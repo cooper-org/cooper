@@ -1,2 +1,2 @@
 # torch-coop
-A library for Constrained Optimization in Pytorch
+torch-coop is a toolkit for Lagrangian-based constrained optimization in Pytorch.
