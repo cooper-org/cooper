@@ -23,6 +23,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         # TODO: assert that if any optimizer has extrapolation, all do.
         self.primal_optimizer = primal_optimizer
+        self.dual_optimizer = dual_optimizer
 
         # TODO: do we need to inherit from torch.optim?
         super().__init__(self.primal_optimizer.param_groups, {})
