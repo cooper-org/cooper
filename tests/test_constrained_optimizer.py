@@ -8,6 +8,7 @@ import torch
 import torch_coop
 
 import pdb
+import pytest
 
 
 def test_optimizer_init():
@@ -28,7 +29,8 @@ def test_optimizer_init():
     assert coop.is_constrained
 
 
-def test_toy_problem():
+@pytest.mark.parametrize("test_cuda", [True, False])
+def test_toy_problem(test_cuda):
     """
     Simple test on a bi-variate quadratic programming problem
         min x**2 + 2*y**2
@@ -65,7 +67,11 @@ def test_toy_problem():
 
         return closure_fn
 
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0]))
+    if test_cuda and torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
 
@@ -79,5 +85,7 @@ def test_toy_problem():
     for step_id in range(1500):
         closure_state = coop.step(construct_closure(params))
 
+    if device == "cuda":
+        assert closure_state.loss.is_cuda
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
     assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))
