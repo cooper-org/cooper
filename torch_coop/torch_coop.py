@@ -132,13 +132,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
             self.restart_dual_variables()
 
-            # # TODO: fix this for tensorized multipliers
-            # for multiplier in self.ineq_multipliers:
-
-            #     if multiplier.weight.grad.item() > 0:
-            #         multiplier.weight.grad *= 0
-            #         multiplier.weight.data *= 0
-
         if self.is_constrained:
             self.dual_optimizer.step()
 
