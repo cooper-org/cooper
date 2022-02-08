@@ -67,10 +67,14 @@ def test_toy_problem(test_cuda):
 
         return closure_fn
 
-    if test_cuda and torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
+    device = "cpu"
+    if test_cuda:
+        if torch.cuda.is_available():
+            device = "cuda"
+        else:
+            # Do not run the test a second time on cpu if cuda is not available
+            pytest.skip("CUDA is not available")
+
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
