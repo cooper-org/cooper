@@ -2,10 +2,25 @@
 
 import logging
 import warnings
+from dataclasses import dataclass
 from typing import List, Optional
 
 import torch
 from .multipliers import DenseMultiplier
+
+
+@dataclass
+class ClosureState:
+    """Represents the 'value' of a given solution based on its loss and
+    constraint violations.
+    """
+
+    loss: torch.Tensor
+    eq_defect: Optional[List[torch.Tensor]] = None
+    ineq_defect: Optional[List[torch.Tensor]] = None
+
+    def as_tuple(self) -> tuple:
+        return self.loss, self.eq_defect, self.ineq_defect
 
 
 class ConstrainedOptimizer(torch.optim.Optimizer):
@@ -59,10 +74,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
     def step(self, closure):
 
-        closure_dict = closure()
-        loss, eq_defect, ineq_defect = [
-            closure_dict[_] for _ in ["loss", "eq_defect", "ineq_defect"]
-        ]
+        closure_state = closure()
+        loss, eq_defect, ineq_defect = closure_state.as_tuple()
 
         if (
             self.dual_optimizer is not None
@@ -84,14 +97,15 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         # Compute Lagrangian value based on current loss and values of multipliers
         lagrangian = self.lagrangian_backward(loss, eq_defect, ineq_defect)
-        closure_dict["lagrangian"] = lagrangian
+        # TODO: do we still want to log the Lagrangian value?
+        # closure_dict["lagrangian"] = lagrangian
 
         # TODO: Why was this being applied on the object loss?
         # Shouldn't this be called with input Lagrangian? Otherwise subsequent
         # extrapolation backprops will ignore constraints.
         self.run_optimizers_step(lagrangian, closure)
 
-        return closure_dict
+        return closure_state
 
     def run_optimizers_step(self, loss, closure_fn):
 
@@ -109,9 +123,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             should_back_prop = True
 
         if should_back_prop:
-            closure_dict_ = closure_fn()
-            in_tuple = (closure_dict_[_] for _ in ["loss", "eq_defect", "ineq_defect"])
-            lagrangian_ = self.lagrangian_backward(*in_tuple)
+            closure_state = closure_fn()
+            lagrangian_ = self.lagrangian_backward(*closure_state.as_tuple())
 
         self.primal_optimizer.step()
 
@@ -119,9 +132,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Once having updated primal parameters, re-compute gradient
             # Skip gradient wrt model parameters to avoid wasteful computation
             # as we only need gradient wrt multipliers.
-            closure_dict_ = closure_fn()
-            in_tuple = (closure_dict_[_] for _ in ["loss", "eq_defect", "ineq_defect"])
-            lagrangian_ = self.lagrangian_backward(*in_tuple, ignore_primal=True)
+            closure_state = closure_fn()
+            lagrangian_ = self.lagrangian_backward(
+                *closure_state.as_tuple(), ignore_primal=True
+            )
 
         if self.dual_reset:
             # 'Reset' value of inequality multipliers to zero as soon as solution becomes feasible

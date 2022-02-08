@@ -41,22 +41,24 @@ def test_toy_problem():
     def construct_closure(params):
         param_x, param_y = params
 
-        def closure():
+        def closure_fn():
             # Define toy closure function
-            closure_dict = {
-                "loss": param_x ** 2 + 2 * param_y ** 2,
-                "eq_defect": [],
-                "ineq_defect": [],
-            }
 
-            # x + y \ge 1
-            closure_dict["ineq_defect"].append(-param_x - param_y + 1.0)
-            # x**2 + y \le 0.5
-            closure_dict["ineq_defect"].append(param_x ** 2 + param_y - 1.0)
+            loss = param_x ** 2 + 2 * param_y ** 2
+            eq_defect = []  # No equality constraints
 
-            return closure_dict
+            ineq_defect = [
+                -param_x - param_y + 1.0,  # x + y \ge 1
+                param_x ** 2 + param_y - 1.0,  # x**2 + y \le 0.5
+            ]
 
-        return closure
+            closure_state = torch_coop.ClosureState(
+                loss=loss, eq_defect=eq_defect, ineq_defect=ineq_defect
+            )
+
+            return closure_state
+
+        return closure_fn
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0]))
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
@@ -67,7 +69,7 @@ def test_toy_problem():
     )
 
     for step_id in range(1500):
-        _closure_dict = coop.step(construct_closure(params))
+        closure_state = coop.step(construct_closure(params))
 
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
     assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))
