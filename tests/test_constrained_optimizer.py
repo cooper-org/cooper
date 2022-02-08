@@ -7,11 +7,13 @@ import functools
 import torch
 import torch_coop
 
+import pdb
+
 
 def test_optimizer_init():
 
     # Dummy wrapper for unconstrained optimization.
-    # If only the primal optimizer is provided, coop behaves like a regular optimizaer
+    # If only the primal optimizer is provided, coop behaves like a regular optimizer
     primal_params = torch.nn.Parameter(torch.randn(10, 1))
     primal_optimizer = torch_coop.optim.SGD([primal_params], lr=1e-2)
     coop = torch_coop.ConstrainedOptimizer(primal_optimizer=primal_optimizer)
@@ -45,12 +47,15 @@ def test_toy_problem():
             # Define toy closure function
 
             loss = param_x ** 2 + 2 * param_y ** 2
-            eq_defect = []  # No equality constraints
+            eq_defect = None  # No equality constraints
 
-            ineq_defect = [
-                -param_x - param_y + 1.0,  # x + y \ge 1
-                param_x ** 2 + param_y - 1.0,  # x**2 + y \le 0.5
-            ]
+            # Two inequality constraints
+            ineq_defect = torch.stack(
+                [
+                    -param_x - param_y + 1.0,  # x + y \ge 1
+                    param_x ** 2 + param_y - 1.0,  # x**2 + y \le 1.0
+                ]
+            )
 
             closure_state = torch_coop.ClosureState(
                 loss=loss, eq_defect=eq_defect, ineq_defect=ineq_defect
@@ -65,7 +70,10 @@ def test_toy_problem():
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
 
     coop = torch_coop.ConstrainedOptimizer(
-        primal_optimizer=primal_optimizer, dual_optimizer=dual_optimizer
+        primal_optimizer=primal_optimizer,
+        dual_optimizer=dual_optimizer,
+        # aug_lag_coefficient=0.1,
+        dual_restarts=True,
     )
 
     for step_id in range(1500):
