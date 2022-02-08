@@ -16,10 +16,9 @@ class DenseMultiplier(torch.nn.Module):
         return self.weight.shape
 
     def forward(self):
-        w = self.weight
         if self.positive:
-            w.data = torch.relu(w).data
-        return w
+            self.weight.data = torch.relu(self.weight).data
+        return self.weight
 
     def __str__(self):
-        return str(self.forward().item())
+        return str(self.forward().data)

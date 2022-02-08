@@ -2,10 +2,25 @@
 
 import logging
 import warnings
+from dataclasses import dataclass
 from typing import List, Optional
 
 import torch
 from .multipliers import DenseMultiplier
+
+
+@dataclass
+class ClosureState:
+    """Represents the 'value' of a given solution based on its loss and
+    constraint violations.
+    """
+
+    loss: torch.Tensor
+    eq_defect: Optional[List[torch.Tensor]] = None
+    ineq_defect: Optional[List[torch.Tensor]] = None
+
+    def as_tuple(self) -> tuple:
+        return self.loss, self.eq_defect, self.ineq_defect
 
 
 class ConstrainedOptimizer(torch.optim.Optimizer):
@@ -13,11 +28,11 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self,
         primal_optimizer: torch.optim.Optimizer,
         dual_optimizer: Optional[torch.optim.Optimizer] = None,
-        ineq_init: Optional[List[torch.Tensor]] = None,
-        eq_init: Optional[List[torch.Tensor]] = None,
+        ineq_init: Optional[torch.Tensor] = None,
+        eq_init: Optional[torch.Tensor] = None,
         aug_lag_coefficient=False,
         alternating=False,
-        dual_reset=False,
+        dual_restarts=False,
         verbose=False,
     ):
 
@@ -25,23 +40,23 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.primal_optimizer = primal_optimizer
         self.dual_optimizer = dual_optimizer
 
-        # TODO: do we need to inherit from torch.optim?
+        # Convenience flag for determining if we actually deal with a constrained problem
+        self.is_constrained = self.dual_optimizer is not None
+
         super().__init__(self.primal_optimizer.param_groups, {})
 
-        # Initialization values for the dual variables
+        # Flag to determine if dual variables have been initialized
         self.dual_init_done = False
 
+        # Store user-provided initializations for dual variables
         self.ineq_init = ineq_init
         self.eq_init = eq_init
-
-        # Create flag for execution in un-constrained setting
-        self.is_constrained = dual_optimizer is not None
 
         if self.is_constrained:
             logging.info("Constrained Execution")
 
-            # The dual optimizer is instantiated in 'init_dual_variables'.
-            self.dual_reset = dual_reset
+            # The dual optimizer is instantiated in 'initialize_dual_variables'
+            self.dual_restarts = dual_restarts
 
             # Other optimization and Lagrangian options
             self.aug_lag_coefficient = aug_lag_coefficient
@@ -49,9 +64,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         else:
             logging.info("Unconstrained Execution")
 
-            self.dual_reset = False
+            self.dual_restarts = False
 
-            # Other optimization and Lagrangian options
+            # Override any given values for constrained optimization parameters
             self.aug_lag_coefficient = 0.0
             self.alternating = False
 
@@ -59,39 +74,25 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
     def step(self, closure):
 
-        closure_dict = closure()
-        loss, eq_defect, ineq_defect = [
-            closure_dict[_] for _ in ["loss", "eq_defect", "ineq_defect"]
-        ]
+        closure_state = closure()
+        loss, eq_defect, ineq_defect = closure_state.as_tuple()
 
-        if (
-            self.dual_optimizer is not None
-            and not self.dual_init_done
-            and not self.eq_multipliers
-            and not self.ineq_multipliers
-        ):
-            # If not done before, instantiate and initialize dual variables
-            # This step also instantiates dual_optimizer, if necessary
-            self.init_dual_variables(eq_defect, ineq_defect)
+        # If not done before, instantiate and initialize dual variables
+        # This step also instantiates dual_optimizer, if necessary
+        if not self.dual_init_done and self.is_constrained:
+            self.initialize_dual_variables(eq_defect, ineq_defect)
 
-            # Ensure multiplier shapes match those of the defects
-            assert eq_defect is None or all(
-                [validate_defect(d, m) for d, m in zip(eq_defect, self.eq_multipliers)]
-            )
-            assert ineq_defect is None or all(
-                [d.shape == m.shape for d, m in zip(ineq_defect, self.ineq_multipliers)]
-            )
-
-        # Compute Lagrangian value based on current loss and values of multipliers
+        # Compute Lagrangian based on current loss and values of multipliers
         lagrangian = self.lagrangian_backward(loss, eq_defect, ineq_defect)
-        closure_dict["lagrangian"] = lagrangian
+        # TODO: do we still want to log the Lagrangian value?
+        # closure_dict["lagrangian"] = lagrangian
 
         # TODO: Why was this being applied on the object loss?
         # Shouldn't this be called with input Lagrangian? Otherwise subsequent
         # extrapolation backprops will ignore constraints.
         self.run_optimizers_step(lagrangian, closure)
 
-        return closure_dict
+        return closure_state
 
     def run_optimizers_step(self, loss, closure_fn):
 
@@ -109,9 +110,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             should_back_prop = True
 
         if should_back_prop:
-            closure_dict_ = closure_fn()
-            in_tuple = (closure_dict_[_] for _ in ["loss", "eq_defect", "ineq_defect"])
-            lagrangian_ = self.lagrangian_backward(*in_tuple)
+            closure_state = closure_fn()
+            lagrangian_ = self.lagrangian_backward(
+                *closure_state.as_tuple(), ignore_primal=False
+            )
 
         self.primal_optimizer.step()
 
@@ -119,22 +121,28 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Once having updated primal parameters, re-compute gradient
             # Skip gradient wrt model parameters to avoid wasteful computation
             # as we only need gradient wrt multipliers.
-            closure_dict_ = closure_fn()
-            in_tuple = (closure_dict_[_] for _ in ["loss", "eq_defect", "ineq_defect"])
-            lagrangian_ = self.lagrangian_backward(*in_tuple, ignore_primal=True)
+            closure_state = closure_fn()
+            lagrangian_ = self.lagrangian_backward(
+                *closure_state.as_tuple(), ignore_primal=True
+            )
 
-        if self.dual_reset:
-            # 'Reset' value of inequality multipliers to zero as soon as solution becomes feasible
-            for multiplier in self.ineq_multipliers:
-                # Call to lagrangian_backward has already flipped sign
-                # Currently positive sign means original defect is negative = feasible
+        if self.dual_restarts:
+            # 'Reset' value of inequality multipliers to zero as soon as
+            # solution becomes feasible
 
-                if multiplier.weight.grad.item() > 0:
-                    multiplier.weight.grad *= 0
-                    multiplier.weight.data *= 0
+            self.restart_dual_variables()
 
         if self.is_constrained:
             self.dual_optimizer.step()
+
+    def restart_dual_variables(self):
+        # Call to lagrangian_backward has already flipped sign
+        # Currently positive sign means original defect is negative => feasible
+
+        feasible_filter = self.ineq_multipliers.weight.grad > 0
+
+        self.ineq_multipliers.weight.grad[feasible_filter] = 0.0
+        self.ineq_multipliers.weight.data[feasible_filter] = 0.0
 
     def lagrangian_backward(self, loss, eq_defect, ineq_defect, ignore_primal=False):
         """Compute Lagrangian and backward pass"""
@@ -147,72 +155,56 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         # Compute gradients
         if ignore_primal and self.is_constrained:
-            mult_params = [m.weight for m in self.eq_multipliers]
-            mult_params += [m.weight for m in self.ineq_multipliers]
-            lagrangian.backward(inputs=mult_params)
+            # Only compute gradients wrt Lagrange multipliers
+            lagrangian.backward(inputs=self.dual_params)
         else:
             lagrangian.backward()
 
         # Flip gradients for dual variables to perform ascent
         if self.is_constrained:
-            [m.weight.grad.mul_(-1) for m in self.eq_multipliers]
-            [m.weight.grad.mul_(-1) for m in self.ineq_multipliers]
+            [_.grad.mul_(-1.0) for _ in self.dual_params]
 
         return lagrangian.item()
 
     def compute_lagrangian(self, loss, eq_defect, ineq_defect):
 
-        # Compute contribution of the constraints, weighted by current multiplier values
-        rhs = self.weighted_constraint(eq_defect, ineq_defect)
+        # Compute contribution of the constraint violations, weighted by the
+        # current multiplier values
+        weighted_violation = 0.0
 
-        # Lagrangian = loss + dot(multipliers, defects)
-        lagrangian = loss + sum(rhs)
+        if eq_defect is not None:
+            weighted_violation += torch.sum(self.eq_multipliers() * eq_defect)
+
+        if ineq_defect is not None:
+            weighted_violation += torch.sum(self.ineq_multipliers() * ineq_defect)
+
+        # Lagrangian = loss + \sum_i multiplier_i * defect_i
+        lagrangian = loss + weighted_violation
 
         # If using augmented Lagrangian, add squared sum of constraints
+        # Following the formulation on Marc Toussaint's slides (p 17-20)
+        # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
         if self.aug_lag_coefficient > 0:
-            ssc = self.squared_sum_constraint(eq_defect, ineq_defect)
-            lagrangian += self.aug_lag_coefficient * ssc
+
+            if eq_defect is not None:
+                eq_square = torch.sum(torch.square(eq_defect))
+            else:
+                eq_square = 0.0
+
+            if ineq_defect is not None:
+                ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
+                ineq_square = torch.sum(torch.square(ineq_defect[ineq_filter]))
+            else:
+                ineq_square = 0.0
+
+            lagrangian += self.aug_lag_coefficient * (eq_square + ineq_square)
 
         return lagrangian
 
-    def squared_sum_constraint(self, eq_defect, ineq_defect) -> torch.Tensor:
-        """Compute quadratic penalty for augmented Lagrangian"""
-        if eq_defect is not None:
-            constraint_sum = torch.zeros(1, device=eq_defect[0].device)
-        else:
-            constraint_sum = torch.zeros(1, device=ineq_defect[0].device)
-
-        for defect in [eq_defect, ineq_defect]:
-            if defect is not None:
-                for hi in defect:
-                    if hi.is_sparse:
-                        hi = hi.coalesce().values()
-                    constraint_sum += torch.sum(torch.square(hi))
-
-        return constraint_sum
-
-    def weighted_constraint(self, eq_defect, ineq_defect) -> list:
-        """Compute contribution of the constraints, weighted by current multiplier values
-
-        Returns:
-            rhs: List of contribution per constraint to the Lagrangian
-        """
-        rhs = []
-
-        if eq_defect is not None:
-            for multiplier, hi in zip(self.eq_multipliers, eq_defect):
-                rhs.append(constraint_dot(hi, multiplier))
-
-        if ineq_defect is not None:
-            for multiplier, hi in zip(self.ineq_multipliers, ineq_defect):
-                rhs.append(constraint_dot(hi, multiplier))
-
-        return rhs
-
-    def init_dual_variables(
+    def initialize_dual_variables(
         self,
-        eq_defect: Optional[List[torch.Tensor]],
-        ineq_defect: Optional[List[torch.Tensor]],
+        eq_defect: Optional[torch.Tensor],
+        ineq_defect: Optional[torch.Tensor],
     ):
         """Initialize dual variables and optimizers given list of equality and
         inequality defects.
@@ -225,51 +217,51 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         if self.verbose:
             logging.info("Initializing dual variables")
 
-        aux_dict = {"eq": eq_defect, "ineq": ineq_defect}
-        aux_init = {"eq": self.eq_init, "ineq": self.ineq_init}
+        aux_dict = {
+            "eq": {"defect": eq_defect, "init": self.eq_init},
+            "ineq": {"defect": ineq_defect, "init": self.ineq_init},
+        }
 
-        for const_name, const_defects in aux_dict.items():
+        dual_params = []
+        for constraint_type in aux_dict.keys():
+            defect = aux_dict[constraint_type]["defect"]
+            init = aux_dict[constraint_type]["init"]
 
-            multipliers = []
-            if const_defects is not None:
+            mult_name = constraint_type + "_multipliers"
 
-                # Assert provided inits match number of constraints
-                assert aux_init[const_name] is None or len(aux_init[const_name]) == len(
-                    const_defects
+            if defect is None:
+                self.state[mult_name] = None
+            else:
+                if init is None:
+                    # If not provided custom initialization, Lagrange multipliers
+                    # are initialized at 0
+
+                    # This already preserves dtype and device of defect
+                    casted_init = torch.zeros_like(defect)
+                else:
+                    casted_init = torch.tensor(
+                        init,
+                        device=defect.device,
+                        dtype=defect.dtype,
+                    )
+                    assert defect.shape == casted_init.shape
+
+                # Enforce positivity if dealing with inequality
+                is_positive = constraint_type == "ineq"
+                self.state[mult_name] = DenseMultiplier(
+                    casted_init, positive=is_positive
                 )
 
-                # For each constraint type, create a multiplier for each constraint
-                for i, defect in enumerate(const_defects):
-                    # Set user-specified init values, else default to zeros
-                    if aux_init[const_name] is None:
-                        init_val = torch.zeros_like(defect)
-                    else:
-                        init_val = torch.tensor(
-                            aux_init[const_name][i], device=defect.device
-                        )
+                dual_params.append(*self.state[mult_name].parameters())
 
-                    mult_class = DenseMultiplier
-                    # Force positivity if dealing with inequality
-                    mult_i = mult_class(init_val, positive=const_name == "ineq")
-                    multipliers.append(mult_i)
-
-            # Join multipliers per constraint type into one module list
-            self.state[const_name + "_multipliers"] = torch.nn.ModuleList(multipliers)
-
-        if self.is_constrained:
-            # Initialize dual optimizer in charge of newly created dual parameters
-            self.dual_optimizer = self.dual_optimizer(
-                [
-                    *self.state["eq_multipliers"].parameters(),
-                    *self.state["ineq_multipliers"].parameters(),
-                ]
-            )
+        # Initialize dual optimizer in charge of newly created dual parameters
+        self.dual_optimizer = self.dual_optimizer(self.dual_params)
 
         # Mark dual instantiation an init as complete
         self.dual_init_done = True
 
     def eval_multipliers(self, mult_type="ineq"):
-        return [_.forward().item() for _ in self.state[mult_type + "_multipliers"]]
+        return self.state[mult_type + "_multipliers"].forward().data
 
     @property
     def ineq_multipliers(self):
@@ -279,18 +271,22 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
     def eq_multipliers(self):
         return self.state["eq_multipliers"]
 
-
-def constraint_dot(defect, multiplier):
-    """Compute constraint contribution for given (potent. sparse) defect and multiplier"""
-    if defect.is_sparse:
-        hi = defect.coalesce()
-        indices = hi.indices().squeeze(0)
-        return torch.einsum(
-            "bh,bh->", multiplier(indices).to(dtype=hi.dtype), hi.values()
-        )
-    else:
-        return torch.sum(multiplier().to(dtype=defect.dtype) * defect)
+    @property
+    def dual_params(self):
+        all_duals = []
+        for _ in [self.eq_multipliers, self.ineq_multipliers]:
+            if _ is not None:
+                all_duals.append(_.weight)
+        return all_duals
 
 
-def validate_defect(defect, multiplier):
-    return defect.shape == multiplier.shape
+# def constraint_dot(defect, multiplier):
+#     """Compute constraint contribution for given (potent. sparse) defect and multiplier"""
+#     if False and defect.is_sparse:
+#         hi = defect.coalesce()
+#         indices = hi.indices().squeeze(0)
+#         return torch.einsum(
+#             "bh,bh->", multiplier(indices).to(dtype=hi.dtype), hi.values()
+#         )
+#     else:
+#         return torch.sum(multiplier() * defect)
