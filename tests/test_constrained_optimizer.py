@@ -67,13 +67,10 @@ def test_toy_problem(test_cuda):
 
         return closure_fn
 
-    device = "cpu"
-    if test_cuda:
-        if torch.cuda.is_available():
-            device = "cuda"
-        else:
-            # Do not run the test a second time on cpu if cuda is not available
-            pytest.skip("CUDA is not available")
+    device = "cuda" if (test_cuda and torch.cuda.is_available()) else "cpu"
+    if test_cuda and device == "cpu":
+        # Intended to test GPU execution, but GPU not available. Skipping test.
+        pytest.skip("CUDA is not available")
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
@@ -91,5 +88,8 @@ def test_toy_problem(test_cuda):
 
     if device == "cuda":
         assert closure_state.loss.is_cuda
+        assert closure_state.eq_defect is None or closure_state.eq_defect.is_cuda
+        assert closure_state.ineq_defect is None or closure_state.ineq_defect.is_cuda
+
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
     assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))
