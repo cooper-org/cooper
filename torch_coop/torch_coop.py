@@ -117,23 +117,32 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         self.primal_optimizer.step()
 
-        if self.is_constrained and self.alternating:
-            # Once having updated primal parameters, re-compute gradient
-            # Skip gradient wrt model parameters to avoid wasteful computation
-            # as we only need gradient wrt multipliers.
-            closure_state = closure_fn()
-            lagrangian_ = self.lagrangian_backward(
-                *closure_state.as_tuple(), ignore_primal=True
-            )
+        if self.is_constrained:
+
+            if self.alternating:
+                # Once having updated primal parameters, re-compute gradient
+                # Skip gradient wrt model parameters to avoid wasteful computation
+                # as we only need gradient wrt multipliers.
+                closure_state = closure_fn()
+                lagrangian_ = self.lagrangian_backward(
+                    *closure_state.as_tuple(), ignore_primal=True
+                )
+
+            self.dual_step()
+
+    def dual_step(self):
+        # Update multipliers based on current constraint violations (gradients)
+        self.dual_optimizer.step()
 
         if self.dual_restarts:
             # 'Reset' value of inequality multipliers to zero as soon as
             # solution becomes feasible
+            if self.ineq_multipliers is not None:
+                self.restart_dual_variables()
 
-            self.restart_dual_variables()
-
-        if self.is_constrained:
-            self.dual_optimizer.step()
+        # Apply projection step to inequality multipliers
+        if self.ineq_multipliers is not None:
+            self.ineq_multipliers.project_()
 
     def restart_dual_variables(self):
         # Call to lagrangian_backward has already flipped sign
@@ -182,7 +191,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         lagrangian = loss + weighted_violation
 
         # If using augmented Lagrangian, add squared sum of constraints
-        # Following the formulation on Marc Toussaint's slides (p 17-20)
+        # Following the formulation on Marc Toussaint slides (p 17-20)
         # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
         if self.aug_lag_coefficient > 0:
 
