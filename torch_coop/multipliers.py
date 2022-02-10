@@ -16,9 +16,13 @@ class DenseMultiplier(torch.nn.Module):
         return self.weight.shape
 
     def forward(self):
+        return self.weight
+
+    def project_(self):
+        # Generic projection for non-negative multipliers used in inequality
+        # constraints. May be generalized to other custom projections
         if self.positive:
             self.weight.data = torch.relu(self.weight).data
-        return self.weight
 
     def __str__(self):
         return str(self.forward().data)
