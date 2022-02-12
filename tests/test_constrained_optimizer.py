@@ -17,13 +17,13 @@ def test_optimizer_init():
     # If only the primal optimizer is provided, coop behaves like a regular optimizer
     primal_params = torch.nn.Parameter(torch.randn(10, 1))
     primal_optimizer = torch_coop.optim.SGD([primal_params], lr=1e-2)
-    coop = torch_coop.ConstrainedOptimizer(primal_optimizer=primal_optimizer)
+    coop = torch_coop.OldConstrainedOptimizer(primal_optimizer=primal_optimizer)
     assert not coop.is_constrained
 
     # Create actual constrained optimizer
 
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
-    coop = torch_coop.ConstrainedOptimizer(
+    coop = torch_coop.OldConstrainedOptimizer(
         primal_optimizer=primal_optimizer, dual_optimizer=dual_optimizer
     )
     assert coop.is_constrained
@@ -76,7 +76,7 @@ def test_toy_problem(aim_device):
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
 
-    coop = torch_coop.ConstrainedOptimizer(
+    coop = torch_coop.OldConstrainedOptimizer(
         primal_optimizer=primal_optimizer,
         dual_optimizer=dual_optimizer,
         # aug_lag_coefficient=0.1,

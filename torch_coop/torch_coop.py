@@ -23,7 +23,7 @@ class ClosureState:
         return self.loss, self.eq_defect, self.ineq_defect
 
 
-class ConstrainedOptimizer(torch.optim.Optimizer):
+class OldConstrainedOptimizer(torch.optim.Optimizer):
     def __init__(
         self,
         primal_optimizer: torch.optim.Optimizer,
