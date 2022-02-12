@@ -5,6 +5,11 @@ from typing import Optional
 import torch
 
 
+# Formulation, and some other classes below, are heavily inspired by the design
+# of the TensorFlow Constrained Optimization (TFCO) library :
+# https://github.com/google-research/tensorflow_constrained_optimization
+
+
 @dataclass
 class CMPState:
     """Represents the "state" of a Constrained Minimization Problem in terms of
