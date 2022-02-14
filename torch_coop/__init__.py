@@ -12,4 +12,4 @@ from . import optim
 
 from torch_coop.optimizer import ConstrainedOptimizer
 from torch_coop.problem import CMPState, ConstrainedMinimizationProblem
-from torch_coop.lagrangian_formulation import _LagrangianFormulation
+from torch_coop.lagrangian_formulation import LagrangianFormulation

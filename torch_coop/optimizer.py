@@ -34,11 +34,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.cmp.state = closure()
 
         # If not done before, instantiate and initialize dual variables
-        # This step also instantiates dual_optimizer, if necessary
         if self.cmp.is_constrained and (not self.formulation.is_state_created):
-            self.formulation.create_state(
-                self.cmp.state.eq_defect, self.cmp.state.ineq_defect
-            )
+            self.formulation.create_state(self.cmp.state)
+            # Instantiates dual_optimizer
             self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
 
         # Compute Lagrangian based on current loss and values of multipliers

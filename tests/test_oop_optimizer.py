@@ -59,7 +59,7 @@ def test_toy_problem(aim_device):
     dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
 
     cmp = torch_coop.ConstrainedMinimizationProblem(is_constrained=True)
-    formulation = torch_coop._LagrangianFormulation(cmp)
+    formulation = torch_coop.LagrangianFormulation(cmp)
 
     coop = torch_coop.ConstrainedOptimizer(
         formulation=formulation,
