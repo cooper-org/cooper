@@ -10,7 +10,7 @@ from .problem import Formulation
 from .multipliers import DenseMultiplier
 
 
-class LagrangianFormulation(Formulation):
+class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     def __init__(
         self,
         cmp,
@@ -28,6 +28,8 @@ class LagrangianFormulation(Formulation):
         # Store user-provided initializations for dual variables
         self.ineq_init = ineq_init
         self.eq_init = eq_init
+
+        self.state_update = []
 
         if aug_lag_coefficient < 0:
             raise ValueError("Augmented Lagrangian coefficient must be non-negative.")
@@ -52,12 +54,7 @@ class LagrangianFormulation(Formulation):
 
         return all_duals
 
-    def create_state(
-        self,
-        cmp_state
-        # eq_defect: Optional[torch.Tensor] = None,
-        # ineq_defect: Optional[torch.Tensor] = None,
-    ):
+    def create_state(self, cmp_state):
         """Initialize dual variables and optimizers given list of equality and
         inequality defects.
 
@@ -65,8 +62,6 @@ class LagrangianFormulation(Formulation):
             eq_defect: Defects for equality constraints
             ineq_defect: Defects for inequality constraints.
         """
-
-        # aux_dict = {}
 
         # Ensure that dual variables are not re-initialized
         for constraint_type in ["eq", "ineq"]:
@@ -117,33 +112,80 @@ class LagrangianFormulation(Formulation):
         """Returns True if any Lagrange multipliers have been initialized"""
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
+    @abc.abstractmethod
+    def get_composite_objective(self):
+        pass
+
+    @abc.abstractmethod
+    def populate_gradients(self):
+        pass
+
+    def purge_state_update(self):
+        self.state_update = []
+
+    def weighted_violation(self, cmp_state, constraint_type):
+
+        defect = getattr(cmp_state, constraint_type + "_defect")
+        has_defect = defect is not None
+
+        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+        has_proxy_defect = proxy_defect is not None
+
+        if not has_proxy_defect:
+            # If not given proxy constraints, then the regular defects are
+            # used for computing gradients and evaluating the multipliers
+            proxy_defect = defect
+
+        if not has_defect:
+            # We should always have at least the regular defects, if not, then
+            # the problem instance does not have `constraint_type` constraints
+            violation = 0.0
+        else:
+            multipliers = getattr(self, constraint_type + "_multipliers")()
+            violation = torch.sum(multipliers.detach() * proxy_defect)
+
+            multiplier_update = torch.sum(multipliers * defect.detach())
+            self.state_update.append(multiplier_update)
+
+        return violation
+
+
+class LagrangianFormulation(BaseLagrangianFormulation):
     def get_composite_objective(self):
 
-        problem_state = self.cmp.state
+        cmp_state = self.cmp.state
 
         # Extract values from ProblemState object
-        loss = problem_state.loss
-        ineq_defect, eq_defect = problem_state.ineq_defect, problem_state.eq_defect
+        loss = cmp_state.loss
+        ineq_defect, eq_defect = cmp_state.ineq_defect, cmp_state.eq_defect
+        proxy_ineq_defect = cmp_state.proxy_ineq_defect
+        proxy_eq_defect = cmp_state.proxy_eq_defect
 
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
             # current multiplier values
-            weighted_violation = 0.0
 
-            if ineq_defect is not None:
-                weighted_violation += torch.sum(self.ineq_multipliers() * ineq_defect)
-
-            if eq_defect is not None:
-                weighted_violation += torch.sum(self.eq_multipliers() * eq_defect)
+            # If given proxy constraints, these are used to compute the terms
+            # added to the Lagrangian, and the multiplier updates are based on
+            # the non-proxy violations.
+            # If not given proxy constraints, then gradients and multiplier updates
+            # are based on the "regular" constraints.
+            ineq_viol = self.weighted_violation(cmp_state, "ineq")
+            eq_viol = self.weighted_violation(cmp_state, "eq")
 
             # Lagrangian = loss + \sum_i multiplier_i * defect_i
-            lagrangian = loss + weighted_violation
+            lagrangian = loss + ineq_viol + eq_viol
+
+            # TODO (1): verify that current implementation of proxy constraints
+            # works properly with augmented lagrangian below.
 
             # If using augmented Lagrangian, add squared sum of constraints
             # Following the formulation on Marc Toussaint slides (p 17-20)
             # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
             if self.aug_lag_coefficient > 0:
 
+                # TODO (2): I guess one would like to filter based on non-proxy
+                # feasibility but then penalize based on the proxy constraint
                 if ineq_defect is not None:
                     ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
                     ineq_square = torch.sum(torch.square(ineq_defect[ineq_filter]))
@@ -158,19 +200,23 @@ class LagrangianFormulation(Formulation):
                 lagrangian += self.aug_lag_coefficient * (ineq_square + eq_square)
 
         else:
-            lagrangian = problem_state.loss
+            lagrangian = cmp_state.loss
 
         return lagrangian
 
     def populate_gradients(self, lagrangian, ignore_primal=False):
         # ignore_primal is used for alternating updates
 
-        # Compute gradients
         if ignore_primal and self.cmp.is_constrained:
             # Only compute gradients wrt Lagrange multipliers
-            lagrangian.backward(inputs=self.state())
+            bwd_inputs = self.state()
         else:
-            lagrangian.backward()
+            # Compute gradients wrt primal and dual parameters
+            bwd_inputs = None
+
+        lagrangian.backward(inputs=bwd_inputs)
+        for violation_tensor in self.state_update:
+            violation_tensor.backward(inputs=bwd_inputs)
 
         # Flip gradients for multipliers to perform ascent
         if self.cmp.is_constrained:

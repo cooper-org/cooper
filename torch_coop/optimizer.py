@@ -40,6 +40,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
 
         # Compute Lagrangian based on current loss and values of multipliers
+        self.formulation.purge_state_update()
         lagrangian = self.formulation.get_composite_objective()
 
         return lagrangian
