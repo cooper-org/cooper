@@ -16,7 +16,7 @@ class CMPState:
     the value of its loss and constraint violations/defects.
     """
 
-    loss: torch.Tensor
+    loss: Optional[torch.Tensor] = None
     ineq_defect: Optional[torch.Tensor] = None
     eq_defect: Optional[torch.Tensor] = None
     proxy_ineq_defect: Optional[torch.Tensor] = None
@@ -46,58 +46,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
     @state.setter
     def state(self, value: CMPState):
         self._state = value
-
-
-# class ConstrainedMinimizationProblem(abc.ABC):
-#     """Constrained minimization problem base class."""
-
-#     def __init__(self):
-#         self._state = None
-
-#     @abc.abstractmethod
-#     def loss(self):
-#         """Returns loss function"""
-#         pass
-
-#     @property
-#     @abc.abstractmethod
-#     def is_constrained(self):
-#         """Returns true if the problem is constrained"""
-#         pass
-
-#     @abc.abstractmethod
-#     def ineq_constraints(self):
-#         """Returns tensor inequality constraints"""
-#         pass
-
-#     @abc.abstractmethod
-#     def eq_constraints(self):
-#         """Returns tensor of equality constraints"""
-#         pass
-
-#     def proxy_ineq_constraints(self):
-#         # Optional
-#         return
-
-#     def proxy_eq_constraints(self):
-#         # Optional
-#         return
-
-#     @property
-#     def state(self) -> ProblemState:
-#         return self._state
-
-#     @state.setter
-#     def state(self, value: ProblemState):
-#         self._state = value
-#         # # Wastefully makes several function calls
-#         # return ProblemState(
-#         #     loss=self.loss(),
-#         #     ineq_defect=self.ineq_constraints(),
-#         #     eq_defect=self.eq_constraints(),
-#         #     proxy_ineq_defect=self.proxy_ineq_constraints(),
-#         #     proxy_eq_defect=self.proxy_eq_constraints(),
-#         # )
 
 
 class Formulation(abc.ABC):
