@@ -10,7 +10,7 @@ from .problem import Formulation
 from .multipliers import DenseMultiplier
 
 
-class _LagrangianFormulation(Formulation):
+class LagrangianFormulation(Formulation):
     def __init__(
         self,
         cmp,
@@ -18,7 +18,7 @@ class _LagrangianFormulation(Formulation):
         eq_init: Optional[torch.Tensor] = None,
         aug_lag_coefficient: float = 0.0,
     ):
-        """Construct new `_LagrangianFormulation`"""
+        """Construct new `LagrangianFormulation`"""
 
         self.cmp = cmp
 
@@ -54,8 +54,9 @@ class _LagrangianFormulation(Formulation):
 
     def create_state(
         self,
-        eq_defect: Optional[torch.Tensor] = None,
-        ineq_defect: Optional[torch.Tensor] = None,
+        cmp_state
+        # eq_defect: Optional[torch.Tensor] = None,
+        # ineq_defect: Optional[torch.Tensor] = None,
     ):
         """Initialize dual variables and optimizers given list of equality and
         inequality defects.
@@ -65,46 +66,51 @@ class _LagrangianFormulation(Formulation):
             ineq_defect: Defects for inequality constraints.
         """
 
+        # aux_dict = {}
+
         # Ensure that dual variables are not re-initialized
-        assert ineq_defect is None or self.ineq_multipliers is None
-        assert eq_defect is None or self.eq_multipliers is None
-
-        logging.info("Initializing dual variables")
-
-        aux_dict = {
-            "eq": {"defect": eq_defect, "init": self.eq_init},
-            "ineq": {"defect": ineq_defect, "init": self.ineq_init},
-        }
-
-        for constraint_type in aux_dict.keys():
-            defect = aux_dict[constraint_type]["defect"]
-            init = aux_dict[constraint_type]["init"]
+        for constraint_type in ["eq", "ineq"]:
 
             mult_name = constraint_type + "_multipliers"
 
-            if defect is not None:
-                if init is None:
+            defect = getattr(cmp_state, constraint_type + "_defect")
+            proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+
+            has_defect = defect is not None
+            has_proxy_defect = proxy_defect is not None
+
+            if has_defect or has_proxy_defect:
+
+                # Ensure dual variables have not been initialized previously
+                assert getattr(self, constraint_type + "_multipliers") is None
+
+                # If given proxy and non-proxy constraints, sanity-check tensor sizes
+                if has_defect and has_proxy_defect:
+                    assert defect.shape == proxy_defect.shape
+
+                # Choose a tensor for getting device and dtype information
+                defect_for_init = defect if has_defect else proxy_defect
+
+                init_tensor = getattr(self, constraint_type + "_init")
+                if init_tensor is None:
                     # If not provided custom initialization, Lagrange multipliers
                     # are initialized at 0
 
                     # This already preserves dtype and device of defect
-                    casted_init = torch.zeros_like(defect)
+                    casted_init = torch.zeros_like(defect_for_init)
                 else:
                     casted_init = torch.tensor(
-                        init,
-                        device=defect.device,
-                        dtype=defect.dtype,
+                        init_tensor,
+                        device=defect_for_init.device,
+                        dtype=defect_for_init.dtype,
                     )
-                    assert defect.shape == casted_init.shape
+                    assert defect_for_init.shape == casted_init.shape
 
                 # Enforce positivity if dealing with inequality
                 is_positive = constraint_type == "ineq"
                 multiplier = DenseMultiplier(casted_init, positive=is_positive)
 
                 setattr(self, mult_name, multiplier)
-
-        # # Initialize dual optimizer in charge of newly created dual parameters
-        # self.dual_optimizer = self.dual_optimizer(self.dual_params)
 
     @property
     def is_state_created(self):
