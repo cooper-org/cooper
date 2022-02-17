@@ -15,6 +15,10 @@ class DenseMultiplier(torch.nn.Module):
     def shape(self):
         return self.weight.shape
 
+    @property
+    def grad(self):
+        return self.weight.grad
+
     def forward(self):
         return self.weight
 

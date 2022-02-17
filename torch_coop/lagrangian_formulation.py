@@ -42,6 +42,11 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
         return ineq_state, eq_state
 
+    def no_none_state(self):
+        """Returns self.state with Nones removed. Used for passing as inputs to
+        backwards."""
+        return [_ for _ in self.state() if _ is not None]
+
     @property
     def dual_parameters(self):
         all_duals = []
@@ -139,15 +144,20 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         if not has_defect:
             # We should always have at least the regular defects, if not, then
             # the problem instance does not have `constraint_type` constraints
-            violation = 0.0
+            proxy_violation = 0.0
         else:
             multipliers = getattr(self, constraint_type + "_multipliers")()
-            violation = torch.sum(multipliers.detach() * proxy_defect)
 
-            multiplier_update = torch.sum(multipliers * defect.detach())
-            self.state_update.append(multiplier_update)
+            # We compute (primal) gradients of this object
+            proxy_violation = torch.sum(multipliers.detach() * proxy_defect)
 
-        return violation
+            # This is the violation of the "actual" constraint. We use this
+            # to update the value of the multipliers by lazily filling the
+            # multiplier gradients in `populate_gradients`
+            violation_for_update = torch.sum(multipliers * defect.detach())
+            self.state_update.append(violation_for_update)
+
+        return proxy_violation
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
@@ -209,17 +219,19 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         if ignore_primal and self.cmp.is_constrained:
             # Only compute gradients wrt Lagrange multipliers
-            bwd_inputs = self.state()
+            # No need to call backward on Lagrangian as the dual variables have
+            # been detached when computing the `weighted_violation`s
+            pass
         else:
-            # Compute gradients wrt primal and dual parameters
-            bwd_inputs = None
+            # Compute gradients wrt primal parameters only.
+            # The gradient for the dual variables is computed based on the
+            # non-proxy violations below.
+            lagrangian.backward()
 
-        lagrangian.backward(inputs=bwd_inputs)
-        for violation_tensor in self.state_update:
-            violation_tensor.backward(inputs=bwd_inputs)
-
-        # Flip gradients for multipliers to perform ascent
+        # Fill in the gradients for the dual variables based on the violation of
+        # the non-proxy constraint
+        # This is equivalent to setting `dual_vars.grad = defect`
         if self.cmp.is_constrained:
-            for multiplier in self.state():
-                if multiplier is not None:
-                    multiplier.grad.mul_(-1.0)
+            for violation_for_update in self.state_update:
+
+                violation_for_update.backward(inputs=self.no_none_state())

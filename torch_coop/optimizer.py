@@ -72,30 +72,46 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         if self.cmp.is_constrained:
 
             if self.alternating:
+                # TODO: add test for this
+
                 # Once having updated primal parameters, re-compute gradient
                 # Skip gradient wrt model parameters to avoid wasteful computation
                 # as we only need gradient wrt multipliers.
-                self.cmp.state = closure()
+                with torch.no_grad():
+                    self.cmp.state = closure()
                 lagrangian = self.formulation.get_composite_objective(self.cmp)
 
-                self.formulation.populate_gradients(
-                    lagrangian, self.cmp, ignore_primal=True
-                )
+                # Zero-out gradients for dual variables since they were already
+                # populated earlier.
+                # Also zeroing primal gradients for safety although not really
+                # necessary.
+                self.zero_grad(ignore_primal=False, ignore_dual=False)
+
+                # Not passing lagrangian since we only want to update the
+                # gradients for the dual variables
+                self.formulation.populate_gradients(lagrangian=None, ignore_primal=True)
 
             self.dual_step()
 
     def dual_step(self):
+
+        # Flip gradients for multipliers to perform ascent.
+        # We only do the flipping *right before* applying the optimizer step to
+        # avoid accidental double sign flips.
+        for multiplier in self.formulation.state():
+            if multiplier is not None:
+                multiplier.grad.mul_(-1.0)
+
         # Update multipliers based on current constraint violations (gradients)
         self.dual_optimizer.step()
 
-        if self.dual_restarts:
-            # "Reset" value of inequality multipliers to zero as soon as
-            # solution becomes feasible
-            if self.formulation.ineq_multipliers is not None:
+        if self.formulation.ineq_multipliers is not None:
+            if self.dual_restarts:
+                # "Reset" value of inequality multipliers to zero as soon as
+                # solution becomes feasible
                 self.restart_dual_variables()
 
-        # Apply projection step to inequality multipliers
-        if self.formulation.ineq_multipliers is not None:
+            # Apply projection step to inequality multipliers
             self.formulation.ineq_multipliers.project_()
 
     def restart_dual_variables(self):
