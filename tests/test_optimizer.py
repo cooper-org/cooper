@@ -90,9 +90,9 @@ def test_toy_problem(aim_device, use_ineq):
         coop.step(closure)
 
     if device == "cuda":
-        assert cmp.loss.is_cuda
-        assert cmp.eq_defect is None or cmp.eq_defect.is_cuda
-        assert cmp.ineq_defect is None or cmp.ineq_defect.is_cuda
+        assert cmp.state.loss.is_cuda
+        assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
+        assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
 
     if use_ineq:
         assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
