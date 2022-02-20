@@ -1,8 +1,7 @@
-import abc
 from typing import Optional
 
 import torch
-from .problem import ConstrainedMinimizationProblem, Formulation
+from .problem import Formulation
 
 
 class ConstrainedOptimizer(torch.optim.Optimizer):
@@ -25,6 +24,43 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.dual_restarts = dual_restarts
 
         super().__init__(self.primal_optimizer.param_groups, {})
+
+        self.sanity_checks()
+
+    def sanity_checks(self):
+
+        is_alternating = self.alternating
+        is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
+            self.formulation.aug_lag_coefficient > 0
+        )
+        is_extrapolation = hasattr(self.primal_optimizer, "extrapolation") or hasattr(
+            self.dual_optimizer, "extrapolation"
+        )
+
+        if is_aug_lag and is_extrapolation:
+            raise NotImplementedError(
+                """It is currently not possible to use extrapolation and an
+                augmented Lagrangian formulation"""
+            )
+
+        if is_alternating and is_extrapolation:
+            raise RuntimeError(
+                """Should not use extrapolation and alternating updates
+                simultaneously. Please disable one of these two modes."""
+            )
+
+        if not (self.cmp.is_constrained) and (self.dual_optimizer is not None):
+            raise RuntimeError(
+                """Provided a dual optimizer, but the `Problem` class claims to
+                be unconstrained."""
+            )
+
+        if not (self.cmp.is_constrained) and is_extrapolation:
+            raise RuntimeError(
+                """Using an extrapolating optimizer an unconstrained problem 
+                might result in unexpected behavior. Consider using a 
+                non-extrapolating optimizer instead."""
+            )
 
     def custom_backward(self, lagrangian):
         self.formulation.populate_gradients(lagrangian)

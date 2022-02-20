@@ -1,9 +1,8 @@
 """Lagrangian formulation"""
 
 import abc
-from dataclasses import dataclass
 import logging
-from typing import List, Optional
+from typing import Optional
 
 import torch
 from .problem import Formulation
@@ -168,8 +167,6 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         # Extract values from ProblemState object
         loss = cmp_state.loss
         ineq_defect, eq_defect = cmp_state.ineq_defect, cmp_state.eq_defect
-        proxy_ineq_defect = cmp_state.proxy_ineq_defect
-        proxy_eq_defect = cmp_state.proxy_eq_defect
 
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
