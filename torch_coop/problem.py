@@ -21,7 +21,8 @@ class CMPState:
     eq_defect: Optional[torch.Tensor] = None
     proxy_ineq_defect: Optional[torch.Tensor] = None
     proxy_eq_defect: Optional[torch.Tensor] = None
-
+    misc: Optional[dict] = None
+    
     def as_tuple(self) -> tuple:
         return (
             self.loss,
@@ -29,6 +30,7 @@ class CMPState:
             self.eq_defect,
             self.proxy_ineq_defect,
             self.proxy_eq_defect,
+            self.misc
         )
 
 
