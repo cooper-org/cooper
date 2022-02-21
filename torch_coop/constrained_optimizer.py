@@ -33,17 +33,19 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
             self.formulation.aug_lag_coefficient > 0
         )
-        is_extrapolation = hasattr(self.primal_optimizer, "extrapolation") or hasattr(
-            self.dual_optimizer, "extrapolation"
-        )
 
-        if is_aug_lag and is_extrapolation:
+        # We assume that both optimizers agree on whether to use extrapolation
+        # or not, so we use the primal optimizer as reference for deciding if
+        # we use extrapolation. See check below for matching extrapolation behavior.
+        self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+
+        if is_aug_lag and self.is_extrapolation:
             raise NotImplementedError(
                 """It is currently not possible to use extrapolation and an
                 augmented Lagrangian formulation"""
             )
 
-        if is_alternating and is_extrapolation:
+        if is_alternating and self.is_extrapolation:
             raise RuntimeError(
                 """Should not use extrapolation and alternating updates
                 simultaneously. Please disable one of these two modes."""
@@ -55,11 +57,19 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 be unconstrained."""
             )
 
-        if not (self.cmp.is_constrained) and is_extrapolation:
+        if not (self.cmp.is_constrained) and self.is_extrapolation:
             raise RuntimeError(
-                """Using an extrapolating optimizer an unconstrained problem 
-                might result in unexpected behavior. Consider using a 
+                """Using an extrapolating optimizer an unconstrained problem
+                might result in unexpected behavior. Consider using a
                 non-extrapolating optimizer instead."""
+            )
+
+        if hasattr(self.primal_optimizer, "extrapolation") != hasattr(
+            self.dual_optimizer, "extrapolation"
+        ):
+            raise RuntimeError(
+                """Primal and dual optimizers do not agree on whether to use 
+                extrapolation or not."""
             )
 
     def custom_backward(self, lagrangian):
@@ -81,13 +91,16 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         return lagrangian
 
+    def extrapolation(self, closure):
+
+        if hasattr(self.primal_optimizer, "extrapolation"):
+            self.primal_optimizer.extrapolation(previous_lagrangian)
+            should_back_prop = True
+
     def step(self, closure, previous_lagrangian=None):
 
         # TODO: integrate extrapolation
         # should_back_prop = False
-        # if hasattr(self.primal_optimizer, "extrapolation"):
-        #     self.primal_optimizer.extrapolation(previous_lagrangian)
-        #     should_back_prop = True
 
         # if (
         #     self.is_constrained
