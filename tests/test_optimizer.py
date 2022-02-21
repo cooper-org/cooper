@@ -41,7 +41,7 @@ def test_toy_problem(aim_device, use_ineq):
     primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
 
     if use_ineq:
-        dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
+        dual_optimizer = torch_coop.optim.partial(torch_coop.optim.SGD, lr=1e-2)
     else:
         dual_optimizer = None
 

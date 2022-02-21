@@ -38,7 +38,7 @@ def test_toy_problem(aim_device):
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch_coop.optim.SGD([params], lr=5e-2, momentum=0.0)
-    dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
+    dual_optimizer = torch_coop.optim.partial(torch_coop.optim.SGD, lr=1e-2)
 
     cmp = torch_coop.ConstrainedMinimizationProblem(is_constrained=True)
     formulation = torch_coop.LagrangianFormulation(cmp)

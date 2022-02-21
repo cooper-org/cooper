@@ -1,4 +1,5 @@
 """(Extrapolation) Optimizer aliases"""
+import functools
 import math
 import torch
 from torch.optim import Optimizer
@@ -8,6 +9,14 @@ SGD = torch.optim.SGD
 Adam = torch.optim.Adam
 Adagrad = torch.optim.Adagrad
 RMSprop = torch.optim.RMSprop
+
+
+def partial(cls, *args, **kwds):
+    class PartialOptimizer(cls):
+        __init__ = functools.partialmethod(cls.__init__, *args, **kwds)
+
+    return PartialOptimizer
+
 
 # -----------------------------------------------------------------------------
 # Implementation of ExtraOptimizers below taken from:
