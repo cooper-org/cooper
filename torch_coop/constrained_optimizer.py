@@ -68,7 +68,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             self.dual_optimizer, "extrapolation"
         ):
             raise RuntimeError(
-                """Primal and dual optimizers do not agree on whether to use 
+                """Primal and dual optimizers do not agree on whether to use
                 extrapolation or not."""
             )
 
@@ -91,56 +91,62 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         return lagrangian
 
-    def extrapolation(self, closure):
+    def step(self, closure, closure_args=None):
 
-        if hasattr(self.primal_optimizer, "extrapolation"):
-            self.primal_optimizer.extrapolation(previous_lagrangian)
-            should_back_prop = True
+        if self.is_extrapolation:
+            # Store parameter copy and compute t+1/2 iterates
+            self.primal_optimizer.extrapolation()
+            if self.cmp.is_constrained:
+                self.dual_optimizer.extrapolation()
 
-    def step(self, closure, previous_lagrangian=None):
+            # Zero gradients and recompute loss at t+1/2
+            self.zero_grad()
 
-        # TODO: integrate extrapolation
-        # should_back_prop = False
+            if closure_args is None:
+                lagrangian = self.composite_objective(closure)
+                # We need the closure args here as the parameter values will have
+                # changed in the update applied on the extrapolation step
+            else:
+                lagrangian = self.composite_objective(closure(closure_args))
 
-        # if (
-        #     self.is_constrained
-        #     and not self.alternating
-        #     and hasattr(self.dual_optimizer, "extrapolation")
-        # ):
-        #     self.dual_optimizer.extrapolation(previous_lagrangian)
-        #     should_back_prop = True
+            # Populate gradients at extrapolation point
+            self.custom_backward(lagrangian)
 
-        # if should_back_prop:
-        #     closure_state = closure_fn()
-        #     lagrangian_ = self.lagrangian_backward(
-        #         *closure_state.as_tuple(), ignore_primal=False
-        #     )
+            # After this, the calls to `step` will update the stored copies with
+            # the newly computed gradients
+            self.primal_optimizer.step()
+            if self.cmp.is_constrained:
+                self.dual_step()
 
-        self.primal_optimizer.step()
+        else:
 
-        if self.cmp.is_constrained:
+            self.primal_optimizer.step()
 
-            if self.alternating:
-                # TODO: add test for this
+            if self.cmp.is_constrained:
 
-                # Once having updated primal parameters, re-compute gradient
-                # Skip gradient wrt model parameters to avoid wasteful computation
-                # as we only need gradient wrt multipliers.
-                with torch.no_grad():
-                    self.cmp.state = closure()
-                lagrangian = self.formulation.get_composite_objective(self.cmp)
+                if self.alternating:
+                    # TODO: add test for this
 
-                # Zero-out gradients for dual variables since they were already
-                # populated earlier.
-                # Also zeroing primal gradients for safety although not really
-                # necessary.
-                self.zero_grad(ignore_primal=False, ignore_dual=False)
+                    # Once having updated primal parameters, re-compute gradient
+                    # Skip gradient wrt model parameters to avoid wasteful computation
+                    # as we only need gradient wrt multipliers.
+                    with torch.no_grad():
+                        self.cmp.state = closure()
+                    lagrangian = self.formulation.get_composite_objective(self.cmp)
 
-                # Not passing lagrangian since we only want to update the
-                # gradients for the dual variables
-                self.formulation.populate_gradients(lagrangian=None, ignore_primal=True)
+                    # Zero-out gradients for dual variables since they were already
+                    # populated earlier.
+                    # Also zeroing primal gradients for safety although not really
+                    # necessary.
+                    self.zero_grad(ignore_primal=False, ignore_dual=False)
 
-            self.dual_step()
+                    # Not passing lagrangian since we only want to update the
+                    # gradients for the dual variables
+                    self.formulation.populate_gradients(
+                        lagrangian=None, ignore_primal=True
+                    )
+
+                self.dual_step()
 
     def dual_step(self):
 
