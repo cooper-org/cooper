@@ -10,38 +10,8 @@ import torch_coop
 import pytest
 import testing_utils
 
-
-def construct_closure(params):
-    param_x, param_y = params
-
-    def closure_fn():
-        # Define toy closure function
-
-        loss = param_x ** 2 + 2 * param_y ** 2
-
-        # Two inequality constraints
-        ineq_defect = torch.stack(
-            [
-                -param_x - param_y + 1.0,  # x + y \ge 1
-                param_x ** 2 + param_y - 1.0,  # x**2 + y \le 1.0
-            ]
-        )
-
-        # Using **slightly** different functions for the proxy constraints
-        proxy_ineq_defect = torch.stack(
-            [
-                -0.9 * param_x - param_y + 1.0,  # x + y \ge 1
-                param_x ** 2 + 0.9 * param_y - 1.0,  # x**2 + y \le 1.0
-            ]
-        )
-
-        closure_state = torch_coop.CMPState(
-            loss=loss, ineq_defect=ineq_defect, proxy_ineq_defect=proxy_ineq_defect
-        )
-
-        return closure_state
-
-    return closure_fn
+# Import basic closure example from helpers
+import closure_2d
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -61,6 +31,10 @@ def test_toy_problem(aim_device):
 
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
+
+    construct_closure = functools.partial(
+        closure_2d.construct_closure, use_ineq=True, use_proxy_ineq=True
+    )
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch_coop.optim.SGD([params], lr=5e-2, momentum=0.0)
