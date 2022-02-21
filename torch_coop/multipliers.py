@@ -30,3 +30,8 @@ class DenseMultiplier(torch.nn.Module):
 
     def __str__(self):
         return str(self.forward().data)
+
+    def __repr__(self):
+        pos_str = "inequality" if self.positive else "equality"
+        rep = "DenseMultiplier(" + pos_str + ", " + str(self.weight.data) + ")"
+        return rep
