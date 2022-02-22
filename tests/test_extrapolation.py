@@ -37,7 +37,7 @@ def test_extrapolation(aim_device, primal_optimizer_str):
 
     dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=1e-2)
 
-    construct_closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
+    closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
 
     cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
     formulation = cooper.LagrangianFormulation(cmp)
@@ -52,12 +52,12 @@ def test_extrapolation(aim_device, primal_optimizer_str):
     for step_id in range(2000):
         coop.zero_grad()
 
-        closure = construct_closure(params)
-        lagrangian = coop.composite_objective(closure)
+        # closure = construct_closure(params)
+        lagrangian = coop.composite_objective(closure, params)
 
         coop.custom_backward(lagrangian)
 
-        coop.step(construct_closure, closure_args=params)
+        coop.step(closure, params)
 
     if device == "cuda":
         assert cmp.state.loss.is_cuda
@@ -97,7 +97,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
 
     dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=1e-2)
 
-    construct_closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
+    closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
 
     cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
     formulation = cooper.LagrangianFormulation(cmp)
@@ -113,8 +113,9 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
     mktensor = functools.partial(torch.tensor, device=device)
 
     coop.zero_grad()
-    closure = construct_closure(params)
-    lagrangian = coop.composite_objective(closure)
+    # closure = construct_closure(params)
+    # lagrangian = coop.composite_objective(construct_closure, closure)
+    lagrangian = coop.composite_objective(closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -133,6 +134,6 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
     # Check updated primal and dual variable values
-    coop.step(construct_closure, closure_args=params)
+    coop.step(closure, params)
     assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))
     assert torch.allclose(formulation.state()[0], mktensor([0.0196, 0.0]))

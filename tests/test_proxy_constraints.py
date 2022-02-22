@@ -31,7 +31,7 @@ def test_toy_problem(aim_device):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    construct_closure = functools.partial(
+    closure = functools.partial(
         closure_2d.construct_closure, use_ineq=True, use_proxy_ineq=True
     )
 
@@ -55,8 +55,7 @@ def test_toy_problem(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    closure = construct_closure(params)
-    lagrangian = coop.composite_objective(closure)
+    lagrangian = coop.composite_objective(closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -77,14 +76,13 @@ def test_toy_problem(aim_device):
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
     # Check updated primal and dual variable values
-    coop.step(closure)
+    coop.step()
     assert torch.allclose(params, mktensor([0.0, -0.8]))
     assert torch.allclose(formulation.state()[0], mktensor([0.02, 0.0]))
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    closure = construct_closure(params)
-    lagrangian = coop.composite_objective(closure)
+    lagrangian = coop.composite_objective(closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.316))
@@ -99,7 +97,7 @@ def test_toy_problem(aim_device):
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
     # Check updated primal and dual variable values
-    coop.step(closure)
+    coop.step()
     assert torch.allclose(params, mktensor([9e-4, -0.639]))
     assert torch.allclose(formulation.state()[0], mktensor([0.038, 0.0]))
 

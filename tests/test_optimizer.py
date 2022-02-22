@@ -33,9 +33,7 @@ def test_toy_problem(aim_device, use_ineq):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    construct_closure = functools.partial(
-        closure_2d.construct_closure, use_ineq=use_ineq
-    )
+    closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
@@ -57,13 +55,9 @@ def test_toy_problem(aim_device, use_ineq):
 
     for step_id in range(1500):
         coop.zero_grad()
-
-        closure = construct_closure(params, use_ineq=use_ineq)
-        lagrangian = coop.composite_objective(closure)
-
+        lagrangian = coop.composite_objective(closure, params)
         coop.custom_backward(lagrangian)
-
-        coop.step(closure)
+        coop.step()
 
     if device == "cuda":
         assert cmp.state.loss.is_cuda

@@ -76,8 +76,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
     def custom_backward(self, lagrangian):
         self.formulation.populate_gradients(lagrangian)
 
-    def composite_objective(self, closure):
-        self.cmp.state = closure()
+    def composite_objective(self, closure, *closure_args, **closure_kwargs):
+
+        self.cmp.state = closure(*closure_args, **closure_kwargs)
+
         # If not done before, instantiate and initialize dual variables
         if self.cmp.is_constrained and (not self.formulation.is_state_created):
             self.formulation.create_state(self.cmp.state)
@@ -90,7 +92,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         return lagrangian
 
-    def step(self, closure, closure_args=None):
+    def step(self, closure=None, *closure_args, **closure_kwargs):
+
+        if self.is_extrapolation or self.alternating:
+            assert closure is not None
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
@@ -103,12 +108,11 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Zero gradients and recompute loss at t+1/2
             self.zero_grad()
 
-            if closure_args is None:
-                lagrangian = self.composite_objective(closure)
-                # We need the closure args here as the parameter values will have
-                # changed in the update applied on the extrapolation step
-            else:
-                lagrangian = self.composite_objective(closure(closure_args))
+            # For extrapolation, we need the closure args here as the parameter
+            # values will have changed in the update applied on the extrapolation step
+            lagrangian = self.composite_objective(
+                closure, *closure_args, **closure_kwargs
+            )
 
             # Populate gradients at extrapolation point
             self.custom_backward(lagrangian)
@@ -132,7 +136,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                     # Skip gradient wrt model parameters to avoid wasteful computation
                     # as we only need gradient wrt multipliers.
                     with torch.no_grad():
-                        self.cmp.state = closure()
+                        self.cmp.state = closure(*closure_args, **closure_kwargs)
                     lagrangian = self.formulation.get_composite_objective(self.cmp)
 
                     # Zero-out gradients for dual variables since they were already
