@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-"""Tests for Constrained Optimizer class."""
+"""Tests for Constrained Optimizer class. This test already verifies that the
+code behaves as expected for an unconstrained setting."""
 
 import functools
 
