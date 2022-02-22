@@ -34,17 +34,19 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
             self.formulation.aug_lag_coefficient > 0
         )
-        is_extrapolation = hasattr(self.primal_optimizer, "extrapolation") or hasattr(
-            self.dual_optimizer, "extrapolation"
-        )
 
-        if is_aug_lag and is_extrapolation:
+        # We assume that both optimizers agree on whether to use extrapolation
+        # or not, so we use the primal optimizer as reference for deciding if
+        # we use extrapolation. See check below for matching extrapolation behavior.
+        self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+
+        if is_aug_lag and self.is_extrapolation:
             raise NotImplementedError(
                 """It is currently not possible to use extrapolation and an
                 augmented Lagrangian formulation"""
             )
 
-        if is_alternating and is_extrapolation:
+        if is_alternating and self.is_extrapolation:
             raise RuntimeError(
                 """Should not use extrapolation and alternating updates
                 simultaneously. Please disable one of these two modes."""
@@ -56,20 +58,26 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 be unconstrained."""
             )
 
-        if not (self.cmp.is_constrained) and is_extrapolation:
+        if not (self.cmp.is_constrained) and self.is_extrapolation:
             raise RuntimeError(
                 """Using an extrapolating optimizer an unconstrained problem
                 might result in unexpected behavior. Consider using a
                 non-extrapolating optimizer instead."""
             )
 
+        if hasattr(self.primal_optimizer, "extrapolation") != hasattr(
+            self.dual_optimizer, "extrapolation"
+        ):
+            raise RuntimeError(
+                """Primal and dual optimizers do not agree on whether to use
+                extrapolation or not."""
+            )
+
     def custom_backward(self, lagrangian):
         self.formulation.populate_gradients(lagrangian)
 
     def composite_objective(self, closure):
-
         self.cmp.state = closure()
-
         # If not done before, instantiate and initialize dual variables
         if self.cmp.is_constrained and (not self.formulation.is_state_created):
             self.formulation.create_state(self.cmp.state)
@@ -82,55 +90,64 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         return lagrangian
 
-    def step(self, closure, previous_lagrangian=None):
+    def step(self, closure, closure_args=None):
 
-        # TODO: integrate extrapolation
-        # should_back_prop = False
-        # if hasattr(self.primal_optimizer, "extrapolation"):
-        #     self.primal_optimizer.extrapolation(previous_lagrangian)
-        #     should_back_prop = True
+        if self.is_extrapolation:
+            # Store parameter copy and compute t+1/2 iterates
+            self.primal_optimizer.extrapolation()
+            if self.cmp.is_constrained:
+                self.dual_step(call_extrapolation=True)
 
-        # if (
-        #     self.is_constrained
-        #     and not self.alternating
-        #     and hasattr(self.dual_optimizer, "extrapolation")
-        # ):
-        #     self.dual_optimizer.extrapolation(previous_lagrangian)
-        #     should_back_prop = True
+            # Zero gradients and recompute loss at t+1/2
+            self.zero_grad()
 
-        # if should_back_prop:
-        #     closure_state = closure_fn()
-        #     lagrangian_ = self.lagrangian_backward(
-        #         *closure_state.as_tuple(), ignore_primal=False
-        #     )
+            if closure_args is None:
+                lagrangian = self.composite_objective(closure)
+                # We need the closure args here as the parameter values will have
+                # changed in the update applied on the extrapolation step
+            else:
+                lagrangian = self.composite_objective(closure(closure_args))
 
-        self.primal_optimizer.step()
+            # Populate gradients at extrapolation point
+            self.custom_backward(lagrangian)
 
-        if self.cmp.is_constrained:
+            # After this, the calls to `step` will update the stored copies with
+            # the newly computed gradients
+            self.primal_optimizer.step()
+            if self.cmp.is_constrained:
+                self.dual_step()
 
-            if self.alternating:
-                # TODO: add test for this
+        else:
 
-                # Once having updated primal parameters, re-compute gradient
-                # Skip gradient wrt model parameters to avoid wasteful computation
-                # as we only need gradient wrt multipliers.
-                with torch.no_grad():
-                    self.cmp.state = closure()
-                lagrangian = self.formulation.get_composite_objective(self.cmp)
+            self.primal_optimizer.step()
 
-                # Zero-out gradients for dual variables since they were already
-                # populated earlier.
-                # Also zeroing primal gradients for safety although not really
-                # necessary.
-                self.zero_grad(ignore_primal=False, ignore_dual=False)
+            if self.cmp.is_constrained:
 
-                # Not passing lagrangian since we only want to update the
-                # gradients for the dual variables
-                self.formulation.populate_gradients(lagrangian=None, ignore_primal=True)
+                if self.alternating:
+                    # TODO: add test for this
 
-            self.dual_step()
+                    # Once having updated primal parameters, re-compute gradient
+                    # Skip gradient wrt model parameters to avoid wasteful computation
+                    # as we only need gradient wrt multipliers.
+                    with torch.no_grad():
+                        self.cmp.state = closure()
+                    lagrangian = self.formulation.get_composite_objective(self.cmp)
 
-    def dual_step(self):
+                    # Zero-out gradients for dual variables since they were already
+                    # populated earlier.
+                    # Also zeroing primal gradients for safety although not really
+                    # necessary.
+                    self.zero_grad(ignore_primal=False, ignore_dual=False)
+
+                    # Not passing lagrangian since we only want to update the
+                    # gradients for the dual variables
+                    self.formulation.populate_gradients(
+                        lagrangian=None, ignore_primal=True
+                    )
+
+                self.dual_step()
+
+    def dual_step(self, call_extrapolation=False):
 
         # Flip gradients for multipliers to perform ascent.
         # We only do the flipping *right before* applying the optimizer step to
@@ -140,7 +157,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 multiplier.grad.mul_(-1.0)
 
         # Update multipliers based on current constraint violations (gradients)
-        self.dual_optimizer.step()
+        if call_extrapolation:
+            self.dual_optimizer.extrapolation()
+        else:
+            self.dual_optimizer.step()
 
         if self.formulation.ineq_multipliers is not None:
             if self.dual_restarts:

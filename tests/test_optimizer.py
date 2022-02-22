@@ -40,7 +40,7 @@ def test_toy_problem(aim_device, use_ineq):
     primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
 
     if use_ineq:
-        dual_optimizer = functools.partial(cooper.optim.SGD, lr=1e-2)
+        dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-2)
     else:
         dual_optimizer = None
 
