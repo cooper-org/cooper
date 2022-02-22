@@ -96,6 +96,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Store parameter copy and compute t+1/2 iterates
             self.primal_optimizer.extrapolation()
             if self.cmp.is_constrained:
+                # Call to dual_step flips sign of gradients, then triggers call
+                # to dual_optimizer.extrapolation and projects dual variables
                 self.dual_step(call_extrapolation=True)
 
             # Zero gradients and recompute loss at t+1/2
