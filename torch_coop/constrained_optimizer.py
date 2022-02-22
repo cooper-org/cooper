@@ -1,6 +1,7 @@
 from typing import Optional
 
 import torch
+
 from .problem import Formulation
 
 
@@ -76,9 +77,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.formulation.populate_gradients(lagrangian)
 
     def composite_objective(self, closure):
-
         self.cmp.state = closure()
-
         # If not done before, instantiate and initialize dual variables
         if self.cmp.is_constrained and (not self.formulation.is_state_created):
             self.formulation.create_state(self.cmp.state)
@@ -97,7 +96,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Store parameter copy and compute t+1/2 iterates
             self.primal_optimizer.extrapolation()
             if self.cmp.is_constrained:
-                self.dual_optimizer.extrapolation()
+                self.dual_step(call_extrapolation=True)
 
             # Zero gradients and recompute loss at t+1/2
             self.zero_grad()
@@ -148,7 +147,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
                 self.dual_step()
 
-    def dual_step(self):
+    def dual_step(self, call_extrapolation=False):
 
         # Flip gradients for multipliers to perform ascent.
         # We only do the flipping *right before* applying the optimizer step to
@@ -158,7 +157,10 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 multiplier.grad.mul_(-1.0)
 
         # Update multipliers based on current constraint violations (gradients)
-        self.dual_optimizer.step()
+        if call_extrapolation:
+            self.dual_optimizer.extrapolation()
+        else:
+            self.dual_optimizer.step()
 
         if self.formulation.ineq_multipliers is not None:
             if self.dual_restarts:
