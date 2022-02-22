@@ -1,6 +1,7 @@
 from typing import Optional
 
 import torch
+
 from .problem import Formulation
 
 
@@ -57,8 +58,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         if not (self.cmp.is_constrained) and is_extrapolation:
             raise RuntimeError(
-                """Using an extrapolating optimizer an unconstrained problem 
-                might result in unexpected behavior. Consider using a 
+                """Using an extrapolating optimizer an unconstrained problem
+                might result in unexpected behavior. Consider using a
                 non-extrapolating optimizer instead."""
             )
 

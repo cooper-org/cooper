@@ -3,11 +3,11 @@ Constrained Optimization in Pytorch
 ===================================
 
 
-.. image:: https://img.shields.io/pypi/v/torch_coop.svg
-        :target: https://pypi.python.org/pypi/torch_coop
+.. image:: https://img.shields.io/pypi/v/cooper.svg
+        :target: https://pypi.python.org/pypi/cooper
 
-.. image:: https://img.shields.io/travis/gallego-posada/torch_coop.svg
-        :target: https://travis-ci.com/gallego-posada/torch_coop
+.. image:: https://img.shields.io/travis/gallego-posada/cooper.svg
+        :target: https://travis-ci.com/gallego-posada/cooper
 
 .. image:: https://readthedocs.org/projects/torch-coop/badge/?version=latest
         :target: https://torch-coop.readthedocs.io/en/latest/?version=latest

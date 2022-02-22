@@ -1,5 +1,6 @@
 import torch
-import torch_coop
+
+import cooper
 
 
 def construct_closure(params, use_ineq=False, use_proxy_ineq=False):
@@ -37,7 +38,7 @@ def construct_closure(params, use_ineq=False, use_proxy_ineq=False):
             ineq_defect = None
             proxy_ineq_defect = None
 
-        closure_state = torch_coop.CMPState(
+        closure_state = cooper.CMPState(
             loss=loss,
             eq_defect=eq_defect,
             ineq_defect=ineq_defect,

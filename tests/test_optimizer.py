@@ -4,14 +4,13 @@
 
 import functools
 
-import torch
-import torch_coop
-
-import pytest
-import testing_utils
-
 # Import basic closure example from helpers
 import closure_2d
+import pytest
+import testing_utils
+import torch
+
+import cooper
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -38,17 +37,17 @@ def test_toy_problem(aim_device, use_ineq):
     )
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = torch_coop.optim.SGD([params], lr=1e-2, momentum=0.3)
+    primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
 
     if use_ineq:
-        dual_optimizer = functools.partial(torch_coop.optim.SGD, lr=1e-2)
+        dual_optimizer = functools.partial(cooper.optim.SGD, lr=1e-2)
     else:
         dual_optimizer = None
 
-    cmp = torch_coop.ConstrainedMinimizationProblem(is_constrained=use_ineq)
-    formulation = torch_coop.LagrangianFormulation(cmp)
+    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=use_ineq)
+    formulation = cooper.LagrangianFormulation(cmp)
 
-    coop = torch_coop.ConstrainedOptimizer(
+    coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optimizer,
         dual_optimizer=dual_optimizer,

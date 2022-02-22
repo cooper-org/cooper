@@ -4,7 +4,6 @@ from typing import Optional
 
 import torch
 
-
 # Formulation, and some other classes below, are heavily inspired by the design
 # of the TensorFlow Constrained Optimization (TFCO) library :
 # https://github.com/google-research/tensorflow_constrained_optimization
@@ -52,6 +51,9 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
 class Formulation(abc.ABC):
     """Base class for Lagrangian and proxy-Lagrangian formulations"""
+
+    def __init__(self):
+        self.cmp = None
 
     @abc.abstractmethod
     def state(self):

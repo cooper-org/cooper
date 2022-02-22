@@ -12,7 +12,7 @@ To install Constrained Optimization in Pytorch, run this command in your termina
 
 .. code-block:: console
 
-    $ pip install torch_coop
+    $ pip install cooper
 
 This is the preferred method to install Constrained Optimization in Pytorch, as it will always install the most recent stable release.
 
@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/gallego-posada/torch_coop
+    $ git clone git://github.com/gallego-posada/cooper
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/gallego-posada/torch_coop/tarball/master
+    $ curl -OJL https://github.com/gallego-posada/cooper/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/gallego-posada/torch_coop
-.. _tarball: https://github.com/gallego-posada/torch_coop/tarball/master
+.. _Github repo: https://github.com/gallego-posada/cooper
+.. _tarball: https://github.com/gallego-posada/cooper/tarball/master

@@ -1,5 +1,6 @@
 """(Extrapolation) Optimizer aliases"""
 import math
+
 import torch
 from torch.optim import Optimizer
 

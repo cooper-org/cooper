@@ -2,11 +2,12 @@
 
 import abc
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import torch
-from .problem import Formulation
+
 from .multipliers import DenseMultiplier
+from .problem import Formulation
 
 
 class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
@@ -28,7 +29,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         self.ineq_init = ineq_init
         self.eq_init = eq_init
 
-        self.state_update = []
+        self.state_update: List[torch.Tensor] = []
 
         if aug_lag_coefficient < 0:
             raise ValueError("Augmented Lagrangian coefficient must be non-negative.")

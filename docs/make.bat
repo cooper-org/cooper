@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=torch_coop
+set SPHINXPROJ=cooper
 
 if "%1" == "" goto help
 
