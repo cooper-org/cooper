@@ -1,1 +1,1 @@
---editable ".[dev, docs]"
+--editable ".[dev, docs, tests, examples]"
