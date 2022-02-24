@@ -34,7 +34,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         )
 
     @abc.abstractmethod
-    def update_state(self, *closure_args, **closure_kwargs):
+    def update_state(self, *cmp_args, **cmp_kwargs):
         """Defined by the user. Sets the state of the problem given args
         and kwargs."""
         pass
@@ -68,8 +68,7 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def composite_objective(self, *closure_args, **closure_kwargs):
-        """Closure-like function"""
+    def composite_objective(self, *cmp_args, **closure_kwargs):
         pass
 
     @abc.abstractmethod

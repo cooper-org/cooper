@@ -118,7 +118,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
     @abc.abstractmethod
-    def composite_objective(self, *closure_args, **closure_kwargs):
+    def composite_objective(self, *cmp_args, **cmp_kwargs):
         pass
 
     @abc.abstractmethod
@@ -161,9 +161,9 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
-    def composite_objective(self, *closure_args, **closure_kwargs):
+    def composite_objective(self, *cmp_args, **cmp_kwargs):
 
-        self.cmp.update_state(*closure_args, **closure_kwargs)
+        self.cmp.update_state(*cmp_args, **cmp_kwargs)
 
         if self.cmp.is_constrained and (not self.is_state_created):
             # If not done before, instantiate and initialize dual variables

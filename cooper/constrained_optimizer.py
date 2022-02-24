@@ -73,7 +73,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 extrapolation or not."""
             )
 
-    def step(self, *closure_args, **closure_kwargs):
+    def step(self, *cmp_args, **cmp_kwargs):
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
             # Instantiates dual_optimizer
@@ -90,15 +90,15 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Zero gradients and recompute loss at t+1/2
             self.zero_grad()
 
-            # For extrapolation, we need the closure args here as the parameter
+            # For extrapolation, we need the cmp args here as the parameter
             # values will have changed in the update applied on the extrapolation step
             try:
                 lagrangian = self.formulation.composite_objective(
-                    *closure_args, **closure_kwargs
+                    *cmp_args, **cmp_kwargs
                 )
             except RuntimeError:
                 raise RuntimeError(
-                    "Did not provide adecquate args for closure to\
+                    "Did not provide adecquate cmp_args, cmp_kwargs to\
                     recompute Lagrangian during extrapolation."
                 )
 
@@ -124,14 +124,14 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                     # Skip gradient wrt model parameters to avoid wasteful computation
                     # as we only need gradient wrt multipliers.
                     with torch.no_grad():
-                        self.cmp.update_state(*closure_args, **closure_kwargs)
+                        self.cmp.update_state(*cmp_args, **cmp_kwargs)
                     try:
                         lagrangian = self.formulation.composite_objective(
-                            *closure_args, **closure_kwargs
+                            *cmp_args, **cmp_kwargs
                         )
                     except RuntimeError:
                         raise RuntimeError(
-                            "Did not provide adecquate args for closure to\
+                            "Did not provide adecquate cmp_args, cmp_kwargs to\
                             recompute Lagrangian during extrapolation."
                         )
 

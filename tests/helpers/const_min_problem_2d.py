@@ -8,7 +8,7 @@ class CustomCMP(cooper.ConstrainedMinimizationProblem):
         super().__init__(is_constrained)
 
     def update_state(self, params, use_ineq=False, use_proxy_ineq=False):
-        """Define toy `closure` function"""
+        """Define toy `cmp` function"""
 
         param_x, param_y = params
         self.loss = param_x ** 2 + 2 * param_y ** 2

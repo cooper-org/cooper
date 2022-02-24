@@ -3,7 +3,7 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
-# Import basic closure example from helpers
+# Import basic cmp example from helpers
 import const_min_problem_2d
 import pytest
 import testing_utils
