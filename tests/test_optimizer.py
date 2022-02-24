@@ -54,8 +54,8 @@ def test_toy_problem(aim_device, use_ineq):
 
     for step_id in range(1500):
         coop.zero_grad()
-        lagrangian = coop.composite_objective(cmp.closure, params)
-        coop.custom_backward(lagrangian)
+        lagrangian = formulation.composite_objective(cmp.closure, params)
+        formulation.custom_backward(lagrangian)
         coop.step()
 
     if device == "cuda":
