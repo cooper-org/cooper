@@ -3,10 +3,8 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
-import functools
-
 # Import basic closure example from helpers
-import closure_2d
+import const_min_problem_2d
 import pytest
 import testing_utils
 import torch
@@ -33,8 +31,6 @@ def test_toy_problem(aim_device, use_ineq):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
-
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
 
@@ -43,7 +39,7 @@ def test_toy_problem(aim_device, use_ineq):
     else:
         dual_optimizer = None
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=use_ineq)
+    cmp = const_min_problem_2d.CustomCMP(is_constrained=use_ineq)
     formulation = cooper.LagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
@@ -53,16 +49,16 @@ def test_toy_problem(aim_device, use_ineq):
         dual_restarts=True,
     )
 
-    for step_id in range(1500):
+    for _ in range(1500):
         coop.zero_grad()
-        lagrangian = coop.composite_objective(closure, params)
+        lagrangian = coop.composite_objective(params, use_ineq=True)
         coop.custom_backward(lagrangian)
         coop.step()
 
     if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
-        assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
+        assert cmp.loss.is_cuda
+        assert cmp.eq_defect is None or cmp.eq_defect.is_cuda
+        assert cmp.ineq_defect is None or cmp.ineq_defect.is_cuda
 
     if use_ineq:
         assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))

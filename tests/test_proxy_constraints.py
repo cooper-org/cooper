@@ -5,7 +5,7 @@
 import functools
 
 # Import basic closure example from helpers
-import closure_2d
+import const_min_problem_2d
 import pytest
 import testing_utils
 import torch
@@ -31,15 +31,11 @@ def test_toy_problem(aim_device):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    closure = functools.partial(
-        closure_2d.construct_closure, use_ineq=True, use_proxy_ineq=True
-    )
-
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = cooper.optim.SGD([params], lr=5e-2, momentum=0.0)
     dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-2)
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
+    cmp = const_min_problem_2d.CustomCMP(is_constrained=True)
     formulation = cooper.LagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
@@ -55,15 +51,15 @@ def test_toy_problem(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(closure, params)
+    lagrangian = coop.composite_objective(params, use_ineq=True, use_proxy_ineq=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
-    assert torch.allclose(cmp.state.loss, mktensor(2.0))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([2.0, -2.0]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([2.0, -1.9]))
-    assert cmp.state.eq_defect is None
-    assert cmp.state.proxy_eq_defect is None
+    assert torch.allclose(cmp.loss, mktensor(2.0))
+    assert torch.allclose(cmp.ineq_defect, mktensor([2.0, -2.0]))
+    assert torch.allclose(cmp.proxy_ineq_defect, mktensor([2.0, -1.9]))
+    assert cmp.eq_defect is None
+    assert cmp.proxy_eq_defect is None
 
     # Multiplier initialization
     assert torch.allclose(formulation.state()[0], mktensor([0.0, 0.0]))
@@ -73,7 +69,7 @@ def test_toy_problem(aim_device):
     # ineq_defect
     coop.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    assert torch.allclose(formulation.state()[0].grad, cmp.ineq_defect)
 
     # Check updated primal and dual variable values
     coop.step()
@@ -82,19 +78,19 @@ def test_toy_problem(aim_device):
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(closure, params)
+    lagrangian = coop.composite_objective(params, use_ineq=True, use_proxy_ineq=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.316))
-    assert torch.allclose(cmp.state.loss, mktensor(1.28))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([1.8, -1.8]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([1.8, -1.72]))
+    assert torch.allclose(cmp.loss, mktensor(1.28))
+    assert torch.allclose(cmp.ineq_defect, mktensor([1.8, -1.8]))
+    assert torch.allclose(cmp.proxy_ineq_defect, mktensor([1.8, -1.72]))
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
     coop.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([-0.018, -3.22]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    assert torch.allclose(formulation.state()[0].grad, cmp.ineq_defect)
 
     # Check updated primal and dual variable values
     coop.step()
@@ -102,5 +98,5 @@ def test_toy_problem(aim_device):
     assert torch.allclose(formulation.state()[0], mktensor([0.038, 0.0]))
 
     if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.ineq_defect.is_cuda
+        assert cmp.loss.is_cuda
+        assert cmp.ineq_defect.is_cuda

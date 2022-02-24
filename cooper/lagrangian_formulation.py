@@ -59,7 +59,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
         return all_duals
 
-    def create_state(self, cmp_state):
+    def create_state(self):
         """Initialize dual variables and optimizers given list of equality and
         inequality defects.
 
@@ -73,8 +73,8 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
             mult_name = constraint_type + "_multipliers"
 
-            defect = getattr(cmp_state, constraint_type + "_defect")
-            proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+            defect = getattr(self.cmp, constraint_type + "_defect")
+            proxy_defect = getattr(self.cmp, "proxy_" + constraint_type + "_defect")
 
             has_defect = defect is not None
             has_proxy_defect = proxy_defect is not None
@@ -128,12 +128,12 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     def purge_state_update(self):
         self.state_update = []
 
-    def weighted_violation(self, cmp_state, constraint_type):
+    def weighted_violation(self, constraint_type):
 
-        defect = getattr(cmp_state, constraint_type + "_defect")
+        defect = getattr(self.cmp, constraint_type + "_defect")
         has_defect = defect is not None
 
-        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+        proxy_defect = getattr(self.cmp, "proxy_" + constraint_type + "_defect")
         has_proxy_defect = proxy_defect is not None
 
         if not has_proxy_defect:
@@ -163,11 +163,9 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 class LagrangianFormulation(BaseLagrangianFormulation):
     def get_composite_objective(self):
 
-        cmp_state = self.cmp.state
-
         # Extract values from ProblemState object
-        loss = cmp_state.loss
-        ineq_defect, eq_defect = cmp_state.ineq_defect, cmp_state.eq_defect
+        loss = self.cmp.loss
+        ineq_defect, eq_defect = self.cmp.ineq_defect, self.cmp.eq_defect
 
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
@@ -178,8 +176,8 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # the non-proxy violations.
             # If not given proxy constraints, then gradients and multiplier updates
             # are based on the "regular" constraints.
-            ineq_viol = self.weighted_violation(cmp_state, "ineq")
-            eq_viol = self.weighted_violation(cmp_state, "eq")
+            ineq_viol = self.weighted_violation("ineq")
+            eq_viol = self.weighted_violation("eq")
 
             # Lagrangian = loss + \sum_i multiplier_i * defect_i
             lagrangian = loss + ineq_viol + eq_viol
@@ -208,7 +206,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 lagrangian += self.aug_lag_coefficient * (ineq_square + eq_square)
 
         else:
-            lagrangian = cmp_state.loss
+            lagrangian = self.cmp.loss
 
         return lagrangian
 

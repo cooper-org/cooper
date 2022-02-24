@@ -9,11 +9,8 @@ import torch
 # https://github.com/google-research/tensorflow_constrained_optimization
 
 
-@dataclass
-class CMPState:
-    """Represents the "state" of a Constrained Minimization Problem in terms of
-    the value of its loss and constraint violations/defects.
-    """
+class ConstrainedMinimizationProblem(abc.ABC):
+    """Constrained minimization problem base class."""
 
     loss: Optional[torch.Tensor] = None
     ineq_defect: Optional[torch.Tensor] = None
@@ -22,7 +19,11 @@ class CMPState:
     proxy_eq_defect: Optional[torch.Tensor] = None
     misc: Optional[dict] = None
 
-    def as_tuple(self) -> tuple:
+    def __init__(self, is_constrained=False):
+        self.is_constrained = is_constrained
+
+    @property
+    def state(self) -> tuple:
         return (
             self.loss,
             self.ineq_defect,
@@ -32,21 +33,11 @@ class CMPState:
             self.misc,
         )
 
-
-class ConstrainedMinimizationProblem(abc.ABC):
-    """Constrained minimization problem base class."""
-
-    def __init__(self, is_constrained=False):
-        self.is_constrained = is_constrained
-        self._state = None
-
-    @property
-    def state(self) -> CMPState:
-        return self._state
-
     @state.setter
-    def state(self, value: CMPState):
-        self._state = value
+    def state(self, *args, **kwargs):
+        """Defined by the user. Sets the state of the problem given args
+        and kwargs."""
+        pass
 
 
 class Formulation(abc.ABC):
