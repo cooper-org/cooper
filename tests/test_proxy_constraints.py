@@ -67,7 +67,7 @@ def test_toy_problem(aim_device):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    coop.custom_backward(lagrangian)
+    formulation.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.ineq_defect)
 
@@ -88,7 +88,7 @@ def test_toy_problem(aim_device):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    coop.custom_backward(lagrangian)
+    formulation.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([-0.018, -3.22]))
     assert torch.allclose(formulation.state()[0].grad, cmp.ineq_defect)
 

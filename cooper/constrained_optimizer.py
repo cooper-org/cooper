@@ -73,9 +73,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 extrapolation or not."""
             )
 
-    def custom_backward(self, lagrangian):
-        self.formulation.populate_gradients(lagrangian)
-
     def composite_objective(self, *closure_args, **closure_kwargs):
 
         self.cmp.update_state(*closure_args, **closure_kwargs)
@@ -116,7 +113,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 )
 
             # Populate gradients at extrapolation point
-            self.custom_backward(lagrangian)
+            self.formulation.custom_backward(lagrangian)
 
             # After this, the calls to `step` will update the stored copies with
             # the newly computed gradients

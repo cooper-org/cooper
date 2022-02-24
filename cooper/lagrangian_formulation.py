@@ -210,6 +210,9 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         return lagrangian
 
+    def custom_backward(self, lagrangian):
+        self.populate_gradients(lagrangian)
+
     def populate_gradients(self, lagrangian, ignore_primal=False):
         # ignore_primal is used for alternating updates
 

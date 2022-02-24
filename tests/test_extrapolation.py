@@ -49,7 +49,7 @@ def test_extrapolation(aim_device, primal_optimizer_str):
     for _ in range(2000):
         coop.zero_grad()
         lagrangian = coop.composite_objective(params, use_ineq=True)
-        coop.custom_backward(lagrangian)
+        formulation.custom_backward(lagrangian)
         coop.step(params, use_ineq=True)
 
     if device == "cuda":
@@ -117,7 +117,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    coop.custom_backward(lagrangian)
+    formulation.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.ineq_defect)
 
