@@ -30,12 +30,12 @@ def test_custom_projection():
     class CustomProjectionMultiplier(cooper.multipliers.DenseMultiplier):
         def project_(self):
             # Project multipliers so that maximum non-zero entry is exactly 1
-            max_entry = torch.relu(self.weight).max()
+            max_entry = torch.relu(self.data).max()
             if max_entry > 0:
-                self.weight.data = self.weight.data / max_entry
+                self.data = self.data / max_entry
 
     init_tensor = torch.randn(100, 1)
     multiplier = CustomProjectionMultiplier(init_tensor)
 
     multiplier.project_()
-    assert torch.allclose(multiplier.weight.data.max(), torch.tensor([1.0]))
+    assert torch.allclose(multiplier.data.max(), torch.tensor([1.0]))
