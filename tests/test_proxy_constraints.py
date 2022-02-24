@@ -4,11 +4,12 @@
 
 import functools
 
-# Import basic closure example from helpers
-import closure_2d
 import pytest
 import testing_utils
 import torch
+
+# Import basic closure example from helpers
+import toy_2d_problem
 
 import cooper
 
@@ -31,15 +32,11 @@ def test_toy_problem(aim_device):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    closure = functools.partial(
-        closure_2d.construct_closure, use_ineq=True, use_proxy_ineq=True
-    )
-
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = cooper.optim.SGD([params], lr=5e-2, momentum=0.0)
     dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-2)
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
+    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True, use_proxy_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
@@ -55,7 +52,7 @@ def test_toy_problem(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(closure, params)
+    lagrangian = coop.composite_objective(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -82,7 +79,7 @@ def test_toy_problem(aim_device):
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(closure, params)
+    lagrangian = coop.composite_objective(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.316))

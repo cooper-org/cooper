@@ -5,11 +5,12 @@ code behaves as expected for an unconstrained setting."""
 
 import functools
 
-# Import basic closure example from helpers
-import closure_2d
 import pytest
 import testing_utils
 import torch
+
+# Import basic closure example from helpers
+import toy_2d_problem
 
 import cooper
 
@@ -33,8 +34,6 @@ def test_toy_problem(aim_device, use_ineq):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    closure = functools.partial(closure_2d.construct_closure, use_ineq=True)
-
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
 
@@ -43,7 +42,7 @@ def test_toy_problem(aim_device, use_ineq):
     else:
         dual_optimizer = None
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=use_ineq)
+    cmp = toy_2d_problem.Toy2dCMP(use_ineq=use_ineq)
     formulation = cooper.LagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
@@ -55,7 +54,7 @@ def test_toy_problem(aim_device, use_ineq):
 
     for step_id in range(1500):
         coop.zero_grad()
-        lagrangian = coop.composite_objective(closure, params)
+        lagrangian = coop.composite_objective(cmp.closure, params)
         coop.custom_backward(lagrangian)
         coop.step()
 

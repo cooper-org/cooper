@@ -48,6 +48,9 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def state(self, value: CMPState):
         self._state = value
 
+    def closure(self) -> CMPState:
+        raise NotImplementedError("Closure function is not implemented.")
+
 
 class Formulation(abc.ABC):
     """Base class for Lagrangian and proxy-Lagrangian formulations"""
