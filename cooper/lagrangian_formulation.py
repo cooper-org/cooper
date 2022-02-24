@@ -118,7 +118,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
     @abc.abstractmethod
-    def get_composite_objective(self):
+    def composite_objective(self, *closure_args, **closure_kwargs):
         pass
 
     @abc.abstractmethod
@@ -171,11 +171,6 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         # Compute Lagrangian based on current loss and values of multipliers
         self.purge_state_update()
-        lagrangian = self.get_composite_objective()
-
-        return lagrangian
-
-    def get_composite_objective(self):
 
         # Extract values from ProblemState object
         loss = self.cmp.loss

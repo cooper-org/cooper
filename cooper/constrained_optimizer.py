@@ -99,7 +99,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             except RuntimeError:
                 raise RuntimeError(
                     "Did not provide adecquate args for closure to\
-                    recompute Lagrangian during extrapolation or alternating."
+                    recompute Lagrangian during extrapolation."
                 )
 
             # Populate gradients at extrapolation point
@@ -125,8 +125,15 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                     # as we only need gradient wrt multipliers.
                     with torch.no_grad():
                         self.cmp.update_state(*closure_args, **closure_kwargs)
-                    # TODO: should recalculate Lagrangian like in extrapolation
-                    lagrangian = self.formulation.get_composite_objective()
+                    try:
+                        lagrangian = self.formulation.composite_objective(
+                            *closure_args, **closure_kwargs
+                        )
+                    except RuntimeError:
+                        raise RuntimeError(
+                            "Did not provide adecquate args for closure to\
+                            recompute Lagrangian during extrapolation."
+                        )
 
                     # Zero-out gradients for dual variables since they were already
                     # populated earlier.

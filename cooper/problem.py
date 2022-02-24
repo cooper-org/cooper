@@ -68,7 +68,7 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_composite_objective(self):
+    def composite_objective(self, *closure_args, **closure_kwargs):
         """Closure-like function"""
         pass
 
