@@ -50,11 +50,8 @@ def test_extrapolation(aim_device, primal_optimizer_str):
 
     for step_id in range(2000):
         coop.zero_grad()
-
-        lagrangian = coop.composite_objective(cmp.closure, params)
-
-        coop.custom_backward(lagrangian)
-
+        lagrangian = formulation.composite_objective(cmp.closure, params)
+        formulation.custom_backward(lagrangian)
         coop.step(cmp.closure, params)
 
     if device == "cuda":
@@ -109,7 +106,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
     mktensor = functools.partial(torch.tensor, device=device)
 
     coop.zero_grad()
-    lagrangian = coop.composite_objective(cmp.closure, params)
+    lagrangian = formulation.composite_objective(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -123,7 +120,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    coop.custom_backward(lagrangian)
+    formulation.custom_backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 

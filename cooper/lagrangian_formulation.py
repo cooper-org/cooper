@@ -117,14 +117,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         """Returns True if any Lagrange multipliers have been initialized"""
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
-    @abc.abstractmethod
-    def get_composite_objective(self):
-        pass
-
-    @abc.abstractmethod
-    def populate_gradients(self):
-        pass
-
     def purge_state_update(self):
         self.state_update = []
 
@@ -161,13 +153,24 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
-    def get_composite_objective(self):
+    def composite_objective(
+        self, closure, *closure_args, write_state=True, **closure_kwargs
+    ):
 
-        cmp_state = self.cmp.state
+        cmp_state = closure(*closure_args, **closure_kwargs)
+        if write_state:
+            self.cmp.state = cmp_state
 
         # Extract values from ProblemState object
         loss = cmp_state.loss
         ineq_defect, eq_defect = cmp_state.ineq_defect, cmp_state.eq_defect
+
+        if self.cmp.is_constrained and (not self.is_state_created):
+            # If not done before, instantiate and initialize dual variables
+            self.create_state(cmp_state)
+
+        # Compute Lagrangian based on current loss and values of multipliers
+        self.purge_state_update()
 
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
@@ -233,3 +236,9 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             for violation_for_update in self.state_update:
 
                 violation_for_update.backward(inputs=self.no_none_state())
+
+    def custom_backward(self, lagrangian):
+        """Alias for ``populate_gradients`` to stick with the Pytorch standard
+        naming of "backwards".
+        """
+        self.populate_gradients(lagrangian)

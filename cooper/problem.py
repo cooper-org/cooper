@@ -74,14 +74,8 @@ class Formulation(abc.ABC):
         """Returns True if the internal state has been created"""
         pass
 
-    @property
     @abc.abstractmethod
-    def dual_parameters(self):
-        pass
-
-    @abc.abstractmethod
-    def get_composite_objective(self, cmp):
-        """Closure-like function"""
+    def composite_objective(self):
         pass
 
     @abc.abstractmethod

@@ -73,26 +73,11 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 extrapolation or not."""
             )
 
-    def custom_backward(self, lagrangian):
-        self.formulation.populate_gradients(lagrangian)
-
-    def composite_objective(self, closure, *closure_args, **closure_kwargs):
-
-        self.cmp.state = closure(*closure_args, **closure_kwargs)
-
-        # If not done before, instantiate and initialize dual variables
-        if self.cmp.is_constrained and (not self.formulation.is_state_created):
-            self.formulation.create_state(self.cmp.state)
-            # Instantiates dual_optimizer
-            self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
-
-        # Compute Lagrangian based on current loss and values of multipliers
-        self.formulation.purge_state_update()
-        lagrangian = self.formulation.get_composite_objective()
-
-        return lagrangian
-
     def step(self, closure=None, *closure_args, **closure_kwargs):
+
+        if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
+            # Checks if needed and instantiates dual_optimizer
+            self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
 
         if self.is_extrapolation or self.alternating:
             assert closure is not None
@@ -110,12 +95,12 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
             # For extrapolation, we need the closure args here as the parameter
             # values will have changed in the update applied on the extrapolation step
-            lagrangian = self.composite_objective(
+            lagrangian = self.formulation.composite_objective(
                 closure, *closure_args, **closure_kwargs
             )
 
             # Populate gradients at extrapolation point
-            self.custom_backward(lagrangian)
+            self.formulation.custom_backward(lagrangian)
 
             # After this, the calls to `step` will update the stored copies with
             # the newly computed gradients
