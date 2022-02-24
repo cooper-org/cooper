@@ -51,7 +51,9 @@ def test_toy_problem(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(params, use_ineq=True, use_proxy_ineq=True)
+    lagrangian = formulation.composite_objective(
+        params, use_ineq=True, use_proxy_ineq=True
+    )
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -78,7 +80,9 @@ def test_toy_problem(aim_device):
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    lagrangian = coop.composite_objective(params, use_ineq=True, use_proxy_ineq=True)
+    lagrangian = formulation.composite_objective(
+        params, use_ineq=True, use_proxy_ineq=True
+    )
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.316))

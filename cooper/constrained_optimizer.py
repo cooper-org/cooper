@@ -73,23 +73,11 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 extrapolation or not."""
             )
 
-    def composite_objective(self, *closure_args, **closure_kwargs):
+    def step(self, *closure_args, **closure_kwargs):
 
-        self.cmp.update_state(*closure_args, **closure_kwargs)
-
-        # If not done before, instantiate and initialize dual variables
-        if self.cmp.is_constrained and (not self.formulation.is_state_created):
-            self.formulation.create_state()
+        if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
             # Instantiates dual_optimizer
             self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
-
-        # Compute Lagrangian based on current loss and values of multipliers
-        self.formulation.purge_state_update()
-        lagrangian = self.formulation.get_composite_objective()
-
-        return lagrangian
-
-    def step(self, *closure_args, **closure_kwargs):
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
@@ -105,7 +93,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # For extrapolation, we need the closure args here as the parameter
             # values will have changed in the update applied on the extrapolation step
             try:
-                lagrangian = self.composite_objective(*closure_args, **closure_kwargs)
+                lagrangian = self.formulation.composite_objective(
+                    *closure_args, **closure_kwargs
+                )
             except RuntimeError:
                 raise RuntimeError(
                     "Did not provide adecquate args for closure to\

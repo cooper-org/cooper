@@ -161,6 +161,20 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
+    def composite_objective(self, *closure_args, **closure_kwargs):
+
+        self.cmp.update_state(*closure_args, **closure_kwargs)
+
+        if self.cmp.is_constrained and (not self.is_state_created):
+            # If not done before, instantiate and initialize dual variables
+            self.create_state()
+
+        # Compute Lagrangian based on current loss and values of multipliers
+        self.purge_state_update()
+        lagrangian = self.get_composite_objective()
+
+        return lagrangian
+
     def get_composite_objective(self):
 
         # Extract values from ProblemState object

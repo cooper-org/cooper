@@ -48,7 +48,7 @@ def test_extrapolation(aim_device, primal_optimizer_str):
 
     for _ in range(2000):
         coop.zero_grad()
-        lagrangian = coop.composite_objective(params, use_ineq=True)
+        lagrangian = formulation.composite_objective(params, use_ineq=True)
         formulation.custom_backward(lagrangian)
         coop.step(params, use_ineq=True)
 
@@ -103,7 +103,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
     mktensor = functools.partial(torch.tensor, device=device)
 
     coop.zero_grad()
-    lagrangian = coop.composite_objective(params, use_ineq=True)
+    lagrangian = formulation.composite_objective(params, use_ineq=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
