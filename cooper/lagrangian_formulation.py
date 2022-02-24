@@ -35,18 +35,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             raise ValueError("Augmented Lagrangian coefficient must be non-negative.")
         self.aug_lag_coefficient = aug_lag_coefficient
 
-    def state(self):
-        """Evaluates and returns all multipliers"""
-        ineq_state = None if self.ineq_multipliers is None else self.ineq_multipliers()
-        eq_state = None if self.eq_multipliers is None else self.eq_multipliers()
-
-        return ineq_state, eq_state
-
-    def no_none_state(self):
-        """Returns self.state with Nones removed. Used for passing as inputs to
-        backwards."""
-        return [_ for _ in self.state() if _ is not None]
-
     @property
     def dual_parameters(self):
         all_duals = []
@@ -58,6 +46,13 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             all_duals += [self.ineq_multipliers()]
 
         return all_duals
+
+    def state(self):
+        """Evaluates and returns all multipliers"""
+        ineq_state = None if self.ineq_multipliers is None else self.ineq_multipliers()
+        eq_state = None if self.eq_multipliers is None else self.eq_multipliers()
+
+        return ineq_state, eq_state
 
     def create_state(self, cmp_state):
         """Initialize dual variables and optimizers given list of equality and
@@ -234,8 +229,8 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         # This is equivalent to setting `dual_vars.grad = defect`
         if self.cmp.is_constrained:
             for violation_for_update in self.state_update:
-
-                violation_for_update.backward(inputs=self.no_none_state())
+                dual_vars = [_ for _ in self.state() if _ is not None]
+                violation_for_update.backward(inputs=dual_vars)
 
     def custom_backward(self, lagrangian):
         """Alias for ``populate_gradients`` to stick with the Pytorch standard
