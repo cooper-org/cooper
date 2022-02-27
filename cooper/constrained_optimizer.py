@@ -1,3 +1,13 @@
+# coding: utf8
+""" Implementation of :py:class:`ConstrainedOptimizer` object which has 2 main
+methods:
+- :py:meth:`~ConstrainedOptimizer.zero_grad`
+- :py:meth:`~ConstrainedOptimizer.step`
+.. seealso:
+    # TODO: Add link!
+    `Documentation on ReadTheDocs `
+"""
+
 from typing import Optional
 
 import torch
@@ -6,6 +16,20 @@ from .problem import Formulation
 
 
 class ConstrainedOptimizer(torch.optim.Optimizer):
+    """
+    Base constrained optimizer class.
+
+    A ``ConstrainedOptimizer`` includes one or two ``torch.optim.Optimizer``s,
+    for the primal and dual problems, respectively. It aims to optimize a given
+    ``Formulation`` of a ``ConstrainedMinimizationProblem``.
+
+    A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
+    ``ConstrainedMinimizationProblem``s. Please refer to the documentation
+    of the :py:class:`cooper.problem.ConstrainedMinimizationProblem` and
+    :py:class:`cooper.problem.Formulation` classes for further details on handling
+    unconstrained problems.
+    """
+
     def __init__(
         self,
         formulation: Formulation,
@@ -13,9 +37,43 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         dual_optimizer: Optional[torch.optim.Optimizer] = None,
         alternating=False,
         dual_restarts=False,
-        verbose=False,
     ):
+        """
+        Constructs a new ``ConstrainedOptimizer``.
 
+        :param formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
+        to be optimized.
+        :type formulation: Formulation
+
+        :param primal_optimizer: Fully instantiated ``torch.optim.Optimizer`` used
+        to optimize the primal parameters (e.g. model parameters).
+        :type primal_optimizer: torch.optim.Optimizer
+
+        :param dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
+        used to optimize the dual variables (e.g. Lagrange multipliers). We refer
+        to this parameter as 'partially instantiated' as the variables it has
+        control over (the Lagrange multipliers or equiv.) are created at runtime
+        by the Formulation object. Defaults to None.
+        This argument should be None when dealing with an unconstrained problem.
+        :type dual_optimizer: Optional[torch.optim.Optimizer], optional
+
+        :param alternating: If ``True``, we perform alternating parameter updates:
+        compute gradients, perform primal update, re-compute gradients, perform
+        dual update. Otherwise, we do simultaneous parameter updates. Defaults
+        to False.
+        :type alternating: bool, optional
+
+        :param dual_restarts: If ``True``, we perform 'restarts' on the Lagrange
+        multipliers associated with the inequality constraints: whenever the
+        constraint is satisfied,  rather than waiting for the (negative) gradient
+        updates to reduce the value of the corresponding Lagrange multiplier,
+        we directly set the Lagrange multiplier to zero. Defaults to False.
+
+        We recommend to set this argument to ``False`` when dealing with constraints
+        whose violations are estimated stochastically, for example Monte Carlo
+        estimates for expectations.
+        :type dual_restarts: bool, optional
+        """
         self.formulation = formulation
         self.cmp = self.formulation.cmp
         self.primal_optimizer = primal_optimizer
