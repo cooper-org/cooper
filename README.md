@@ -87,16 +87,21 @@ We thank Manuel del Verme for insightful discussions in the early stages of this
 library.
 
 Many of the structural design ideas behind cooper are heavily inspired by the
-brilliant [TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
+[TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
 library. We highly recommend TFCO for TensorFlow-based projects and will continue
 to integrate more of TFCO's feature in future releases.
 
-Cooper supports the use of extra-gradient style optimizers for solving the min-max Lagrangian problem. We include the implementations of the [extra-gradient version](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam by Hugo Berard.
+Cooper supports the use of extra-gradient style optimizers for solving the min-max
+Lagrangian problem. We include the implementations of the
+[extra-gradient version](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py)
+of SGD and Adam by Hugo Berard.
 
-This README follows closely the style of the [NeuralCompression](https://github.com/facebookresearch/NeuralCompression) repository.
-## Cite
+This README follows closely the style of the [NeuralCompression](https://github.com/facebookresearch/NeuralCompression)
+repository.
 
-If you find cooper useful in your work, please use the citation snippet below:
+## How to cite this work?
+
+If you find cooper useful in your work, please consider citing it using the snippet below:
 
 ```bibtex
 @misc{gallegoPosada2022cooper,
