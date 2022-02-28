@@ -44,8 +44,15 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "sphinxcontrib.bibtex"
     # "sphinx_gallery.gen_gallery",
 ]
+
+# Handle Latex-style references
+bibtex_reference_style = "author_year"
+bibtex_bibfiles = ["references.bib"]
+
+todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

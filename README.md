@@ -1,7 +1,6 @@
 # Cooper
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gallego-posada/cooper/tree/master/LICENSE)
-
 [![DOCS](https://readthedocs.org/projects/torch-cooper/badge/?version=latest)](https://torch-cooper.readthedocs.io/en/latest/?version=latest)
 
 ## About
