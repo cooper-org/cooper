@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-plt.style.use("seaborn")
+plt.style.use("seaborn-whitegrid")
 
 SMALL_SIZE = 13
 MEDIUM_SIZE = 16
