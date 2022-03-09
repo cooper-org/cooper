@@ -74,45 +74,54 @@ Other methods for solving the `ConstrainedMinimizationProblem` include:
     - Extrapolation.
     - Augmented Lagrangian.
 
+.. note::
+
+    When solving an unconstrained problem, the notions of a Lagrangian and a
+    saddle point optimization do not exist. Therefore, updates will be gradient
+    descent on the primal parameters (given the primal optimizer provided).
+
 The :func:`~cooper.ConstrainedOptimizer.step` method can be used in one of two
 ways:
 
 ``optimizer.step()``
 ~~~~~~~~~~~~~~~~~~~~
 
-TODO (JCR): update below
-
-This is a simplified version supported by most optimizers. The function can be
-called once the gradients are computed using e.g.
-:func:`~torch.autograd.Variable.backward`.
+This is the basic usage of the method, which applies to gradient descent-acent
+and augmented Lagrangian updates. The function can be called once the gradients
+are computed using :py:meth:`~cooper.problem.Formulation.custom_backward`.
 
 Example::
 
-    for input, target in dataset:
-        optimizer.zero_grad()
-        output = model(input)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
+    cmp = ...
+    formulation = ...
+    constrained_optimizer = ...
+
+    for batch, targets in dataset:
+        constrained_optimizer.zero_grad()
+        lagrangian = formulation.composite_objective(cmp.closure, *closure_args, **closure_kwargs)
+        formulation.custom_backward(lagrangian)
+        constrained_optimizer.step()
 
 ``optimizer.step(closure)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Some optimization algorithms such as Conjugate Gradient and LBFGS need to
-reevaluate the function multiple times, so you have to pass in a closure that
-allows them to recompute your model. The closure should clear the gradients,
-compute the loss, and return it.
+Some optimization algorithms such as Extragradient and alternating gradient
+descent-ascent need to re-evaluate the state of the ``ConstrainedMinimizationProblem``
+multiple times, so you have to pass in the closure that allows them to recompute
+your :py:class:`~cooper.problem.CMPState`. The arguments required to evaluate the
+closure must also be provided as ``*closure_args`` and ``**closure_kwargs``.
 
 Example::
 
-    for input, target in dataset:
-        def closure():
-            optimizer.zero_grad()
-            output = model(input)
-            loss = loss_fn(output, target)
-            loss.backward()
-            return loss
-        optimizer.step(closure)
+    cmp = ...
+    formulation = ...
+    constrained_optimizer = ...
+
+    for batch, targets in dataset:
+        constrained_optimizer.zero_grad()
+        lagrangian = formulation.composite_objective(cmp.closure, *closure_args, **closure_kwargs)
+        formulation.custom_backward(lagrangian)
+        constrained_optimizer.step(cmp.closure, *closure_args, **closure_kwargs)
 
 Base class
 ----------
