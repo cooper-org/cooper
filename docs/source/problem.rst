@@ -24,23 +24,12 @@ a component function :math:`h_i(x)` is associated with the scalar constraint
       :math:`g(x) \le \mathbf{\epsilon}`). To improve the readability of the
       code, we adopt the convention that the constraint levels have been
       "absorbed" in the definition of the functions :math:`g` and :math:`h`.
-    * We use the terms **defect** and **constraint violation** interchangeably
-      to denote the quantities :math:`g(x)` or :math:`h(x)`. Note that equality
-      constraints are satisfied *only* when their defect is zero. On the other hand,
-      a *negative* defect for an inequality constraint means that the constraint
-      is *strictly* satisfied; while a *positive* defect means that the inequality
-      constraint is being violated.
-
-CMP State
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The "state" of a Constrained Minimization Problem can be represented by the value
-of the decision variables, as well as the
-
-.. autoclass:: CMPState
-    :members:
-    :special-members: __init__
-
+    * Based on this convention, we use the terms **defect** and **constraint violation**
+      interchangeably to denote the quantities :math:`g(x)` or :math:`h(x)`. Note
+      that equality constraints :math:`h(x)` are satisfied *only* when their
+      defect is zero. On the other hand, a *negative* defect for an inequality
+      constraint means that the constraint is *strictly* satisfied; while a
+      *positive* defect means that the inequality constraint is being violated.
 
 Constrained Minimization Problem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,11 +53,20 @@ functions of :math:`x` and :math:`\Omega` is convex.
 
 .. autoclass:: ConstrainedMinimizationProblem
     :members:
-    :special-members: __init__
+
+CMP State
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: CMPState
+    :members:
 
 Formulation
 ~~~~~~~~~~~
 
+Formulations denote mathematical or algorithmic techniques aimed at solving a
+specific (family of) CMP. **Cooper** is heavily, but not exclusively, oriented
+towards Lagrangian-based formulations. You can find more details in
+:doc:`lagrangian_formulation`.
+
 .. autoclass:: Formulation
     :members:
-    :special-members: __init__
