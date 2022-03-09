@@ -205,7 +205,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
                     # Not passing lagrangian since we only want to update the
                     # gradients for the dual variables
-                    self.formulation.populate_gradients(
+                    self.formulation._populate_gradients(
                         lagrangian=None, ignore_primal=True
                     )
 
@@ -236,7 +236,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             self.formulation.ineq_multipliers.project_()
 
     def restart_dual_variables(self):
-        # Call to formulation.populate_gradients has already flipped sign
+        # Call to formulation._populate_gradients has already flipped sign
         # A currently *positive* gradient means original defect is negative, so
         # the constraint is being satisfied.
 

@@ -7,13 +7,13 @@ from typing import List, Optional
 import torch
 
 from .multipliers import DenseMultiplier
-from .problem import Formulation
+from .problem import ConstrainedMinimizationProblem, Formulation
 
 
 class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     def __init__(
         self,
-        cmp,
+        cmp: ConstrainedMinimizationProblem,
         ineq_init: Optional[torch.Tensor] = None,
         eq_init: Optional[torch.Tensor] = None,
         aug_lag_coefficient: float = 0.0,
@@ -148,6 +148,19 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
+    """
+    Provides utilities for computing the Lagrangian associated with a
+    ``ConstrainedMinimizationProblem`` and for populating the gradients for the
+    primal and dual parameters.
+
+    Args:
+        cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
+            rise to the Lagrangian.
+        ineq_init: Initialization values for the inequality multipliers.
+        eq_init: Initialization values for the equality multipliers.
+        aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
+    """
+
     def composite_objective(
         self, closure, *closure_args, write_state=True, **closure_kwargs
     ):
@@ -210,8 +223,23 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         return lagrangian
 
-    def populate_gradients(self, lagrangian, ignore_primal=False):
-        # ignore_primal is used for alternating updates
+    def _populate_gradients(
+        self, lagrangian: torch.Tensor, ignore_primal: bool = False
+    ):
+        """
+        Performs the actual backward computation which populates the gradients
+        for the primal and dual variables.
+
+        Args:
+            lagrangian: Value of the computed Lagrangian based on which the
+                gradients for the primal and dual variables are populated.
+            ignore_primal: If ``True``, only the gradients with respect to the
+                dual variables are populated (these correspond to the constraint
+                violations). This feature is mainly used in conjunction with
+                ``alternating`` updates, which require updating the multipliers
+                based on the constraints violation *after* having updated the
+                primal parameters. Defaults to False.
+        """
 
         if ignore_primal and self.cmp.is_constrained:
             # Only compute gradients wrt Lagrange multipliers
@@ -232,11 +260,17 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 dual_vars = [_ for _ in self.state() if _ is not None]
                 violation_for_update.backward(inputs=dual_vars)
 
-    def custom_backward(self, lagrangian):
-        """Alias for ``populate_gradients`` to stick with the Pytorch standard
-        naming of "backwards".
+    def custom_backward(self, lagrangian: torch.Tensor):
+        """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
+        naming convention used in Pytorch. We avoid naming this method ``backward``
+        as it is a method of the ``LagrangianFormulation`` object and not that of
+        a :py:class:`torch.Tensor` as is usual in Pytorch.
+
+        Args:
+            lagrangian: Value of the computed Lagrangian based on which the
+                gradients for the primal and dual variables are populated.
         """
-        self.populate_gradients(lagrangian)
+        self._populate_gradients(lagrangian)
 
 
 class ProxyLagrangianFormulation(BaseLagrangianFormulation):

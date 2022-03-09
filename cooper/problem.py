@@ -79,6 +79,6 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def populate_gradients(self):
+    def _populate_gradients(self):
         """Like lagrangian backward"""
         pass
