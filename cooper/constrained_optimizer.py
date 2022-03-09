@@ -9,6 +9,8 @@ methods:
 from typing import Callable, Optional
 
 import torch
+from torch import Tensor
+from torch.optim import Optimizer
 
 from .problem import CMPState, Formulation
 
@@ -36,36 +38,37 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             to optimize the primal parameters (e.g. model parameters).
 
         dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
-            used to optimize the dual variables (e.g. Lagrange multipliers). We refer
-            to this parameter as 'partially instantiated' as the variables it has
-            control over (the Lagrange multipliers or equiv.) are created at runtime
-            by the Formulation object. Defaults to None.
-            This argument should be None when dealing with an unconstrained problem.
+            used to optimize the dual variables (e.g. Lagrange multipliers).
+            We refer to this parameter as 'partially instantiated' as the
+            variables it has control over (the Lagrange multipliers or equiv.)
+            are created at runtime by the ``Formulation``.
+            Defaults to None.
+            When dealing with an unconstrained problem, should be set to None.
 
-        alternating: If ``True``, we perform alternating parameter updates:
-            compute gradients, perform primal update, re-compute gradients, perform
-            dual update. Otherwise, we do simultaneous parameter updates. Defaults
-            to False.
+        alternating: If True, perform alternating parameter updates: compute
+            gradients, perform primal update, re-compute gradients, perform
+            dual update.
+            Otherwise, we do simultaneous parameter updates.
+            Defaults to False.
 
-        dual_restarts: If ``True``, we perform 'restarts' on the Lagrange
-            multipliers associated with the inequality constraints: whenever the
-            constraint is satisfied,  rather than waiting for the (negative) gradient
-            updates to reduce the value of the corresponding Lagrange multiplier,
-            we directly set the Lagrange multiplier to zero. Defaults to False.
-
-            We recommend to set this argument to ``False`` when dealing with constraints
-            whose violations are estimated stochastically, for example Monte Carlo
-            estimates for expectations.
+        dual_restarts: If True, perform 'restarts' on the Lagrange
+            multipliers associated with inequality constraints: whenever the
+            constraint is satisfied, directly set the multiplier to zero.
+            Defaults to False.
+            We recommend to set this argument to False when dealing with
+            constraints whose violations are estimated stochastically, for
+            example Monte Carlo estimates for expectations.
 
     Attributes:
+        cmp: ``ConstrainedMinimizationProblem`` from ``Formulation``.
 
     """
 
     def __init__(
         self,
         formulation: Formulation,
-        primal_optimizer: torch.optim.Optimizer,
-        dual_optimizer: Optional[torch.optim.Optimizer] = None,
+        primal_optimizer: Optimizer,
+        dual_optimizer: Optional[Optimizer] = None,
         alternating: bool = False,
         dual_restarts: bool = False,
     ):
@@ -82,6 +85,11 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.sanity_checks()
 
     def sanity_checks(self):
+        """
+        Perform sanity checks on the initialization of the ``ConstrainedOptimizer``.
+
+        Raises:
+        """
 
         is_alternating = self.alternating
         is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
@@ -247,7 +255,18 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.formulation.ineq_multipliers.weight.grad[feasible_filter] = 0.0
         self.formulation.ineq_multipliers.weight.data[feasible_filter] = 0.0
 
-    def zero_grad(self, ignore_primal=False, ignore_dual=False):
+    def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
+        """
+        Sets the gradients of all optimized :py:class:`torch.Tensor`\\s to zero.
+        This includes both the primal and dual variables.
+
+        Args:
+            ignore_primal: If True, the gradients of the primal variables will
+                not be zeroed. Defaults to False.
+
+            ignore_dual: If True, the gradients of the dual variables will not
+                be zeroed. Defaults to False.
+        """
 
         if not ignore_primal:
             self.primal_optimizer.zero_grad()
