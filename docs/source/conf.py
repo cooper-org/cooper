@@ -49,7 +49,7 @@ extensions = [
 ]
 
 
-mathjax_config = {"jax": ["input/TeX", "output/HTML-CSS"], "displayAlign": "left"}
+mathjax3_config = {"jax": ["input/TeX", "output/HTML-CSS"], "displayAlign": "left"}
 
 # Handle Latex-style references
 bibtex_reference_style = "author_year"
@@ -85,6 +85,8 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_css_files = ["css/custom.css"]
 
 # intersphinx maps
 intersphinx_mapping = {
