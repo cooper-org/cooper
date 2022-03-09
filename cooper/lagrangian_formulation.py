@@ -237,3 +237,16 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         naming of "backwards".
         """
         self.populate_gradients(lagrangian)
+
+
+class ProxyLagrangianFormulation(BaseLagrangianFormulation):
+    """
+    Placeholder class for the proxy-Lagrangian formulation proposed by
+    :cite:t:`cotter19JMLR`.
+
+    .. todo::
+        Implement Proxy-Lagrangian formulation as described in :cite:t:`cotter19JMLR`
+
+    """
+
+    pass
