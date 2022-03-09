@@ -48,6 +48,9 @@ extensions = [
     # "sphinx_gallery.gen_gallery",
 ]
 
+
+mathjax_config = {"jax": ["input/TeX", "output/HTML-CSS"], "displayAlign": "left"}
+
 # Handle Latex-style references
 bibtex_reference_style = "author_year"
 bibtex_bibfiles = ["references.bib"]
