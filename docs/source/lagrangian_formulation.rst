@@ -34,16 +34,19 @@ This approach can be interpreted as a zero-sum two-player game, where the
 goal of the "dual" player :math:`\lambda` is to minimize :math:`-\mathcal{L}(x,\lambda)`.
 
 .. admonition:: Theorem (:math:`\S` 5.2.3, :cite:t:`boyd2004convex`)
+    :class: hint
 
     Convex problem + Slater condition :math:`\Rightarrow` Strong duality
 
 .. admonition:: Theorem (:math:`\S` 5.4.2, :cite:t:`boyd2004convex`)
+    :class: hint
 
     (:math:`x^*, \lambda^*`) primal and dual optimal and strong duality
     :math:`\Leftrightarrow` (:math:`x^*, \lambda^*`) is a saddle point of the
     Lagrangian.
 
 .. admonition:: Theorem
+    :class: hint
 
     Every convex CMP with compact domain (for which strong duality holds) has
     a Lagrangian for which a saddle point (i.e. pure Nash Equilibrium) exists.
