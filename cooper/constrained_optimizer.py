@@ -158,20 +158,22 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         **closure_kwargs
     ):
         """
-        Performs a single optimization step on both the primal and dual variables.
+        Performs a single optimization step on both the primal and dual
+        variables.
 
         Args:
-            closure: Closure callable required for re-evaluating the objective
-                and constraints when performing alternating or extrapolating updates.
-                If neither alternating or extrapolating updates are used, this
-                argument can be skipped as the closure would not be re-evaluated.
+            closure: Closure ``Callable`` required for re-evaluating the
+                objective and constraints when performing alternating or
+                extrapolating updates. If neither alternating or extrapolating
+                updates are used, this argument can be skipped as the closure
+                would not be re-evaluated.
                 Defaults to None.
 
             *closure_args: Arguments to be passed to the closure function
                 when re-evaluating.
 
-            *closure_kwargs: Keyword arguments to be passed to the closure
-            function when re-evaluating.
+            **closure_kwargs: Keyword arguments to be passed to the closure
+                function when re-evaluating.
         """
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
