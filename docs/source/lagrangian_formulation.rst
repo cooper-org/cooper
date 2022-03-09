@@ -1,3 +1,5 @@
+.. _lagrangian-formulations:
+
 .. currentmodule:: cooper.lagrangian_formulation
 
 Lagrangian Formulations
@@ -55,10 +57,15 @@ goal of the "dual" player :math:`\lambda` is to minimize :math:`-\mathcal{L}(x,\
 
 .. autoclass:: LagrangianFormulation
     :members:
-    :special-members: __init__
 
 Proxy-Lagrangian Formulation
 ----------------------------
 
 .. autoclass:: ProxyLagrangianFormulation
+    :members:
+
+Base Lagrangian Formulation
+----------------------------
+
+.. autoclass:: BaseLagrangianFormulation
     :members:
