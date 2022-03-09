@@ -15,9 +15,9 @@
     :hidden:
     :caption: Package Reference
 
-    constrained_optimizer
     problem
     lagrangian_formulation
+    constrained_optimizer
     multipliers
 
 .. toctree::
