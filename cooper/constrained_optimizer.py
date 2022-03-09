@@ -1,9 +1,11 @@
 # coding: utf8
 """
-Implementation of :py:class:`ConstrainedOptimizer` object which has 2 main
+Implementation of :py:class:`ConstrainedOptimizer` class, which has 2 main
 methods:
-- :py:meth:``~ConstrainedOptimizer.zero_grad``
-- :py:meth:``~ConstrainedOptimizer.step``
+
+- :py:meth:`~ConstrainedOptimizer.zero_grad`
+
+- :py:meth:`~ConstrainedOptimizer.step`
 """
 
 from typing import Callable, Optional
@@ -15,17 +17,51 @@ from .problem import CMPState, Formulation
 
 class ConstrainedOptimizer(torch.optim.Optimizer):
     """
-    Base constrained optimizer class.
+    Aims to optimize a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    given its :py:class:`~cooper.problem.Formulation`.
 
-    A ``ConstrainedOptimizer`` includes one or two ``torch.optim.Optimizer``\\s,
-    for the primal and dual problems, respectively. It aims to optimize a given
-    ``Formulation`` of a ``ConstrainedMinimizationProblem``.
+    A ``ConstrainedOptimizer`` includes one or two :class:`torch.optim.Optimizer`\\'s,
+    for the primal and dual variables associated with the ``Formulation``,
+    respectively.
 
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
     ``ConstrainedMinimizationProblem``\\s. Please refer to the documentation
-    of the :py:class:`cooper.problem.ConstrainedMinimizationProblem` and
-    :py:class:`cooper.problem.Formulation` classes for further details on handling
-    unconstrained problems.
+    of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
+    :py:class:`~cooper.problem.Formulation` classes for further details on
+    handling unconstrained problems.
+
+    Args:
+        formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
+            to be optimized.
+
+        primal_optimizer: Fully instantiated ``torch.optim.Optimizer`` used
+            to optimize the primal parameters (e.g. model parameters).
+
+        dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
+            used to optimize the dual variables (e.g. Lagrange multipliers).
+            We refer to this parameter as 'partially instantiated' as the
+            variables it has control over (the Lagrange multipliers or equiv.)
+            are created at runtime by the ``Formulation``.
+            Defaults to None.
+            When dealing with an unconstrained problem, should be set to None.
+
+        alternating: If True, perform alternating parameter updates: compute
+            gradients, perform primal update, re-compute gradients, perform
+            dual update.
+            Otherwise, we do simultaneous parameter updates.
+            Defaults to False.
+
+        dual_restarts: If True, perform 'restarts' on the Lagrange
+            multipliers associated with inequality constraints: whenever the
+            constraint is satisfied, directly set the multiplier to zero.
+            Defaults to False.
+            We recommend to set this argument to False when dealing with
+            constraints whose violations are estimated stochastically, for
+            example Monte Carlo estimates for expectations.
+
+    Attributes:
+        cmp: ``ConstrainedMinimizationProblem`` from ``Formulation``.
+
     """
 
     def __init__(
@@ -36,38 +72,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         alternating: bool = False,
         dual_restarts: bool = False,
     ):
-        """
-        Constructs a new ``ConstrainedOptimizer``.
-
-        Args:
-            formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
-                to be optimized.
-
-            primal_optimizer: Fully instantiated ``torch.optim.Optimizer`` used
-                to optimize the primal parameters (e.g. model parameters).
-
-            dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
-                used to optimize the dual variables (e.g. Lagrange multipliers). We refer
-                to this parameter as 'partially instantiated' as the variables it has
-                control over (the Lagrange multipliers or equiv.) are created at runtime
-                by the Formulation object. Defaults to None.
-                This argument should be None when dealing with an unconstrained problem.
-
-            alternating: If ``True``, we perform alternating parameter updates:
-                compute gradients, perform primal update, re-compute gradients, perform
-                dual update. Otherwise, we do simultaneous parameter updates. Defaults
-                to False.
-
-            dual_restarts: If ``True``, we perform 'restarts' on the Lagrange
-                multipliers associated with the inequality constraints: whenever the
-                constraint is satisfied,  rather than waiting for the (negative) gradient
-                updates to reduce the value of the corresponding Lagrange multiplier,
-                we directly set the Lagrange multiplier to zero. Defaults to False.
-
-                We recommend to set this argument to ``False`` when dealing with constraints
-                whose violations are estimated stochastically, for example Monte Carlo
-                estimates for expectations.
-        """
         self.formulation = formulation
         self.cmp = self.formulation.cmp
         self.primal_optimizer = primal_optimizer
@@ -81,6 +85,28 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.sanity_checks()
 
     def sanity_checks(self):
+        """
+        Perform sanity checks on the initialization of ``ConstrainedOptimizer``.
+
+        Raises:
+            NotImplementedError: The ``Formulation`` has an augmented Lagrangian
+                coefficient and ``primal_optimizer`` has an ``extrapolation``
+                function. This is not supported because of possible unexpected
+                behavior.
+            RuntimeError: The ``primal_optimizer`` has an ``extrapolation``
+                function and ``alternating`` was set to True.
+            RuntimeError: a ``dual_optimizer`` was provided but the
+                ``ConstrainedMinimizationProblem`` of formulation was
+                unconstrained. There are no dual variables to optimize.
+            RuntimeError: the considered ``ConsrtaindMinimizationProblem`` is
+                unconstrained, but the provided ``primal_optimizer`` has an
+                ``extrapolation`` function. This is not supported because of
+                unexpected behavior when using extrapolation to update the
+                primal parameters without any dual parameters.
+            RuntimeError: One of ``primal_optimizer`` or ``dual_optimizer`` has
+                an extrapolation function while the other does not.
+                Extrapolation on only one player is not supported.
+        """
 
         is_alternating = self.alternating
         is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
@@ -132,20 +158,22 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         **closure_kwargs
     ):
         """
-        Performs a single optimization step on both the primal and dual variables.
+        Performs a single optimization step on both the primal and dual
+        variables.
 
         Args:
-            closure: Closure callable required for re-evaluating the objective
-                and constraints when performing alternating or extrapolating updates.
-                If neither alternating or extrapolating updates are used, this
-                argument can be skipped as the closure would not be re-evaluated.
+            closure: Closure ``Callable`` required for re-evaluating the
+                objective and constraints when performing alternating or
+                extrapolating updates. If neither alternating or extrapolating
+                updates are used, this argument can be skipped as the closure
+                would not be re-evaluated.
                 Defaults to None.
 
             *closure_args: Arguments to be passed to the closure function
                 when re-evaluating.
 
-            *closure_kwargs: Keyword arguments to be passed to the closure
-            function when re-evaluating.
+            **closure_kwargs: Keyword arguments to be passed to the closure
+                function when re-evaluating.
         """
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
@@ -246,7 +274,18 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         self.formulation.ineq_multipliers.weight.grad[feasible_filter] = 0.0
         self.formulation.ineq_multipliers.weight.data[feasible_filter] = 0.0
 
-    def zero_grad(self, ignore_primal=False, ignore_dual=False):
+    def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
+        """
+        Sets the gradients of all optimized :py:class:`torch.Tensor`\\s to zero.
+        This includes both the primal and dual variables.
+
+        Args:
+            ignore_primal: If True, the gradients of the primal variables will
+                not be zeroed. Defaults to False.
+
+            ignore_dual: If True, the gradients of the dual variables will not
+                be zeroed. Defaults to False.
+        """
 
         if not ignore_primal:
             self.primal_optimizer.zero_grad()
