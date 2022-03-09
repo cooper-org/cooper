@@ -2,15 +2,15 @@
 """
 Implementation of :py:class:`ConstrainedOptimizer` class, which has 2 main
 methods:
+
 - :py:meth:`~ConstrainedOptimizer.zero_grad`
+
 - :py:meth:`~ConstrainedOptimizer.step`
 """
 
 from typing import Callable, Optional
 
 import torch
-from torch import Tensor
-from torch.optim import Optimizer
 
 from .problem import CMPState, Formulation
 
@@ -67,8 +67,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
     def __init__(
         self,
         formulation: Formulation,
-        primal_optimizer: Optimizer,
-        dual_optimizer: Optional[Optimizer] = None,
+        primal_optimizer: torch.optim.Optimizer,
+        dual_optimizer: Optional[torch.optim.Optimizer] = None,
         alternating: bool = False,
         dual_restarts: bool = False,
     ):
