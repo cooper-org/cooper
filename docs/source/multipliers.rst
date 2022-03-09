@@ -3,25 +3,46 @@ Multipliers
 
 .. automodule:: cooper.multipliers
 
+.. note::
+
+    Multipliers are designed to be handled internaly by
+    :py:class:`~cooper.problem.Formulation`\s. This includes:
+
+    - Their initialization in the
+      :py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`
+      method of :py:class:`~cooper.lagrangian_formulation.BaseLagrangianFormulation`.
+    - Ensuring that their shape and device matches that of the constraint
+      defects provided by the :py:class:`~cooper.problem.CMPState` of the
+      considered :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
+    - Using them for computing Lagrangians in the
+      :py:meth:`~cooper.lagrangian_formulation.LagrangianFormulation.composite_objective`
+      method of :py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`.
+
 Constructing a DenseMultiplier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To construct a ``DenseMultiplier``, you have to provide it with an initial
-value. The shape of this initial value must match the shape of the constraint
-defect it corresponds to.
+To construct a ``DenseMultiplier``, its initial value ``init`` must be provided.
+The shape of this initial value must match the shape of the constraint defect it
+corresponds to.
 
-The positivity argument should be specified when initializing the multiplier.
-If set to ``True``, it enforces multipliers to be positive. For multipliers
-associated with inequality constraints, you must specify ``positive=True``.
+We lazily initialize ``DenseMultiplier``\s in the
+:py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`
+method of :py:class:`~cooper.lagrangian_formulation.BaseLagrangianFormulation`\s
+when the first ``CMPState`` of the ``ConstrainedMinimizationProblem`` is evaluated.
+That way we can ensure that the ``DenseMultiplier``\s are initialized on the
+correct device and that their shape matches that of the constraint defects.
+If initial values for multipliers are not specified during the initialization
+of the ``BaseLagrangianFormulation``, each is initialized to zero.
 
-.. note::
 
-    Multipliers are designed to be mostly handled by
-    :py:class:`~cooper.problem.Formulation`\s. This includes:
-
-    - Their initialization in  in :py:class:`~cooper.problem.BaseLagrangianFormulation`'s :py:meth:`~cooper.problem.BaseLagrangianFormulation.create_state`.
-    - Ensuring that their shape and device matches that of constraint defects given by the :py:class:`~cooper.problem.CMPState` of the ``ConstrainedMinimizationProblem`` they are solving.
-    - Using them for computing Lagrangians in :py:class:`~cooper.problem.LagrangianFormulation`'s :py:meth:`~cooper.problem.LagrangianFormulation.composite_objective`.
+We specify ``positive=True`` when a multiplier corresponds to an inequality
+constraint to enforce its value to be positive. After having performed a step
+on the dual variables inside the
+:py:meth:`~cooper.constrained_optimizer.ConstrainedOptimizer.step` method of
+:py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`, inequality
+multipliers which are negative are projected to zero.
+For multipliers corresponding to equality constraints, we specify
+``positive=False``. No projection is employed in this case.
 
 .. autoclass:: DenseMultiplier
     :members:
