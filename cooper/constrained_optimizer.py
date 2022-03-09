@@ -86,9 +86,26 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
     def sanity_checks(self):
         """
-        Perform sanity checks on the initialization of the ``ConstrainedOptimizer``.
+        Perform sanity checks on the initialization of ``ConstrainedOptimizer``.
 
         Raises:
+            NotImplementedError: The ``Formulation`` has an augmented Lagrangian
+                coefficient and ``primal_optimizer`` has an ``extrapolation``
+                function. This is not supported because of possible unexpected
+                behavior.
+            RuntimeError: The ``primal_optimizer`` has an ``extrapolation``
+                function and ``alternating`` was set to True.
+            RuntimeError: a ``dual_optimizer`` was provided but the
+                ``ConstrainedMinimizationProblem`` of formulation was
+                unconstrained. There are no dual variables to optimize.
+            RuntimeError: the considered ``ConsrtaindMinimizationProblem`` is
+                unconstrained, but the provided ``primal_optimizer`` has an
+                ``extrapolation`` function. This is not supported because of
+                unexpected behavior when using extrapolation to update the
+                primal parameters without any dual parameters.
+            RuntimeError: One of ``primal_optimizer`` or ``dual_optimizer`` has
+                an extrapolation function while the other does not.
+                Extrapolation on only one player is not supported.
         """
 
         is_alternating = self.alternating
