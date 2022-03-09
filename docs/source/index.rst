@@ -18,6 +18,7 @@
     problem
     lagrangian_formulation
     constrained_optimizer
+    optim
     multipliers
 
 .. toctree::

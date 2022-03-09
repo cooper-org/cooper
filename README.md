@@ -51,11 +51,11 @@ pip install --editable .
 ## Cooper
 
 - `cooper` - base package
+    - `problem` - abstract class for representing CMPs
     - `constrained_optimizer` - Pytorch optimizer class for handling constrained minimization problems (CMPs)
     - `lagrangian_formulation` - Lagrangian formulation of a CMP
     - `multipliers` - utility class for Lagrange multipliers
     - `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
-    - `problem` - abstract class for representing CMPs
 
 ## Tutorial Notebooks
 
