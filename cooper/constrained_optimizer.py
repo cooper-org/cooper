@@ -45,10 +45,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             Defaults to None.
             When dealing with an unconstrained problem, should be set to None.
 
-        alternating: If True, perform alternating parameter updates: compute
-            gradients, perform primal update, re-compute gradients, perform
-            dual update.
-            Otherwise, we do simultaneous parameter updates.
+        alternating: Whether to alternate parameter updates between primal and
+            dual parameters. Otherwise, do simultaneous parameter updates.
             Defaults to False.
 
         dual_restarts: If True, perform 'restarts' on the Lagrange
@@ -58,9 +56,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             We recommend to set this argument to False when dealing with
             constraints whose violations are estimated stochastically, for
             example Monte Carlo estimates for expectations.
-
-    Attributes:
-        cmp: ``ConstrainedMinimizationProblem`` from ``Formulation``.
 
     """
 
@@ -94,7 +89,8 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                 function. This is not supported because of possible unexpected
                 behavior.
             RuntimeError: The ``primal_optimizer`` has an ``extrapolation``
-                function and ``alternating`` was set to True.
+                function and ``alternating`` was set to True. Mixing
+                extrapolation and alternating updates is not supported.
             RuntimeError: a ``dual_optimizer`` was provided but the
                 ``ConstrainedMinimizationProblem`` of formulation was
                 unconstrained. There are no dual variables to optimize.
@@ -276,7 +272,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
     def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
         """
-        Sets the gradients of all optimized :py:class:`torch.Tensor`\\s to zero.
+        Sets the gradients of all optimized :py:class:`~torch.Tensor`\\s to zero.
         This includes both the primal and dual variables.
 
         Args:
