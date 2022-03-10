@@ -1,6 +1,7 @@
 """(Extrapolation) Optimizer aliases"""
 import functools
 import math
+from collections.abc import Iterable
 
 import torch
 from torch.optim import Optimizer
@@ -13,6 +14,13 @@ RMSprop = torch.optim.RMSprop
 
 
 def partial(cls, *args, **kwds):
+    """
+    Partially instantiates an optimizer class. This approach is preferred over
+    :py:func:`functools.partial` since the returned value is an optimizer
+    class whose attributes can be inspected and which can be further
+    instantiated.
+    """
+
     class PartialOptimizer(cls):
         __init__ = functools.partialmethod(cls.__init__, *args, **kwds)
 
@@ -113,19 +121,22 @@ class Extragradient(Optimizer):
 
 
 class ExtraSGD(Extragradient):
-    """Implements stochastic gradient descent with extrapolation step (optionally with momentum).
+    """
+    Implements stochastic gradient descent with extrapolation step (optionally
+    with momentum).
 
-    Nesterov momentum is based on the formula from
-    `On the importance of initialization and momentum in deep learning`__.
+    Nesterov momentum is based on the formula from `On the importance of
+    initialization and momentum in deep learning
+    <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_.
 
     Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
+        params: iterable of parameters to optimize or dicts defining
             parameter groups
-        lr (float): learning rate
-        momentum (float, optional): momentum factor (default: 0)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        dampening (float, optional): dampening for momentum (default: 0)
-        nesterov (bool, optional): enables Nesterov momentum (default: False)
+        lr: learning rate
+        momentum: momentum factor (default: 0)
+        weight_decay: weight decay (L2 penalty) (default: 0)
+        dampening: dampening for momentum (default: 0)
+        nesterov: enables Nesterov momentum (default: False)
 
     Example:
         >>> optimizer = torch.optim.ExtraSGD(model.parameters(), lr=0.1, momentum=0.9)
@@ -136,8 +147,6 @@ class ExtraSGD(Extragradient):
         >>> loss_fn(model(input), target).backward()
         >>> optimizer.step()
 
-    __ http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf
-
     .. note::
         The implementation of SGD with Momentum/Nesterov subtly differs from
         Sutskever et. al. and implementations in some other frameworks.
@@ -145,30 +154,30 @@ class ExtraSGD(Extragradient):
         Considering the specific case of Momentum, the update can be written as
 
         .. math::
-                  v = \rho * v + g \\
-                  p = p - lr * v
+            v = \\rho \cdot v + g \\\\
+            p = p - lr \cdot v
 
-        where p, g, v and :math:`\rho` denote the parameters, gradient,
-        velocity, and momentum respectively.
+        where :math:`p`, :math:`v`, :math:`g` and :math:`\\rho` denote the
+        parameters, gradient, velocity, and momentum respectively.
 
         This is in contrast to Sutskever et. al. and
         other frameworks which employ an update of the form
 
         .. math::
-             v = \rho * v + lr * g \\
-             p = p - v
+            v &= \\rho \cdot v + lr \cdot g \\\\
+            p &= p - v
 
         The Nesterov version is analogously modified.
     """
 
     def __init__(
         self,
-        params,
-        lr=required,
-        momentum=0,
-        dampening=0,
-        weight_decay=0,
-        nesterov=False,
+        params: Iterable,
+        lr: float = required,
+        momentum: float = 0,
+        dampening: float = 0,
+        weight_decay: float = 0,
+        nesterov: bool = False,
     ):
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))

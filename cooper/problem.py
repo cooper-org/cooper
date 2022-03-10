@@ -34,9 +34,17 @@ class CMPState:
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
-    """Constrained minimization problem base class."""
+    """
+    Base class for constrained minimization problems.
 
-    def __init__(self, is_constrained=False):
+    Args:
+        is_constrained: We request the problem to be explicitly declared as
+            constrained or unconstrained to perform sanity checks when
+            initializing the :py:class:`~cooper.ConstrainedOptimizer`. Defaults
+            to ``False``.
+    """
+
+    def __init__(self, is_constrained: bool = False):
         self.is_constrained = is_constrained
         self._state = None
 
@@ -48,30 +56,54 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def state(self, value: CMPState):
         self._state = value
 
+    @abc.abstractmethod
     def closure(self) -> CMPState:
-        raise NotImplementedError("Closure function is not implemented.")
+        """
+        Computes the state of the CMP based on the current value of the primal
+        parameters.
+
+        The signature of this abstract function may be change to accommodate
+        situations that require a model, (mini-batched) inputs/targets, or
+        other arguments to be passed.
+
+        Structuring the CMP class around this closure method, enables the re-use
+        of shared sections of a computational graph. For example, consider a
+        case where we want to minimize a model's cross entropy loss subject to
+        a constraint on the entropy of its predictions. Both of these quantities
+        depend on the predicted logits (on a minibatch). This closure-centric
+        design allows flexible problem specifications while avoiding
+        re-computation.
+        """
 
 
 class Formulation(abc.ABC):
-    """Base class for Lagrangian and proxy-Lagrangian formulations"""
+    """Base class for Lagrangian and proxy-Lagrangian formulations."""
 
     def __init__(self):
         self.cmp = None
 
     @abc.abstractmethod
-    def state(self):
-        """Returns internal state of formulation (e.g. multipliers)"""
+    def create_state(self):
+        """Initializes the internal state of the formulation."""
         pass
 
     @abc.abstractmethod
-    def create_state(self):
-        """Initializes the internal state/multipliers"""
+    def state(self):
+        """Returns the internal state of formulation (e.g. multipliers)."""
         pass
 
     @property
     @abc.abstractmethod
     def is_state_created(self):
-        """Returns True if the internal state has been created"""
+        """Returns ``True`` if the internal state has been created."""
+        pass
+
+    @property
+    @abc.abstractmethod
+    def dual_parameters(self):
+        """Returns the trainable parameters for the dual variables. Depending on
+        the formulation, these dual parameters can represent the multipliers
+        themselves, or a model which "learns" multiplier values."""
         pass
 
     @abc.abstractmethod
@@ -79,6 +111,19 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def populate_gradients(self):
-        """Like lagrangian backward"""
+    def _populate_gradients(self):
+        """Performs the actual backward computation and populates the gradients
+        for the trainable parameters for the dual variables."""
         pass
+
+    def custom_backward(self, lagrangian: torch.Tensor):
+        """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
+        naming convention used in Pytorch. We avoid naming this method
+        ``backward`` as it is a method of the ``LagrangianFormulation`` object
+        and not that of a :py:class:`torch.Tensor` as is usual in Pytorch.
+
+        Args:
+            lagrangian: Value of the computed Lagrangian based on which the
+                gradients for the primal and dual variables are populated.
+        """
+        self._populate_gradients(lagrangian)

@@ -1,16 +1,16 @@
 # Cooper
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gallego-posada/cooper/tree/master/LICENSE)
-
+[![DOCS](https://readthedocs.org/projects/torch-cooper/badge/?version=latest)](https://torch-cooper.readthedocs.io/en/latest/?version=latest)
 
 ## About
 
-Cooper is a toolkit for Lagrangian-based constrained optimization in Pytorch.
+**Cooper** is a toolkit for Lagrangian-based constrained optimization in Pytorch.
 This library aims to encourage and facilitate the study of constrained
 optimization problems in machine learning by providing a seamless integration
 with Pytorch, while preserving the `loss -> backward -> step` workflow commonly used in many machine/deep learning pipelines.
 
-Cooper is under active development and future API changes might break backward compatibility.
+**Cooper** is under active development and future API changes might break backward compatibility.
 
 ## Getting Started
 
@@ -24,13 +24,10 @@ TBC
 ```
 ## Installation
 
-Cooper is a project currently under development. You can install the
+**Cooper** is a project currently under development. You can install the
 repository in development mode.
 
-### PyPI Installation
-
-First, install PyTorch according to the directions from the
-[PyTorch website](https://pytorch.org/). Then, you should be able to run
+### Basic Installation
 
 ```bash
 pip install git@github.com:gallego-posada/cooper.git#egg=cooper
@@ -38,26 +35,27 @@ pip install git@github.com:gallego-posada/cooper.git#egg=cooper
 
 ### Development Installation
 
-First, clone the repository and navigate to the Cooper root
+First, clone the repository and navigate to the **Cooper** root
 directory and install the package in development mode by running:
 
 ```bash
 pip install --editable ".[dev]"
 ```
 
-If you are not interested in matching the test environment, then you can just
-apply `pip install -e .`.
-
-
+If you are not interested in matching the test environment, you can just
+apply:
+```bash
+pip install --editable .
+```
 
 ## Cooper
 
 - `cooper` - base package
-  - `constrained_optimizer` - Pytorch optimizer class for handling constrained minimization problems (CMPs)
-  - `lagrangian_formulation` - Lagrangian formulation of a CMP
-  - `multipliers` - utility class for Lagrange multipliers
-  - `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
-  - `problem` - abstract class for representing CMPs
+    - `problem` - abstract class for representing CMPs
+    - `constrained_optimizer` - Pytorch optimizer class for handling constrained minimization problems (CMPs)
+    - `lagrangian_formulation` - Lagrangian formulation of a CMP
+    - `multipliers` - utility class for Lagrange multipliers
+    - `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
 
 ## Tutorial Notebooks
 
@@ -79,24 +77,29 @@ linting, and `mypy` for type checking.
 
 ## License
 
-Cooper is distributed under an MIT license, as found in the [LICENSE](https://github.com/gallego-posada/cooper/tree/master/LICENSE) file.
+**Cooper** is distributed under an MIT license, as found in the [LICENSE](https://github.com/gallego-posada/cooper/tree/master/LICENSE) file.
 
 ## Acknowledgements
 
 We thank Manuel del Verme for insightful discussions in the early stages of this
 library.
 
-Many of the structural design ideas behind cooper are heavily inspired by the
-brilliant [TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
+Many of the structural design ideas behind **Cooper** are heavily inspired by the
+[TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
 library. We highly recommend TFCO for TensorFlow-based projects and will continue
 to integrate more of TFCO's feature in future releases.
 
-Cooper supports the use of extra-gradient style optimizers for solving the min-max Lagrangian problem. We include the implementations of the [extra-gradient version](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam by Hugo Berard.
+**Cooper** supports the use of extra-gradient style optimizers for solving the min-max
+Lagrangian problem. We include the implementations of the
+[extra-gradient version](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py)
+of SGD and Adam by Hugo Berard.
 
-This README follows closely the style of the [NeuralCompression](https://github.com/facebookresearch/NeuralCompression) repository.
-## Cite
+This README follows closely the style of the [NeuralCompression](https://github.com/facebookresearch/NeuralCompression)
+repository.
 
-If you find cooper useful in your work, please use the citation snippet below:
+## How to cite this work?
+
+If you find **Cooper** useful in your work, please consider citing it using the snippet below:
 
 ```bibtex
 @misc{gallegoPosada2022cooper,

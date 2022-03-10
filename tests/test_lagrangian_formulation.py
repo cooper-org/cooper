@@ -10,8 +10,14 @@ import cooper
 
 
 def test_lagrangian_formulation():
+    class DummyCMP(cooper.ConstrainedMinimizationProblem):
+        def __init__(self):
+            super().__init__(is_constrained=True)
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
+        def closure(self):
+            pass
+
+    cmp = DummyCMP()
 
     lf = cooper.LagrangianFormulation(cmp)
     cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]))
