@@ -6,6 +6,10 @@ __pycache__/
 # Tutorial auxiliary folder
 tutorials/data/
 
+# Ignore generated files for tutorial gallery
+docs/source/auto_tutorials
+docs/source/modules/
+
 # C extensions
 *.so
 

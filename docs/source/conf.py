@@ -14,6 +14,11 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(".."))
+
 import cooper.version
 
 # -- Project information -----------------------------------------------------
@@ -44,8 +49,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
-    "sphinxcontrib.bibtex"
-    # "sphinx_gallery.gen_gallery",
+    "sphinxcontrib.bibtex",
+    "sphinx_gallery.gen_gallery",
 ]
 
 
@@ -97,6 +102,19 @@ intersphinx_mapping = {
 }
 
 # sphinx_gallery_conf = {
-#     "examples_dirs": "../examples",
-#     "gallery_dirs": "examples",
+#     "examples_dirs": "../../../tutorials",
+#     "gallery_dirs": "auto_tutorials",
 # }
+
+sphinx_gallery_conf = {
+    # path to your examples scripts
+    "examples_dirs": "../../tutorials/scripts",
+    "doc_module": "cooper",
+    # path where to save gallery generated examples
+    "gallery_dirs": "auto_tutorials",
+    # "backreferences_dir": os.path.join("modules", "generated"),
+    # "show_memory": True,
+    # "reference_url": {"cooper": None},
+    "filename_pattern": "/plot_",
+    "ignore_pattern": r"__init__\.py",
+}
