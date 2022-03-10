@@ -312,10 +312,10 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 class ProxyLagrangianFormulation(BaseLagrangianFormulation):
     """
     Placeholder class for the proxy-Lagrangian formulation proposed by
-    :cite:t:`cotter19JMLR`.
+    :cite:t:`cotter2019JMLR`.
 
     .. todo::
-        Implement Proxy-Lagrangian formulation as described in :cite:t:`cotter19JMLR`
+        Implement Proxy-Lagrangian formulation as described in :cite:t:`cotter2019JMLR`
 
     """
 
