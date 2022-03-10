@@ -24,6 +24,13 @@
 .. toctree::
     :maxdepth: 2
     :hidden:
+    :caption: Tutorials
+
+    tutorials
+
+.. toctree::
+    :maxdepth: 2
+    :hidden:
     :caption: Bibliography
 
     bibliography
