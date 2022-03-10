@@ -56,7 +56,7 @@ goal of the "dual" player :math:`\lambda` is to minimize :math:`-\mathcal{L}(x,\
 
     On a constrained non-convex problem might have an optimal feasible solution,
     and yet its Lagrangian might not have a pure Nash equilibrium. See example
-    in Fig 1. of :cite:p:`cotter19JMLR`
+    in Fig 1. of :cite:t:`cotter2019JMLR`
 
 .. autoclass:: LagrangianFormulation
     :members:

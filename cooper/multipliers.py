@@ -2,24 +2,68 @@
 
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 
+import abc
+
 import torch
 
 
-class BaseMultiplier(torch.nn.Module):
+class BaseMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
     """
-    Placeholder for base multiplier class, which can be extended to adapt
-    different types of multipliers: Dense, Sparse, implicit multiplier which is
-    itself the output of a model.
-
-    .. todo::
-        Implement BaseMultiplier class and refactor DenseMultiplier.
+    Base class for Lagrange multipliers. This base class can be extended to
+    different types of multipliers: Dense, Sparse or implicit multipliers.
     """
 
     def __init__(self) -> None:
         super().__init__()
 
+    @property
+    @abc.abstractmethod
+    def shape(self):
+        """
+        Returns the shape of the explicit multipliers. In the case of implicit
+        multipliers, this should return the *actual* predicted multipliers.
+        """
+        pass
 
-class DenseMultiplier(torch.nn.Module):
+    @property
+    @abc.abstractmethod
+    def grad(self):
+        """
+        Returns the gradient of trainable parameters associated with the
+        multipliers. In the case of implicit multipliers, this corresponds to
+        the gradient with respect to the parameters of the model which predicts
+        the multiplier values.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def data(self):
+        """
+        Returns the data stored in the tensors corresponding to the trainable
+        parameters associated with the multipliers.
+        """
+        pass
+
+    @abc.abstractmethod
+    def forward(self):
+        """
+        Returns the *actual* value of the multipliers. When using implicit
+        multipliers, the signature of this method may be change to enable
+        passing the "features" of the constraint to predict the corresponding
+        multiplier.
+        """
+        pass
+
+    @abc.abstractmethod
+    def project_(self):
+        """
+        In-place projection function for multipliers.
+        """
+        pass
+
+
+class DenseMultiplier(BaseMultiplier):
     """
     A dense multiplier. Holds a :py:class:`~torch.nn.parameter.Parameter`,
     which contains the value of the Lagrange multipliers associated with the
@@ -30,14 +74,6 @@ class DenseMultiplier(torch.nn.Module):
         init: Initial value of the multiplier.
         positive: Whether to enforce non-negativity on the values of the
             multiplier.
-
-    Attributes:
-        shape: shape of the :py:class:`~torch.nn.parameter.Parameter` associated
-            with the multiplier.
-        data: data (weight) of the :py:class:`~torch.nn.parameter.Parameter`
-            associated with the multiplier.
-        grad: gradient of the :py:class:`~torch.nn.parameter.Parameter`
-            associated with the multiplier.
     """
 
     def __init__(self, init: torch.Tensor, *, positive: bool = False):
@@ -47,14 +83,17 @@ class DenseMultiplier(torch.nn.Module):
 
     @property
     def shape(self):
+        """Returns the shape of the multiplier tensor."""
         return self.weight.shape
 
     @property
     def grad(self):
+        """Returns current gradient stored in the multiplier tensor."""
         return self.weight.grad
 
     @property
     def data(self):
+        """Returns the value of the multiplier tensor."""
         return self.weight.data
 
     @data.setter
@@ -62,16 +101,13 @@ class DenseMultiplier(torch.nn.Module):
         self.weight.data = value
 
     def forward(self):
-        """
-        Defines the computation performed at every call, which gets the current
-        value of the multiplier.
-        """
+        """Return the current value of the multiplier."""
         return self.weight
 
     def project_(self):
         """
-        Generic projection for non-negative multipliers used in inequality
-        constraints. May be generalized to other custom projections.
+        Ensures multipliers associated with inequality constraints reamain
+        non-negative.
         """
         if self.positive:
             self.weight.data = torch.relu(self.data)
