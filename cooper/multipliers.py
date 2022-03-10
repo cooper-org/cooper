@@ -36,15 +36,6 @@ class BaseMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
         """
         pass
 
-    @property
-    @abc.abstractmethod
-    def data(self):
-        """
-        Returns the data stored in the tensors corresponding to the trainable
-        parameters associated with the multipliers.
-        """
-        pass
-
     @abc.abstractmethod
     def forward(self):
         """
@@ -91,15 +82,6 @@ class DenseMultiplier(BaseMultiplier):
         """Returns current gradient stored in the multiplier tensor."""
         return self.weight.grad
 
-    @property
-    def data(self):
-        """Returns the value of the multiplier tensor."""
-        return self.weight.data
-
-    @data.setter
-    def data(self, value):
-        self.weight.data = value
-
     def forward(self):
         """Return the current value of the multiplier."""
         return self.weight
@@ -110,12 +92,12 @@ class DenseMultiplier(BaseMultiplier):
         non-negative.
         """
         if self.positive:
-            self.weight.data = torch.relu(self.data)
+            self.weight.data = torch.relu(self.weight.data)
 
     def __str__(self):
-        return str(self.data)
+        return str(self.weight.data)
 
     def __repr__(self):
         pos_str = "inequality" if self.positive else "equality"
-        rep = "DenseMultiplier(" + pos_str + ", " + str(self.data) + ")"
+        rep = "DenseMultiplier(" + pos_str + ", " + str(self.weight.data) + ")"
         return rep
