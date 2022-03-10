@@ -39,9 +39,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
             used to optimize the dual variables (e.g. Lagrange multipliers).
-            We refer to this parameter as 'partially instantiated' as the
-            variables it has control over (the Lagrange multipliers or equiv.)
-            are created at runtime by the ``Formulation``.
             Defaults to None.
             When dealing with an unconstrained problem, should be set to None.
 
@@ -53,9 +50,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             multipliers associated with inequality constraints: whenever the
             constraint is satisfied, directly set the multiplier to zero.
             Defaults to False.
-            We recommend to set this argument to False when dealing with
-            constraints whose violations are estimated stochastically, for
-            example Monte Carlo estimates for expectations.
 
     """
 
@@ -160,9 +154,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         Args:
             closure: Closure ``Callable`` required for re-evaluating the
                 objective and constraints when performing alternating or
-                extrapolating updates. If neither alternating or extrapolating
-                updates are used, this argument can be skipped as the closure
-                would not be re-evaluated.
+                extrapolating updates.
                 Defaults to None.
 
             *closure_args: Arguments to be passed to the closure function

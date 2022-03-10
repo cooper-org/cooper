@@ -37,23 +37,23 @@ Examples:
 
 - Unconstrained problem::
 
-    cmp = cooper.problem.ConstrainedMinimizationProblem(is_constrained=False)
+    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
     formulation = ...
     primal_optim = cooper.optim.Adam(model.parameters(), lr=1e-2)
 
-    const_optim = cooper.constrained_optimizer.ConstrainedOptimizer(
+    const_optim = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optim,
         )
 
 - Constrained problem::
 
-    cmp = cooper.problem.ConstrainedMinimizationProblem(is_constrained=True)
+    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
     formulation = ...
     primal_optim = cooper.optim.Adam(model.parameters(), lr=1e-2)
     p_dual_optim = cooper.optim.partial(cooper.optim.SGD, lr=1e-3, momentum=0.9)
 
-    const_optim = cooper.constrained_optimizer.ConstrainedOptimizer(
+    const_optim = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optim,
         dual_optimizer=p_dual_optim,
@@ -72,18 +72,25 @@ internally in :py:meth:`ConstrainedOptimizer.step`.
 .. note::
 
     Choosing ``alternating=True`` does not necessarily double the number of
-    backward passes through a considered model. When calculating gradients with
-    respect to :py:class:`~cooper.multipliers.DenseMultiplier`\s, it sufices to
-    evaluate the constraint defects (through a call to
+    backward passes through a model. When ``LagrangianFormulation`` calculates
+    gradients with respect to :py:class:`~cooper.multipliers.DenseMultiplier`\s,
+    it sufices to evaluate the constraint defects (through a call to
     :py:meth:`~cooper.problem.ConstrainedMinimizationProblem.closure`), which is
-    cheaper than having to backpropagate through the model's loss.
+    cheaper than having to backpropagate through the Lagrangian.
 
 Dual restarts
 ~~~~~~~~~~~~~
 
 ``dual_restarts=True`` can be used to set the dual variables associated with
 inequality constraints to 0 each time that their respective constraint reaches
-feasibility.
+feasibility. In practice, this prevents the optimization from over-focusing on
+the constraints at the cost of the loss function.
+
+We recommend to set ``dual_restarts=False`` when dealing with
+constraints whose violations are estimated stochastically, for
+example Monte Carlo estimates for expectations. This is to avoid restarting
+multipliers when a constraint is being satisfied for **one** estimation, as
+it may not be satisfied for further estimations because of their stochasticity.
 
 Taking an optimization step
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -91,8 +98,8 @@ The ``ConstrainedOptimizer`` implements a :meth:`~ConstrainedOptimizer.step`
 method, that updates the primal and dual parameters (if ``Formulation`` has any).
 The nature of the update depends on the attributes provided during the
 initialization of the ``ConstrainedOptimizer``. By default, updates are via
-simultaneous projected gradient descent on the primal parameters and ascent
-on the dual parameters.
+gradient descent on the primal parameters and (projected) ascent
+on the dual parameters, with simultaneous updates.
 
 Other methods for solving a ``ConstrainedMinimizationProblem`` include:
 
@@ -103,7 +110,7 @@ Other methods for solving a ``ConstrainedMinimizationProblem`` include:
 .. note::
 
     When solving an unconstrained problem, ``ConstrainedOptimizer.step()`` will
-    perform usual gradient descent on the primal parameters (given the primal
+    perform usual gradient descent updates on the primal parameters (given the primal
     optimizer provided). This is done as the notions of a Lagrangian and a
     saddle point optimization problem do not arise in the unconstrained case.
 
@@ -115,25 +122,13 @@ Other methods for solving a ``ConstrainedMinimizationProblem`` include:
 The :meth:`~ConstrainedOptimizer.step` method can be used in one of two ways:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. ``ConstrainedOptimizer.step()``
+#. ``constrained_optimizer.step()``
 
     This is the basic usage of the method, which applies to gradient descent-acent
     and augmented Lagrangian updates. The function can be called once the gradients
     are computed using :py:meth:`~cooper.problem.Formulation.custom_backward`.
 
-    Example::
-
-        cmp = ...
-        formulation = ...
-        constrained_optimizer = ...
-
-        for batch, targets in dataset:
-            constrained_optimizer.zero_grad()
-            lagrangian = formulation.composite_objective(cmp.closure, *closure_args, **closure_kwargs)
-            formulation.custom_backward(lagrangian)
-            constrained_optimizer.step()
-
-#. ``ConstrainedOptimizer.step(closure)``
+#. ``constrained_optimizer.step(closure)``
 
     Some optimization algorithms such as extragradient and alternating gradient
     descent-ascent need to re-evaluate the state of the ``ConstrainedMinimizationProblem``
@@ -144,17 +139,24 @@ The :meth:`~ConstrainedOptimizer.step` method can be used in one of two ways:
     The arguments required to evaluate ``closure()`` must also be provided as
     ``*closure_args`` and ``**closure_kwargs``.
 
-    Example::
+Example::
 
-        cmp = ...
-        formulation = ...
-        constrained_optimizer = ...
+    cmp = cooper.ConstrainedMinimizationProblem(...)
+    formulation = cooper.LagrangianFormulation(...)
+    constrained_optimizer = cooper.ConstrainedOptimizer(...)
 
-        for batch, targets in dataset:
-            constrained_optimizer.zero_grad()
-            lagrangian = formulation.composite_objective(cmp.closure, *closure_args, **closure_kwargs)
-            formulation.custom_backward(lagrangian)
-            constrained_optimizer.step(cmp.closure, *closure_args, **closure_kwargs)
+    for batch, targets in dataset:
+        constrained_optimizer.zero_grad()
+
+        # The closure is always required to compute the Lagrangian
+        lagrangian = formulation.composite_objective(cmp.closure, *closure_args, **closure_kwargs)
+        formulation.custom_backward(lagrangian)
+
+        # Not providing a closure
+        constrained_optimizer.step()
+
+        # Providing closure
+        constrained_optimizer.step(cmp.closure, *closure_args, **closure_kwargs)
 
 Base class
 ----------
