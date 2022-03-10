@@ -1,19 +1,30 @@
 """Lagrangian formulation"""
 
 import abc
-import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 import torch
 
 from .multipliers import DenseMultiplier
-from .problem import Formulation
+from .problem import CMPState, ConstrainedMinimizationProblem, Formulation
 
 
 class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
+    """
+    Base class for Lagrangian Formulations.
+
+    Attributes:
+        cmp: :py:class:`~cooper.problem.ConstrainedMinimizationProblem` we aim
+            to solve and which gives rise to the Lagrangian.
+        ineq_multipliers: Trainable :py:class:`cooper.multipliers.DenseMultiplier`\\s
+            associated with the inequality constraints.
+        eq_multipliers: Trainable :py:class:`cooper.multipliers.DenseMultiplier`\\s
+            associated with the equality constraints.
+    """
+
     def __init__(
         self,
-        cmp,
+        cmp: ConstrainedMinimizationProblem,
         ineq_init: Optional[torch.Tensor] = None,
         eq_init: Optional[torch.Tensor] = None,
         aug_lag_coefficient: float = 0.0,
@@ -36,19 +47,16 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         self.aug_lag_coefficient = aug_lag_coefficient
 
     @property
-    def dual_parameters(self):
-        all_duals = []
+    def dual_parameters(self) -> List[torch.Tensor]:
+        """Returns a list gathering all dual parameters"""
+        return [_ for _ in self.state() if _ is not None]
 
-        if self.eq_multipliers is not None:
-            all_duals += [self.eq_multipliers()]
-
-        if self.ineq_multipliers is not None:
-            all_duals += [self.ineq_multipliers()]
-
-        return all_duals
-
-    def state(self):
-        """Evaluates and returns all multipliers"""
+    def state(self) -> Tuple[Union[None, torch.Tensor]]:
+        """
+        Collects all dual variables and returns a tuple containing their
+        :py:class:`torch.Tensor` values. Note that the *values* are a different
+        type from the :py:class:`cooper.multipliers.DenseMultiplier` objects.
+        """
         ineq_state = None if self.ineq_multipliers is None else self.ineq_multipliers()
         eq_state = None if self.eq_multipliers is None else self.eq_multipliers()
 
@@ -56,7 +64,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
     def create_state(self, cmp_state):
         """Initialize dual variables and optimizers given list of equality and
-        inequality defects.
+        inequality defects. :py:class:`cooper.multipliers.DenseMultiplier`
 
         Args:
             eq_defect: Defects for equality constraints
@@ -109,13 +117,30 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
     @property
     def is_state_created(self):
-        """Returns True if any Lagrange multipliers have been initialized"""
+        """
+        Returns ``True`` if any Lagrange multipliers have been initialized.
+        """
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
     def purge_state_update(self):
         self.state_update = []
 
-    def weighted_violation(self, cmp_state, constraint_type):
+    def weighted_violation(
+        self, cmp_state: CMPState, constraint_type: str
+    ) -> torch.Tensor:
+        """
+        Computes the dot product between the current multipliers and the
+        constraint violations of type ``constraint_type``. If proxy-constraints
+        are provided in the :py:class:`.CMPState`, the non-proxy (usually
+        non-differentiable) constraints are used for computing the dot product,
+        while the "proxy-constraint" dot products are stored under
+        ``self.state_update``.
+
+        Args:
+            cmp_state: current ``CMPState``
+            constraint_type: type of constrained to be used
+
+        """
 
         defect = getattr(cmp_state, constraint_type + "_defect")
         has_defect = defect is not None
@@ -148,9 +173,45 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):
+    """
+    Provides utilities for computing the Lagrangian associated with a
+    ``ConstrainedMinimizationProblem`` and for populating the gradients for the
+    primal and dual parameters.
+
+    Args:
+        cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
+            rise to the Lagrangian.
+        ineq_init: Initialization values for the inequality multipliers.
+        eq_init: Initialization values for the equality multipliers.
+        aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
+    """
+
     def composite_objective(
-        self, closure, *closure_args, write_state=True, **closure_kwargs
-    ):
+        self,
+        closure: callable,
+        *closure_args,
+        write_state: bool = True,
+        **closure_kwargs
+    ) -> torch.Tensor:
+        """
+        Computes the Lagrangian based on a new evaluation of the
+        :py:class:`~cooper.problem.CMPState``.
+
+        If no explicit proxy-constraints are provided, we use the given
+        inequality/equality constraints to compute the Lagrangian and to
+        populate the primal and dual gradients.
+
+        In case proxy constraints are provided in the CMPState, the non-proxy
+        constraints (potentially non-differentiable) are used for computing the
+        Lagrangian, while the proxy-constraints are used in the backward
+        computation triggered by :py:meth:`._populate_gradient` (and thus must
+        be differentiable).
+
+        Args:
+            closure (callable): _description_
+            write_state (bool, optional): _description_. Defaults to True.
+
+        """
 
         cmp_state = closure(*closure_args, **closure_kwargs)
         if write_state:
@@ -182,7 +243,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # Lagrangian = loss + \sum_i multiplier_i * defect_i
             lagrangian = loss + ineq_viol + eq_viol
 
-            # TODO (1): verify that current implementation of proxy constraints
+            # TODO(JGP): [1] verify that current implementation of proxy constraints
             # works properly with augmented lagrangian below.
 
             # If using augmented Lagrangian, add squared sum of constraints
@@ -190,7 +251,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
             if self.aug_lag_coefficient > 0:
 
-                # TODO (2): I guess one would like to filter based on non-proxy
+                # TODO(JGP): [2] I guess one would like to filter based on non-proxy
                 # feasibility but then penalize based on the proxy constraint
                 if ineq_defect is not None:
                     ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
@@ -210,8 +271,23 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         return lagrangian
 
-    def populate_gradients(self, lagrangian, ignore_primal=False):
-        # ignore_primal is used for alternating updates
+    def _populate_gradients(
+        self, lagrangian: torch.Tensor, ignore_primal: bool = False
+    ):
+        """
+        Performs the actual backward computation which populates the gradients
+        for the primal and dual variables.
+
+        Args:
+            lagrangian: Value of the computed Lagrangian based on which the
+                gradients for the primal and dual variables are populated.
+            ignore_primal: If ``True``, only the gradients with respect to the
+                dual variables are populated (these correspond to the constraint
+                violations). This feature is mainly used in conjunction with
+                ``alternating`` updates, which require updating the multipliers
+                based on the constraints violation *after* having updated the
+                primal parameters. Defaults to False.
+        """
 
         if ignore_primal and self.cmp.is_constrained:
             # Only compute gradients wrt Lagrange multipliers
@@ -232,8 +308,15 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 dual_vars = [_ for _ in self.state() if _ is not None]
                 violation_for_update.backward(inputs=dual_vars)
 
-    def custom_backward(self, lagrangian):
-        """Alias for ``populate_gradients`` to stick with the Pytorch standard
-        naming of "backwards".
-        """
-        self.populate_gradients(lagrangian)
+
+class ProxyLagrangianFormulation(BaseLagrangianFormulation):
+    """
+    Placeholder class for the proxy-Lagrangian formulation proposed by
+    :cite:t:`cotter19JMLR`.
+
+    .. todo::
+        Implement Proxy-Lagrangian formulation as described in :cite:t:`cotter19JMLR`
+
+    """
+
+    pass
