@@ -20,6 +20,7 @@
     constrained_optimizer
     optim
     multipliers
+    state_logger
 
 .. toctree::
     :maxdepth: 2
