@@ -13,6 +13,7 @@ jobs:
             matrix:
                 python-version: [3.8]
                 os: [ubuntu-latest, macos-latest, windows-latest]
+                # No gpu workflow: https://github.com/apache/singa/issues/802
 
         steps:
             - uses: actions/checkout@v2
