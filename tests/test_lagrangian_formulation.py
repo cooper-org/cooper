@@ -2,8 +2,6 @@
 
 """Tests for Lagrangian Formulation class."""
 
-import pytest
-import testing_utils
 import torch
 
 import cooper

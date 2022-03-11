@@ -7,12 +7,13 @@ from .problem import Formulation
 
 class StateLogger:
     """
-    Utility for storing optimization metrics (e.g. loss, multipliers) through training
+    Utility for storing optimization metrics (e.g. loss, multipliers) through
+    training.
 
     Args:
-        save_metrics: List of metric names to be stored. Currently supported values
-            are: ``loss``, ``ineq_defect``, ``eq_defect``, ``ineq_multipliers``,
-            ``eq_multipliers``.
+        save_metrics: List of metric names to be stored. Currently supported
+            values are: ``loss``, ``ineq_defect``, ``eq_defect``,
+            ``ineq_multipliers``, ``eq_multipliers``.
     """
 
     def __init__(self, save_metrics: List[str]):
