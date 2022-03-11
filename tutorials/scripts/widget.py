@@ -4,13 +4,14 @@ import ipywidgets as widgets
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from . import style_utils
 import torch
 from IPython.display import display
 from ipywidgets import HBox, Layout, VBox, fixed, interactive
 from matplotlib.gridspec import GridSpec
 
 import cooper
+
+from . import style_utils
 
 
 class Toy2DWidget:
