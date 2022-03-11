@@ -1,7 +1,8 @@
 # Cooper
 
-[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gallego-posada/cooper/tree/master/LICENSE)
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
 [![DOCS](https://readthedocs.org/projects/torch-cooper/badge/?version=latest)](https://torch-cooper.readthedocs.io/en/latest/?version=latest)
+[![Codecov](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)
 
 ## About
 
@@ -16,8 +17,9 @@ with Pytorch, while preserving the `loss -> backward -> step` workflow commonly 
 
 Here we consider a simple convex optimization problem to illustrate how to use **Cooper**.
 This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
->*I am trying to solve the following problem using Pytorch: given a 6-sided die whose
->average roll is known to be 4.5, what is the maximum entropy distribution for the faces?*
+
+> _I am trying to solve the following problem using Pytorch: given a 6-sided die whose
+> average roll is known to be 4.5, what is the maximum entropy distribution for the faces?_
 
 ```python
 import torch
@@ -75,7 +77,7 @@ repository in development mode.
 ### Basic Installation
 
 ```bash
-pip install git@github.com:gallego-posada/cooper.git#egg=cooper
+pip install git@github.com:cooper-org/cooper.git#egg=cooper
 ```
 
 ### Development Installation
@@ -89,29 +91,30 @@ pip install --editable ".[dev]"
 
 If you are not interested in matching the test environment, you can just
 apply:
+
 ```bash
 pip install --editable .
 ```
 
 ## Cooper
 
-- `cooper` - base package
-    - `problem` - abstract class for representing CMPs
-    - `constrained_optimizer` - Pytorch optimizer class for handling constrained minimization problems (CMPs)
-    - `lagrangian_formulation` - Lagrangian formulation of a CMP
-    - `multipliers` - utility class for Lagrange multipliers
-    - `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
+-   `cooper` - base package
+    -   `problem` - abstract class for representing CMPs
+    -   `constrained_optimizer` - Pytorch optimizer class for handling constrained minimization problems (CMPs)
+    -   `lagrangian_formulation` - Lagrangian formulation of a CMP
+    -   `multipliers` - utility class for Lagrange multipliers
+    -   `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
 
 ## Tutorial Notebooks
 
 The `tutorials` directory contains interactive notebooks which showcase the core
 features of the toolkit. Existing tutorials are:
 
-- Tutorials TBD
+-   Tutorials TBD
 
 ## Contributions
 
-Please read our [CONTRIBUTING](https://github.com/gallego-posada/cooper/tree/master/.github/CONTRIBUTING.md) guide prior to submitting a pull request.
+Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md) guide prior to submitting a pull request.
 
 We test all pull requests. We rely on this for reviews, so please make sure any
 new code is tested. Tests for `cooper` go in the `tests` folder in
@@ -122,7 +125,7 @@ linting, and `mypy` for type checking.
 
 ## License
 
-**Cooper** is distributed under an MIT license, as found in the [LICENSE](https://github.com/gallego-posada/cooper/tree/master/LICENSE) file.
+**Cooper** is distributed under an MIT license, as found in the [LICENSE](https://github.com/cooper-org/cooper/tree/master/LICENSE) file.
 
 ## Acknowledgements
 
@@ -150,7 +153,7 @@ If you find **Cooper** useful in your work, please consider citing it using the 
 @misc{gallegoPosada2022cooper,
     author={Gallego-Posada, Jose and Ramirez, Juan},
     title={Cooper: a toolkit for Lagrangian-based constrained optimization},
-    howpublished={\url{https://github.com/gallego-posada/cooper}},
+    howpublished={\url{https://github.com/cooper-org/cooper}},
     year={2022}
 }
 ```
