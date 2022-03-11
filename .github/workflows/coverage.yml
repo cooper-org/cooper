@@ -24,7 +24,7 @@ jobs:
                   pip install codecov pytest-cov
                   pip install .[dev]
             - name: Coverage tests
-              run: pytest --cov=cooper test/ --cov-report term-missing
+              run: pytest --cov=cooper . --cov-report term-missing
 
             - name: Codecov
               if: success()
