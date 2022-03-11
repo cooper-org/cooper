@@ -16,10 +16,12 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     Attributes:
         cmp: :py:class:`~cooper.problem.ConstrainedMinimizationProblem` we aim
             to solve and which gives rise to the Lagrangian.
-        ineq_multipliers: Trainable :py:class:`cooper.multipliers.DenseMultiplier`\\s
-            associated with the inequality constraints.
-        eq_multipliers: Trainable :py:class:`cooper.multipliers.DenseMultiplier`\\s
-            associated with the equality constraints.
+        ineq_multipliers: Trainable
+            :py:class:`cooper.multipliers.DenseMultiplier`\\s associated with
+            the inequality constraints.
+        eq_multipliers: Trainable
+            :py:class:`cooper.multipliers.DenseMultiplier`\\s associated with
+            the equality constraints.
     """
 
     def __init__(
@@ -87,7 +89,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
                 # Ensure dual variables have not been initialized previously
                 assert getattr(self, constraint_type + "_multipliers") is None
 
-                # If given proxy and non-proxy constraints, sanity-check tensor sizes
+                # If given proxy and non-proxy defects, sanity-check shapes
                 if has_defect and has_proxy_defect:
                     assert defect.shape == proxy_defect.shape
 
@@ -96,8 +98,8 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
                 init_tensor = getattr(self, constraint_type + "_init")
                 if init_tensor is None:
-                    # If not provided custom initialization, Lagrange multipliers
-                    # are initialized at 0
+                    # If not provided custom initialization, Lagrange
+                    # multipliers are initialized at 0
 
                     # This already preserves dtype and device of defect
                     casted_init = torch.zeros_like(defect_for_init)
@@ -235,24 +237,24 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # If given proxy constraints, these are used to compute the terms
             # added to the Lagrangian, and the multiplier updates are based on
             # the non-proxy violations.
-            # If not given proxy constraints, then gradients and multiplier updates
-            # are based on the "regular" constraints.
+            # If not given proxy constraints, then gradients and multiplier
+            # updates are based on the "regular" constraints.
             ineq_viol = self.weighted_violation(cmp_state, "ineq")
             eq_viol = self.weighted_violation(cmp_state, "eq")
 
             # Lagrangian = loss + \sum_i multiplier_i * defect_i
             lagrangian = loss + ineq_viol + eq_viol
 
-            # TODO(JGP): [1] verify that current implementation of proxy constraints
-            # works properly with augmented lagrangian below.
+            # TODO(JGP): [1] verify that current implementation of proxy
+            # constraints works properly with augmented lagrangian below.
 
             # If using augmented Lagrangian, add squared sum of constraints
             # Following the formulation on Marc Toussaint slides (p 17-20)
             # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
             if self.aug_lag_coefficient > 0:
 
-                # TODO(JGP): [2] I guess one would like to filter based on non-proxy
-                # feasibility but then penalize based on the proxy constraint
+                # TODO(JGP): [2] I guess one would like to filter based on
+                # non-proxy feasibility but penalize based on the proxy defect
                 if ineq_defect is not None:
                     ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
                     ineq_square = torch.sum(torch.square(ineq_defect[ineq_filter]))
@@ -315,7 +317,8 @@ class ProxyLagrangianFormulation(BaseLagrangianFormulation):
     :cite:t:`cotter2019JMLR`.
 
     .. todo::
-        Implement Proxy-Lagrangian formulation as described in :cite:t:`cotter2019JMLR`
+        Implement Proxy-Lagrangian formulation as described in
+        :cite:t:`cotter2019JMLR`
 
     """
 

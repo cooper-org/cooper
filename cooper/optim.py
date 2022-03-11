@@ -77,14 +77,20 @@ class Extragradient(Optimizer):
         raise NotImplementedError
 
     def extrapolation(self):
-        """Performs the extrapolation step and save a copy of the current parameters for the update step."""
+        """
+        Performs the extrapolation step and save a copy of the current
+        parameters for the update step.
+        """
         # Check if a copy of the parameters was already made.
         is_empty = len(self.params_copy) == 0
         for group in self.param_groups:
             for p in group["params"]:
                 u = self.update(p, group)
                 if is_empty:
-                    # Save the current parameters for the update step. Several extrapolation step can be made before each update but only the parameters before the first extrapolation step are saved.
+                    # Save the current parameters for the update step. Several
+                    # extrapolation step can be made before each update but only
+                    # the parameters before the first extrapolation step are
+                    # saved.
                     self.params_copy.append(p.data.clone())
                 if u is None:
                     continue
@@ -139,7 +145,8 @@ class ExtraSGD(Extragradient):
         nesterov: enables Nesterov momentum (default: False)
 
     Example:
-        >>> optimizer = torch.optim.ExtraSGD(model.parameters(), lr=0.1, momentum=0.9)
+        >>> optimizer = torch.optim.ExtraSGD(model.parameters(), lr=0.1,
+            momentum=0.9)
         >>> optimizer.zero_grad()
         >>> loss_fn(model(input), target).backward()
         >>> optimizer.extrapolation()
@@ -154,8 +161,8 @@ class ExtraSGD(Extragradient):
         Considering the specific case of Momentum, the update can be written as
 
         .. math::
-            v = \\rho \cdot v + g \\\\
-            p = p - lr \cdot v
+            v = \\rho \\cdot v + g \\\\
+            p = p - lr \\cdot v
 
         where :math:`p`, :math:`v`, :math:`g` and :math:`\\rho` denote the
         parameters, gradient, velocity, and momentum respectively.
@@ -164,7 +171,7 @@ class ExtraSGD(Extragradient):
         other frameworks which employ an update of the form
 
         .. math::
-            v &= \\rho \cdot v + lr \cdot g \\\\
+            v &= \\rho \\cdot v + lr \\cdot g \\\\
             p &= p - v
 
         The Nesterov version is analogously modified.

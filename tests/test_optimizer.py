@@ -3,8 +3,6 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
-import functools
-
 import pytest
 import testing_utils
 import torch
