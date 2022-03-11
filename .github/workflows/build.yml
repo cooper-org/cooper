@@ -31,18 +31,23 @@ jobs:
               if: ${{ matrix.os == 'windows-latest' }}
               run: |
                   python -m pip install --upgrade pip
-                  pip install torch===1.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+                  pip install torch==1.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
                   pip install .[dev]
             - name: Lint with flake8
               run: |
-                  # stop the build if there are Python syntax errors or undefined names
-                  flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-                  flake8 . --count --exit-zero --max-complexity=12 --max-line-length=88 --statistics
+                  # stop the build if there are Python syntax errors or undefined in Cooper folder (ignoring tutorials)
+                  flake8 cooper --count --select=E9,F63,F7,F82 --show-source --statistics
+                  flake8 cooper --count --exit-zero --max-complexity=12 --max-doc-length=80 --max-line-length=88 --statistics
+                  # Uncomment below to flake tutorials
+                  # flake8 cooper --count --select=E9,F63,F7,F82 --show-source --statistics
+                  # flake8 cooper --count --exit-zero --max-complexity=12 --max-doc-length=80 --max-line-length=88 --statistics
             - name: Lint with Black
               run: |
                   black --check --diff .
             - name: Sort imports with isort
-              uses: isort/isort-action@master
+              run: |
+                  isort cooper
+                  isort tutorials
             - name: Test with pytest
               run: |
                   pytest test
