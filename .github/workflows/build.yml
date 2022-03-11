@@ -50,4 +50,4 @@ jobs:
                   isort tutorials
             - name: Test with pytest
               run: |
-                  pytest test
+                  pytest .
