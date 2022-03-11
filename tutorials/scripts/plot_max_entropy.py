@@ -9,13 +9,13 @@ This example is inspired by [this StackExchange question](https://datascience.st
 average roll is known to be 4.5, what is the maximum entropy distribution for the faces?*
 """
 
-import os
 import copy
+import os
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 import torch
+
 import cooper
 
 
