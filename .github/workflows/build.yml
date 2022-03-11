@@ -37,11 +37,9 @@ jobs:
             - name: Lint with flake8
               run: |
                   # stop the build if there are Python syntax errors or undefined in Cooper folder (ignoring tutorials)
-                  flake8 cooper --count --select=E9,F63,F7,F82 --show-source --statistics
-                  flake8 cooper --count --exit-zero --max-complexity=12 --max-doc-length=80 --max-line-length=88 --statistics
-                  # Uncomment below to flake tutorials
-                  # flake8 cooper --count --select=E9,F63,F7,F82 --show-source --statistics
-                  # flake8 cooper --count --exit-zero --max-complexity=12 --max-doc-length=80 --max-line-length=88 --statistics
+                  flake8 --ignore=E203,E266,E501 cooper --count --exit-zero --max-doc-length=80 --max-line-length=88 --statistics
+                  # Uncomment below to apply flake8 to tutorials
+                  # flake8 --ignore=E203,E266,E501 cooper --count --exit-zero --max-doc-length=80 --max-line-length=88 --statistics
             - name: Lint with Black
               run: |
                   black --check --diff .
