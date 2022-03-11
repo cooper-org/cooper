@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Ignore generated version file by setuptools
+cooper/version
+
 # Tutorial auxiliary folder
 tutorials/data/
 
