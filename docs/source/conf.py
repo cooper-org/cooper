@@ -20,8 +20,8 @@ import cooper.version
 # -- Project information -----------------------------------------------------
 
 project = "Cooper"
-copyright = "2022, Cooper Developers"
-author = "Cooper Developers"
+copyright = "2022, The Cooper Developers"
+author = "The Cooper Developers"
 
 # The full version, including alpha/beta/rc tags
 release = f"v{cooper.version.version}"
