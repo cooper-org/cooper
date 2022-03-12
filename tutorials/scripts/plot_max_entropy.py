@@ -2,11 +2,13 @@
 Finding a discrete maximum entropy distribution
 ===============================================
 
-Here we consider a simple convex optimization problem to illustrate how to use **Cooper**.
-This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
+Here we consider a simple convex optimization problem to illustrate how to use 
+**Cooper**. This example is inspired by `this StackExchange question
+<https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch>`_\:
 
-*I am trying to solve the following problem using Pytorch: given a 6-sided die whose
-average roll is known to be 4.5, what is the maximum entropy distribution for the faces?*
+*I am trying to solve the following problem using Pytorch: given a 6-sided die 
+whose average roll is known to be 4.5, what is the maximum entropy distribution 
+for the faces?*
 """
 
 import copy
@@ -29,7 +31,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         assert torch.all(probs >= 0)
 
         # Negative signed removed since we want to *maximize* the entropy
-        entropy = torch.sum(probs * torch.log(probs))
+        neg_entropy = torch.sum(probs * torch.log(probs))
 
         # Entries of p >= 0 (equiv. -p <= 0)
         ineq_defect = -probs
@@ -39,7 +41,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         eq_defect = torch.stack([torch.sum(probs) - 1, mean - self.mean_constraint])
 
         return cooper.CMPState(
-            loss=entropy, eq_defect=eq_defect, ineq_defect=ineq_defect
+            loss=neg_entropy, eq_defect=eq_defect, ineq_defect=ineq_defect
         )
 
 
@@ -48,7 +50,8 @@ cmp = MaximumEntropy(mean_constraint=4.5)
 formulation = cooper.LagrangianFormulation(cmp)
 
 # Define the primal parameters and optimizer
-probs = torch.nn.Parameter(torch.rand(6))  # Use a 6-sided die
+rand_init = torch.rand(6)  # Use a 6-sided die
+probs = torch.nn.Parameter(rand_init / sum(rand_init))
 primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 
 # Define the dual optimizer. Note that this optimizer has NOT been fully instantiated
@@ -73,16 +76,24 @@ for iter_num in range(5000):
 
 all_metrics = state_history.unpack_stored_metrics()
 
-fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, sharex=True, figsize=(15, 3))
+# Theoretical solution
+optim_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])
+optim_neg_entropy = torch.sum(optim_prob * torch.log(optim_prob))
+
+# Generate plots
+fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, sharex=True, figsize=(20, 4))
 
 ax0.plot(all_metrics["iters"], np.stack(all_metrics["eq_multipliers"]))
 ax0.set_title("Multipliers")
 
 ax1.plot(all_metrics["iters"], np.stack(all_metrics["eq_defect"]), alpha=0.6)
-ax1.axhline(0.0, c="gray", alpha=0.2)
+# Show that defect remains below/at zero
+ax1.axhline(0.0, c="gray", alpha=0.35)
 ax1.set_title("Defects")
 
 ax2.plot(all_metrics["iters"], all_metrics["loss"])
+# Show optimal entropy is achieved
+ax2.axhline(optim_neg_entropy, c="gray", alpha=0.35)
 ax2.set_title("Objective")
 
 [_.semilogx() for _ in (ax0, ax1, ax2)]
