@@ -12,20 +12,16 @@
 #
 # import os
 # import sys
-# sys.path.insert(0, os.path.abspath('.'))
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(".."))
+# sys.path.insert(0, os.path.abspath("."))
 
 import cooper.version
 
 # -- Project information -----------------------------------------------------
 
 project = "Cooper"
-copyright = "2022, Jose Gallego-Posada and Juan Ramirez"
-author = "Jose Gallego-Posada and Juan Ramirez"
+copyright = "2022, Cooper Developers"
+author = "Cooper Developers"
 
 # The full version, including alpha/beta/rc tags
 release = f"v{cooper.version.version}"
@@ -53,8 +49,22 @@ extensions = [
     "sphinx_gallery.gen_gallery",
 ]
 
+mathjax3_config = {
+    "extensions": ["tex2jax.js"],
+    "TeX": {
+        "Macros": {
+            "argmin": "\\DeclareMathOperator*{\\argmin}{\\mathbf{arg\\,min}}",
+            "argmax": "\\DeclareMathOperator*{\\argmin}{\\mathbf{arg\\,max}}",
+            "bs": "\\newcommand{\\bs}[1]{\\boldsymbol{#1}}",
+        },
+    },
+    "tex2jax": {
+        "inlineMath": [["$", "$"], ["\(", "\)"]],
+    },
+    "jax": ["input/TeX", "output/HTML-CSS"],
+    "displayAlign": "left",
+}
 
-mathjax3_config = {"jax": ["input/TeX", "output/HTML-CSS"], "displayAlign": "left"}
 
 # Handle Latex-style references
 bibtex_reference_style = "author_year"
@@ -68,7 +78,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["build"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -101,20 +111,17 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
 }
 
-# sphinx_gallery_conf = {
-#     "examples_dirs": "../../../tutorials",
-#     "gallery_dirs": "auto_tutorials",
-# }
-
 sphinx_gallery_conf = {
     # path to your examples scripts
-    "examples_dirs": "../../tutorials/scripts",
-    "doc_module": "cooper",
+    "examples_dirs": "../../tutorials/scripts/",
+    # "doc_module": "cooper",
     # path where to save gallery generated examples
     "gallery_dirs": "auto_tutorials",
     # "backreferences_dir": os.path.join("modules", "generated"),
     # "show_memory": True,
     # "reference_url": {"cooper": None},
-    "filename_pattern": "/plot_",
-    "ignore_pattern": r"__init__\.py",
+    # "filename_pattern": r"/plot_\.py",
+    # "ignore_pattern": r"__init__\.py",
+    "line_numbers": True,
+    # "run_stale_examples": True,
 }

@@ -25,9 +25,9 @@
 .. toctree::
     :maxdepth: 2
     :hidden:
-    :caption: Tutorials
+    :caption: Tutorial Gallery
 
-    tutorials
+    auto_tutorials/index
 
 .. toctree::
     :maxdepth: 2
