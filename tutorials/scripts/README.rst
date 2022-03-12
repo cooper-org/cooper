@@ -1,4 +1,2 @@
-Gallery
-========
-
-Dummy text for gallery
+Tutorial Gallery
+================

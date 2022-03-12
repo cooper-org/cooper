@@ -2,12 +2,12 @@
 Finding a discrete maximum entropy distribution
 ===============================================
 
-Here we consider a simple convex optimization problem to illustrate how to use 
+Here we consider a simple convex optimization problem to illustrate how to use
 **Cooper**. This example is inspired by `this StackExchange question
 <https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch>`_\:
 
-*I am trying to solve the following problem using Pytorch: given a 6-sided die 
-whose average roll is known to be 4.5, what is the maximum entropy distribution 
+*I am trying to solve the following problem using Pytorch: given a 6-sided die
+whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
 """
 
@@ -16,9 +16,13 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import style_utils
 import torch
 
 import cooper
+
+torch.manual_seed(0)
+np.random.seed(0)
 
 
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
@@ -81,7 +85,7 @@ optim_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])
 optim_neg_entropy = torch.sum(optim_prob * torch.log(optim_prob))
 
 # Generate plots
-fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, sharex=True, figsize=(20, 4))
+fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, sharex=True, figsize=(15, 3))
 
 ax0.plot(all_metrics["iters"], np.stack(all_metrics["eq_multipliers"]))
 ax0.set_title("Multipliers")

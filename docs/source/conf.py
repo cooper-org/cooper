@@ -121,7 +121,7 @@ sphinx_gallery_conf = {
     # "show_memory": True,
     # "reference_url": {"cooper": None},
     # "filename_pattern": r"/plot_\.py",
-    # "ignore_pattern": r"__init__\.py",
+    "ignore_pattern": r"__init__\.py|.*_utils.py",
     "line_numbers": True,
     # "run_stale_examples": True,
 }
