@@ -133,7 +133,7 @@ class ExtraSGD(Extragradient):
 
     Nesterov momentum is based on the formula from `On the importance of
     initialization and momentum in deep learning
-    <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_.
+    <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_\.
 
     Args:
         params: iterable of parameters to optimize or dicts defining
@@ -249,7 +249,8 @@ class ExtraAdam(Extragradient):
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
         amsgrad (boolean, optional): whether to use the AMSGrad variant of this
-            algorithm from the paper `On the Convergence of Adam and Beyond`_
+            algorithm from the paper `On the Convergence of Adam and Beyond
+            <https://arxiv.org/abs/1904.09237>`_
     """
 
     def __init__(
