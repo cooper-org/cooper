@@ -104,8 +104,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
         )
 
         # We assume that both optimizers agree on whether to use extrapolation
-        # or not, so we use the primal optimizer as reference for deciding to
-        # use extrapolation. See check below for matching extrapolation behavior
+        # or not, so we use the primal optimizer as reference for deciding
+        # whether to use extrapolation. See check below for matching
+        # extrapolation behavior.
         self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
 
         if is_aug_lag and self.is_extrapolation:
@@ -182,8 +183,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             # Zero gradients and recompute loss at t+1/2
             self.zero_grad()
 
-            # For extrapolation, we need closure args as the parameter values
-            # will have changed in the update applied on the extrapolation step
+            # For extrapolation, we need closure args here as the parameter
+            # values will have changed in the update applied on the
+            # extrapolation step
             lagrangian = self.formulation.composite_objective(
                 closure, *closure_args, **closure_kwargs
             )
@@ -207,15 +209,15 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
                     # TODO: add test for this
 
                     # Once having updated primal parameters, re-compute gradient
-                    # Skip gradient wrt model parameters (wasteful computation)
-                    # as we only need gradient wrt multipliers.
+                    # Skip gradient wrt model parameters to avoid wasteful
+                    # computation, as we only need gradient wrt multipliers.
                     with torch.no_grad():
                         self.cmp.state = closure(*closure_args, **closure_kwargs)
                     lagrangian = self.formulation.get_composite_objective(self.cmp)
 
                     # Zero-out gradients for dual variables since they were
                     # already populated earlier.
-                    # Also zeroing primal gradients for safety although not
+                    # We also zero-out primal gradients for safety although not
                     # really necessary.
                     self.zero_grad(ignore_primal=False, ignore_dual=False)
 
