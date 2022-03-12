@@ -90,11 +90,14 @@ html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
     "analytics_id": "",
-    "collapse_navigation": False,
+    "logo_only": False,
     "display_version": True,
-    "logo_only": True,
+    "collapse_navigation": True,
+    "sticky_navigation": True,
     "navigation_with_keys": True,
+    "prev_next_buttons_location": "bottom",
 }
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -102,6 +105,8 @@ html_theme_options = {
 html_static_path = ["_static"]
 
 html_css_files = ["css/custom.css"]
+
+html_logo = "_static/cooper_logo_200px.png"
 
 # intersphinx maps
 intersphinx_mapping = {
@@ -115,8 +120,7 @@ sphinx_gallery_conf = {
     # path to your examples scripts
     "examples_dirs": "../../tutorials/scripts/",
     # "doc_module": "cooper",
-    # path where to save gallery generated examples
-    "gallery_dirs": "auto_tutorials",
+    "gallery_dirs": "auto_tutorials",  # path to save gallery generated examples
     # "backreferences_dir": os.path.join("modules", "generated"),
     # "show_memory": True,
     # "reference_url": {"cooper": None},
