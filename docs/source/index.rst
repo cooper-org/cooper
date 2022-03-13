@@ -10,6 +10,8 @@
 
     readme
 
+.. highlight:: python
+
 .. toctree::
     :maxdepth: 2
     :hidden:

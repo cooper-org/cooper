@@ -2,9 +2,9 @@
 import functools
 import math
 from collections.abc import Iterable
+from typing import Tuple, Type
 
 import torch
-from torch.optim import Optimizer
 
 # Define aliases
 SGD = torch.optim.SGD
@@ -13,16 +13,20 @@ Adagrad = torch.optim.Adagrad
 RMSprop = torch.optim.RMSprop
 
 
-def partial(cls, *args, **kwds):
+def partial(optim_cls: Type[torch.optim.Optimizer], **optim_kwargs):
     """
     Partially instantiates an optimizer class. This approach is preferred over
     :py:func:`functools.partial` since the returned value is an optimizer
     class whose attributes can be inspected and which can be further
     instantiated.
+
+    Args:
+        optim_cls: Pytorch optimizer class to be partially instantiated.
+        **optim_kwargs: Keyword arguments for optimizer hyperparemeters.
     """
 
-    class PartialOptimizer(cls):
-        __init__ = functools.partialmethod(cls.__init__, *args, **kwds)
+    class PartialOptimizer(optim_cls):
+        __init__ = functools.partialmethod(optim_cls.__init__, **optim_kwargs)
 
     return PartialOptimizer
 
@@ -59,18 +63,18 @@ def partial(cls, *args, **kwds):
 required = object()
 
 
-class Extragradient(Optimizer):
+class ExtragradientOptimizer(torch.optim.Optimizer):
     """Base class for optimizers with extrapolation step.
 
-    Arguments:
-    params (iterable): an iterable of :class:`torch.Tensor` s or
-        :class:`dict` s. Specifies what Tensors should be optimized.
-    defaults: (dict): a dict containing default values of optimization
-        options (used when a parameter group doesn't specify them).
+    Args:
+        params: an iterable of :class:`torch.Tensor`\\s or
+            :class:`dict`\\s. Specifies what Tensors should be optimized.
+        defaults: a dict containing default values of optimization
+            options (used when a parameter group doesn't specify them).
     """
 
-    def __init__(self, params, defaults):
-        super(Extragradient, self).__init__(params, defaults)
+    def __init__(self, params: Iterable, defaults: dict):
+        super(ExtragradientOptimizer, self).__init__(params, defaults)
         self.params_copy = []
 
     def update(self, p, group):
@@ -126,7 +130,7 @@ class Extragradient(Optimizer):
         return loss
 
 
-class ExtraSGD(Extragradient):
+class ExtraSGD(ExtragradientOptimizer):
     """
     Implements stochastic gradient descent with extrapolation step (optionally
     with momentum).
@@ -136,13 +140,13 @@ class ExtraSGD(Extragradient):
     <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_\.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr: learning rate
-        momentum: momentum factor (default: 0)
-        weight_decay: weight decay (L2 penalty) (default: 0)
-        dampening: dampening for momentum (default: 0)
-        nesterov: enables Nesterov momentum (default: False)
+        params: Iterable of parameters to optimize or dicts defining parameter
+            groups.
+        lr: Learning rate.
+        momentum: Momentum factor.
+        weight_decay: Weight decay (L2 penalty).
+        dampening: Dampening for momentum.
+        nesterov: If ``True``, enables Nesterov momentum.
 
     Example:
         >>> optimizer = torch.optim.ExtraSGD(model.parameters(), lr=0.1,
@@ -236,31 +240,30 @@ class ExtraSGD(Extragradient):
         return -group["lr"] * d_p
 
 
-class ExtraAdam(Extragradient):
-    """Implements the Adam algorithm with extrapolation step.
+class ExtraAdam(ExtragradientOptimizer):
+    """Implements the Adam algorithm with an extrapolation step.
 
-    Arguments:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float, optional): learning rate (default: 1e-3)
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.999))
-        eps (float, optional): term added to the denominator to improve
-            numerical stability (default: 1e-8)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        amsgrad (boolean, optional): whether to use the AMSGrad variant of this
-            algorithm from the paper `On the Convergence of Adam and Beyond
-            <https://arxiv.org/abs/1904.09237>`_
+    Args:
+        params: Iterable of parameters to optimize or dicts defining
+            parameter groups.
+        lr : Learning rate.
+        betas: Coefficients used for computing running averages of gradient and
+            its square.
+        eps : Term added to the denominator to improve numerical stability.
+        weight_decay: Weight decay (L2 penalty).
+        amsgrad: Flag to use the AMSGrad variant of this algorithm from the
+            paper `On the Convergence of Adam and Beyond
+            <https://arxiv.org/abs/1904.09237>`_\\.
     """
 
     def __init__(
         self,
-        params,
-        lr=1e-3,
-        betas=(0.9, 0.999),
-        eps=1e-8,
-        weight_decay=0,
-        amsgrad=False,
+        params: Iterable,
+        lr: float = 1e-3,
+        betas: Tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0,
+        amsgrad: bool = False,
     ):
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))

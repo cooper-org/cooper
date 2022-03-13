@@ -1,96 +1,89 @@
 Constrained Optimizer
 =====================
 
-.. automodule:: cooper.constrained_optimizer
+.. currentmodule:: cooper.constrained_optimizer
+
+.. autoclass:: ConstrainedOptimizer
+    :members:
+
 
 How to use a constrained optimizer
 ----------------------------------
-To use ``cooper.constrained_optimizer``, a ``ConstrainedOptimizer`` object
-must be constructed. It will perform parameter updates to solve a
-:py:class:`~cooper.problem.ConstrainedMinimizationProblem` given its
+The :py:class:`ConstrainedOptimizer` class is the cornerstone of **Cooper**. A
+:py:class:`ConstrainedOptimizer` performs parameter updates to solve a
+:py:class:`~cooper.problem.ConstrainedMinimizationProblem` given a chosen
 :py:class:`~cooper.problem.Formulation`.
 
-It will hold a :py:class:`torch.optim.Optimizer` used on "primal" parameters:
-those associated directly with the optimization problem. It will potentially
-also hold a :py:class:`torch.optim.Optimizer` for "dual" parameters, if
-the provided formulation has them (e.g. Lagrange multipliers).
+A ``ConstrainedOptimizer`` wraps a :py:class:`torch.optim.Optimizer`
+used for updating the "primal" parameters associated directly with the
+optimization problem. These might be, for example, the parameters of the model
+you are training.
 
-Constructing it
-^^^^^^^^^^^^^^^
+Additionally, a ``ConstrainedOptimizer`` includes a second
+:py:class:`torch.optim.Optimizer`, which performs updates on the "dual"
+parameters (e.g. the multipliers used in a
+:py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`).
 
-To construct a ``ConstrainedOptimizer``, you have to give it a
-``Formulation`` of a ``ConstrainedMinimizationProblem``
-and an instantiated ``Optimizer`` for the primal (e.g. model) parameters.
+Construction
+^^^^^^^^^^^^
 
-If the ``ConstrainedMinimizationProblem`` you are trying to solve is constrained,
-you must also provide a partially instantiated ``Optimizer`` for the dual
-parameters (see :py:func:`cooper.optim.partial`). This partialy instantiated
-class must only lack the ``params`` attribute, which will be created at runtime
-by the ``Formulation`` based on the properties of evaluated constraint defects.
+The main ingredients to build a ``ConstrainedOptimizer`` are a
+:py:class:`~cooper.problem.Formulation` (associated with a
+:py:class:`~cooper.problem.ConstrainedMinimizationProblem`) and a
+:py:class:`torch.optim.Optimizer` corresponding to the ``primal_optimizer``.
+
+If the ``ConstrainedMinimizationProblem`` you are dealing with is in fact
+constrained, depending on your formulation, you might also need to provide a
+``dual_optimizer``. Check out the section on :ref:`partial_optimizer_instantiation`
+for more details on defining ``dual_optimizer``\s.
+
 
 .. note::
 
-    In particular, :py:class:`cooper.optim.Extragradient` optimizers with an
-    extrapolation method can be provided for the primal and dual parameters.
+    **Cooper** includes extra-gradient implementations of SGD and Adam which can
+    be used as primal or dual optimizers. See :ref:`extra-gradient_optimizers`.
 
 Examples:
+~~~~~~~~~
 
-- Unconstrained problem::
+The highlighted lines below show the small changes required to go from an
+unconstrained to a constrained problem. Note that these changes should also be
+accompanied with edits to the custom problem class which inherits from
+:py:class:`~cooper.problem.ConstrainedMinimizationProblem`. More details on
+the definition of a CMP can be found under the entry for :ref:`cmp`.
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
-    formulation = ...
-    primal_optim = cooper.optim.Adam(model.parameters(), lr=1e-2)
+- **Unconstrained problem**
 
-    const_optim = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optim,
+    .. code-block:: python
+        :linenos:
+
+        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
+        formulation = cooper.problem.Formulation(...)
+
+        primal_optimizer = cooper.optim.Adam(model.parameters(), lr=1e-2)
+
+        const_optim = cooper.ConstrainedOptimizer(
+            formulation=formulation,
+            primal_optimizer=primal_optim,
         )
 
-- Constrained problem::
+- **Constrained problem**
 
-    cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
-    formulation = ...
-    primal_optim = cooper.optim.Adam(model.parameters(), lr=1e-2)
-    p_dual_optim = cooper.optim.partial(cooper.optim.SGD, lr=1e-3, momentum=0.9)
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 1,5,10
 
-    const_optim = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optim,
-        dual_optimizer=p_dual_optim,
+        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
+        formulation = cooper.problem.Formulation(...)
+
+        primal_optimizer = cooper.optim.Adam(model.parameters(), lr=1e-2)
+        dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-3, momentum=0.9)
+
+        const_optim = cooper.ConstrainedOptimizer(
+            formulation=formulation,
+            primal_optimizer=primal_optimizer,
+            dual_optimizer=dual_optimizer,
         )
-
-Alternating updates
-~~~~~~~~~~~~~~~~~~~
-
-You can also indicate ``alternating=True`` for updates to alternate between the
-primal and dual parameters. In this case, the gradient you compute by calling
-:py:meth:`~cooper.problem.Formulation.custom_backward` is used to update the
-primal parameters and is then discarded. The gradient with respect to the dual
-variables must then be re-computed to update them, process which is handled
-internally in :py:meth:`ConstrainedOptimizer.step`.
-
-.. note::
-
-    Choosing ``alternating=True`` does not necessarily double the number of
-    backward passes through a model. When ``LagrangianFormulation`` calculates
-    gradients with respect to :py:class:`~cooper.multipliers.DenseMultiplier`\s,
-    it sufices to evaluate the constraint defects (through a call to
-    :py:meth:`~cooper.problem.ConstrainedMinimizationProblem.closure`), which is
-    cheaper than having to backpropagate through the Lagrangian.
-
-Dual restarts
-~~~~~~~~~~~~~
-
-``dual_restarts=True`` can be used to set the dual variables associated with
-inequality constraints to 0 each time that their respective constraint reaches
-feasibility. In practice, this prevents the optimization from over-focusing on
-the constraints at the cost of the loss function.
-
-We recommend to set ``dual_restarts=False`` when dealing with
-constraints whose violations are estimated stochastically, for
-example Monte Carlo estimates for expectations. This is to avoid restarting
-multipliers when a constraint is being satisfied for **one** estimation, as
-it may not be satisfied for further estimations because of their stochasticity.
 
 Taking an optimization step
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -158,10 +151,40 @@ Example::
         # Providing closure
         constrained_optimizer.step(cmp.closure, *closure_args, **closure_kwargs)
 
-Base class
-----------
 
-.. currentmodule:: cooper.constrained_optimizer
+Additional features
+-------------------
 
-.. autoclass:: ConstrainedOptimizer
-    :members:
+
+Alternating updates
+~~~~~~~~~~~~~~~~~~~
+
+You can also indicate ``alternating=True`` for updates to alternate between the
+primal and dual parameters. In this case, the gradient you compute by calling
+:py:meth:`~cooper.problem.Formulation.custom_backward` is used to update the
+primal parameters and is then discarded. The gradient with respect to the dual
+variables must then be re-computed to update them, process which is handled
+internally in :py:meth:`ConstrainedOptimizer.step`.
+
+.. note::
+
+    Choosing ``alternating=True`` does not necessarily double the number of
+    backward passes through a model. When ``LagrangianFormulation`` calculates
+    gradients with respect to :py:class:`~cooper.multipliers.DenseMultiplier`\s,
+    it sufices to evaluate the constraint defects (through a call to
+    :py:meth:`~cooper.problem.ConstrainedMinimizationProblem.closure`), which is
+    cheaper than having to backpropagate through the Lagrangian.
+
+Dual restarts
+~~~~~~~~~~~~~
+
+``dual_restarts=True`` can be used to set the dual variables associated with
+inequality constraints to 0 each time that their respective constraint reaches
+feasibility. In practice, this prevents the optimization from over-focusing on
+the constraints at the cost of the loss function.
+
+We recommend to set ``dual_restarts=False`` when dealing with
+constraints whose violations are estimated stochastically, for
+example Monte Carlo estimates for expectations. This is to avoid restarting
+multipliers when a constraint is being satisfied for **one** estimation, as
+it may not be satisfied for further estimations because of their stochasticity.

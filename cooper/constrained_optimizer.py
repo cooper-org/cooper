@@ -21,7 +21,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
     given its :py:class:`~cooper.problem.Formulation`.
 
     A ``ConstrainedOptimizer`` includes one or two
-    :class:`torch.optim.Optimizer`\\'s, for the primal and dual variables
+    :class:`torch.optim.Optimizer`\\s, for the primal and dual variables
     associated with the ``Formulation``, respectively.
 
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained

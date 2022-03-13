@@ -1,5 +1,7 @@
 .. currentmodule:: cooper.problem
 
+.. _cmp:
+
 Constrained Minimization Problem
 ================================
 
