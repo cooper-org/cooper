@@ -12,7 +12,7 @@ optimization problems in machine learning. **Cooper** can is seamlessly integrat
 with Pytorch and preserves the usual `loss -> backward -> step` workflow. If you
 are already familiar with Pytorch, using **Cooper** will be a breeze! 🙂
 
-⚠️**Cooper** is under active development. Future API changes might break backward 
+⚠️**Cooper** is under active development. Future API changes might break backward
 compatibility.
 
 ## Getting Started
@@ -89,7 +89,7 @@ to the **Cooper** root directory and install the package in development mode by 
 |-------------|------------------------------------------|-------------------------------------------|
 | Development | `pip install --editable "[.dev, tests]"` | Editable mode. Matches test environment.  |
 | Docs        | `pip install --editable "[.docs]"`       | Used to re-generate the documentation.    |
-| Docs        | `pip install --editable "[.examples]"`   | Install dependencies for running examples |
+| Tutorials   | `pip install --editable "[.examples]"`   | Install dependencies for running examples |
 | No Tests    | `pip install --editable .`               | Editable mode, without tests.             |
 
 
