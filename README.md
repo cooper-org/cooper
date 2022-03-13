@@ -10,10 +10,10 @@
 This library aims to encourage and facilitate the study of constrained
 optimization problems in machine learning. **Cooper** can is seamlessly integrated
 with Pytorch and preserves the usual `loss -> backward -> step` workflow. If you
-are already familiar with Pytorch, then using **Cooper** will be a breeze! 🙂
+are already familiar with Pytorch, using **Cooper** will be a breeze! 🙂
 
-**Cooper** is under active development and future API changes might break
-backward compatibility.
+⚠️**Cooper** is under active development. Future API changes might break backward 
+compatibility.
 
 ## Getting Started
 
@@ -74,10 +74,6 @@ for iter_num in range(5000):
 ```
 
 ## Installation
-
-**Cooper** is a project currently under development. You can install the
-repository in development mode.
-
 ### Basic Installation
 
 ```bash
@@ -118,14 +114,12 @@ features of the toolkit. Existing tutorials are:
 ## Contributions
 
 Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md)
-guide prior to submitting a pull request.
+guide prior to submitting a pull request. We use `black` for formatting, `isort`
+for import sorting, `flake8` for linting, and `mypy` for type checking.
 
 We test all pull requests. We rely on this for reviews, so please make sure any
 new code is tested. Tests for `cooper` go in the `tests` folder in the root of
 the repository.
-
-We use `black` for formatting, `isort` for import sorting, `flake8` for
-linting, and `mypy` for type checking.
 
 ## License
 
