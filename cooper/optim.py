@@ -148,16 +148,6 @@ class ExtraSGD(ExtragradientOptimizer):
         dampening: Dampening for momentum.
         nesterov: If ``True``, enables Nesterov momentum.
 
-    Example:
-        >>> optimizer = torch.optim.ExtraSGD(model.parameters(), lr=0.1,
-            momentum=0.9)
-        >>> optimizer.zero_grad()
-        >>> loss_fn(model(input), target).backward()
-        >>> optimizer.extrapolation()
-        >>> optimizer.zero_grad()
-        >>> loss_fn(model(input), target).backward()
-        >>> optimizer.step()
-
     .. note::
         The implementation of SGD with Momentum/Nesterov subtly differs from
         Sutskever et. al. and implementations in some other frameworks.
