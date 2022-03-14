@@ -8,12 +8,14 @@
 
 **Cooper** is a toolkit for Lagrangian-based constrained optimization in Pytorch.
 This library aims to encourage and facilitate the study of constrained
-optimization problems in machine learning. **Cooper** can is seamlessly integrated
-with Pytorch and preserves the usual `loss -> backward -> step` workflow. If you
-are already familiar with Pytorch, using **Cooper** will be a breeze! 🙂
+optimization problems in machine learning.
 
-⚠️**Cooper** is under active development. Future API changes might break backward
-compatibility.
+**Cooper** is (almost!) seamlessly integrated with Pytorch and preserves the
+usual `loss -> backward -> step` workflow. If you are already familiar with
+Pytorch, using **Cooper** will be a breeze! 🙂
+
+⚠️ This library is under active development. Future API changes might break backward
+compatibility. ⚠️
 
 ## Getting Started
 
