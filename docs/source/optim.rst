@@ -46,7 +46,7 @@ Given a Lagrangian :math:`\mathcal{L}(x,\lambda)`, define the joint variable
 
 .. math::
 
-    F(\omega) = [\nabla_x \mathcal{L}(x,\lambda), \nabla_{\lambda} \mathcal{L}(x,\lambda)]^{\top}
+    F(\omega) = [\nabla_x \mathcal{L}(x,\lambda), -\nabla_{\lambda} \mathcal{L}(x,\lambda)]^{\top}
 
 The extra-gradient update can be summarized as:
 
