@@ -1,1 +1,1 @@
-"""Unit test package for torch_coop."""
+"""Unit test package for cooper."""

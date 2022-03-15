@@ -3,6 +3,16 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Ignore generated version file by setuptools
+cooper/version.py
+
+# Tutorial auxiliary folder
+tutorials/data/
+
+# Ignore generated files for tutorial gallery
+docs/source/auto_tutorials
+docs/source/modules/
+
 # C extensions
 *.so
 
@@ -63,7 +73,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+docs/source/_build/
 
 # PyBuilder
 target/
