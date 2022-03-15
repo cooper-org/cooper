@@ -32,7 +32,7 @@ def partial(optim_cls: Type[torch.optim.Optimizer], **optim_kwargs):
 
 
 # -----------------------------------------------------------------------------
-# Implementation of ExtraOptimizers below taken from:
+# Implementation of ExtraOptimizers contains minor edits on source code from:
 # https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py
 # -----------------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
 
     def extrapolation(self):
         """
-        Performs the extrapolation step and save a copy of the current
+        Performs the extrapolation step and saves a copy of the current
         parameters for the update step.
         """
         # Check if a copy of the parameters was already made.
@@ -101,12 +101,11 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
                 # Update the current parameters
                 p.data.add_(u)
 
-    def step(self, closure=None):
+    def step(self, closure: callable = None):
         """Performs a single optimization step.
 
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
+        Args:
+            closure: A closure that reevaluates the model and returns the loss.
         """
         if len(self.params_copy) == 0:
             raise RuntimeError("Need to call extrapolation before calling step.")

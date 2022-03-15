@@ -60,7 +60,7 @@ The extra-gradient update can be summarized as:
     In the *unconstrained* case, the extra-gradient update is "intrinsically
     different" from that of Nesterov momentum :cite:p:`gidel2018variational`.
     The current version of **Cooper** raises a :py:class:`RuntimeError` when
-    trying to use an :py:class:`~cooper.optim.ExtragradientOptimizer`. This
+    trying to use an :py:class:`ExtragradientOptimizer`. This
     restriction might be lifted in future releases.
 
 The implementations of :py:class:`~cooper.optim.ExtraSGD` and
@@ -75,7 +75,7 @@ extra-gradient in the context of solving Variational Inequality Problems.
     If you decide to use extra-gradient optimizers for defining a
     :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`, the primal
     and dual optimizers must **both** be instances of classes inheriting from
-    :py:class:`~cooper.optim.ExtragradientOptimizer`.
+    :py:class:`ExtragradientOptimizer`.
 
     When provided with extrapolation-capable optimizers, **Cooper** will
     automatically trigger the calls to the extrapolation function.
@@ -125,6 +125,9 @@ extra-gradient in the context of solving Variational Inequality Problems.
             # Must pass (cmp.closure, model, inputs) to step
             const_optim.step(cmp.closure, model, inputs)
 
+
+.. autoclass:: ExtragradientOptimizer
+    :members:
 
 .. autoclass:: ExtraSGD
     :members:
