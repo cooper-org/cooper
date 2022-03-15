@@ -1,8 +1,6 @@
 Multipliers
 ===========
 
-.. automodule:: cooper.multipliers
-
 .. note::
 
     Multipliers are mostly handled internally by the
@@ -21,9 +19,11 @@ Multipliers
 Constructing a DenseMultiplier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To construct a ``DenseMultiplier``, its initial value ``init`` must be provided.
-The shape of this initial value must match the shape of the constraint defect it
-corresponds to.
+The construction of a ``DenseMultiplier`` requires its initial value ``init`` to
+be provided. The shape of ``init`` should match that shape of the corresponding
+constraint defect. Recall that in :ref:`lagrangian-formulations`, the
+calculation of the Lagrangian involves an inner product between the multipliers
+and the constraint violations.
 
 We lazily initialize ``DenseMultiplier``\s via a call to the
 :py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`
@@ -54,13 +54,13 @@ constraints, while ``positive=False`` corresponds to equality constraints.
 .. autoclass:: DenseMultiplier
     :members:
 
-Extension to other Multipliers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Extensions
+^^^^^^^^^^
 
 Certain optimization problems comprise a very large number of constraints. For
 example, in a learning task one might impose a constraint *per data-point*.
 In these settings, explicitly maintaining one Lagrange multiplier per constraint
-becomes impractical :cite:p:`narasimhan2019multiplier`. We provide a
+becomes impractical :cite:p:`narasimhan2020multiplier`. We provide a
 ``BaseMultiplier`` class which can be easily extended to accommodate situations
 which employ sparse multipliers or even a model that predicts the value of the
 multiplier based on some properties or "features" of each constraint.
