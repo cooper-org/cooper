@@ -10,9 +10,18 @@
 This library aims to encourage and facilitate the study of constrained
 optimization problems in machine learning.
 
+
 **Cooper** is (almost!) seamlessly integrated with Pytorch and preserves the
 usual `loss -> backward -> step` workflow. If you are already familiar with
 Pytorch, using **Cooper** will be a breeze! 🙂
+
+**Cooper** was born out of the need to handle constrained optimization problems
+for which the loss or constraints are not necessarily "nicely behaved"
+or  "theoretically tractable", e.g. when no (efficient) projection or proximal
+are available. Although assumptions of this kind have enabled the development of
+great Pytorch-based libraries such as [CHOP](https://github.com/openopt/chop)
+and [GeoTorch](https://github.com/Lezcano/geotorch), they are seldom satisfied
+in the context of many modern machine learning problems.
 
 ⚠️ This library is under active development. Future API changes might break backward
 compatibility. ⚠️
