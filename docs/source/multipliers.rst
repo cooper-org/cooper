@@ -1,5 +1,9 @@
+.. _multipliers:
+
 Multipliers
 ===========
+
+.. currentmodule:: cooper.multipliers
 
 .. note::
 
@@ -21,7 +25,7 @@ Constructing a DenseMultiplier
 
 The construction of a ``DenseMultiplier`` requires its initial value ``init`` to
 be provided. The shape of ``init`` should match that shape of the corresponding
-constraint defect. Recall that in :ref:`lagrangian-formulations`, the
+constraint defect. Recall that in :ref:`lagrangian_formulations`, the
 calculation of the Lagrangian involves an inner product between the multipliers
 and the constraint violations.
 

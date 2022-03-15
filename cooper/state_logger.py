@@ -53,7 +53,7 @@ class StateLogger:
 
         self.logger[step_id] = aux_dict
 
-    def unpack_stored_metrics(self):
+    def unpack_stored_metrics(self) -> dict:
         """
         Returns a dictionary containing the stored values separated by metric.
         """

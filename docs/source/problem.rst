@@ -61,7 +61,7 @@ arguments can be omitted in the creation of the ``CMPState``.
 
 
 For details on the use of proxy-constraints and the ``proxy_ineq_defect`` and
-``proxy_eq_defect`` attributes, please see :ref:`lagrangian-formulations`.
+``proxy_eq_defect`` attributes, please see :ref:`lagrangian_formulations`.
 
 
 Constrained Minimization Problem

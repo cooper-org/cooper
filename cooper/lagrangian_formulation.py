@@ -210,8 +210,14 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         be differentiable).
 
         Args:
-            closure (callable): _description_
-            write_state (bool, optional): _description_. Defaults to True.
+            closure: Callable returning a :py:class:`cooper.problem.CMPState`
+            write_state: If ``True``, the ``state`` of the formulation's
+                :py:class:`cooper.problem.ConstrainedMinimizationProblem`
+                attribute is replaced by that returned by the ``closure``
+                argument. This flag can be used (when set to ``False``) to
+                evaluate the Lagrangian, e.g. for logging validation metrics,
+                without overwritting the information stored in the formulation's
+                :py:class:`cooper.problem.ConstrainedMinimizationProblem`.
 
         """
 
