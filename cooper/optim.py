@@ -135,9 +135,8 @@ class ExtraSGD(ExtragradientOptimizer):
     Implements stochastic gradient descent with extrapolation step (optionally
     with momentum).
 
-    Nesterov momentum is based on the formula from `On the importance of
-    initialization and momentum in deep learning
-    <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_\.
+    Nesterov momentum is based on the formula from
+    :cite:t:`sutskever2013initialization`.
 
     Args:
         params: Iterable of parameters to optimize or dicts defining parameter
@@ -150,7 +149,7 @@ class ExtraSGD(ExtragradientOptimizer):
 
     .. note::
         The implementation of SGD with Momentum/Nesterov subtly differs from
-        Sutskever et. al. and implementations in some other frameworks.
+        :cite:t:`sutskever2013initialization`. and implementations in some other frameworks.
 
         Considering the specific case of Momentum, the update can be written as
 
@@ -161,7 +160,7 @@ class ExtraSGD(ExtragradientOptimizer):
         where :math:`p`, :math:`v`, :math:`g` and :math:`\\rho` denote the
         parameters, gradient, velocity, and momentum respectively.
 
-        This is in contrast to Sutskever et. al. and
+        This is in contrast to :cite:t:`sutskever2013initialization` and
         other frameworks which employ an update of the form
 
         .. math::
@@ -241,9 +240,8 @@ class ExtraAdam(ExtragradientOptimizer):
             its square.
         eps : Term added to the denominator to improve numerical stability.
         weight_decay: Weight decay (L2 penalty).
-        amsgrad: Flag to use the AMSGrad variant of this algorithm from the
-            paper `On the Convergence of Adam and Beyond
-            <https://arxiv.org/abs/1904.09237>`_\\.
+        amsgrad: Flag to use the AMSGrad variant of this algorithm from
+            :cite:t:`reddi2018amsgrad`.
     """
 
     def __init__(
