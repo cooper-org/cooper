@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - about: Ask and answer questions about Cooper
+    name: Cooper Issues
+    url: https://github.com/cooper-org/cooper/issues
