@@ -43,7 +43,7 @@ for more details on defining ``dual_optimizer``\s.
     **Cooper** includes extra-gradient implementations of SGD and Adam which can
     be used as primal or dual optimizers. See :ref:`extra-gradient_optimizers`.
 
-Examples:
+Examples
 ~~~~~~~~~
 
 The highlighted lines below show the small changes required to go from an

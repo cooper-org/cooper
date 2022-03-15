@@ -9,6 +9,7 @@
     :caption: Contents
 
     readme
+    auto_tutorials/index
 
 .. highlight:: python
 
@@ -24,12 +25,6 @@
     multipliers
     state_logger
 
-.. toctree::
-    :maxdepth: 2
-    :hidden:
-    :caption: Tutorial Gallery
-
-    auto_tutorials/index
 
 .. toctree::
     :maxdepth: 2

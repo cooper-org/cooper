@@ -13,6 +13,17 @@ import torch
 class CMPState:
     """Represents the "state" of a Constrained Minimization Problem in terms of
     the value of its loss and constraint violations/defects.
+
+    Args:
+        loss: Value of the loss or main objective to be minimized :math:`f(x)`
+        ineq_defect: Violation of the inequality constraints :math:`g(x)`
+        eq_defect: Violation of the equality constraints :math:`h(x)`
+        proxy_ineq_defect: Differentiable surrogate for the inequality
+            constraints as proposed by :cite:t:`cotter2019JMLR`.
+        proxy_eq_defect: Differentiable surrogate for the equality constraints
+            as proposed by :cite:t:`cotter2019JMLR`.
+        misc: Optional additional information to be store along with the state
+            of the CMP
     """
 
     loss: Optional[torch.Tensor] = None

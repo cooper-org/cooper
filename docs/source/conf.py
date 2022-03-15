@@ -110,7 +110,8 @@ html_logo = "_static/cooper_logo_200px.png"
 
 # intersphinx maps
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
+    # "python": ("https://docs.python.org/3", None),
+    "python": ("https://python.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),

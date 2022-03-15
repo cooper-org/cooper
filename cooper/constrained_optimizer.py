@@ -46,7 +46,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             dual parameters. Otherwise, do simultaneous parameter updates.
             Defaults to False.
 
-        dual_restarts: If True, perform 'restarts' on the Lagrange
+        dual_restarts: If True, perform "restarts" on the Lagrange
             multipliers associated with inequality constraints: whenever the
             constraint is satisfied, directly set the multiplier to zero.
             Defaults to False.
@@ -88,7 +88,7 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
             RuntimeError: a ``dual_optimizer`` was provided but the
                 ``ConstrainedMinimizationProblem`` of formulation was
                 unconstrained. There are no dual variables to optimize.
-            RuntimeError: the considered ``ConsrtaindMinimizationProblem`` is
+            RuntimeError: the considered ``ConstrainedMinimizationProblem`` is
                 unconstrained, but the provided ``primal_optimizer`` has an
                 ``extrapolation`` function. This is not supported because of
                 unexpected behavior when using extrapolation to update the
@@ -266,8 +266,9 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
     def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
         """
-        Sets the gradients of all optimized :py:class:`~torch.Tensor`\\s to
-        zero. This includes both the primal and dual variables.
+        Sets the gradients of all optimized
+        :py:class:`~torch.nn.parameter.Parameter`\\s to zero. This includes both
+        the primal and dual variables.
 
         Args:
             ignore_primal: If True, the gradients of the primal variables will
