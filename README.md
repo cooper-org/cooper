@@ -106,13 +106,6 @@ to the **Cooper** root directory and install the package in development mode by 
 - `tests` - unit tests for `cooper` components
 - `tutorials` - source code for examples contained in the tutorial gallery
 
-## Tutorial Notebooks
-
-The `tutorials` directory contains interactive notebooks which showcase the core
-features of the toolkit. Existing tutorials are:
-
--   Tutorials TBD
-
 ## Contributions
 
 Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md)
