@@ -196,8 +196,7 @@ gradient descent on the primal parameters and (projected) ascent
 on the dual parameters, with simultaneous updates.
 
 
-.. admonition::
-    :class: note
+.. note::
 
     When applied to an unconstrained problem, :py:meth:`ConstrainedOptimizer.step`
     will be equivalent to performing ``primal_optimizer.step()`` based on the

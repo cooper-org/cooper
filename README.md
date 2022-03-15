@@ -1,7 +1,7 @@
 # Cooper
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
-[![DOCS](https://readthedocs.org/projects/torch-cooper/badge/?version=latest)](https://torch-cooper.readthedocs.io/en/latest/?version=latest)
+[![DOCS](https://readthedocs.org/projects/cooper/badge/?version=latest)](https://cooper.readthedocs.io/en/latest/?version=latest)
 [![Codecov](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)
 
 ## About
@@ -98,9 +98,9 @@ to the **Cooper** root directory and install the package in development mode by 
 
 | Setting     | Command                                  | Notes                                     |
 |-------------|------------------------------------------|-------------------------------------------|
-| Development | `pip install --editable "[.dev, tests]"` | Editable mode. Matches test environment.  |
-| Docs        | `pip install --editable "[.docs]"`       | Used to re-generate the documentation.    |
-| Tutorials   | `pip install --editable "[.examples]"`   | Install dependencies for running examples |
+| Development | `pip install --editable ".[dev, tests]"` | Editable mode. Matches test environment.  |
+| Docs        | `pip install --editable ".[docs]"`       | Used to re-generate the documentation.    |
+| Tutorials   | `pip install --editable ".[examples]"`   | Install dependencies for running examples |
 | No Tests    | `pip install --editable .`               | Editable mode, without tests.             |
 
 
