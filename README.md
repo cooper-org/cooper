@@ -23,6 +23,11 @@ great Pytorch-based libraries such as [CHOP](https://github.com/openopt/chop)
 and [GeoTorch](https://github.com/Lezcano/geotorch), they are seldom satisfied
 in the context of many modern machine learning problems.
 
+Many of the structural design ideas behind **Cooper** are heavily inspired by
+the [TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
+library. We highly recommend TFCO for TensorFlow-based projects and will
+continue to integrate more of TFCO's features in future releases.
+
 ⚠️ This library is under active development. Future API changes might break backward
 compatibility. ⚠️
 
@@ -131,11 +136,6 @@ the repository.
 [LICENSE](https://github.com/cooper-org/cooper/tree/master/LICENSE) file.
 
 ## Acknowledgements
-
-Many of the structural design ideas behind **Cooper** are heavily inspired by
-the [TensorFlow Constrained Optimization (TFCO)](https://github.com/google-research/tensorflow_constrained_optimization)
-library. We highly recommend TFCO for TensorFlow-based projects and will
-continue to integrate more of TFCO's feature in future releases.
 
 **Cooper** supports the use of extra-gradient style optimizers for solving the
 min-max Lagrangian problem. We include the implementations of the
