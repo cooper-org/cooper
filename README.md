@@ -94,7 +94,7 @@ for iter_num in range(5000):
 ### Basic Installation
 
 ```bash
-pip install git@github.com:cooper-org/cooper.git#egg=cooper
+pip install git+https://github.com/cooper-org/cooper.git
 ```
 
 ### Development Installation
