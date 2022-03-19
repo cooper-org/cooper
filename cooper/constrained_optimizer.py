@@ -12,6 +12,7 @@ from typing import Callable, Optional
 
 import torch
 
+from .optim import partial
 from .problem import CMPState, Formulation
 
 
@@ -164,6 +165,7 @@ class ConstrainedOptimizer:
         """
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
+            assert self.dual_optimizer is not None and callable(self.dual_optimizer)
             # Checks if needed and instantiates dual_optimizer
             self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
 
@@ -172,7 +174,7 @@ class ConstrainedOptimizer:
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
-            self.primal_optimizer.extrapolation()
+            self.primal_optimizer.extrapolation()  # type: ignore
             if self.cmp.is_constrained:
                 # Call to dual_step flips sign of gradients, then triggers call
                 # to dual_optimizer.extrapolation and projects dual variables
@@ -186,7 +188,7 @@ class ConstrainedOptimizer:
             # extrapolation step
             lagrangian = self.formulation.composite_objective(
                 closure, *closure_args, **closure_kwargs
-            )
+            )  # type: ignore
 
             # Populate gradients at extrapolation point
             self.formulation.custom_backward(lagrangian)
@@ -210,8 +212,9 @@ class ConstrainedOptimizer:
                     # Skip gradient wrt model parameters to avoid wasteful
                     # computation, as we only need gradient wrt multipliers.
                     with torch.no_grad():
+                        assert closure is not None
                         self.cmp.state = closure(*closure_args, **closure_kwargs)
-                    lagrangian = self.formulation.get_composite_objective(self.cmp)
+                    lagrangian = self.formulation.composite_objective(self.cmp)  # type: ignore
 
                     # Zero-out gradients for dual variables since they were
                     # already populated earlier.

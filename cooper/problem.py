@@ -57,7 +57,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def __init__(self, is_constrained: bool = False):
         self.is_constrained = is_constrained
-        self._state = None
+        self._state = CMPState()
 
     @property
     def state(self) -> CMPState:
@@ -122,12 +122,12 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def _populate_gradients(self):
+    def _populate_gradients(self, *args, **kwargs):
         """Performs the actual backward computation and populates the gradients
         for the trainable parameters for the dual variables."""
         pass
 
-    def custom_backward(self, lagrangian: torch.Tensor):
+    def custom_backward(self, *args, **kwargs):
         """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
         naming convention used in Pytorch. We avoid naming this method
         ``backward`` as it is a method of the ``LagrangianFormulation`` object
@@ -137,4 +137,4 @@ class Formulation(abc.ABC):
             lagrangian: Value of the computed Lagrangian based on which the
                 gradients for the primal and dual variables are populated.
         """
-        self._populate_gradients(lagrangian)
+        self._populate_gradients(*args, **kwargs)

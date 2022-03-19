@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
-from typing import List
+from typing import Any, List, Mapping
 
 from .problem import Formulation
 
@@ -17,11 +17,14 @@ class StateLogger:
     """
 
     def __init__(self, save_metrics: List[str]):
-        self.logger = OrderedDict()
+        self.logger: OrderedDict = OrderedDict()
         self.save_metrics = save_metrics
 
     def store_metrics(
-        self, formulation: Formulation, step_id: int, partial_dict: dict = None
+        self,
+        formulation: Formulation,
+        step_id: int,
+        partial_dict: dict = None,
     ):
         """
         Store a new screenshot of the metrics.
@@ -48,8 +51,9 @@ class StateLogger:
             elif metric == "eq_multipliers":
                 aux_dict[metric] = deepcopy(formulation.state()[1].data)
 
-        aux_dict.update(partial_dict)
-        self.save_metrics = list(set(self.save_metrics + list(partial_dict.keys())))
+        if partial_dict is not None:
+            aux_dict.update(partial_dict)
+            self.save_metrics = list(set(self.save_metrics + list(partial_dict.keys())))
 
         self.logger[step_id] = aux_dict
 
