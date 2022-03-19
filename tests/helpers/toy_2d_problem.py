@@ -30,7 +30,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             )
 
             if self.use_proxy_ineq:
-                # Using **slightly** different functions for the proxy constraints
+                # Using **slightly** different functions for the proxy
+                # constraints
                 proxy_ineq_defect = torch.stack(
                     [
                         -0.9 * param_x - param_y + 1.0,  # x + y \ge 1

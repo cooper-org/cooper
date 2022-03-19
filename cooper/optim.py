@@ -6,8 +6,6 @@ from typing import Callable, List, Tuple, Type, no_type_check
 
 import torch
 
-from .problem import CMPState
-
 # Define aliases
 SGD = torch.optim.SGD
 Adam = torch.optim.Adam

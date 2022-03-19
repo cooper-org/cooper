@@ -20,7 +20,8 @@ def get_device_skip(aim_device, cuda_available):
             device = "cuda"
             skip = SkipTest(do_skip=False)
         else:
-            # # Intended to test GPU execution, but GPU not available. Skipping test.
+            # Intended to test GPU execution, but GPU not available. Skipping
+            # test.
             device = None
             skip = SkipTest(do_skip=True, skip_reason="CUDA is not available")
     else:

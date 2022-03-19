@@ -12,7 +12,6 @@ from typing import Callable, Optional
 
 import torch
 
-from .optim import partial
 from .problem import CMPState, Formulation
 
 
