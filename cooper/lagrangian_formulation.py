@@ -1,7 +1,7 @@
 """Lagrangian formulation"""
 
 import abc
-from typing import List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union, no_type_check
 
 import torch
 
@@ -59,10 +59,17 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         :py:class:`torch.Tensor` values. Note that the *values* are a different
         type from the :py:class:`cooper.multipliers.DenseMultiplier` objects.
         """
-        ineq_state = None if self.ineq_multipliers is None else self.ineq_multipliers()
-        eq_state = None if self.eq_multipliers is None else self.eq_multipliers()
+        if self.ineq_multipliers is None:
+            ineq_state = None
+        else:
+            ineq_state = self.ineq_multipliers()
 
-        return ineq_state, eq_state
+        if self.eq_multipliers is None:
+            eq_state = None
+        else:
+            eq_state = self.eq_multipliers()
+
+        return ineq_state, eq_state  # type: ignore
 
     def create_state(self, cmp_state):
         """Initialize dual variables and optimizers given list of equality and
@@ -158,7 +165,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         if not has_defect:
             # We should always have at least the regular defects, if not, then
             # the problem instance does not have `constraint_type` constraints
-            proxy_violation = 0.0
+            proxy_violation = torch.tensor([0.0])
         else:
             multipliers = getattr(self, constraint_type + "_multipliers")()
 
@@ -188,9 +195,10 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
     """
 
+    @no_type_check
     def composite_objective(
         self,
-        closure: callable,
+        closure: Callable[..., CMPState],
         *closure_args,
         write_state: bool = True,
         **closure_kwargs
@@ -262,23 +270,26 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 # TODO(JGP): [2] I guess one would like to filter based on
                 # non-proxy feasibility but penalize based on the proxy defect
                 if ineq_defect is not None:
+                    assert self.ineq_multipliers is not None
                     ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
                     ineq_square = torch.sum(torch.square(ineq_defect[ineq_filter]))
                 else:
-                    ineq_square = 0.0
+                    ineq_square = torch.tensor([0.0])
 
                 if eq_defect is not None:
                     eq_square = torch.sum(torch.square(eq_defect))
                 else:
-                    eq_square = 0.0
+                    eq_square = torch.tensor([0.0])
 
                 lagrangian += self.aug_lag_coefficient * (ineq_square + eq_square)
 
         else:
+            assert cmp_state.loss is not None
             lagrangian = cmp_state.loss
 
         return lagrangian
 
+    @no_type_check
     def _populate_gradients(
         self, lagrangian: torch.Tensor, ignore_primal: bool = False
     ):

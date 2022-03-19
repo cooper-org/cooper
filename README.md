@@ -2,6 +2,7 @@
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
 [![DOCS](https://readthedocs.org/projects/cooper/badge/?version=latest)](https://cooper.readthedocs.io/en/latest/?version=latest)
+[![Build and Test](https://github.com/cooper-org/cooper/actions/workflows/build.yml/badge.svg)](https://github.com/cooper-org/cooper/actions/workflows/build.yml)
 [![Codecov](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)
 
 ## About
@@ -93,7 +94,7 @@ for iter_num in range(5000):
 ### Basic Installation
 
 ```bash
-pip install git@github.com:cooper-org/cooper.git#egg=cooper
+pip install git+https://github.com/cooper-org/cooper.git
 ```
 
 ### Development Installation
