@@ -13,11 +13,11 @@ jobs:
         strategy:
             matrix:
                 platform: [ubuntu-latest, macos-latest, windows-latest]
-                python-version: [3.8]
+                python-version: ['3.8', '3.9', '3.10']
                 # No gpu workflow yet!: https://github.com/apache/singa/issues/802
 
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v2
               with:
@@ -28,24 +28,7 @@ jobs:
                 python -m pip install --upgrade pip
                 python -m pip install tox tox-gh-actions
 
-            - name: Lint with flake8
-              run: |
-                  # stop the build if there are Python syntax errors or undefined in Cooper folder (ignoring tutorials)
-                  flake8 --ignore=E203,E266,E501 cooper --count --exit-zero --max-doc-length=80 --max-line-length=88 --statistics
-                  # Uncomment below to apply flake8 to tutorials
-                  # flake8 --ignore=E203,E266,E501 cooper --count --exit-zero --max-doc-length=80 --max-line-length=88 --statistics
-
-            - name: Lint with Black
-              run: |
-                  black --check --diff .
-
-            - name: Sort imports with isort
-              run: |
-                  isort cooper
-                  isort tutorials
-
             - name: Test with tox
               run: tox
               env:
                 PLATFORM: ${{ matrix.platform }}
-
