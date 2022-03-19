@@ -13,7 +13,7 @@ jobs:
         strategy:
             matrix:
                 platform: [ubuntu-latest, macos-latest, windows-latest]
-                python-version: [3.8, 3.9, 3.10]
+                python-version: ['3.8', '3.9', '3.10']
                 # No gpu workflow yet!: https://github.com/apache/singa/issues/802
 
         steps:
