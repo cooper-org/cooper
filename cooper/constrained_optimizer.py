@@ -15,7 +15,7 @@ import torch
 from .problem import CMPState, Formulation
 
 
-class ConstrainedOptimizer(torch.optim.Optimizer):
+class ConstrainedOptimizer:
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given its :py:class:`~cooper.problem.Formulation`.
@@ -68,8 +68,6 @@ class ConstrainedOptimizer(torch.optim.Optimizer):
 
         self.alternating = alternating
         self.dual_restarts = dual_restarts
-
-        super().__init__(self.primal_optimizer.param_groups, {})
 
         self.sanity_checks()
 
