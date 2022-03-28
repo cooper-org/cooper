@@ -22,6 +22,13 @@ def test_extrapolation(scheduler_name, optimizer_name):
             x**2 + y <= 1
     """
 
+    try:
+        scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_name)
+    except:
+        pytest.skip(
+            "The requested scheduler is not implemented in this version of Pytorch."
+        )
+
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0]))
 
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
@@ -31,7 +38,6 @@ def test_extrapolation(scheduler_name, optimizer_name):
     primal_optimizer = optimizer_class([params], lr=1e1)
     dual_optimizer = cooper.optim.partial_optimizer(optimizer_class, lr=1e1)
 
-    scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_name)
     if scheduler_name == "ExponentialLR":
         scheduler_kwargs = {"gamma": 0.1}
     elif scheduler_name == "ConstantLR":
