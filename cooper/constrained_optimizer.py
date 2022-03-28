@@ -58,6 +58,7 @@ class ConstrainedOptimizer:
         formulation: Formulation,
         primal_optimizer: torch.optim.Optimizer,
         dual_optimizer: Optional[torch.optim.Optimizer] = None,
+        dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
         alternating: bool = False,
         dual_restarts: bool = False,
     ):
@@ -65,6 +66,7 @@ class ConstrainedOptimizer:
         self.cmp = self.formulation.cmp
         self.primal_optimizer = primal_optimizer
         self.dual_optimizer = dual_optimizer
+        self.dual_scheduler = dual_scheduler
 
         self.alternating = alternating
         self.dual_restarts = dual_restarts
@@ -125,6 +127,19 @@ class ConstrainedOptimizer:
                 be unconstrained."""
             )
 
+        if self.dual_scheduler is not None:
+            if not (self.cmp.is_constrained):
+                raise RuntimeError(
+                    """A dual scheduler was provided, but the `Problem` class
+                    claims to be unconstrained."""
+                )
+
+            if self.dual_optimizer is None:
+                raise RuntimeError(
+                    """A dual scheduler was provided, but no dual optimizer
+                    was provided."""
+                )
+
         if not (self.cmp.is_constrained) and self.is_extrapolation:
             raise RuntimeError(
                 """Using an extrapolating optimizer an unconstrained problem
@@ -168,6 +183,11 @@ class ConstrainedOptimizer:
             # Checks if needed and instantiates dual_optimizer
             self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
 
+            if self.dual_scheduler is not None:
+                assert callable(self.dual_scheduler), "dual_scheduler must be callable"
+                # Instantiates the dual_scheduler
+                self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
+
         if self.is_extrapolation or self.alternating:
             assert closure is not None
 
@@ -197,6 +217,12 @@ class ConstrainedOptimizer:
             self.primal_optimizer.step()
             if self.cmp.is_constrained:
                 self.dual_step()
+
+                if self.dual_scheduler is not None:
+                    # Do a step on the dual scheduler after the actual step on
+                    # the dual parameters. Extrapolation steps are not followed
+                    # by a call to the dual_scheduler.step method
+                    self.dual_scheduler.step()
 
         else:
 
@@ -228,6 +254,8 @@ class ConstrainedOptimizer:
                     )
 
                 self.dual_step()
+                if self.dual_scheduler is not None:
+                    self.dual_scheduler.step()
 
     def dual_step(self, call_extrapolation=False):
 

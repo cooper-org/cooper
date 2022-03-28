@@ -11,14 +11,13 @@
 This library aims to encourage and facilitate the study of constrained
 optimization problems in machine learning.
 
-
 **Cooper** is (almost!) seamlessly integrated with Pytorch and preserves the
 usual `loss -> backward -> step` workflow. If you are already familiar with
 Pytorch, using **Cooper** will be a breeze! 🙂
 
 **Cooper** was born out of the need to handle constrained optimization problems
 for which the loss or constraints are not necessarily "nicely behaved"
-or  "theoretically tractable", e.g. when no (efficient) projection or proximal
+or "theoretically tractable", e.g. when no (efficient) projection or proximal
 are available. Although assumptions of this kind have enabled the development of
 great Pytorch-based libraries such as [CHOP](https://github.com/openopt/chop)
 and [GeoTorch](https://github.com/Lezcano/geotorch), they are seldom satisfied
@@ -35,7 +34,7 @@ compatibility. ⚠️
 ## Getting Started
 
 Here we consider a simple convex optimization problem to illustrate how to use
- **Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
+**Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
 
 > _I am trying to solve the following problem using Pytorch: given a 6-sided die
 > whose average roll is known to be 4.5, what is the maximum entropy
@@ -76,7 +75,7 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 
 # Define the dual optimizer. Note that this optimizer has NOT been fully instantiated
 # yet. Cooper takes care of this, once it has initialized the formulation state.
-dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
+dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
 coop = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
@@ -91,6 +90,7 @@ for iter_num in range(5000):
 ```
 
 ## Installation
+
 ### Basic Installation
 
 ```bash
@@ -103,12 +103,11 @@ First, clone the [repository](https://github.com/cooper-org/cooper), navigate
 to the **Cooper** root directory and install the package in development mode by running:
 
 | Setting     | Command                                  | Notes                                     |
-|-------------|------------------------------------------|-------------------------------------------|
+| ----------- | ---------------------------------------- | ----------------------------------------- |
 | Development | `pip install --editable ".[dev, tests]"` | Editable mode. Matches test environment.  |
 | Docs        | `pip install --editable ".[docs]"`       | Used to re-generate the documentation.    |
 | Tutorials   | `pip install --editable ".[examples]"`   | Install dependencies for running examples |
 | No Tests    | `pip install --editable .`               | Editable mode, without tests.             |
-
 
 ## Package structure
 
@@ -118,8 +117,8 @@ to the **Cooper** root directory and install the package in development mode by 
     -   `lagrangian_formulation` - Lagrangian formulation of a CMP
     -   `multipliers` - utility class for Lagrange multipliers
     -   `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
-- `tests` - unit tests for `cooper` components
-- `tutorials` - source code for examples contained in the tutorial gallery
+-   `tests` - unit tests for `cooper` components
+-   `tutorials` - source code for examples contained in the tutorial gallery
 
 ## Contributions
 

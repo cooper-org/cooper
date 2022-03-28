@@ -24,11 +24,11 @@ When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimize
 yet** been passed. The rest of the instantiation of the ``dual_optimizer`` is
 handled internally by **Cooper**.
 
-The :py:meth:`cooper.optim.partial` method below allows you to provide a
+The :py:meth:`cooper.optim.partial_optimizer` method below allows you to provide a
 configuration for your ``dual_optimizer``\'s hyperparameters (e.g. learning
 rate, momentum, etc.)
 
-.. automethod:: cooper.optim.partial
+.. automethod:: cooper.optim.partial_optimizer
 
 
 .. _extra-gradient_optimizers:
@@ -100,11 +100,11 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
         # Non-extra-gradient optimizers
         primal_optimizer = cooper.optim.SGD(model.parameters(), lr=1e-2)
-        dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-3)
+        dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.SGD, lr=1e-3)
 
         # Extra-gradient optimizers
         primal_optimizer = cooper.optim.ExtraSGD(model.parameters(), lr=1e-2)
-        dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=1e-3)
+        dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=1e-3)
 
         const_optim = cooper.ConstrainedOptimizer(
             formulation=formulation,
