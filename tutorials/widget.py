@@ -269,7 +269,7 @@ class Toy2DWidget:
             [params],
             **primal_kwargs,
         )
-        dual_optimizer = cooper.optim.partial(
+        dual_optimizer = cooper.optim.partial_optimizer(
             getattr(cooper.optim, dual_optim),
             **dual_kwargs,
         )

@@ -1,5 +1,5 @@
 Optim
-=====================
+=====
 
 .. currentmodule:: cooper.optim
 
@@ -134,3 +134,53 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
 .. autoclass:: ExtraAdam
     :members:
+
+Learning Rate Schedulers
+------------------------
+
+**Cooper** supports learning rate schedulers for the primal and dual optimizers.
+
+Primal lr scheduler
+~~~~~~~~~~~~~~~~~~~
+
+.. _primal_lr_scheduler:
+
+You must instantiate the scheduler for the learning rate of a
+``primal_optimizer`` and use it as in standard Pytorch. See
+:py:mod:`torch.optim` for details.
+
+**Example:**
+
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 8,13
+
+        from torch.optim.lr_scheduler import StepLR
+
+        ...
+        primal_optimizer = cooper.optim.SGD(...)
+        dual_optimizer = cooper.optim.partial_optimizer(...)
+        const_optim = cooper.ConstrainedOptimizer(...)
+
+        primal_scheduler = StepLR(primal_optimizer, step_size=1, gamma=0.1)
+
+        for step in range(num_steps):
+            ...
+            const_optim.step()
+            primal_scheduler.step()
+
+Dual lr scheduler
+~~~~~~~~~~~~~~~~~
+
+.. _dual_lr_scheduler:
+
+When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+the ``dual_scheduler`` parameter is expected to be a partially instantiated
+Pytorch learning rate scheduler, for which the ``optimizer`` argument has **not
+yet** been passed. The rest of the instantiation of the ``dual_scheduler`` is
+handled internally by **Cooper**.
+
+The :py:meth:`cooper.optim.partial_scheduler` method below allows you to provide
+a configuration for your ``dual_scheduler``\'s hyperparameters.
+
+.. automethod:: cooper.optim.partial_scheduler

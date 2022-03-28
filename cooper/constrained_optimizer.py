@@ -42,6 +42,12 @@ class ConstrainedOptimizer:
             Defaults to None.
             When dealing with an unconstrained problem, should be set to None.
 
+        dual_scheduler: Partially instantiated
+            ``torch.optim.lr_scheduler._LRScheduler``
+            used to schedule the learning rate of the dual variables.
+            Defaults to None.
+            When dealing with an unconstrained problem, should be set to None.
+
         alternating: Whether to alternate parameter updates between primal and
             dual parameters. Otherwise, do simultaneous parameter updates.
             Defaults to False.
@@ -88,6 +94,13 @@ class ConstrainedOptimizer:
             RuntimeError: a ``dual_optimizer`` was provided but the
                 ``ConstrainedMinimizationProblem`` of formulation was
                 unconstrained. There are no dual variables to optimize.
+            RuntimeError: a ``dual_scheduler`` was provided but the
+                ``ConstrainedMinimizationProblem`` of formulation was
+                unconstrained. There are no dual variables and no
+                ``dual_optimizer`` for learning rate scheduling.
+            RuntimeError: a ``dual_scheduler`` was provided but no
+                ``dual_optimizer`` was provided. Can not schedule the learning
+                rate of an unknown optimizer.
             RuntimeError: the considered ``ConstrainedMinimizationProblem`` is
                 unconstrained, but the provided ``primal_optimizer`` has an
                 ``extrapolation`` function. This is not supported because of
@@ -163,7 +176,8 @@ class ConstrainedOptimizer:
     ):
         """
         Performs a single optimization step on both the primal and dual
-        variables.
+        variables. If ``dual_scheduler`` is provided, a scheduler step is
+        performed on the learning rate of the ``dual_optimizer``.
 
         Args:
             closure: Closure ``Callable`` required for re-evaluating the

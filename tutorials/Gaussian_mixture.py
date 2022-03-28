@@ -123,7 +123,9 @@ def train(problem, inputs, targets, n_iters=10000, lr=1e-2, const_level=0.7):
     formulation = cooper.LagrangianFormulation(cmp)
 
     primal_optimizer = SGD(cmp.linear.parameters(), lr=lr)
-    dual_optimizer = cooper.optim.partial(SGD, lr=lr) if is_constrained else None
+    dual_optimizer = (
+        cooper.optim.partial_optimizer(SGD, lr=lr) if is_constrained else None
+    )
     optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optimizer,
