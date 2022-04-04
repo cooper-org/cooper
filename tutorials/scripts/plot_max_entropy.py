@@ -60,7 +60,9 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 
 # Define the dual optimizer. Note that this optimizer has NOT been fully instantiated
 # yet. Cooper takes care of this, once it has initialized the formulation state.
-dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
+dual_optimizer = cooper.optim.partial_optimizer(
+    cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7
+)
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
 coop = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)

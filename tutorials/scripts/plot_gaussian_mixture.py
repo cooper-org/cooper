@@ -163,7 +163,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     primal_optimizer = SGD(model.parameters(), lr=lr, momentum=0.7)
 
     if is_constrained:
-        dual_optimizer = cooper.optim.partial(SGD, lr=lr, momentum=0.7)
+        dual_optimizer = cooper.optim.partial_optimizer(SGD, lr=lr, momentum=0.7)
     else:
         dual_optimizer = None
 

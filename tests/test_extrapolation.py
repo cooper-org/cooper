@@ -36,7 +36,7 @@ def test_extrapolation(aim_device, primal_optimizer_str):
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = getattr(cooper.optim, primal_optimizer_str)([params], lr=1e-2)
 
-    dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=1e-2)
+    dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=1e-2)
 
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
@@ -90,7 +90,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer):
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = getattr(cooper.optim, primal_optimizer)([params], lr=1e-2)
 
-    dual_optimizer = cooper.optim.partial(cooper.optim.ExtraSGD, lr=1e-2)
+    dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=1e-2)
 
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
