@@ -72,9 +72,9 @@ def test_extrapolation(scheduler_name, optimizer_name):
         dual_lr = constrained_optimizer.dual_scheduler.get_last_lr()
 
         if scheduler_name == "ExponentialLR":
-            target = torch.tensor(0.1) ** step_id
+            target_lr = torch.tensor(0.1) ** step_id
         elif scheduler_name == "ConstantLR":
-            target = torch.tensor(5.0) if step_id < 3 else torch.tensor(10.0)
+            target_lr = torch.tensor(5.0) if step_id < 3 else torch.tensor(10.0)
 
-        assert torch.allclose(torch.tensor(primal_lr), target)
-        assert torch.allclose(torch.tensor(dual_lr), target)
+        assert torch.allclose(torch.tensor(primal_lr), target_lr)
+        assert torch.allclose(torch.tensor(dual_lr), target_lr)

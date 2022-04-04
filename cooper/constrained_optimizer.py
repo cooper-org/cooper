@@ -234,8 +234,9 @@ class ConstrainedOptimizer:
 
                 if self.dual_scheduler is not None:
                     # Do a step on the dual scheduler after the actual step on
-                    # the dual parameters. Extrapolation steps are not followed
-                    # by a call to the dual_scheduler.step method
+                    # the dual parameters. Intermediate updates that take
+                    # place inside the extrapolation process do not perform a
+                    # call to the scheduler's step method
                     self.dual_scheduler.step()
 
         else:
@@ -268,6 +269,7 @@ class ConstrainedOptimizer:
                     )
 
                 self.dual_step()
+                
                 if self.dual_scheduler is not None:
                     self.dual_scheduler.step()
 
