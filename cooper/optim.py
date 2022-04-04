@@ -1,4 +1,6 @@
-"""(Extrapolation) Optimizer aliases"""
+"""Extrapolation Optimizers and functions for partial instantiation of dual
+optimizers and schedulers"""
+
 import functools
 import math
 from collections.abc import Iterable
@@ -7,12 +9,6 @@ from typing import Callable, List, Tuple, Type, no_type_check
 import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
-
-# Define aliases
-SGD = torch.optim.SGD
-Adam = torch.optim.Adam
-Adagrad = torch.optim.Adagrad
-RMSprop = torch.optim.RMSprop
 
 
 @no_type_check
@@ -218,7 +214,7 @@ class ExtraSGD(ExtragradientOptimizer):
         super(ExtraSGD, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(SGD, self).__setstate__(state)
+        super(torch.optim.SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault("nesterov", False)
 

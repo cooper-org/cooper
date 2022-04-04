@@ -33,10 +33,10 @@ def test_toy_problem(aim_device, use_ineq):
         pytest.skip(skip.skip_reason)
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = cooper.optim.SGD([params], lr=1e-2, momentum=0.3)
+    primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
 
     if use_ineq:
-        dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.SGD, lr=1e-2)
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
     else:
         dual_optimizer = None
 

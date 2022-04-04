@@ -265,14 +265,19 @@ class Toy2DWidget:
             primal_optim = "Extra" + primal_optim
             dual_optim = "Extra" + dual_optim
 
-        primal_optimizer = getattr(cooper.optim, primal_optim)(
-            [params],
-            **primal_kwargs,
+        primal_opt_class = (
+            getattr(cooper.optim, primal_optim)
+            if extrapolation
+            else getattr(torch.optim, primal_optim)
         )
-        dual_optimizer = cooper.optim.partial_optimizer(
-            getattr(cooper.optim, dual_optim),
-            **dual_kwargs,
+        primal_optimizer = primal_opt_class([params], **primal_kwargs)
+
+        dual_opt_class = (
+            getattr(cooper.optim, dual_optim)
+            if extrapolation
+            else getattr(torch.optim, dual_optim)
         )
+        dual_optimizer = cooper.optim.partial_optimizer(dual_opt_class, **dual_kwargs)
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=self.formulation,

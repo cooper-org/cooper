@@ -4,15 +4,6 @@ Optim
 .. currentmodule:: cooper.optim
 
 
-This module gathers aliases for :py:class:`torch.optim.Optimizer`\s so they
-can be accessed directly from **Cooper** as ``cooper.optim.<OptimizerName>``. The
-existing aliases are:
-
-- ``cooper.optim.SGD = torch.optim.SGD``
-- ``cooper.optim.Adam = torch.optim.Adam``
-- ``cooper.optim.Adagrad = torch.optim.Adagrad``
-- ``cooper.optim.RMSprop = torch.optim.RMSprop``
-
 .. _partial_optimizer_instantiation:
 
 Partial optimizer instantiation
@@ -99,8 +90,8 @@ extra-gradient in the context of solving Variational Inequality Problems.
         formulation = cooper.problem.Formulation(...)
 
         # Non-extra-gradient optimizers
-        primal_optimizer = cooper.optim.SGD(model.parameters(), lr=1e-2)
-        dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.SGD, lr=1e-3)
+        primal_optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
 
         # Extra-gradient optimizers
         primal_optimizer = cooper.optim.ExtraSGD(model.parameters(), lr=1e-2)
@@ -153,7 +144,7 @@ for the learning rate schedulers.
         from torch.optim.lr_scheduler import StepLR, ExponentialLR
 
         ...
-        primal_optimizer = cooper.optim.SGD(...)
+        primal_optimizer = torch.optim.SGD(...)
         dual_optimizer = cooper.optim.partial_optimizer(...)
         
         primal_scheduler = StepLR(primal_optimizer, step_size=1, gamma=0.1)
