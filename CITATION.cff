@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as indicated below."
+authors:
+    - family-names: "Gallego-Posada"
+      given-names: "Jose"
+    - family-names: "Ramirez"
+      given-names: "Juan"
+title: "Cooper"
+date-released: 2022-03-19
+url: "https://github.com/cooper-org/cooper"
