@@ -34,7 +34,11 @@ def test_extrapolation(scheduler_name, optimizer_name):
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
 
-    optimizer_class = getattr(cooper.optim, optimizer_name)
+    try:
+        optimizer_class = getattr(cooper.optim, optimizer_name)
+    except:
+        optimizer_class = getattr(torch.optim, optimizer_name)
+
     primal_optimizer = optimizer_class([params], lr=1e1)
     dual_optimizer = cooper.optim.partial_optimizer(optimizer_class, lr=1e1)
 

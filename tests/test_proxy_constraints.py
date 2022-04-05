@@ -33,8 +33,8 @@ def test_toy_problem(aim_device):
         pytest.skip(skip.skip_reason)
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = cooper.optim.SGD([params], lr=5e-2, momentum=0.0)
-    dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.SGD, lr=1e-2)
+    primal_optimizer = torch.optim.SGD([params], lr=5e-2, momentum=0.0)
+    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
 
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True, use_proxy_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
