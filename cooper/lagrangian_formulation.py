@@ -165,7 +165,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         if not has_defect:
             # We should always have at least the regular defects, if not, then
             # the problem instance does not have `constraint_type` constraints
-            proxy_violation = torch.tensor([0.0])
+            proxy_violation = torch.tensor([0.0], device=cmp_state.loss.device)
         else:
             multipliers = getattr(self, constraint_type + "_multipliers")()
 

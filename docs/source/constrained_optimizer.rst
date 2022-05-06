@@ -63,7 +63,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
         cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
         formulation = cooper.problem.Formulation(...)
 
-        primal_optimizer = cooper.optim.Adam(model.parameters(), lr=1e-2)
+        primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
@@ -80,9 +80,9 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
         cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
         formulation = cooper.problem.Formulation(...)
 
-        primal_optimizer = cooper.optim.Adam(model.parameters(), lr=1e-2)
+        primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # Note that dual_optimizer is "partly instantiated", *without* parameters
-        dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=1e-3, momentum=0.9)
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3, momentum=0.9)
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
@@ -122,9 +122,9 @@ Example
         cmp = cooper.ConstrainedMinimizationProblem(...)
         formulation = cooper.LagrangianFormulation(...)
 
-        primal_optimizer = cooper.optim.SGD(model.parameters(), lr=primal_lr)
+        primal_optimizer = torch.optim.SGD(model.parameters(), lr=primal_lr)
         # Note that dual_optimizer is "partly instantiated", *without* parameters
-        dual_optimizer = cooper.optim.partial(cooper.optim.SGD, lr=primal_lr)
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=primal_lr)
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,

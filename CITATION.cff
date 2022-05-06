@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please consider citing it as indicated below."
+authors:
+    - family-names: "Gallego-Posada"
+      given-names: "Jose"
+    - family-names: "Ramirez"
+      given-names: "Juan"
+title: "Cooper: a toolkit for Lagrangian-based constrained optimization"
+date-released: 2022-03-15
+url: "https://github.com/cooper-org/cooper"
