@@ -7,12 +7,11 @@ from collections.abc import Iterable
 from typing import Callable, List, Tuple, Type, no_type_check
 
 import torch
-from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
 
 @no_type_check
-def partial_optimizer(optim_cls: Type[Optimizer], **optim_kwargs):
+def partial_optimizer(optim_cls: Type[torch.optim.Optimizer], **optim_kwargs):
     """
     Partially instantiates an optimizer class. This approach is preferred over
     :py:func:`functools.partial` since the returned value is an optimizer
