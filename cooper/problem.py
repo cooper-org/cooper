@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 
@@ -87,11 +87,32 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
 
+@dataclass
+class FormulationState:
+    """Represents the "state" of a Formulation. This is used for checkpointing.
+
+    Args:
+        dual_parameters: Trainable parameters for the formulation.
+        is_state_created: Whether the formulation state has been created.
+        state
+    """
+
+    dual_parameters: Optional[List[torch.Tensor]]
+
+
 class Formulation(abc.ABC):
     """Base class for Lagrangian and proxy-Lagrangian formulations."""
 
     def __init__(self):
         self.cmp = None
+
+    @abc.abstractmethod
+    def state_dict(self) -> Dict[str, Any]:
+        pass
+
+    @abc.abstractmethod
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        pass
 
     @abc.abstractmethod
     def create_state(self):
@@ -218,3 +239,17 @@ class UnconstrainedFormulation(Formulation):
             loss: Loss tensor for computing gradients for primal variables.
         """
         loss.backward()
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Generates the state dictionary for an unconstrained formulation.
+        """
+
+        return {}
+
+    def load_state_dict(self, state_dict: dict):
+        """
+        Loads the state dictionary for an unconstrained formulation. Since
+        unconstrained formulations are stateless, this is a no-op.
+        """
+        pass
