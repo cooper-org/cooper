@@ -1,7 +1,7 @@
 """Lagrangian formulation"""
 
 import abc
-from typing import Callable, List, Optional, Tuple, Union, no_type_check
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_check
 
 import torch
 
@@ -179,6 +179,39 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             self.state_update.append(violation_for_update)
 
         return proxy_violation
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Generates the state dictionary for a Lagrangian formulation.
+        """
+
+        state_dict = {
+            "ineq_multipliers": self.ineq_multipliers,
+            "eq_multipliers": self.eq_multipliers,
+            "state_update": self.state_update,
+            "aug_lag_coefficient": self.aug_lag_coefficient,
+        }
+        return state_dict
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads the state dictionary of a Lagrangian formulation.
+
+        Args:
+            state_dict: state dictionary to be loaded.
+        """
+
+        known_attrs = [
+            "ineq_multipliers",
+            "eq_multipliers",
+            "state_update",
+            "aug_lag_coefficient",
+        ]
+        for key, val in state_dict.items():
+            assert (
+                key in known_attrs
+            ), "LagrangianFormulation received unknown key: {}".format(key)
+            setattr(self, key, val)
 
 
 class LagrangianFormulation(BaseLagrangianFormulation):

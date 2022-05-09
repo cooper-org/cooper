@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 
@@ -87,11 +87,32 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
 
+@dataclass
+class FormulationState:
+    """Represents the "state" of a Formulation. This is used for checkpointing.
+
+    Args:
+        dual_parameters: Trainable parameters for the formulation.
+        is_state_created: Whether the formulation state has been created.
+        state
+    """
+
+    dual_parameters: Optional[List[torch.Tensor]]
+
+
 class Formulation(abc.ABC):
     """Base class for Lagrangian and proxy-Lagrangian formulations."""
 
     def __init__(self):
         self.cmp = None
+
+    @abc.abstractmethod
+    def state_dict(self) -> Dict[str, Any]:
+        pass
+
+    @abc.abstractmethod
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        pass
 
     @abc.abstractmethod
     def create_state(self):
@@ -138,3 +159,97 @@ class Formulation(abc.ABC):
                 gradients for the primal and dual variables are populated.
         """
         self._populate_gradients(*args, **kwargs)
+
+
+class UnconstrainedFormulation(Formulation):
+    """
+    Base class for unconstrained formulations.
+
+    Attributes:
+        cmp: :py:class:`~cooper.problem.ConstrainedMinimizationProblem` we aim
+            to solve and which gives rise to the Lagrangian.
+    """
+
+    def __init__(
+        self,
+        cmp: ConstrainedMinimizationProblem,
+    ):
+        """Construct new `UnconstrainedFormulation`"""
+
+        assert (
+            not cmp.is_constrained
+        ), "Trying to create an unconstrained formulation but a constrained \
+            problem was provided."
+
+        self.cmp = cmp
+
+    def create_state(self):
+        """This is a stateless formulation. No need to create a state."""
+        pass
+
+    def state(self) -> None:
+        """Returns the internal state of formulation (e.g. multipliers)."""
+        return None
+
+    @property
+    def is_state_created(self) -> False:
+        """This is a stateless formulation. This function always returns ``False``."""
+        return False
+
+    @property
+    def dual_parameters(self) -> None:
+        """Returns ``None`` as there are no trainable dual parameters in an
+        unconstrained formulation."""
+        return None
+
+    def composite_objective(
+        self,
+        closure: Callable[..., CMPState],
+        *closure_args,
+        write_state: bool = True,
+        **closure_kwargs
+    ) -> torch.Tensor:
+        """
+        Computes the loss based on a new evaluation of the
+        :py:class:`~cooper.problem.CMPState``.
+
+        Args:
+            closure: Callable returning a :py:class:`cooper.problem.CMPState`
+            write_state: If ``True``, the ``state`` of the formulation's
+                :py:class:`cooper.problem.ConstrainedMinimizationProblem`
+                attribute is replaced by that returned by the ``closure``
+                argument. This flag can be used (when set to ``False``) to
+                evaluate the loss, e.g. for logging validation metrics,
+                without overwritting the information stored in the formulation's
+                :py:class:`cooper.problem.ConstrainedMinimizationProblem`.
+        """
+
+        cmp_state = closure(*closure_args, **closure_kwargs)
+        if write_state:
+            self.cmp.state = cmp_state
+
+        return cmp_state.loss
+
+    def _populate_gradients(self, loss: torch.Tensor):
+        """
+        Performs the actual backward computation which populates the gradients
+        for the primal variables.
+
+        Args:
+            loss: Loss tensor for computing gradients for primal variables.
+        """
+        loss.backward()
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Generates the state dictionary for an unconstrained formulation.
+        """
+
+        return {}
+
+    def load_state_dict(self, state_dict: dict):
+        """
+        Loads the state dictionary for an unconstrained formulation. Since
+        unconstrained formulations are stateless, this is a no-op.
+        """
+        pass

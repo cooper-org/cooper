@@ -35,13 +35,16 @@ def test_toy_problem(aim_device, use_ineq):
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
 
-    if use_ineq:
-        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-    else:
-        dual_optimizer = None
-
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=use_ineq)
-    formulation = cooper.LagrangianFormulation(cmp)
+
+    if use_ineq:
+        # Constrained case
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
+        formulation = cooper.LagrangianFormulation(cmp)
+    else:
+        # Unconstrained case
+        dual_optimizer = None
+        formulation = cooper.UnconstrainedFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
@@ -52,8 +55,11 @@ def test_toy_problem(aim_device, use_ineq):
 
     for step_id in range(1500):
         coop.zero_grad()
+
+        # When using the unconstrained formulation, lagrangian = loss
         lagrangian = formulation.composite_objective(cmp.closure, params)
         formulation.custom_backward(lagrangian)
+
         coop.step()
 
     if device == "cuda":
