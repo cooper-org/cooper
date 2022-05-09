@@ -8,11 +8,57 @@ methods:
 - :py:meth:`~ConstrainedOptimizer.step`
 """
 
-from typing import Callable, Optional
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Type
 
 import torch
 
+import tests.helpers.pytorch_testing_utils as ptu
+
 from .problem import CMPState, Formulation
+
+
+@dataclass
+class ConstrainedOptimizerState:
+    """Represents the "state" of a Constrained Optimizer in terms of the state
+    dicts of the primal optimizer, as well as those of the dual optimizer and
+    the dual scheduler if applicable. This is used for checkpointing.
+
+    Args:
+        primal_optimizer_state: State dict for the primal optimizer.
+        dual_optimizer_state: State dict for the dual optimizer.
+        dual_scheduler_state: State dict for the primal optimizer.
+    """
+
+    primal_optimizer_state: Dict
+    dual_optimizer_state: Optional[Dict] = None
+    dual_scheduler_state: Optional[Dict] = None
+    alternating: bool = False
+    dual_restarts: bool = False
+
+    def __eq__(self, other):
+
+        assert isinstance(other, ConstrainedOptimizerState)
+
+        def compare_state_dicts(dict_name):
+            try:
+                return ptu.validate_state_dicts(
+                    getattr(self, dict_name), getattr(other, dict_name)
+                )
+            except:
+                return False
+
+        state_dict_names = [
+            "primal_optimizer_state",
+            "dual_optimizer_state",
+            "dual_scheduler_state",
+        ]
+
+        all_checks = [compare_state_dicts(_) for _ in state_dict_names]
+        all_checks.append(self.alternating == other.alternating)
+        all_checks.append(self.dual_restarts == other.dual_restarts)
+
+        return all(all_checks)
 
 
 class ConstrainedOptimizer:
@@ -269,8 +315,11 @@ class ConstrainedOptimizer:
                     )
 
                 self.dual_step()
-                
+
                 if self.dual_scheduler is not None:
+                    # FIXME(JGP): We are applying the dual scheduler step  after
+                    # every optimization step. The convention in Pytorch is for
+                    # this to happen after every epoch instead.
                     self.dual_scheduler.step()
 
     def dual_step(self, call_extrapolation=False):
@@ -334,3 +383,89 @@ class ConstrainedOptimizer:
                     )
                 else:
                     self.dual_optimizer.zero_grad()
+
+    def state_dict(self) -> ConstrainedOptimizerState:
+        """
+        Returns the state of the ConstrainedOptimizer. See
+        :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizerState`.
+        """
+
+        primal_optimizer_state = self.primal_optimizer.state_dict()
+
+        if self.dual_optimizer is not None:
+            dual_optimizer_state = self.dual_optimizer.state_dict()
+
+            # formulation_dual_vars = self.formulation.dual_parameters
+            # dual_vars_metadata = [_.shape for _ in formulation_dual_vars]
+
+        else:
+            dual_optimizer_state = None
+
+        if self.dual_scheduler is not None:
+            dual_scheduler_state = self.dual_scheduler.state_dict()
+        else:
+            dual_scheduler_state = None
+
+        return ConstrainedOptimizerState(
+            primal_optimizer_state=primal_optimizer_state,
+            dual_optimizer_state=dual_optimizer_state,
+            dual_scheduler_state=dual_scheduler_state,
+            alternating=self.alternating,
+            dual_restarts=self.dual_restarts,
+        )
+
+    @classmethod
+    def load_from_state_dict(
+        cls,
+        const_optim_state: ConstrainedOptimizerState,
+        formulation: Formulation,
+        primal_optimizer_class: torch.optim.Optimizer,
+        primal_parameters: List[torch.nn.Parameter],
+        dual_optimizer_class: Type[torch.optim.Optimizer] = None,
+        dual_scheduler_class: Type[torch.optim.lr_scheduler._LRScheduler] = None,
+    ):
+        """
+        Loads the state of the ConstrainedOptimizer. This method should be called
+
+        Args:
+            state_dict: state of the ConstrainedOptimizer.
+        """
+
+        primal_optimizer = primal_optimizer_class(primal_parameters)
+        primal_optimizer.load_state_dict(const_optim_state.primal_optimizer_state)
+
+        if const_optim_state.dual_optimizer_state is not None:
+            if dual_optimizer_class is None:
+                raise ValueError(
+                    "State dict contains dual_opt_state but dual_optimizer is None."
+                )
+
+            # This assumes a checkpoint-loaded formulation has been provided in
+            # the initialization of the ``ConstrainedOptimizer``. This ensure
+            # that we can safely call self.formulation.dual_parameters.
+            dual_optimizer = dual_optimizer_class(formulation.dual_parameters)
+            dual_optimizer.load_state_dict(const_optim_state.dual_optimizer_state)
+
+            if const_optim_state.dual_scheduler_state is not None:
+                if dual_scheduler_class is None:
+                    raise ValueError(
+                        "State dict contains dual_scheduler_state but dual_scheduler is None."
+                    )
+
+                dual_scheduler = dual_scheduler(dual_optimizer)
+                dual_scheduler.load_state_dict(const_optim_state.dual_scheduler_state)
+            else:
+                dual_scheduler = None
+
+        else:
+            dual_optimizer = None
+            dual_scheduler = None
+
+        return ConstrainedOptimizer(
+            formulation=formulation,
+            primal_optimizer=primal_optimizer,
+            dual_optimizer=dual_optimizer,
+            dual_scheduler=dual_scheduler,
+            alternating=const_optim_state.alternating,
+            dual_restarts=const_optim_state.dual_restarts,
+        )
