@@ -11,7 +11,10 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
     def closure(self, params):
 
-        param_x, param_y = params
+        if isinstance(params, torch.nn.Module):
+            param_x, param_y = params.forward()
+        else:
+            param_x, param_y = params
 
         # Define toy closure function
 
