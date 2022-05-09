@@ -13,9 +13,8 @@ from typing import Callable, Dict, List, Optional, Type
 
 import torch
 
-import tests.helpers.pytorch_testing_utils as ptu
-
 from .problem import CMPState, Formulation
+from .utils import validate_state_dicts
 
 
 @dataclass
@@ -45,7 +44,7 @@ class ConstrainedOptimizerState:
 
         def compare_state_dicts(dict_name):
             try:
-                return ptu.validate_state_dicts(
+                return validate_state_dicts(
                     getattr(self, dict_name), getattr(other, dict_name)
                 )
             except:

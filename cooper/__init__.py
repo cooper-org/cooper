@@ -24,4 +24,4 @@ from cooper.problem import (
 )
 from cooper.state_logger import StateLogger
 
-from . import optim
+from . import optim, utils

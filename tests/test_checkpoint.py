@@ -7,7 +7,6 @@ import os
 import tempfile
 
 import pytest
-import pytorch_testing_utils as ptu
 import testing_utils
 import torch
 
@@ -15,6 +14,7 @@ import torch
 import toy_2d_problem
 
 import cooper
+from cooper.utils import validate_state_dicts
 
 
 def train_for_n_steps(coop, cmp, params, n_step=100):
@@ -140,9 +140,7 @@ def test_toy_problem(aim_device, use_ineq):
     train_for_n_steps(loaded_coop, cmp, loaded_model, n_step=100)
 
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
-    assert ptu.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
-    assert ptu.validate_state_dicts(
-        loaded_formulation.state_dict(), form_state_dict_200
-    )
+    assert validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
+    assert validate_state_dicts(loaded_formulation.state_dict(), form_state_dict_200)
     # These are ConstrainedOptimizerState objects and not dicts
     assert loaded_coop.state_dict() == coop_state_dict_200
