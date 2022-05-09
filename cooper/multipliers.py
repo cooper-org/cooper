@@ -71,6 +71,7 @@ class DenseMultiplier(BaseMultiplier):
         super().__init__()
         self.weight = torch.nn.Parameter(init)
         self.positive = positive
+        self.device = self.weight.device
 
     @property
     def shape(self):
@@ -101,3 +102,11 @@ class DenseMultiplier(BaseMultiplier):
         pos_str = "inequality" if self.positive else "equality"
         rep = "DenseMultiplier(" + pos_str + ", " + str(self.weight.data) + ")"
         return rep
+
+    def __eq__(self, other):
+        assert isinstance(other, DenseMultiplier)
+
+        positive_check = self.positive == other.positive
+        weight_check = torch.allclose(self.weight, other.weight)
+
+        return positive_check and weight_check
