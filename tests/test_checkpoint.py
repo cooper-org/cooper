@@ -87,7 +87,7 @@ def test_toy_problem(aim_device, use_ineq):
     )
 
     # Train for 100 steps
-    train_for_n_steps(coop, cmp, model, n_step=10)
+    train_for_n_steps(coop, cmp, model, n_step=100)
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
@@ -107,9 +107,7 @@ def test_toy_problem(aim_device, use_ineq):
         form_state_dict_100 = torch.load(os.path.join(tmpdirname, "formulation.pth"))
         coop_state_dict_100 = torch.load(os.path.join(tmpdirname, "coop.pth"))
 
-    # pdb.set_trace()
-
-    # Train for another 200 steps
+    # Train for another 100 steps
     train_for_n_steps(coop, cmp, model, n_step=100)
 
     model_state_dict_200 = model.state_dict()
@@ -120,6 +118,8 @@ def test_toy_problem(aim_device, use_ineq):
     loaded_model = Model(None)
     loaded_model.load_state_dict(model_state_dict_100)
 
+    loaded_primal_optimizer = partial_primal_optim(loaded_model.parameters())
+
     if use_ineq:
         loaded_formulation = cooper.LagrangianFormulation(cmp)
     else:
@@ -129,8 +129,7 @@ def test_toy_problem(aim_device, use_ineq):
     loaded_coop = cooper.ConstrainedOptimizer.load_from_state_dict(
         const_optim_state=coop_state_dict_100,
         formulation=loaded_formulation,
-        primal_optimizer_class=partial_primal_optim,
-        primal_parameters=loaded_model.parameters(),
+        primal_optimizer=loaded_primal_optimizer,
         dual_optimizer_class=partial_dual_optim,
         dual_scheduler_class=None,
     )

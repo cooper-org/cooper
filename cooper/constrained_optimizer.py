@@ -24,6 +24,9 @@ class ConstrainedOptimizerState:
     dicts of the primal optimizer, as well as those of the dual optimizer and
     the dual scheduler if applicable. This is used for checkpointing.
 
+    # TODO(JGP): Add docs about difference between this and FormulationState
+    # here we focus on the optimizers, while the formulation contains dual vars.
+
     Args:
         primal_optimizer_state: State dict for the primal optimizer.
         dual_optimizer_state: State dict for the dual optimizer.
@@ -394,10 +397,6 @@ class ConstrainedOptimizer:
 
         if self.dual_optimizer is not None:
             dual_optimizer_state = self.dual_optimizer.state_dict()
-
-            # formulation_dual_vars = self.formulation.dual_parameters
-            # dual_vars_metadata = [_.shape for _ in formulation_dual_vars]
-
         else:
             dual_optimizer_state = None
 
@@ -419,8 +418,7 @@ class ConstrainedOptimizer:
         cls,
         const_optim_state: ConstrainedOptimizerState,
         formulation: Formulation,
-        primal_optimizer_class: torch.optim.Optimizer,
-        primal_parameters: List[torch.nn.Parameter],
+        primal_optimizer: torch.optim.Optimizer,
         dual_optimizer_class: Type[torch.optim.Optimizer] = None,
         dual_scheduler_class: Type[torch.optim.lr_scheduler._LRScheduler] = None,
     ):
@@ -431,7 +429,6 @@ class ConstrainedOptimizer:
             state_dict: state of the ConstrainedOptimizer.
         """
 
-        primal_optimizer = primal_optimizer_class(primal_parameters)
         primal_optimizer.load_state_dict(const_optim_state.primal_optimizer_state)
 
         if const_optim_state.dual_optimizer_state is not None:
