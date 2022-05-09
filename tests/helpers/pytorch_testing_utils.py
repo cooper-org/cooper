@@ -38,6 +38,9 @@ def validate_state_dicts(model_state_dict_1, model_state_dict_2):
     if model_state_dict_1 is None and model_state_dict_2 is None:
         return True
 
+    if model_state_dict_1 == {} or model_state_dict_2 == {}:
+        return (model_state_dict_1 == {}) and (model_state_dict_2 == {})
+
     if len(model_state_dict_1) != len(model_state_dict_2):
         logger.info(
             f"Length mismatch: {len(model_state_dict_1)}, {len(model_state_dict_2)}"
