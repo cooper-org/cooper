@@ -61,7 +61,8 @@ def test_toy_problem(aim_device, use_ineq):
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    model = Model(torch.tensor([0.0, -1.0], device=device))
+    model = Model(torch.tensor([0.0, -1.0]))
+    model.to(device)
 
     partial_primal_optim = cooper.optim.partial_optimizer(
         torch.optim.SGD, lr=1e-2, momentum=0.3
@@ -117,6 +118,7 @@ def test_toy_problem(aim_device, use_ineq):
     # Reload from 100-step checkpoint
     loaded_model = Model(None)
     loaded_model.load_state_dict(model_state_dict_100)
+    loaded_model.to(device)
 
     loaded_primal_optimizer = partial_primal_optim(loaded_model.parameters())
 
