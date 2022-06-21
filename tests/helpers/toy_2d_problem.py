@@ -18,7 +18,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         # Define toy closure function
 
-        loss = param_x ** 2 + 2 * param_y ** 2
+        loss = param_x**2 + 2 * param_y**2
 
         # No equality constraints
         eq_defect = None
@@ -28,7 +28,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             ineq_defect = torch.stack(
                 [
                     -param_x - param_y + 1.0,  # x + y \ge 1
-                    param_x ** 2 + param_y - 1.0,  # x**2 + y \le 1.0
+                    param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
                 ]
             )
 
@@ -38,7 +38,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                 proxy_ineq_defect = torch.stack(
                     [
                         -0.9 * param_x - param_y + 1.0,  # x + y \ge 1
-                        param_x ** 2 + 0.9 * param_y - 1.0,  # x**2 + y \le 1.0
+                        param_x**2 + 0.9 * param_y - 1.0,  # x**2 + y \le 1.0
                     ]
                 )
             else:
