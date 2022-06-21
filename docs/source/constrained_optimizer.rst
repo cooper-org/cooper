@@ -241,6 +241,12 @@ variables. This two-stage process is handled by **Cooper** inside the
     :py:meth:`torch.nograd()` context. Future releases might allow for
     evaluating the constraints only.
 
+
+.. warning::
+
+    Combining alternating updates with :ref:`dual restarts<dual_restarts>` is untested. Use at your
+    own risk.
+
 .. _dual_restarts:
 
 Dual restarts

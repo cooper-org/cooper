@@ -9,6 +9,7 @@ methods:
 """
 
 import pdb
+import warnings
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Type
 
@@ -170,6 +171,12 @@ class ConstrainedOptimizer:
         # whether to use extrapolation. See check below for matching
         # extrapolation behavior.
         self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+
+        if is_alternating and self.dual_restarts:
+            warnings.warn(
+                """Using alternating updates with dual restarts is untested.
+                Please use with caution."""
+            )
 
         if is_aug_lag and self.is_extrapolation:
             raise NotImplementedError(
