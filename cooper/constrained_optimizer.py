@@ -8,6 +8,7 @@ methods:
 - :py:meth:`~ConstrainedOptimizer.step`
 """
 
+import pdb
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Type
 
@@ -251,7 +252,9 @@ class ConstrainedOptimizer:
                 self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
 
         if self.is_extrapolation or self.alternating:
-            assert closure is not None
+            assert (
+                closure is not None
+            ), "Closure must be provided for extrapolation or alternating updates"
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
@@ -294,7 +297,6 @@ class ConstrainedOptimizer:
             if self.cmp.is_constrained:
 
                 if self.alternating:
-                    # TODO: add test for this
 
                     # Once having updated primal parameters, re-compute gradient
                     # Skip gradient wrt model parameters to avoid wasteful
@@ -302,7 +304,14 @@ class ConstrainedOptimizer:
                     with torch.no_grad():
                         assert closure is not None
                         self.cmp.state = closure(*closure_args, **closure_kwargs)
-                    lagrangian = self.formulation.composite_objective(self.cmp)  # type: ignore
+
+                    # We have already computed the new CMP state with the new
+                    # values of the multipliers. Now we only need to recalculate
+                    # the Lagrangian so we can get the gradients wrt the
+                    # multipliers.
+                    lagrangian = self.formulation.composite_objective(
+                        closure=None, pre_computed_state=self.cmp.state
+                    )  # type: ignore
 
                     # Zero-out gradients for dual variables since they were
                     # already populated earlier.

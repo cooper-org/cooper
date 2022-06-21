@@ -1,6 +1,7 @@
 """Lagrangian formulation"""
 
 import abc
+import pdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_check
 
 import torch
@@ -233,6 +234,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         self,
         closure: Callable[..., CMPState],
         *closure_args,
+        pre_computed_state: Optional[CMPState] = None,
         write_state: bool = True,
         **closure_kwargs
     ) -> torch.Tensor:
@@ -252,6 +254,8 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         Args:
             closure: Callable returning a :py:class:`cooper.problem.CMPState`
+            pre_computed_state: Pre-computed CMP state to avoid wasteful
+                computation when only dual gradients are required.
             write_state: If ``True``, the ``state`` of the formulation's
                 :py:class:`cooper.problem.ConstrainedMinimizationProblem`
                 attribute is replaced by that returned by the ``closure``
@@ -262,7 +266,10 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         """
 
-        cmp_state = closure(*closure_args, **closure_kwargs)
+        if pre_computed_state is not None:
+            cmp_state = pre_computed_state
+        else:
+            cmp_state = closure(*closure_args, **closure_kwargs)
         if write_state:
             self.cmp.state = cmp_state
 
