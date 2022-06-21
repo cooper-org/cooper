@@ -241,6 +241,10 @@ class ConstrainedOptimizer:
                 function when re-evaluating.
         """
 
+        # TODO (JGP): The logic inside this method is becoming overly complex
+        # due to the constant friction between extrapolation, alternating
+        # updates, and proxy-constraints. We might want to consider refactoring.
+
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
             assert self.dual_optimizer is not None and callable(self.dual_optimizer)
             # Checks if needed and instantiates dual_optimizer
@@ -302,6 +306,11 @@ class ConstrainedOptimizer:
                     # Skip gradient wrt model parameters to avoid wasteful
                     # computation, as we only need gradient wrt multipliers.
                     with torch.no_grad():
+
+                        # TODO (JGP): This could be made more efficient by not
+                        # computing the whole closure but rather *just the
+                        # constraint violations*
+
                         assert closure is not None
                         self.cmp.state = closure(*closure_args, **closure_kwargs)
 
