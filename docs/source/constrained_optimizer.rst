@@ -179,7 +179,7 @@ Formally,
 Other update strategies implemented by :py:class:`~ConstrainedOptimizer`
 include:
 
-- (TODO) :ref:`Alternating updates<alternating_updates>` for (projected) gradient descent-ascent
+- :ref:`Alternating updates<alternating_updates>` for (projected) gradient descent-ascent
 - Performing :ref:`dual_restarts` on the Lagrange multipliers for inequality constraints
 - Using :ref:`Extra-gradient<extra-gradient_optimizers>`
 
@@ -234,12 +234,18 @@ variables. This two-stage process is handled by **Cooper** inside the
     to the Lagrange multipliers, it suffices to *evaluate* the constraint
     defects (through a call to
     :py:meth:`~cooper.problem.ConstrainedMinimizationProblem.closure`). This
-    operation does not require a having to back-propagate through the Lagrangian.
+    operation does not require a having to back-propagate through the Lagrangian
+    with respect to the primal parameters.
 
-.. todo::
+    The current implementation re-evaluates the closure inside a
+    :py:meth:`torch.nograd()` context. Future releases might allow for
+    evaluating the constraints only.
 
-    This functionality is untested and is yet to be integrated with the use of
-    proxy constraints.
+
+.. warning::
+
+    Combining alternating updates with :ref:`dual restarts<dual_restarts>` is untested. Use at your
+    own risk.
 
 .. _dual_restarts:
 

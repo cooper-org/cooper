@@ -8,6 +8,8 @@ methods:
 - :py:meth:`~ConstrainedOptimizer.step`
 """
 
+import pdb
+import warnings
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Type
 
@@ -170,6 +172,12 @@ class ConstrainedOptimizer:
         # extrapolation behavior.
         self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
 
+        if is_alternating and self.dual_restarts:
+            warnings.warn(
+                """Using alternating updates with dual restarts is untested.
+                Please use with caution."""
+            )
+
         if is_aug_lag and self.is_extrapolation:
             raise NotImplementedError(
                 """It is currently not possible to use extrapolation and an
@@ -240,6 +248,10 @@ class ConstrainedOptimizer:
                 function when re-evaluating.
         """
 
+        # TODO (JGP): The logic inside this method is becoming overly complex
+        # due to the constant friction between extrapolation, alternating
+        # updates, and proxy-constraints. We might want to consider refactoring.
+
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
             assert self.dual_optimizer is not None and callable(self.dual_optimizer)
             # Checks if needed and instantiates dual_optimizer
@@ -251,7 +263,9 @@ class ConstrainedOptimizer:
                 self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
 
         if self.is_extrapolation or self.alternating:
-            assert closure is not None
+            assert (
+                closure is not None
+            ), "Closure must be provided for extrapolation or alternating updates"
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
@@ -294,15 +308,26 @@ class ConstrainedOptimizer:
             if self.cmp.is_constrained:
 
                 if self.alternating:
-                    # TODO: add test for this
 
                     # Once having updated primal parameters, re-compute gradient
                     # Skip gradient wrt model parameters to avoid wasteful
                     # computation, as we only need gradient wrt multipliers.
                     with torch.no_grad():
+
+                        # TODO (JGP): This could be made more efficient by not
+                        # computing the whole closure but rather *just the
+                        # constraint violations*
+
                         assert closure is not None
                         self.cmp.state = closure(*closure_args, **closure_kwargs)
-                    lagrangian = self.formulation.composite_objective(self.cmp)  # type: ignore
+
+                    # We have already computed the new CMP state with the new
+                    # values of the multipliers. Now we only need to recalculate
+                    # the Lagrangian so we can get the gradients wrt the
+                    # multipliers.
+                    lagrangian = self.formulation.composite_objective(
+                        closure=None, pre_computed_state=self.cmp.state
+                    )  # type: ignore
 
                     # Zero-out gradients for dual variables since they were
                     # already populated earlier.
