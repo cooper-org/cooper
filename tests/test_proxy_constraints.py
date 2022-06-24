@@ -4,51 +4,34 @@
 
 import functools
 
+import cooper_test_utils
 import pytest
-import testing_utils
 import torch
-
-# Import basic closure example from helpers
-import toy_2d_problem
 
 import cooper
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_toy_problem(aim_device):
+def test_manual_proxy_constraints(aim_device):
     """
-    Simple test on a bi-variate quadratic programming problem
-        min x**2 + 2*y**2
-        st.
-            x + y >= 1
-            x**2 + y <= 1.
-
-    Verified solution from WolframAlpha (x=2/3, y=1/3)
-    Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
+    Checks correct behavior when using proxy constraints by comparing the
+    problem and formulation states over a couple of initial iterations.
     """
 
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = torch.optim.SGD([params], lr=5e-2, momentum=0.0)
-    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True, use_proxy_ineq=True)
-    formulation = cooper.LagrangianFormulation(cmp)
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_proxy_ineq=True,
         dual_restarts=False,
         alternating=False,
+        primal_optim_kwargs={"lr": 5e-2},
+        dual_optim_kwargs={"lr": 1e-2},
     )
 
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
+    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
