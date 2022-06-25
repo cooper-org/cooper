@@ -30,7 +30,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         cmp: ConstrainedMinimizationProblem,
         ineq_init: Optional[torch.Tensor] = None,
         eq_init: Optional[torch.Tensor] = None,
-        aug_lag_coefficient: float = 0.0,
     ):
         """Construct new `LagrangianFormulation`"""
 
@@ -44,10 +43,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         self.eq_init = eq_init
 
         self.state_update: List[torch.Tensor] = []
-
-        if aug_lag_coefficient < 0:
-            raise ValueError("Augmented Lagrangian coefficient must be non-negative.")
-        self.aug_lag_coefficient = aug_lag_coefficient
 
     @property
     def dual_parameters(self) -> List[torch.Tensor]:
@@ -190,7 +185,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             "ineq_multipliers": self.ineq_multipliers,
             "eq_multipliers": self.eq_multipliers,
             "state_update": self.state_update,
-            "aug_lag_coefficient": self.aug_lag_coefficient,
         }
         return state_dict
 
@@ -275,7 +269,6 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         # Extract values from ProblemState object
         loss = cmp_state.loss
-        ineq_defect, eq_defect = cmp_state.ineq_defect, cmp_state.eq_defect
 
         if self.cmp.is_constrained and (not self.is_state_created):
             # If not done before, instantiate and initialize dual variables
@@ -298,30 +291,6 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
             # Lagrangian = loss + \sum_i multiplier_i * defect_i
             lagrangian = loss + ineq_viol + eq_viol
-
-            # TODO(JGP): [1] verify that current implementation of proxy
-            # constraints works properly with augmented lagrangian below.
-
-            # If using augmented Lagrangian, add squared sum of constraints
-            # Following the formulation on Marc Toussaint slides (p 17-20)
-            # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
-            if self.aug_lag_coefficient > 0:
-
-                # TODO(JGP): [2] I guess one would like to filter based on
-                # non-proxy feasibility but penalize based on the proxy defect
-                if ineq_defect is not None:
-                    assert self.ineq_multipliers is not None
-                    ineq_filter = (ineq_defect >= 0) + (self.ineq_multipliers() > 0)
-                    ineq_square = torch.sum(torch.square(ineq_defect[ineq_filter]))
-                else:
-                    ineq_square = torch.tensor([0.0])
-
-                if eq_defect is not None:
-                    eq_square = torch.sum(torch.square(eq_defect))
-                else:
-                    eq_square = torch.tensor([0.0])
-
-                lagrangian += self.aug_lag_coefficient * (ineq_square + eq_square)
 
         else:
             assert cmp_state.loss is not None

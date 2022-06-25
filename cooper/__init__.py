@@ -15,6 +15,7 @@ except PackageNotFoundError:
 
     warnings.warn("Could not retrieve cooper version!")
 
+from cooper.augmented_lagrangian import AugmentedLagrangianFormulation
 from cooper.constrained_optimizer import ConstrainedOptimizer
 from cooper.lagrangian_formulation import LagrangianFormulation
 from cooper.problem import (
