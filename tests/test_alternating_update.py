@@ -2,50 +2,28 @@
 
 """Tests for Extrapolation optimizers."""
 
-import functools
 import pdb
 
+import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
-# Import basic closure example from helpers
-import toy_2d_problem
 
-import cooper
+def problem_data(aim_device, alternating):
 
-
-def prepare_problem(aim_device, alternating):
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-
-    try:
-        optimizer_class = getattr(cooper.optim, "SGD")
-    except:
-        optimizer_class = getattr(torch.optim, "SGD")
-    primal_optimizer = optimizer_class([params], lr=1e-2)
-
-    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
-    formulation = cooper.LagrangianFormulation(cmp)
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_proxy_ineq=False,
         dual_restarts=False,
         alternating=alternating,
     )
 
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
-
-    return params, cmp, coop, formulation, mktensor
+    # params, cmp, coop, formulation, device, mktensor
+    return test_problem_data.as_tuple()
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -55,7 +33,7 @@ def test_manual_alternating(aim_device, alternating):
     Test first step of alternating vs non-alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, mktensor = prepare_problem(aim_device, alternating)
+    params, cmp, coop, formulation, _, mktensor = problem_data(aim_device, alternating)
 
     coop.zero_grad()
     lagrangian = formulation.composite_objective(cmp.closure, params)
@@ -99,7 +77,7 @@ def test_convergence_alternating(aim_device, alternating):
     Test convergence of alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, mktensor = prepare_problem(aim_device, alternating)
+    params, cmp, coop, formulation, _, _ = problem_data(aim_device, alternating)
 
     for step_id in range(1500):
         coop.zero_grad()

@@ -6,12 +6,10 @@ for the unconstrained setting."""
 import os
 import tempfile
 
-import pytest
-import testing_utils
-import torch
-
 # Import basic closure example from helpers
-import toy_2d_problem
+import cooper_test_utils
+import pytest
+import torch
 
 import cooper
 from cooper.utils import validate_state_dicts
@@ -44,48 +42,40 @@ class Model(torch.nn.Module):
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 @pytest.mark.parametrize("use_ineq", [True, False])
-def test_toy_problem(aim_device, use_ineq):
+def test_checkpoint(aim_device, use_ineq):
     """
-    Simple test on a bi-variate quadratic programming problem
-        min x**2 + 2*y**2
-        st.
-            x + y >= 1
-            x**2 + y <= 1
-
-    Verified solution from WolframAlpha (x=2/3, y=1/3)
-    Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
+    Test that checkpointing and loading works for the constrained and
+    unconstrained cases.
     """
-
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
 
     model = Model(torch.tensor([0.0, -1.0]))
-    model.to(device)
 
     partial_primal_optim = cooper.optim.partial_optimizer(
         torch.optim.SGD, lr=1e-2, momentum=0.3
     )
-    primal_optimizer = partial_primal_optim(model.parameters())
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=use_ineq)
 
     if use_ineq:
         # Constrained case
         partial_dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-        formulation = cooper.LagrangianFormulation(cmp)
     else:
         # Unconstrained case
         partial_dual_optim = None
-        formulation = cooper.UnconstrainedFormulation(cmp)
 
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=partial_dual_optim,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=None,
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=use_ineq,
+        use_proxy_ineq=False,
         dual_restarts=True,
+        alternating=False,
+        primal_optim_kwargs={"lr": 1e-2, "momentum": 0.3},
+        dual_optim_kwargs={"lr": 1e-2},
+        primal_model=model,
     )
+
+    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
     # Train for 100 steps
     train_for_n_steps(coop, cmp, model, n_step=100)
