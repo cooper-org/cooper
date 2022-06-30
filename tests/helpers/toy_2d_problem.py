@@ -1,3 +1,4 @@
+import pdb
 import torch
 
 import cooper
@@ -9,16 +10,29 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_proxy_ineq = use_proxy_ineq
         super().__init__(is_constrained=self.use_ineq)
 
-    def closure(self, params):
-
+    def eval_params(self, params):
         if isinstance(params, torch.nn.Module):
             param_x, param_y = params.forward()
         else:
             param_x, param_y = params
 
-        # Define toy closure function
+        return param_x, param_y
 
-        loss = param_x**2 + 2 * param_y**2
+    def closure(self, params):
+
+        cmp_state = self.defect_fn(params)
+        cmp_state.loss = self.loss_fn(params)
+
+        return cmp_state
+
+    def loss_fn(self, params):
+        param_x, param_y = self.eval_params(params)
+
+        return param_x**2 + 2 * param_y**2
+
+    def defect_fn(self, params):
+
+        param_x, param_y = self.eval_params(params)
 
         # No equality constraints
         eq_defect = None
@@ -48,11 +62,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             ineq_defect = None
             proxy_ineq_defect = None
 
-        closure_state = cooper.CMPState(
-            loss=loss,
+        return cooper.CMPState(
+            loss=None,
             eq_defect=eq_defect,
             ineq_defect=ineq_defect,
             proxy_ineq_defect=proxy_ineq_defect,
         )
-
-        return closure_state
