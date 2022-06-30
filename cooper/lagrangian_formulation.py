@@ -135,56 +135,27 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
     def update_accumulated_violation(self, update: Optional[torch.Tensor] = None):
+        """
+        Update the cumulative dot product between the constraint violations
+        (aka defects) and the current multipliers.
+
+        Args:
+            update: Dot product between multipliers and constraints. If value is
+            `None`, `self.accumulated_violation_dot_prod` is set to None.
+        """
         if update is None or self.accumulated_violation_dot_prod is None:
             self.accumulated_violation_dot_prod = update
         elif self.accumulated_violation_dot_prod is not None:
             self.accumulated_violation_dot_prod += update
 
+    @abc.abstractmethod
     def weighted_violation(
         self, cmp_state: CMPState, constraint_type: str
     ) -> torch.Tensor:
         """
-        Computes the dot product between the current multipliers and the
-        constraint violations of type ``constraint_type``. If proxy-constraints
-        are provided in the :py:class:`.CMPState`, the non-proxy (usually
-        non-differentiable) constraints are used for computing the dot product,
-        while the "proxy-constraint" dot products are accumulated under
-        ``self.accumulated_violation_dot_prod``.
-
-        Args:
-            cmp_state: current ``CMPState``
-            constraint_type: type of constrained to be used
-
+        Abstract method for computing the weighted violation of a constraint.
         """
-
-        defect = getattr(cmp_state, constraint_type + "_defect")
-        has_defect = defect is not None
-
-        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
-        has_proxy_defect = proxy_defect is not None
-
-        if not has_proxy_defect:
-            # If not given proxy constraints, then the regular defects are
-            # used for computing gradients and evaluating the multipliers
-            proxy_defect = defect
-
-        if not has_defect:
-            # We should always have at least the regular defects, if not, then
-            # the problem instance does not have `constraint_type` constraints
-            proxy_violation = torch.tensor([0.0], device=cmp_state.loss.device)
-        else:
-            multipliers = getattr(self, constraint_type + "_multipliers")()
-
-            # We compute (primal) gradients of this object
-            proxy_violation = torch.sum(multipliers.detach() * proxy_defect)
-
-            # This is the violation of the "actual" constraint. We use this
-            # to update the value of the multipliers by lazily filling the
-            # multiplier gradients in `populate_gradients`
-            violation_for_update = torch.sum(multipliers * defect.detach())
-            self.update_accumulated_violation(update=violation_for_update)
-
-        return proxy_violation
+        pass
 
     def state_dict(self) -> Dict[str, Any]:
         """
@@ -308,6 +279,56 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             lagrangian = cmp_state.loss
 
         return lagrangian
+
+    def weighted_violation(
+        self, cmp_state: CMPState, constraint_type: str
+    ) -> torch.Tensor:
+        """
+        Computes the dot product between the current multipliers and the
+        constraint violations of type ``constraint_type``. If proxy-constraints
+        are provided in the :py:class:`.CMPState`, the non-proxy (usually
+        non-differentiable) constraints are used for computing the dot product,
+        while the "proxy-constraint" dot products are accumulated under
+        ``self.accumulated_violation_dot_prod``.
+
+        Args:
+            cmp_state: current ``CMPState``
+            constraint_type: type of constrained to be used, e.g. "eq" or "ineq".
+        """
+
+        defect = getattr(cmp_state, constraint_type + "_defect")
+        has_defect = defect is not None
+
+        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+        has_proxy_defect = proxy_defect is not None
+
+        if not has_proxy_defect:
+            # If not given proxy constraints, then the regular defects are
+            # used for computing gradients and evaluating the multipliers
+            proxy_defect = defect
+
+        if not has_defect:
+            # We should always have at least the "regular" defects, if not, then
+            # the problem instance does not have `constraint_type` constraints
+            proxy_violation = torch.tensor([0.0], device=cmp_state.loss.device)
+        else:
+            multipliers = getattr(self, constraint_type + "_multipliers")()
+
+            # We compute (primal) gradients of this object
+            proxy_violation = torch.sum(multipliers.detach() * proxy_defect)
+
+            # This is the violation of the "actual/hard" constraint. We use this
+            # to update the multipliers.
+            # The gradients for the dual variables are computed via a backward
+            # on `accumulated_violation_dot_prod`. This enables easy
+            # extensibility to multiplier classes beyond DenseMultiplier.
+
+            # TODO (JGP): Verify that call to backward is general enough for
+            # Lagrange Multiplier models
+            violation_for_update = torch.sum(multipliers * defect.detach())
+            self.update_accumulated_violation(update=violation_for_update)
+
+        return proxy_violation
 
     @no_type_check
     def _populate_gradients(
