@@ -263,10 +263,13 @@ class ConstrainedOptimizer:
                 # Instantiates the dual_scheduler
                 self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
 
-        if self.is_extrapolation or self.alternating:
-            assert (
-                closure is not None
-            ), "Closure must be provided for extrapolation or alternating updates"
+        assert not (
+            self.is_extrapolation and (closure is None)
+        ), "Closure must be provided to step when using extrapolation"
+
+        assert not (
+            self.alternating and (closure is None) and (defect_fn is None)
+        ), "At least one of closure or defect_fn must be provided for alternating updates"
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
