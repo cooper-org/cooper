@@ -100,6 +100,9 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             # This is the violation of the "actual" constraint. We use this
             # to update the value of the multipliers by lazily filling the
             # multiplier gradients in `populate_gradients`
+
+            # TODO (JGP): Verify that call to backward is general enough for
+            # Lagrange Multiplier models
             violation_for_update = torch.sum(multipliers * defect.detach())
             self.state_update.append(violation_for_update)
 
