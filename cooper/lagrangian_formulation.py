@@ -47,7 +47,14 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     @property
     def dual_parameters(self) -> List[torch.Tensor]:
         """Returns a list gathering all dual parameters"""
-        return [_ for _ in self.state() if _ is not None]
+
+        all_dual_params = []
+
+        for mult in [self.ineq_multipliers, self.eq_multipliers]:
+            if mult is not None:
+                all_dual_params.extend(list(mult.parameters()))
+
+        return all_dual_params
 
     def state(self) -> Tuple[Union[None, torch.Tensor]]:
         """
@@ -329,8 +336,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             lagrangian.backward()
 
         # Fill in the gradients for the dual variables based on the violation of
-        # the non-proxy constraint
-        # This is equivalent to setting `dual_vars.grad = defect`
+        # the non-proxy constraints
         if self.cmp.is_constrained:
             for violation_for_update in self.state_update:
                 dual_vars = [_ for _ in self.state() if _ is not None]
