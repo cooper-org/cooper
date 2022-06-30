@@ -15,7 +15,7 @@ import toy_2d_problem
 import cooper
 
 
-def prepare_problem(aim_device, alternating):
+def prepare_problem(aim_device, alternating, use_defect_fn):
     device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
 
     if skip.do_skip:
@@ -33,6 +33,7 @@ def prepare_problem(aim_device, alternating):
 
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
     formulation = cooper.LagrangianFormulation(cmp)
+    defect_fn = cmp.defect_fn if use_defect_fn else None
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
@@ -45,17 +46,20 @@ def prepare_problem(aim_device, alternating):
     # Helper function to instantiate tensors in correct device
     mktensor = functools.partial(torch.tensor, device=device)
 
-    return params, cmp, coop, formulation, mktensor
+    return params, cmp, coop, formulation, defect_fn, mktensor
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 @pytest.mark.parametrize("alternating", [True, False])
-def test_manual_alternating(aim_device, alternating):
+@pytest.mark.parametrize("use_defect_fn", [True, False])
+def test_manual_alternating(aim_device, alternating, use_defect_fn):
     """
     Test first step of alternating vs non-alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, mktensor = prepare_problem(aim_device, alternating)
+    params, cmp, coop, formulation, defect_fn, mktensor = prepare_problem(
+        aim_device, alternating, use_defect_fn
+    )
 
     coop.zero_grad()
     lagrangian = formulation.composite_objective(cmp.closure, params)
@@ -76,13 +80,22 @@ def test_manual_alternating(aim_device, alternating):
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
-    # # Check updated primal and dual variable values
-    coop.step(cmp.closure, params)
+    # Check updated primal and dual variable values
+    coop.step(closure=cmp.closure, params=params, defect_fn=defect_fn)
+
     assert torch.allclose(params, mktensor([0.0, -0.96]))
 
     if alternating:
         # Loss and violation measurements taken the initialization point [0, -0.96]
-        assert torch.allclose(cmp.state.loss, mktensor([1.8432]))
+        if use_defect_fn:
+            # If we use defect_fn, the loss at this point is not recomputed, so we test
+            # with the _previous_ loss
+            assert torch.allclose(cmp.state.loss, mktensor([2.0]))
+        else:
+            # If alternating step uses closure, loss is indeed computed at the new primal
+            # location.
+            assert torch.allclose(cmp.state.loss, mktensor([1.8432]))
+
         # The constraint defects are [1.96, -1.96]
         assert torch.allclose(formulation.state()[0], mktensor([1.96 * 1e-2, 0.0]))
     else:
@@ -94,22 +107,25 @@ def test_manual_alternating(aim_device, alternating):
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 @pytest.mark.parametrize("alternating", [True])
-def test_convergence_alternating(aim_device, alternating):
+@pytest.mark.parametrize("use_defect_fn", [True, False])
+def test_convergence_alternating(aim_device, alternating, use_defect_fn):
     """
     Test convergence of alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, mktensor = prepare_problem(aim_device, alternating)
+    params, cmp, coop, formulation, defect_fn, mktensor = prepare_problem(
+        aim_device, alternating, use_defect_fn
+    )
 
     for step_id in range(1500):
         coop.zero_grad()
 
         # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = formulation.composite_objective(cmp.closure, params)
+        lagrangian = formulation.composite_objective(closure=cmp.closure, params=params)
         formulation.custom_backward(lagrangian)
 
         # Need to pass closure to step function to perform alternating updates
-        coop.step(cmp.closure, params)
+        coop.step(closure=cmp.closure, params=params, defect_fn=cmp.defect_fn)
 
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
     assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))

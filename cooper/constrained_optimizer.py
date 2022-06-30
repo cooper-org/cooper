@@ -228,7 +228,8 @@ class ConstrainedOptimizer:
         self,
         closure: Optional[Callable[..., CMPState]] = None,
         *closure_args,
-        **closure_kwargs
+        defect_fn: Optional[Callable[..., CMPState]] = None,
+        **closure_kwargs,
     ):
         """
         Performs a single optimization step on both the primal and dual
@@ -302,43 +303,15 @@ class ConstrainedOptimizer:
                     self.dual_scheduler.step()
 
         else:
+            # Non-extrapolation case
 
             self.primal_optimizer.step()
 
             if self.cmp.is_constrained:
 
                 if self.alternating:
-
-                    # Once having updated primal parameters, re-compute gradient
-                    # Skip gradient wrt model parameters to avoid wasteful
-                    # computation, as we only need gradient wrt multipliers.
-                    with torch.no_grad():
-
-                        # TODO (JGP): This could be made more efficient by not
-                        # computing the whole closure but rather *just the
-                        # constraint violations*
-
-                        assert closure is not None
-                        self.cmp.state = closure(*closure_args, **closure_kwargs)
-
-                    # We have already computed the new CMP state with the new
-                    # values of the multipliers. Now we only need to recalculate
-                    # the Lagrangian so we can get the gradients wrt the
-                    # multipliers.
-                    lagrangian = self.formulation.composite_objective(
-                        closure=None, pre_computed_state=self.cmp.state
-                    )  # type: ignore
-
-                    # Zero-out gradients for dual variables since they were
-                    # already populated earlier.
-                    # We also zero-out primal gradients for safety although not
-                    # really necessary.
-                    self.zero_grad(ignore_primal=False, ignore_dual=False)
-
-                    # Not passing lagrangian since we only want to update the
-                    # gradients for the dual variables
-                    self.formulation._populate_gradients(
-                        lagrangian=None, ignore_primal=True
+                    self.populate_alternating_dual_gradient(
+                        closure, defect_fn, *closure_args, **closure_kwargs
                     )
 
                 self.dual_step()
@@ -348,6 +321,47 @@ class ConstrainedOptimizer:
                     # every optimization step. The convention in Pytorch is for
                     # this to happen after every epoch instead.
                     self.dual_scheduler.step()
+
+    def populate_alternating_dual_gradient(
+        self, closure, defect_fn, *closure_args, **closure_kwargs
+    ):
+
+        # Once having updated primal parameters, re-compute gradient
+        # Skip gradient wrt model parameters to avoid wasteful
+        # computation, as we only need gradient wrt multipliers.
+        with torch.no_grad():
+
+            assert closure is not None or defect_fn is not None
+
+            if defect_fn is not None:
+                alternate_cmp_state = defect_fn(*closure_args, **closure_kwargs)
+
+                if alternate_cmp_state.loss is None:
+                    # Store last computed loss
+                    alternate_cmp_state.loss = self.formulation.cmp.state.loss
+
+            elif closure is not None:
+                alternate_cmp_state = closure(*closure_args, **closure_kwargs)
+
+        # We have already computed the new CMP state with the new values of the
+        # parameters. Now we only need to recalculate the Lagrangian so we can
+        # get the gradients wrt the multipliers.
+        # Note that the call to defect_fn might _not_ have populated the loss.
+        # This is not a problem since we only need to compute the gradient wrt
+        # the multipliers.
+        _ = self.formulation.composite_objective(
+            closure=None, pre_computed_state=alternate_cmp_state, write_state=True
+        )  # type: ignore
+
+        # Zero-out gradients for dual variables since they were
+        # already populated earlier.
+        # We also zero-out primal gradients for safety although not
+        # really necessary.
+        self.zero_grad(ignore_primal=False, ignore_dual=False)
+
+        # Not passing lagrangian since we only want to update the
+        # gradients for the dual variables
+        self.formulation._populate_gradients(lagrangian=None, ignore_primal=True)
 
     def dual_step(self, call_extrapolation=False):
 
