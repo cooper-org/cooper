@@ -42,7 +42,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         self.ineq_init = ineq_init
         self.eq_init = eq_init
 
-        self.state_update: List[torch.Tensor] = []
+        self.accumulated_violation_dot_prod: torch.Tensor = None
 
     @property
     def dual_parameters(self) -> List[torch.Tensor]:
@@ -134,8 +134,11 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         """
         return self.ineq_multipliers is not None or self.eq_multipliers is not None
 
-    def purge_state_update(self):
-        self.state_update = []
+    def update_accumulated_violation(self, update: Optional[torch.Tensor] = None):
+        if update is None or self.accumulated_violation_dot_prod is None:
+            self.accumulated_violation_dot_prod = update
+        elif self.accumulated_violation_dot_prod is not None:
+            self.accumulated_violation_dot_prod += update
 
     def weighted_violation(
         self, cmp_state: CMPState, constraint_type: str
@@ -145,8 +148,8 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         constraint violations of type ``constraint_type``. If proxy-constraints
         are provided in the :py:class:`.CMPState`, the non-proxy (usually
         non-differentiable) constraints are used for computing the dot product,
-        while the "proxy-constraint" dot products are stored under
-        ``self.state_update``.
+        while the "proxy-constraint" dot products are accumulated under
+        ``self.accumulated_violation_dot_prod``.
 
         Args:
             cmp_state: current ``CMPState``
@@ -179,7 +182,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             # to update the value of the multipliers by lazily filling the
             # multiplier gradients in `populate_gradients`
             violation_for_update = torch.sum(multipliers * defect.detach())
-            self.state_update.append(violation_for_update)
+            self.update_accumulated_violation(update=violation_for_update)
 
         return proxy_violation
 
@@ -191,7 +194,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         state_dict = {
             "ineq_multipliers": self.ineq_multipliers,
             "eq_multipliers": self.eq_multipliers,
-            "state_update": self.state_update,
+            "accumulated_violation_dot_prod": self.accumulated_violation_dot_prod,
         }
         return state_dict
 
@@ -206,7 +209,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         known_attrs = [
             "ineq_multipliers",
             "eq_multipliers",
-            "state_update",
+            "accumulated_violation_dot_prod",
             "aug_lag_coefficient",
         ]
         for key, val in state_dict.items():
@@ -281,9 +284,10 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # If not done before, instantiate and initialize dual variables
             self.create_state(cmp_state)
 
-        # Compute Lagrangian based on current loss and values of multipliers
-        self.purge_state_update()
+        # Purge previously accumulated constraint violations
+        self.update_accumulated_violation(update=None)
 
+        # Compute Lagrangian based on current loss and values of multipliers
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
             # current multiplier values
@@ -307,7 +311,10 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
     @no_type_check
     def _populate_gradients(
-        self, lagrangian: torch.Tensor, ignore_primal: bool = False
+        self,
+        lagrangian: torch.Tensor,
+        ignore_primal: bool = False,
+        ignore_dual: bool = False,
     ):
         """
         Performs the actual backward computation which populates the gradients
@@ -322,6 +329,8 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 ``alternating`` updates, which require updating the multipliers
                 based on the constraints violation *after* having updated the
                 primal parameters. Defaults to False.
+            ignore_dual: If ``True``, the gradients with respect to the dual
+                variables are not populated.
         """
 
         if ignore_primal and self.cmp.is_constrained:
@@ -330,17 +339,16 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # been detached when computing the `weighted_violation`s
             pass
         else:
-            # Compute gradients wrt primal parameters only.
+            # Compute gradients wrt _primal_ parameters only.
             # The gradient for the dual variables is computed based on the
             # non-proxy violations below.
             lagrangian.backward()
 
         # Fill in the gradients for the dual variables based on the violation of
         # the non-proxy constraints
-        if self.cmp.is_constrained:
-            for violation_for_update in self.state_update:
-                dual_vars = [_ for _ in self.state() if _ is not None]
-                violation_for_update.backward(inputs=dual_vars)
+        if not (ignore_dual) and self.cmp.is_constrained:
+            dual_vars = [_ for _ in self.state() if _ is not None]
+            self.accumulated_violation_dot_prod.backward(inputs=dual_vars)
 
 
 class ProxyLagrangianFormulation(BaseLagrangianFormulation):

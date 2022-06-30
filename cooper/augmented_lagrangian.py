@@ -57,7 +57,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         are provided in the :py:class:`.CMPState`, the non-proxy (usually
         non-differentiable) constraints are used for computing the dot product,
         while the "proxy-constraint" dot products are stored under
-        ``self.state_update``.
+        ``self.accumulated_violation_dot_prod``.
 
         Args:
             cmp_state: current ``CMPState``
@@ -104,7 +104,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             # TODO (JGP): Verify that call to backward is general enough for
             # Lagrange Multiplier models
             violation_for_update = torch.sum(multipliers * defect.detach())
-            self.state_update.append(violation_for_update)
+            self.update_accumulated_violation(update=violation_for_update)
 
         return proxy_violation, sq_proxy_violation
 
@@ -159,9 +159,10 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             # If not done before, instantiate and initialize dual variables
             self.create_state(cmp_state)
 
-        # Compute Lagrangian based on current loss and values of multipliers
-        self.purge_state_update()
+        # Purge previously accumulated constraint violations
+        self.update_accumulated_violation(update=None)
 
+        # Compute Augmented Lagrangian based on current loss and values of multipliers
         if self.cmp.is_constrained:
             # Compute contribution of the constraint violations, weighted by the
             # current multiplier values

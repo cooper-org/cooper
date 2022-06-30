@@ -329,8 +329,8 @@ class ConstrainedOptimizer:
         self, closure, defect_fn, *closure_args, **closure_kwargs
     ):
 
-        # Once having updated primal parameters, re-compute gradient
-        # Skip gradient wrt model parameters to avoid wasteful
+        # Once having updated the primal parameters, re-compute gradient wrt
+        # multipliers. Skip gradient wrt primal parameters to avoid wasteful
         # computation, as we only need gradient wrt multipliers.
         with torch.no_grad():
 
@@ -356,15 +356,16 @@ class ConstrainedOptimizer:
             closure=None, pre_computed_state=alternate_cmp_state, write_state=True
         )  # type: ignore
 
-        # Zero-out gradients for dual variables since they were
-        # already populated earlier.
-        # We also zero-out primal gradients for safety although not
-        # really necessary.
+        # Zero-out gradients for dual variables since they were already
+        # populated earlier. We also zero-out primal gradients for safety
+        # although not really necessary.
         self.zero_grad(ignore_primal=False, ignore_dual=False)
 
-        # Not passing lagrangian since we only want to update the
-        # gradients for the dual variables
-        self.formulation._populate_gradients(lagrangian=None, ignore_primal=True)
+        # Not passing lagrangian since we only want to update the gradients for
+        # the dual variables
+        self.formulation._populate_gradients(
+            lagrangian=None, ignore_primal=True, ignore_dual=False
+        )
 
     def dual_step(self, call_extrapolation=False):
 
