@@ -2,6 +2,7 @@
 
 """Tests for Augmented Lagrangian Formulation class."""
 
+import functools
 import pdb
 
 import pytest
@@ -46,6 +47,9 @@ def test_convergence_augmented_lagrangian(aim_device):
 
     device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
 
+    # Helper function to instantiate tensors in correct device
+    mktensor = functools.partial(torch.tensor, device=device)
+
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
@@ -80,8 +84,8 @@ def test_convergence_augmented_lagrangian(aim_device):
         assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
         assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
 
-    assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
-    assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))
+    assert torch.allclose(params[0], mktensor(2.0 / 3.0))
+    assert torch.allclose(params[1], mktensor(1.0 / 3.0))
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -92,6 +96,9 @@ def test_manual_augmented_lagrangian(aim_device):
 
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
+
+    # Helper function to instantiate tensors in correct device
+    mktensor = functools.partial(torch.tensor, device=device)
 
     params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
     primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.0)
@@ -117,18 +124,18 @@ def test_manual_augmented_lagrangian(aim_device):
     # When using the unconstrained formulation, lagrangian = loss
     lagrangian = formulation.composite_objective(cmp.closure, params)
 
-    assert torch.allclose(cmp.state.loss, torch.tensor(2.0))
-    assert torch.allclose(lagrangian, torch.tensor(4.0))
+    assert torch.allclose(cmp.state.loss, mktensor(2.0))
+    assert torch.allclose(lagrangian, mktensor(4.0))
 
     formulation.custom_backward(lagrangian)
 
-    assert torch.allclose(params.grad, torch.tensor([-2.0, -6.0]))
+    assert torch.allclose(params.grad, mktensor([-2.0, -6.0]))
 
     coop.step(cmp.closure, params)
-    assert torch.allclose(params, torch.tensor([0.02, -0.94]))
+    assert torch.allclose(params, mktensor([0.02, -0.94]))
 
     # Check inequality multipliers
-    assert torch.allclose(formulation.state()[0], torch.tensor([1.92, 0.0]))
+    assert torch.allclose(formulation.state()[0], mktensor([1.92, 0.0]))
 
     # ---------- Second iteration ----------
 
@@ -137,19 +144,17 @@ def test_manual_augmented_lagrangian(aim_device):
     # When using the unconstrained formulation, lagrangian = loss
     lagrangian = formulation.composite_objective(cmp.closure, params)
 
-    assert torch.allclose(cmp.state.loss, torch.tensor(1.7676))
-    assert torch.allclose(lagrangian, torch.tensor(7.2972))
+    assert torch.allclose(cmp.state.loss, mktensor(1.7676))
+    assert torch.allclose(lagrangian, mktensor(7.2972))
 
     formulation.custom_backward(lagrangian)
 
-    assert torch.allclose(params.grad, torch.tensor([-3.8, -7.6]))
+    assert torch.allclose(params.grad, mktensor([-3.8, -7.6]))
 
     coop.step(cmp.closure, params)
-    assert torch.allclose(params, torch.tensor([0.058, -0.864]))
+    assert torch.allclose(params, mktensor([0.058, -0.864]))
 
     # Check inequality multipliers
     # Multiplier gradient signed is flipped inside step
-    assert torch.allclose(
-        -formulation.state()[0].grad, torch.tensor([1.8060, -1.860636])
-    )
-    assert torch.allclose(formulation.state()[0], torch.tensor([3.726, 0.0]))
+    assert torch.allclose(-formulation.state()[0].grad, mktensor([1.8060, -1.860636]))
+    assert torch.allclose(formulation.state()[0], mktensor([3.726, 0.0]))
