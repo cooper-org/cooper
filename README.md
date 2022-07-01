@@ -78,15 +78,15 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-coop = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
+constrained_optimizer = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
 
 # Here is the actual training loop.
 # The steps follow closely the `loss -> backward -> step` Pytorch workflow.
 for iter_num in range(5000):
-    coop.zero_grad()
+    constrained_optimizer.zero_grad()
     lagrangian = formulation.composite_objective(cmp.closure, probs)
     formulation.custom_backward(lagrangian)
-    coop.step(cmp.closure, probs)
+    constrained_optimizer.step(cmp.closure, probs)
 ```
 
 ## Installation

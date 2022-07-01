@@ -130,10 +130,23 @@ class DenseMultiplier(BaseMultiplier):
         rep = "DenseMultiplier(" + pos_str + ", " + str(self.weight.data) + ")"
         return rep
 
+    def __members(self):
+        return (self.positive, self.weight)
+
+    def __hash__(self):
+        return hash(self.__members())
+
     def __eq__(self, other):
-        assert isinstance(other, DenseMultiplier)
 
-        positive_check = self.positive == other.positive
-        weight_check = torch.allclose(self.weight, other.weight)
+        if type(other) is type(self):
 
-        return positive_check and weight_check
+            self_positive, self_weight = self.__members()
+            other_positive, other_weight = other.__members()
+
+            positive_check = self_positive == other_positive
+            weight_check = torch.allclose(self_weight, other_weight)
+
+            return positive_check and weight_check
+
+        else:
+            return False

@@ -1,5 +1,5 @@
-Optim
-=====
+Optim Module
+============
 
 .. currentmodule:: cooper.optim
 
@@ -180,8 +180,25 @@ allows you to provide a  configuration for your ``dual_scheduler``\'s
 hyperparameters. The rest of the instantiation of the ``dual_scheduler`` is
 managed internally by **Cooper**.
 
-The calls to the ``step`` method of the ``dual_scheduler`` are made by
-**Cooper** during the execution of
-:py:meth:`cooper.constrained_optimizer.ConstrainedOptimizer.step`.
+.. note::
+
+    The call to the ``step()`` method of the dual optimizer is handled
+    internally by **Cooper**. However, you must perform the call to the dual
+    scheduler's ``step`` method manually. This will usually come after several
+    calls to :py:meth:`cooper.constrained_optimizer.ConstrainedOptimizer.step`.
+
+    The reasoning behind this design is to provide you, the user, with greater
+    visibility and control on the dual learning rate scheduler. For example, you
+    might want to synchronize the changes in the dual learning rate scheduler
+    depending on the number of training epochs ellapsed so far.
+
+    This flexibility is also desirable when using an
+    :ref:`Augmented Lagrangian Formulation<augmented_lagrangian_formulation>`,
+    since the penalty coefficient for the augmented Lagrangian can be controlled
+    directly via the dual learning rate scheduler.
+
+
+``PartialScheduler`` Class
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automethod:: cooper.optim.partial_scheduler

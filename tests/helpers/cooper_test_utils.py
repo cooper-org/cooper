@@ -38,6 +38,7 @@ def build_test_problem(
     dual_optim_kwargs={"lr": 1e-2},
     dual_scheduler=None,
     primal_model=None,
+    formulation_cls=cooper.LagrangianFormulation,
 ):
 
     # Retrieve available device, and signal to skip test if GPU is not available
@@ -63,7 +64,7 @@ def build_test_problem(
         dual_optimizer = cooper.optim.partial_optimizer(
             dual_optim_cls, **dual_optim_kwargs
         )
-        formulation = cooper.LagrangianFormulation(cmp)
+        formulation = formulation_cls(cmp)
     else:
         # Unconstrained case
         dual_optimizer = None
@@ -113,14 +114,29 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_proxy_ineq = use_proxy_ineq
         super().__init__(is_constrained=self.use_ineq)
 
-    def closure(self, params):
-
+    def eval_params(self, params):
         if isinstance(params, torch.nn.Module):
             param_x, param_y = params.forward()
         else:
             param_x, param_y = params
 
-        loss = param_x**2 + 2 * param_y**2
+        return param_x, param_y
+
+    def closure(self, params):
+
+        cmp_state = self.defect_fn(params)
+        cmp_state.loss = self.loss_fn(params)
+
+        return cmp_state
+
+    def loss_fn(self, params):
+        param_x, param_y = self.eval_params(params)
+
+        return param_x**2 + 2 * param_y**2
+
+    def defect_fn(self, params):
+
+        param_x, param_y = self.eval_params(params)
 
         # No equality constraints
         eq_defect = None
@@ -152,14 +168,12 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             ineq_defect = None
             proxy_ineq_defect = None
 
-        closure_state = cooper.CMPState(
-            loss=loss,
+        return cooper.CMPState(
+            loss=None,
             eq_defect=eq_defect,
             ineq_defect=ineq_defect,
             proxy_ineq_defect=proxy_ineq_defect,
         )
-
-        return closure_state
 
 
 def get_optimizer_from_str(optimizer_str):

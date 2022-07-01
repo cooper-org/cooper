@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional, Type
 
 import torch
 
+from .augmented_lagrangian import AugmentedLagrangianFormulation
 from .problem import CMPState, Formulation
 from .utils import validate_state_dicts
 
@@ -162,15 +163,18 @@ class ConstrainedOptimizer:
         """
 
         is_alternating = self.alternating
-        is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
-            self.formulation.aug_lag_coefficient > 0
-        )
+        is_aug_lag = isinstance(self.formulation, AugmentedLagrangianFormulation)
 
         # We assume that both optimizers agree on whether to use extrapolation
         # or not, so we use the primal optimizer as reference for deciding
         # whether to use extrapolation. See check below for matching
         # extrapolation behavior.
         self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+
+        if is_aug_lag:
+            assert (
+                self.alternating
+            ), "Augmented Lagrangian formulation requires alternating updates."
 
         if is_alternating and self.dual_restarts:
             warnings.warn(
@@ -224,11 +228,24 @@ class ConstrainedOptimizer:
                 extrapolation or not."""
             )
 
+    def instantiate_dual_optimizer_and_scheduler(self):
+        """Instantiates the dual optimizer and scheduler."""
+
+        assert self.dual_optimizer is not None and callable(self.dual_optimizer)
+        # Checks if needed and instantiates dual_optimizer
+        self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
+
+        if self.dual_scheduler is not None:
+            assert callable(self.dual_scheduler), "dual_scheduler must be callable"
+            # Instantiates the dual_scheduler
+            self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
+
     def step(
         self,
         closure: Optional[Callable[..., CMPState]] = None,
         *closure_args,
-        **closure_kwargs
+        defect_fn: Optional[Callable[..., CMPState]] = None,
+        **closure_kwargs,
     ):
         """
         Performs a single optimization step on both the primal and dual
@@ -253,19 +270,15 @@ class ConstrainedOptimizer:
         # updates, and proxy-constraints. We might want to consider refactoring.
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
-            assert self.dual_optimizer is not None and callable(self.dual_optimizer)
-            # Checks if needed and instantiates dual_optimizer
-            self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
+            self.instantiate_dual_optimizer_and_scheduler()
 
-            if self.dual_scheduler is not None:
-                assert callable(self.dual_scheduler), "dual_scheduler must be callable"
-                # Instantiates the dual_scheduler
-                self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
+        assert not (
+            self.is_extrapolation and (closure is None)
+        ), "Closure must be provided to step when using extrapolation"
 
-        if self.is_extrapolation or self.alternating:
-            assert (
-                closure is not None
-            ), "Closure must be provided for extrapolation or alternating updates"
+        assert not (
+            self.alternating and (closure is None) and (defect_fn is None)
+        ), "At least one of closure or defect_fn must be provided for alternating updates"
 
         if self.is_extrapolation:
             # Store parameter copy and compute t+1/2 iterates
@@ -294,60 +307,69 @@ class ConstrainedOptimizer:
             if self.cmp.is_constrained:
                 self.dual_step()
 
-                if self.dual_scheduler is not None:
-                    # Do a step on the dual scheduler after the actual step on
-                    # the dual parameters. Intermediate updates that take
-                    # place inside the extrapolation process do not perform a
-                    # call to the scheduler's step method
-                    self.dual_scheduler.step()
-
         else:
+            # Non-extrapolation case
 
             self.primal_optimizer.step()
 
             if self.cmp.is_constrained:
 
                 if self.alternating:
-
-                    # Once having updated primal parameters, re-compute gradient
-                    # Skip gradient wrt model parameters to avoid wasteful
-                    # computation, as we only need gradient wrt multipliers.
-                    with torch.no_grad():
-
-                        # TODO (JGP): This could be made more efficient by not
-                        # computing the whole closure but rather *just the
-                        # constraint violations*
-
-                        assert closure is not None
-                        self.cmp.state = closure(*closure_args, **closure_kwargs)
-
-                    # We have already computed the new CMP state with the new
-                    # values of the multipliers. Now we only need to recalculate
-                    # the Lagrangian so we can get the gradients wrt the
-                    # multipliers.
-                    lagrangian = self.formulation.composite_objective(
-                        closure=None, pre_computed_state=self.cmp.state
-                    )  # type: ignore
-
-                    # Zero-out gradients for dual variables since they were
-                    # already populated earlier.
-                    # We also zero-out primal gradients for safety although not
-                    # really necessary.
-                    self.zero_grad(ignore_primal=False, ignore_dual=False)
-
-                    # Not passing lagrangian since we only want to update the
-                    # gradients for the dual variables
-                    self.formulation._populate_gradients(
-                        lagrangian=None, ignore_primal=True
+                    self.populate_alternating_dual_gradient(
+                        closure, defect_fn, *closure_args, **closure_kwargs
                     )
 
                 self.dual_step()
 
-                if self.dual_scheduler is not None:
-                    # FIXME(JGP): We are applying the dual scheduler step  after
-                    # every optimization step. The convention in Pytorch is for
-                    # this to happen after every epoch instead.
-                    self.dual_scheduler.step()
+    def populate_alternating_dual_gradient(
+        self, closure, defect_fn, *closure_args, **closure_kwargs
+    ):
+
+        # Once having updated the primal parameters, re-compute gradient wrt
+        # multipliers. Skip gradient wrt primal parameters to avoid wasteful
+        # computation, as we only need gradient wrt multipliers.
+        with torch.no_grad():
+
+            assert closure is not None or defect_fn is not None
+
+            if defect_fn is not None:
+                alternate_cmp_state = defect_fn(*closure_args, **closure_kwargs)
+
+                if alternate_cmp_state.loss is None:
+                    # Store last computed loss
+                    alternate_cmp_state.loss = self.formulation.cmp.state.loss
+
+            elif closure is not None:
+                alternate_cmp_state = closure(*closure_args, **closure_kwargs)
+
+        # We have already computed the new CMP state with the new values of the
+        # parameters. Now we only need to recalculate the Lagrangian so we can
+        # get the gradients wrt the multipliers.
+        # Note that the call to defect_fn might _not_ have populated the loss.
+        # This is not a problem since we only need to compute the gradient wrt
+        # the multipliers.
+        if isinstance(self.formulation, AugmentedLagrangianFormulation):
+            # Use LR of dual optimizer as penalty coefficient for the augmented Lagrangian
+            _ = self.formulation.composite_objective(
+                closure=None,
+                aug_lag_coeff_scheduler=self.dual_scheduler,
+                pre_computed_state=alternate_cmp_state,
+                write_state=True,
+            )  # type: ignore
+        else:
+            _ = self.formulation.composite_objective(
+                closure=None, pre_computed_state=alternate_cmp_state, write_state=True
+            )  # type: ignore
+        # Zero-out gradients for dual variables since they were already
+        # populated earlier. We also zero-out primal gradients for safety
+        # although not really necessary.
+        self.zero_grad(ignore_primal=False, ignore_dual=False)
+
+        # Not passing lagrangian since we only want to update the gradients for
+        # the dual variables
+        self.formulation._populate_gradients(
+            lagrangian=None, ignore_primal=True, ignore_dual=False
+        )
 
     def dual_step(self, call_extrapolation=False):
 

@@ -67,6 +67,7 @@ mathjax3_config = {
 
 
 # Handle Latex-style references
+bibtex_encoding = "latin"
 bibtex_reference_style = "author_year"
 bibtex_bibfiles = ["references.bib"]
 
