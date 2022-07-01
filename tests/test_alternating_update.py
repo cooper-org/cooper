@@ -2,51 +2,28 @@
 
 """Tests for Extrapolation optimizers."""
 
-import functools
 import pdb
 
+import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
-# Import basic closure example from helpers
-import toy_2d_problem
 
-import cooper
+def problem_data(aim_device, alternating):
 
-
-def prepare_problem(aim_device, alternating, use_defect_fn):
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-
-    try:
-        optimizer_class = getattr(cooper.optim, "SGD")
-    except:
-        optimizer_class = getattr(torch.optim, "SGD")
-    primal_optimizer = optimizer_class([params], lr=1e-2)
-
-    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
-    formulation = cooper.LagrangianFormulation(cmp)
-    defect_fn = cmp.defect_fn if use_defect_fn else None
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_proxy_ineq=False,
         dual_restarts=False,
         alternating=alternating,
     )
 
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
-
-    return params, cmp, coop, formulation, defect_fn, mktensor
+    # params, cmp, coop, formulation, device, mktensor
+    return test_problem_data.as_tuple()
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -57,9 +34,9 @@ def test_manual_alternating(aim_device, alternating, use_defect_fn):
     Test first step of alternating vs non-alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, defect_fn, mktensor = prepare_problem(
-        aim_device, alternating, use_defect_fn
-    )
+    params, cmp, coop, formulation, _, mktensor = problem_data(aim_device, alternating)
+
+    defect_fn = cmp.defect_fn if use_defect_fn else None
 
     coop.zero_grad()
     lagrangian = formulation.composite_objective(cmp.closure, params)
@@ -113,9 +90,9 @@ def test_convergence_alternating(aim_device, alternating, use_defect_fn):
     Test convergence of alternating GDA updates on toy 2D problem.
     """
 
-    params, cmp, coop, formulation, defect_fn, mktensor = prepare_problem(
-        aim_device, alternating, use_defect_fn
-    )
+    params, cmp, coop, formulation, _, mktensor = problem_data(aim_device, alternating)
+
+    defect_fn = cmp.defect_fn if use_defect_fn else None
 
     for step_id in range(1500):
         coop.zero_grad()
@@ -125,7 +102,10 @@ def test_convergence_alternating(aim_device, alternating, use_defect_fn):
         formulation.custom_backward(lagrangian)
 
         # Need to pass closure to step function to perform alternating updates
-        coop.step(closure=cmp.closure, params=params, defect_fn=cmp.defect_fn)
+        if use_defect_fn:
+            coop.step(defect_fn=defect_fn, params=params)
+        else:
+            coop.step(closure=cmp.closure, params=params)
 
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
     assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))

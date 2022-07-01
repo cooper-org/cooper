@@ -5,10 +5,10 @@
 import functools
 import pdb
 
+import cooper_test_utils
 import pytest
 import testing_utils
 import torch
-import toy_2d_problem
 
 import cooper
 
@@ -45,37 +45,28 @@ def test_augmented_lagrangian_formulation():
 def test_convergence_augmented_lagrangian(aim_device):
     """ """
 
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = torch.optim.SGD([params], lr=1e-2)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
-
-    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1.0)
-
     # Increasing Augmented Lagrangian coefficient schedule
     lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
     dual_scheduler = cooper.optim.partial_scheduler(
         torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
     )
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp)
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
-        dual_scheduler=dual_scheduler,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_proxy_ineq=False,
         dual_restarts=False,
         alternating=True,
+        primal_optim_kwargs={"lr": 1e-2},
+        dual_optim_kwargs={"lr": 1.0},
+        dual_scheduler=dual_scheduler,
+        formulation_cls=cooper.AugmentedLagrangianFormulation,
     )
+
+    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
     formulation.create_state_from_metadata(
         dtype=params.dtype, device=device, ineq_size=torch.Size([2])
@@ -93,7 +84,6 @@ def test_convergence_augmented_lagrangian(aim_device):
         formulation.custom_backward(lagrangian)
 
         coop.step(defect_fn=cmp.defect_fn, params=params)
-        # coop.step(closure=cmp.closure, params=params)
         coop.dual_scheduler.step()
 
     if device == "cuda":
@@ -109,37 +99,28 @@ def test_convergence_augmented_lagrangian(aim_device):
 def test_manual_augmented_lagrangian(aim_device):
     """ """
 
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.0)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
-
-    dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1.0)
-
     # No change <-> constant dual learning rate
     lr_lambda = lambda epoch: 1.0
     dual_scheduler = cooper.optim.partial_scheduler(
         torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
     )
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp)
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
-        dual_scheduler=dual_scheduler,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_proxy_ineq=False,
         dual_restarts=False,
         alternating=True,
+        primal_optim_kwargs={"lr": 1e-2},
+        dual_optim_kwargs={"lr": 1.0},
+        dual_scheduler=dual_scheduler,
+        formulation_cls=cooper.AugmentedLagrangianFormulation,
     )
+
+    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
     formulation.create_state_from_metadata(
         dtype=params.dtype, device=device, ineq_size=torch.Size([2])

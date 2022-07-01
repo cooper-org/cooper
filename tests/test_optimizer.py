@@ -3,12 +3,9 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
+import cooper_test_utils
 import pytest
-import testing_utils
 import torch
-
-# Import basic closure example from helpers
-import toy_2d_problem
 
 import cooper
 
@@ -17,41 +14,24 @@ import cooper
 @pytest.mark.parametrize("use_ineq", [True, False])
 def test_toy_problem(aim_device, use_ineq):
     """
-    Simple test on a bi-variate quadratic programming problem
-        min x**2 + 2*y**2
-        st.
-            x + y >= 1
-            x**2 + y <= 1
-
-    Verified solution from WolframAlpha (x=2/3, y=1/3)
-    Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
+    Verify constrained and unconstrained executions run correctly on a toy 2D
+    problem.
     """
 
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    params = torch.nn.Parameter(torch.tensor([0.0, -1.0], device=device))
-    primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
-
-    cmp = toy_2d_problem.Toy2dCMP(use_ineq=use_ineq)
-
-    if use_ineq:
-        # Constrained case
-        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-        formulation = cooper.LagrangianFormulation(cmp)
-    else:
-        # Unconstrained case
-        dual_optimizer = None
-        formulation = cooper.UnconstrainedFormulation(cmp)
-
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizer=primal_optimizer,
-        dual_optimizer=dual_optimizer,
+    test_problem_data = cooper_test_utils.build_test_problem(
+        aim_device=aim_device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=use_ineq,
+        use_proxy_ineq=False,
         dual_restarts=True,
+        alternating=False,
+        primal_optim_kwargs={"lr": 1e-2, "momentum": 0.3},
+        dual_optim_kwargs={"lr": 1e-2},
     )
+
+    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
     for step_id in range(1500):
         coop.zero_grad()

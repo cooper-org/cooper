@@ -396,15 +396,8 @@ class ConstrainedOptimizer:
             self.formulation.ineq_multipliers.project_()
 
     def restart_dual_variables(self):
-        # Call to formulation._populate_gradients has already flipped sign
-        # A currently *positive* gradient means original defect is negative, so
-        # the constraint is being satisfied.
-
-        # The code below still works in the case of proxy constraints, since the
-        # multiplier updates are computed based on *non-proxy* constraints
-        feasible_filter = self.formulation.ineq_multipliers.weight.grad > 0
-        self.formulation.ineq_multipliers.weight.grad[feasible_filter] = 0.0
-        self.formulation.ineq_multipliers.weight.data[feasible_filter] = 0.0
+        # Execute restart for multipliers associated with inequality constraints
+        self.formulation.ineq_multipliers.restart_if_feasible_()
 
     def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
         """
