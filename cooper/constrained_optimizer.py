@@ -319,12 +319,6 @@ class ConstrainedOptimizer:
 
                 self.dual_step()
 
-                if self.dual_scheduler is not None:
-                    # FIXME(JGP): We are applying the dual scheduler step  after
-                    # every optimization step. The convention in Pytorch is for
-                    # this to happen after every epoch instead.
-                    self.dual_scheduler.step()
-
     def populate_alternating_dual_gradient(
         self, closure, defect_fn, *closure_args, **closure_kwargs
     ):
