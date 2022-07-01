@@ -298,13 +298,6 @@ class ConstrainedOptimizer:
             if self.cmp.is_constrained:
                 self.dual_step()
 
-                if self.dual_scheduler is not None:
-                    # Do a step on the dual scheduler after the actual step on
-                    # the dual parameters. Intermediate updates that take
-                    # place inside the extrapolation process do not perform a
-                    # call to the scheduler's step method
-                    self.dual_scheduler.step()
-
         else:
             # Non-extrapolation case
 
