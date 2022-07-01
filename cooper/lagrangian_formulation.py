@@ -46,7 +46,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
     @property
     def dual_parameters(self) -> List[torch.Tensor]:
-        """Returns a list gathering all dual parameters"""
+        """Returns a list gathering all dual parameters."""
 
         all_dual_params = []
 
@@ -74,16 +74,42 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
         return ineq_state, eq_state  # type: ignore
 
-    def create_state(self, cmp_state):
-        """Initialize dual variables and optimizers given list of equality and
-        inequality defects. :py:class:`cooper.multipliers.DenseMultiplier`
+    def create_state_from_metadata(
+        self,
+        dtype: torch.dtype,
+        device: torch.device,
+        ineq_size: torch.Size = None,
+        eq_size: torch.Size = None,
+    ) -> None:
+        """
+        Initialize the formulation state based on the shape of the constraints.
+        """
+
+        assert ineq_size is not None or eq_size is not None
+
+        dummy_cmp_state = CMPState()
+
+        if ineq_size is not None:
+            dummy_cmp_state.ineq_defect = torch.empty(
+                size=ineq_size, dtype=dtype, device=device
+            )
+
+        if eq_size is not None:
+            dummy_cmp_state.eq_defect = torch.empty(
+                size=eq_size, dtype=dtype, device=device
+            )
+
+        self.create_state(dummy_cmp_state)
+
+    def create_state(self, cmp_state: CMPState) -> None:
+        """Initialize multipliers and optimizers given list of equality and
+        inequality defects.
 
         Args:
             eq_defect: Defects for equality constraints
             ineq_defect: Defects for inequality constraints.
         """
 
-        # Ensure that dual variables are not re-initialized
         for constraint_type in ["eq", "ineq"]:
 
             mult_name = constraint_type + "_multipliers"
@@ -141,7 +167,8 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
         Args:
             update: Dot product between multipliers and constraints. If value is
-            `None`, `self.accumulated_violation_dot_prod` is set to None.
+                ``None``, then ``self.accumulated_violation_dot_prod`` is set to
+                ``None``.
         """
         if update is None or self.accumulated_violation_dot_prod is None:
             self.accumulated_violation_dot_prod = update
@@ -154,6 +181,10 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
     ) -> torch.Tensor:
         """
         Abstract method for computing the weighted violation of a constraint.
+
+        Args:
+            cmp_state: Current :py:class:`cooper.problem.CMPState`.
+            constraint_type: Constraint type, either ``"eq"`` or ``"ineq"``.
         """
         pass
 
@@ -181,7 +212,6 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             "ineq_multipliers",
             "eq_multipliers",
             "accumulated_violation_dot_prod",
-            "aug_lag_coefficient",
         ]
         for key, val in state_dict.items():
             assert (
@@ -201,13 +231,12 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             rise to the Lagrangian.
         ineq_init: Initialization values for the inequality multipliers.
         eq_init: Initialization values for the equality multipliers.
-        aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
     """
 
     @no_type_check
     def composite_objective(
         self,
-        closure: Callable[..., CMPState],
+        closure: Callable[..., CMPState] = None,
         *closure_args,
         pre_computed_state: Optional[CMPState] = None,
         write_state: bool = True,
@@ -215,17 +244,18 @@ class LagrangianFormulation(BaseLagrangianFormulation):
     ) -> torch.Tensor:
         """
         Computes the Lagrangian based on a new evaluation of the
-        :py:class:`~cooper.problem.CMPState``.
+        :py:class:`~cooper.problem.CMPState` via the ``closure`` function.
 
         If no explicit proxy-constraints are provided, we use the given
         inequality/equality constraints to compute the Lagrangian and to
-        populate the primal and dual gradients.
+        populate the primal and dual gradients. Note that gradients are _not_
+        populated by this function, but rather :py:meth:`._populate_gradient`.
 
         In case proxy constraints are provided in the CMPState, the non-proxy
         constraints (potentially non-differentiable) are used for computing the
-        Lagrangian, while the proxy-constraints are used in the backward
-        computation triggered by :py:meth:`._populate_gradient` (and thus must
-        be differentiable).
+        value of the Lagrangian. The accumulated proxy-constraints are used in
+        the backward computation triggered by
+        :py:meth:`._populate_gradient` (and thus must be differentiable).
 
         Args:
             closure: Callable returning a :py:class:`cooper.problem.CMPState`
@@ -241,10 +271,15 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         """
 
+        assert (
+            closure is not None or pre_computed_state is not None
+        ), "At least one of closure or pre_computed_state must be provided"
+
         if pre_computed_state is not None:
             cmp_state = pre_computed_state
         else:
             cmp_state = closure(*closure_args, **closure_kwargs)
+
         if write_state:
             self.cmp.state = cmp_state
 
