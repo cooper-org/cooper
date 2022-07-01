@@ -73,7 +73,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         Computes the state of the CMP based on the current value of the primal
         parameters.
 
-        The signature of this abstract function may be change to accommodate
+        The signature of this abstract function may be changed to accommodate
         situations that require a model, (mini-batched) inputs/targets, or
         other arguments to be passed.
 
@@ -85,6 +85,28 @@ class ConstrainedMinimizationProblem(abc.ABC):
         design allows flexible problem specifications while avoiding
         re-computation.
         """
+
+    def defect_fn(self) -> CMPState:
+        """
+        Computes the constraints of the CMP based on the current value of the
+        primal parameters. This function returns a
+        :py:class:`cooper.problem.CMPState` collecting the values of the (proxy
+        and/or non-proxy) constraints. Note that this returned ``CMPState`` may
+        have a ``loss`` attribute with value ``None`` since, by design, the loss
+        is not necessarily computed when evaluating `only` the constraints.
+
+        The signature of this "abstract" function may be changed to accommodate
+        situations that require a model, (mini-batched) inputs/targets, or
+        other arguments to be passed.
+
+        Depending on the problem at hand, the computation of the constraints
+        can be compartimentalized in a way that is independent of the evaluation
+        of the loss. Alternatively,
+        :py:meth:`~.ConstrainedMinimizationProblem.defect_fn` may be used in the
+        implementation of the :py:meth:`~.ConstrainedMinimizationProblem.closure`
+        function.
+        """
+        raise NotImplementedError
 
 
 @dataclass
@@ -101,7 +123,7 @@ class FormulationState:
 
 
 class Formulation(abc.ABC):
-    """Base class for Lagrangian and proxy-Lagrangian formulations."""
+    """Base class for Lagrangian formulations."""
 
     def __init__(self):
         self.cmp = None
@@ -150,9 +172,10 @@ class Formulation(abc.ABC):
 
     def custom_backward(self, *args, **kwargs):
         """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
-        naming convention used in Pytorch. We avoid naming this method
-        ``backward`` as it is a method of the ``LagrangianFormulation`` object
-        and not that of a :py:class:`torch.Tensor` as is usual in Pytorch.
+        naming convention used in Pytorch. For clarity, we avoid naming this
+        method ``backward`` as it is a method of the ``LagrangianFormulation``
+        object and not a method of a :py:class:`torch.Tensor` as is standard in
+        Pytorch.
 
         Args:
             lagrangian: Value of the computed Lagrangian based on which the
