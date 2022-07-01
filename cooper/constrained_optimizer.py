@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional, Type
 
 import torch
 
+from .augmented_lagrangian import AugmentedLagrangianFormulation
 from .problem import CMPState, Formulation
 from .utils import validate_state_dicts
 
@@ -162,15 +163,18 @@ class ConstrainedOptimizer:
         """
 
         is_alternating = self.alternating
-        is_aug_lag = hasattr(self.formulation, "aug_lag_coefficient") and (
-            self.formulation.aug_lag_coefficient > 0
-        )
+        is_aug_lag = isinstance(self.formulation, AugmentedLagrangianFormulation)
 
         # We assume that both optimizers agree on whether to use extrapolation
         # or not, so we use the primal optimizer as reference for deciding
         # whether to use extrapolation. See check below for matching
         # extrapolation behavior.
         self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+
+        if is_aug_lag:
+            assert (
+                self.alternating
+            ), "Augmented Lagrangian formulation requires alternating updates."
 
         if is_alternating and self.dual_restarts:
             warnings.warn(
@@ -224,6 +228,18 @@ class ConstrainedOptimizer:
                 extrapolation or not."""
             )
 
+    def instantiate_dual_optimizer_and_scheduler(self):
+        """Instantiates the dual optimizer and scheduler."""
+
+        assert self.dual_optimizer is not None and callable(self.dual_optimizer)
+        # Checks if needed and instantiates dual_optimizer
+        self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
+
+        if self.dual_scheduler is not None:
+            assert callable(self.dual_scheduler), "dual_scheduler must be callable"
+            # Instantiates the dual_scheduler
+            self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
+
     def step(
         self,
         closure: Optional[Callable[..., CMPState]] = None,
@@ -254,14 +270,7 @@ class ConstrainedOptimizer:
         # updates, and proxy-constraints. We might want to consider refactoring.
 
         if self.cmp.is_constrained and not hasattr(self.dual_optimizer, "param_groups"):
-            assert self.dual_optimizer is not None and callable(self.dual_optimizer)
-            # Checks if needed and instantiates dual_optimizer
-            self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
-
-            if self.dual_scheduler is not None:
-                assert callable(self.dual_scheduler), "dual_scheduler must be callable"
-                # Instantiates the dual_scheduler
-                self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
+            self.instantiate_dual_optimizer_and_scheduler()
 
         assert not (
             self.is_extrapolation and (closure is None)
@@ -339,10 +348,18 @@ class ConstrainedOptimizer:
         # Note that the call to defect_fn might _not_ have populated the loss.
         # This is not a problem since we only need to compute the gradient wrt
         # the multipliers.
-        _ = self.formulation.composite_objective(
-            closure=None, pre_computed_state=alternate_cmp_state, write_state=True
-        )  # type: ignore
-
+        if isinstance(self.formulation, AugmentedLagrangianFormulation):
+            # Use LR of dual optimizer as penalty coefficient for the augmented Lagrangian
+            _ = self.formulation.composite_objective(
+                closure=None,
+                aug_lag_coeff_scheduler=self.dual_scheduler,
+                pre_computed_state=alternate_cmp_state,
+                write_state=True,
+            )  # type: ignore
+        else:
+            _ = self.formulation.composite_objective(
+                closure=None, pre_computed_state=alternate_cmp_state, write_state=True
+            )  # type: ignore
         # Zero-out gradients for dual variables since they were already
         # populated earlier. We also zero-out primal gradients for safety
         # although not really necessary.

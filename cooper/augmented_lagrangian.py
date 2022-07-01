@@ -1,30 +1,26 @@
 """Lagrangian formulation"""
 
-import abc
 import pdb
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_check
+from typing import Callable, Optional, no_type_check
 
 import torch
 
-from .lagrangian_formulation import BaseLagrangianFormulation, LagrangianFormulation
-from .multipliers import DenseMultiplier
-from .problem import CMPState, ConstrainedMinimizationProblem, Formulation
+from .lagrangian_formulation import LagrangianFormulation
+from .problem import CMPState, ConstrainedMinimizationProblem
 
 
 class AugmentedLagrangianFormulation(LagrangianFormulation):
     """
     Provides utilities for computing the Augmented Lagrangian associated with a
     ``ConstrainedMinimizationProblem`` and for populating the gradients for the
-    primal and dual parameters.
+    primal and dual parameters accordingly.
 
     Args:
         cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
             rise to the Lagrangian.
         ineq_init: Initialization values for the inequality multipliers.
         eq_init: Initialization values for the equality multipliers.
-        aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
 
-    # TODO: Add mathematical formulation here
     """
 
     def __init__(
@@ -32,7 +28,6 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         cmp: ConstrainedMinimizationProblem,
         ineq_init: Optional[torch.Tensor] = None,
         eq_init: Optional[torch.Tensor] = None,
-        aug_lag_coefficient: float = 0.0,
     ):
         """Construct new `AugmentedLagrangianFormulation`"""
 
@@ -42,11 +37,6 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             cmp.is_constrained
         ), "Attempted to create an Augmented Lagrangian formulation for an unconstrained \
             problem. Consider using an `UnconstrainedFormulation` instead."
-
-        if aug_lag_coefficient < 0:
-            raise ValueError("Augmented Lagrangian coefficient must be non-negative.")
-
-        self.aug_lag_coefficient = aug_lag_coefficient
 
     def weighted_violation(
         self, cmp_state: CMPState, constraint_type: str
@@ -59,10 +49,14 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         while the "proxy-constraint" dot products are stored under
         ``self.accumulated_violation_dot_prod``.
 
-        Args:
-            cmp_state: current ``CMPState``
-            constraint_type: type of constrained to be used
+        If the ``CMPState`` contains proxy _inequality_ constraints, the
+        filtering on whether the constraint is active for the calculation of the
+        Augmented Lagrangian is done based on the value of the non-proxy
+        constraints.
 
+        Args:
+            cmp_state: current ``CMPState``.
+            constraint_type: type of constrained to be used, e.g. "eq" or "ineq".
         """
 
         defect = getattr(cmp_state, constraint_type + "_defect")
@@ -111,7 +105,8 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
     @no_type_check
     def composite_objective(
         self,
-        closure: Callable[..., CMPState],
+        aug_lag_coeff_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
+        closure: Callable[..., CMPState] = None,
         *closure_args,
         pre_computed_state: Optional[CMPState] = None,
         write_state: bool = True,
@@ -119,17 +114,18 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
     ) -> torch.Tensor:
         """
         Computes the Lagrangian based on a new evaluation of the
-        :py:class:`~cooper.problem.CMPState``.
+        :py:class:`~cooper.problem.CMPState` via the ``closure`` function.
 
         If no explicit proxy-constraints are provided, we use the given
-        inequality/equality constraints to compute the Lagrangian and to
-        populate the primal and dual gradients.
+        inequality/equality constraints to compute the Augmented Lagrangian and
+        to populate the primal and dual gradients. Note that gradients are _not_
+        populated by this function, but rather :py:meth:`._populate_gradient`.
 
         In case proxy constraints are provided in the CMPState, the non-proxy
         constraints (potentially non-differentiable) are used for computing the
-        Lagrangian, while the proxy-constraints are used in the backward
-        computation triggered by :py:meth:`._populate_gradient` (and thus must
-        be differentiable).
+        value of the Augmented Lagrangian. The accumulated proxy-constraints
+        are used in the backward computation triggered by
+        :py:meth:`._populate_gradient` (and thus must be differentiable).
 
         Args:
             closure: Callable returning a :py:class:`cooper.problem.CMPState`
@@ -139,16 +135,22 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
                 :py:class:`cooper.problem.ConstrainedMinimizationProblem`
                 attribute is replaced by that returned by the ``closure``
                 argument. This flag can be used (when set to ``False``) to
-                evaluate the Lagrangian, e.g. for logging validation metrics,
-                without overwritting the information stored in the formulation's
+                evaluate the Augmented Lagrangian, e.g. for logging validation
+                metrics, without overwritting the information stored in the
+                formulation's
                 :py:class:`cooper.problem.ConstrainedMinimizationProblem`.
 
         """
+
+        assert (
+            closure is not None or pre_computed_state is not None
+        ), "At least one of closure or pre_computed_state must be provided"
 
         if pre_computed_state is not None:
             cmp_state = pre_computed_state
         else:
             cmp_state = closure(*closure_args, **closure_kwargs)
+
         if write_state:
             self.cmp.state = cmp_state
 
@@ -163,31 +165,37 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         self.update_accumulated_violation(update=None)
 
         # Compute Augmented Lagrangian based on current loss and values of multipliers
-        if self.cmp.is_constrained:
-            # Compute contribution of the constraint violations, weighted by the
-            # current multiplier values
 
-            # If given proxy constraints, these are used to compute the terms
-            # added to the Lagrangian, and the multiplier updates are based on
-            # the non-proxy violations.
-            # If not given proxy constraints, then gradients and multiplier
-            # updates are based on the "regular" constraints.
-            ineq_viol, sq_ineq_viol = self.weighted_violation(cmp_state, "ineq")
-            eq_viol, sq_eq_viol = self.weighted_violation(cmp_state, "eq")
+        # Compute contribution of the constraint violations, weighted by the
+        # current multiplier values
 
-            # Lagrangian = loss + \sum_i multiplier_i * defect_i
-            lagrangian = loss + ineq_viol + eq_viol
+        # If given proxy constraints, these are used to compute the terms
+        # added to the Lagrangian, and the multiplier updates are based on
+        # the non-proxy violations.
+        # If not given proxy constraints, then gradients and multiplier
+        # updates are based on the "regular" constraints.
+        ineq_viol, sq_ineq_viol = self.weighted_violation(cmp_state, "ineq")
+        eq_viol, sq_eq_viol = self.weighted_violation(cmp_state, "eq")
 
-            if self.aug_lag_coefficient > 0:
-                # If using augmented Lagrangian, add squared sum of constraints
-                # Following the formulation on Marc Toussaint slides (p 17-20)
-                # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
-                lagrangian += (
-                    0.5 * self.aug_lag_coefficient * (sq_ineq_viol + sq_eq_viol)
-                )
+        # Lagrangian = loss + \sum_i multiplier_i * defect_i
+        lagrangian = loss + ineq_viol + eq_viol
 
-        else:
-            assert cmp_state.loss is not None
-            lagrangian = cmp_state.loss
+        # Gather all the learning rates for the "parameter groups" of the dual
+        # variables, and check that all the learning rates are the same.
+        dual_lrs = aug_lag_coeff_scheduler.get_last_lr()
+        is_all_dual_lr_equal = all(x == dual_lrs[0] for x in dual_lrs)
+        assert is_all_dual_lr_equal, "All the dual LRs must be the same."
+
+        # Use the dual learning as the Augmented Lagrangian coefficient to
+        # ensure that gradient-based update will coincide with the update
+        # scheme of the Augmented Lagrangian method.
+        augmented_lagrangian_coefficient = dual_lrs[0]
+        if augmented_lagrangian_coefficient > 0:
+            # If using augmented Lagrangian, add squared sum of constraints
+            # Following the formulation on Marc Toussaint slides (p 17-20)
+            # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
+            lagrangian += (
+                0.5 * augmented_lagrangian_coefficient * (sq_ineq_viol + sq_eq_viol)
+            )
 
         return lagrangian

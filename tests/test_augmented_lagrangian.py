@@ -23,7 +23,7 @@ def test_augmented_lagrangian_formulation():
 
     cmp = DummyCMP()
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp, aug_lag_coefficient=1.0)
+    formulation = cooper.AugmentedLagrangianFormulation(cmp)
     cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]))
     formulation.create_state(cmp.state)
 
@@ -31,7 +31,7 @@ def test_augmented_lagrangian_formulation():
         formulation.eq_multipliers is not None
     )
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp, aug_lag_coefficient=1.0)
+    formulation = cooper.AugmentedLagrangianFormulation(cmp)
     cmp.state = cooper.CMPState(
         eq_defect=torch.tensor([1.0]), ineq_defect=torch.tensor([1.0, 1.2])
     )
@@ -59,25 +59,42 @@ def test_convergence_augmented_lagrangian(aim_device):
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
 
     dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1.0)
-    formulation = cooper.AugmentedLagrangianFormulation(cmp, aug_lag_coefficient=1.0)
-    # formulation = cooper.LagrangianFormulation(cmp)
+
+    # Increasing Augmented Lagrangian coefficient schedule
+    lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
+    dual_scheduler = cooper.optim.partial_scheduler(
+        torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
+    )
+
+    formulation = cooper.AugmentedLagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optimizer,
         dual_optimizer=dual_optimizer,
+        dual_scheduler=dual_scheduler,
         dual_restarts=False,
         alternating=True,
     )
 
+    formulation.create_state_from_metadata(
+        dtype=params.dtype, device=device, ineq_size=torch.Size([2])
+    )
+    coop.instantiate_dual_optimizer_and_scheduler()
+
     for step_id in range(1500):
         coop.zero_grad()
 
-        # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = formulation.composite_objective(cmp.closure, params)
+        lagrangian = formulation.composite_objective(
+            aug_lag_coeff_scheduler=coop.dual_scheduler,
+            closure=cmp.closure,
+            params=params,
+        )
         formulation.custom_backward(lagrangian)
 
-        coop.step(cmp.closure, params)
+        coop.step(defect_fn=cmp.defect_fn, params=params)
+        # coop.step(closure=cmp.closure, params=params)
+        coop.dual_scheduler.step()
 
     if device == "cuda":
         assert cmp.state.loss.is_cuda
@@ -106,23 +123,38 @@ def test_manual_augmented_lagrangian(aim_device):
     cmp = toy_2d_problem.Toy2dCMP(use_ineq=True)
 
     dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1.0)
-    formulation = cooper.AugmentedLagrangianFormulation(cmp, aug_lag_coefficient=1.0)
-    # formulation = cooper.LagrangianFormulation(cmp)
+
+    # No change <-> constant dual learning rate
+    lr_lambda = lambda epoch: 1.0
+    dual_scheduler = cooper.optim.partial_scheduler(
+        torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
+    )
+
+    formulation = cooper.AugmentedLagrangianFormulation(cmp)
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
         primal_optimizer=primal_optimizer,
         dual_optimizer=dual_optimizer,
+        dual_scheduler=dual_scheduler,
         dual_restarts=False,
         alternating=True,
     )
+
+    formulation.create_state_from_metadata(
+        dtype=params.dtype, device=device, ineq_size=torch.Size([2])
+    )
+    coop.instantiate_dual_optimizer_and_scheduler()
 
     # ---------- First iteration ----------
 
     coop.zero_grad()
 
-    # When using the unconstrained formulation, lagrangian = loss
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.composite_objective(
+        aug_lag_coeff_scheduler=coop.dual_scheduler,
+        closure=cmp.closure,
+        params=params,
+    )
 
     assert torch.allclose(cmp.state.loss, mktensor(2.0))
     assert torch.allclose(lagrangian, mktensor(4.0))
@@ -131,18 +163,23 @@ def test_manual_augmented_lagrangian(aim_device):
 
     assert torch.allclose(params.grad, mktensor([-2.0, -6.0]))
 
-    coop.step(cmp.closure, params)
+    coop.step(closure=cmp.closure, params=params)
     assert torch.allclose(params, mktensor([0.02, -0.94]))
 
     # Check inequality multipliers
     assert torch.allclose(formulation.state()[0], mktensor([1.92, 0.0]))
 
+    coop.dual_scheduler.step()
+
     # ---------- Second iteration ----------
 
     coop.zero_grad()
 
-    # When using the unconstrained formulation, lagrangian = loss
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.composite_objective(
+        aug_lag_coeff_scheduler=coop.dual_scheduler,
+        closure=cmp.closure,
+        params=params,
+    )
 
     assert torch.allclose(cmp.state.loss, mktensor(1.7676))
     assert torch.allclose(lagrangian, mktensor(7.2972))
@@ -151,10 +188,12 @@ def test_manual_augmented_lagrangian(aim_device):
 
     assert torch.allclose(params.grad, mktensor([-3.8, -7.6]))
 
-    coop.step(cmp.closure, params)
+    coop.step(closure=cmp.closure, params=params)
     assert torch.allclose(params, mktensor([0.058, -0.864]))
 
     # Check inequality multipliers
     # Multiplier gradient signed is flipped inside step
     assert torch.allclose(-formulation.state()[0].grad, mktensor([1.8060, -1.860636]))
     assert torch.allclose(formulation.state()[0], mktensor([3.726, 0.0]))
+
+    coop.dual_scheduler.step()
