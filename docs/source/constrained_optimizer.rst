@@ -3,10 +3,6 @@ Constrained Optimizer
 
 .. currentmodule:: cooper.constrained_optimizer
 
-.. autoclass:: ConstrainedOptimizer
-    :members:
-
-
 How to use a ``ConstrainedOptimizer``
 -------------------------------------
 
@@ -113,7 +109,7 @@ will involve the following steps:
     #. Perform updates on the parameters using the primal and dual optimizers based on the recently computed gradients, via a call to :py:meth:`constrained_optimizer.step()<step>`.
 
 Example
-^^^^^^^
+~~~~~~~
 
     .. code-block:: python
         :linenos:
@@ -146,18 +142,20 @@ Example
             # Perform primal and dual parameter updates
             constrained_optimizer.step()
 
+.. _basic_parameter_updates:
 
 Parameter updates
 ^^^^^^^^^^^^^^^^^
 
-By default, parameter updates will be performed using **simultaneous** gradient
+By default, parameter updates are performed using **simultaneous** gradient
 descent-ascent updates (according to the choice of primal and dual optimizers).
 Formally,
 
+
 .. math::
 
-    x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}(x_t, \lambda_t) \right)\\
-    \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}(x_t, \lambda_t) \right)
+    x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}(x, \lambda_t)|_{x=x_t} \right)\\
+    \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({x_{t}}, \lambda)|_{\lambda=\lambda_t} \right)
 
 .. note::
     We explicitly include a negative sign in front of the gradient for
@@ -176,17 +174,16 @@ Formally,
     on using custom projection operations, see the section on :ref:`multipliers`.
 
 
-Other update strategies implemented by :py:class:`~ConstrainedOptimizer`
-include:
+Other update strategies supported by :py:class:`~ConstrainedOptimizer` include:
 
 - :ref:`Alternating updates<alternating_updates>` for (projected) gradient descent-ascent
+- The :ref:`Augmented Lagrangian<augmented_lagrangian_const_opt>` method (ALM)
 - Performing :ref:`dual_restarts` on the Lagrange multipliers for inequality constraints
 - Using :ref:`Extra-gradient<extra-gradient_optimizers>`
 
   - Extra-gradient-based optimizers require an extra call to the
     :py:meth:`cmp.closure()<cooper.problem.ConstrainedMinimizationProblem.closure>`.
     See the section on :ref:`extra-gradient_optimizers` for usage details.
-- TODO: :ref:`augmented_lagrangian`
 
 The ``ConstrainedOptimizer`` implements a :py:meth:`ConstrainedOptimizer.step`
 method, that updates the primal and dual parameters (if ``Formulation`` has any).
@@ -202,102 +199,11 @@ on the dual parameters, with simultaneous updates.
     will be equivalent to performing ``primal_optimizer.step()`` based on the
     gradient of the loss with respect to the primal parameters.
 
-Additional features
--------------------
 
-.. _alternating_updates:
+.. include:: additional_features.rst
 
-Alternating updates
-^^^^^^^^^^^^^^^^^^^
+``ConstrainedOptimizer`` Class
+------------------------------
 
-It is possible to perform alternating updates between the primal and dual
-parameters by setting the flag ``alternating=True`` in the construction of the
-:py:class:`ConstrainedOptimizer`. In this case, the gradient computed by calling
-:py:meth:`~cooper.problem.Formulation.custom_backward` is used to update the
-primal parameters. Then, the gradient with respect to the dual variables (given
-the new value of the primal parameter!) is computed and used to update the dual
-variables. This two-stage process is handled by **Cooper** inside the
-:py:meth:`ConstrainedOptimizer.step` method.
-
-.. math::
-
-    x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}(x_t, \lambda_t) \right)\\
-    \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda_t) \right)
-
-
-.. important::
-
-    Selecting ``alternating=True`` does not necessarily double the number of
-    backward passes through a the primal parameters!
-
-    When using a ``LagrangianFormulation``, to obtain the gradients with respect
-    to the Lagrange multipliers, it suffices to *evaluate* the constraint
-    defects (through a call to
-    :py:meth:`~cooper.problem.ConstrainedMinimizationProblem.closure`). This
-    operation does not require a having to back-propagate through the Lagrangian
-    with respect to the primal parameters.
-
-    The current implementation re-evaluates the closure inside a
-    :py:meth:`torch.nograd()` context. Future releases might allow for
-    evaluating the constraints only.
-
-
-.. warning::
-
-    Combining alternating updates with :ref:`dual restarts<dual_restarts>` is untested. Use at your
-    own risk.
-
-.. _dual_restarts:
-
-Dual restarts
-^^^^^^^^^^^^^
-
-``dual_restarts=True`` can be used to set the value of the dual variables
-associated with inequality constraints to zero whenever the respective
-constraints are being satisfied. We do not perform ``dual_restarts`` on
-multipliers for equality constraints.
-
-For simplicity, consider a CMP with two inequality constraints
-:math:`g_1(x) \le 0` and :math:`g_2(x) \le 0` and loss :math:`f(x)`. Suppose
-that the constraint on :math:`g_1` is strictly satisfied, while that on
-:math:`g_2` is violated at :math:`x`. Consider the Lagrangian at :math:`x`
-with (**non-negative**) multipliers :math:`\lambda_1` and :math:`\lambda_2`.
-
-.. math::
-    \mathcal{L}(x,\lambda_1, \lambda_2) = f(x) + \lambda_1 \, g_1(x) + \lambda_2 \, g_2(x)
-
-The `best response <https://en.wikipedia.org/wiki/Best_response>`_ for
-:math:`\lambda_1` and :math:`\lambda_2` at the current value of the primal
-parameters :math:`x` is :math:`(\lambda_1, \lambda_2) = (0, +\infty)`. This is
-due to the non-negativity constraints on the Lagrange multipliers, the sign of
-the constraint violations, and the fact that the :math:`\lambda`-player wants to
-maximize :math:`\mathcal{L}(x,\lambda_1, \lambda_2)`.
-
-"Playing a best response" for the Lagrange multiplier :math:`\lambda_2` of the
-violated constraint clearly leads to an impractical algorithm (due to numerical
-overflow). However, for the currently *feasible* constraint, performing a best
-response update on :math:`\lambda_1` is indeed implementable, and trivially so.
-This is exactly the effect of setting ``dual_restarts=True``!
-
-In practice, this prevents the optimization from over-focusing on a constraint
-(at the expense on improving on the loss function!) when said constraint **is
-already being satisfied**. This over-penalization arises from the accumulation
-of the (positive) defects in the value of the Lagrange multiplier while the
-constraint was being violated in the past.
-
-.. note::
-    We recommend setting ``dual_restarts=False`` when dealing with constraints
-    whose violations are estimated stochastically, for example Monte Carlo
-    estimates constraints described by expectations.  This is to avoid
-    restarting multipliers when a constraint is "being satisfied" for a single
-    estimate, since this can be a result of the stochasticity of the estimator.
-
-.. _augmented_lagrangian:
-
-Augmented Lagrangian
-^^^^^^^^^^^^^^^^^^^^
-
-.. todo::
-
-    Verify current (unfinished and untested) implementation of the Augmented
-    Lagrangian method.
+.. autoclass:: ConstrainedOptimizer
+    :members:

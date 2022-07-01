@@ -22,9 +22,9 @@ Lagrangian Formulation
 The *Lagrangian* problem associated with the CMP above is given by:
 
 .. math::
-    \min_{x \in \Omega} \max_{\lambda_g \ge 0, \, \lambda_h} \mathcal{L}(x,\lambda) \triangleq f(x) + \lambda_g^{\top} g(x) + \lambda_h^{\top} h(x)
+    \min_{x \in \Omega} \max_{{\lambda^g} \ge 0, \, {\lambda^h}} \mathcal{L}(x,\lambda) \triangleq f(x) + {\lambda^g}^{\top} g(x) + {\lambda^h}^{\top} h(x)
 
-The vectors :math:`\lambda_g` and :math:`\lambda_h` are called the **Lagrange
+The vectors :math:`{\lambda^g}` and :math:`{\lambda^h}` are called the **Lagrange
 multipliers** or **dual variables** associated with the CMP. Observe that
 :math:`\mathcal{L}(x,\lambda)` is a concave function of :math:`\lambda` regardless
 of the convexity properties of :math:`f, g` and :math:`h`.
@@ -51,7 +51,7 @@ unilaterally deviating from :math:`(x^*,\lambda^*)`.
 In the context of a convex CMP (convex objectives, constraints and
 :math:`\Omega`), given certain technical conditions (e.g. `Slater's condition
 <https://en.wikipedia.org/wiki/Slater%27s_condition>`_
-(see:math:`\S` 5.2.3 in :cite:p:`boyd2004convex`), or compactness of the domains),
+(see :math:`\S` 5.2.3 in :cite:p:`boyd2004convex`), or compactness of the domains),
 the existence of a pure Nash equilibrium is guaranteed :cite:p:`vonNeumann1928theorie`.
 
 .. warning::
@@ -83,6 +83,62 @@ the existence of a pure Nash equilibrium is guaranteed :cite:p:`vonNeumann1928th
 
 .. autoclass:: LagrangianFormulation
     :members:
+
+
+.. currentmodule:: cooper.augmented_lagrangian
+
+.. _augmented_lagrangian_formulation:
+
+Augmented Lagrangian Formulation
+--------------------------------
+
+The Augmented Lagrangian Method (ALM) considers a `sequence` of unconstrained
+minimization problems on the primal variables:
+
+.. math::
+    L_{c_t}(x, \lambda^t) \triangleq f(x) + \lambda_{g, t}^{\top} \, g(x) + \lambda_{h, t}^{\top} \, h(x) + \frac{c_t}{2} ||g(x) \odot \mathbf{1}_{g(x_t) \ge 0 \vee \lambda_{g, t} > 0}||^2 +  \frac{c_t}{2} ||h(x_t)||^2
+
+This problem is (approximately) minimized over the primal variables to obtain:
+
+.. math::
+    x^{t+1} = \arg \min_{x \in \Omega} \mathcal{L}_{c^t}(x, \lambda^t)
+
+The found :math:`x^{t+1}` is used to update the estimate for the Lagrange multiplier:
+
+.. math::
+    \begin{align}
+        \lambda_{t+1}^g &= \left[\lambda_t^g + c^t g(x^{t+1}) \right]^+ \\
+        \lambda_{t+1}^h &= \lambda_t^h + c^t h(x^{t+1})
+    \end{align}
+
+
+The main advantage of the ALM compared to the quadratic penalty method
+(see :math:`\S` 4.2.1 in :cite:p:`bertsekas1999NonlinearProgramming`) is that
+(under some reasonable assumptions), the algorithm can be successful without
+requiring the unbounded increase of the penalty parameter sequence :math:`c^t`.
+The use of explicit estimates for the Lagrange multipliers contribute to
+avoiding the  ill-conditioning that is inherent in the quadratic penalty method.
+
+See :math:`\S` 4.2.1 in :cite:p:`bertsekas1999NonlinearProgramming` and
+:math:`\S` 17 in :cite:p:`nocedal2006NumericalOptimization` for a comprehensive
+treatment of the Augmented Lagrangian method.
+
+
+.. important::
+    Please visit :ref:`this section<augmented_lagrangian_const_opt>` for
+    practical considerations on using the Augmented Lagrangian method in
+    **Cooper**.
+
+    In particular, the sequence of penalty coefficients :math:`c_t` is handled
+    in **Cooper** as a
+    :ref:`scheduler on the dual learning rate<dual_lr_scheduler>`.
+
+.. autoclass:: AugmentedLagrangianFormulation
+    :members:
+
+
+
+.. currentmodule:: cooper.lagrangian_formulation
 
 Proxy-Lagrangian Formulation
 ----------------------------

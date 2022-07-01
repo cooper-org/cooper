@@ -51,7 +51,7 @@ arguments can be omitted in the creation of the ``CMPState``.
     expensive, the :py:class:`CMPState` may contain stochastic estimates of the
     loss/constraints. For example, this is the case when the loss corresponds to a
     sum over a large number of terms, such as training examples. In this case, the
-    loss and constraints may to be estimated using a mini-batch of data.
+    loss and constraints may be estimated using mini-batches of data.
 
     Note that, just as in the unconstrained case, these approximations can
     entail a compromise in the stability of the optimization process.
@@ -78,11 +78,14 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
 
 #. *[Line 4]* Define a custom class which inherits from :py:class:`ConstrainedMinimizationProblem`.
 #. *[Line 10]* Write a closure function that computes the loss and constraints.
-#. *[Line 29]* Return the information about the loss and constraints packaged into a :py:class:`CMPState`.
+#. *[Line 14]* Note how the ``misc`` attribute can be use to store previous results.
+#. *[Line 18]* Return the information about the loss and constraints packaged into a :py:class:`CMPState`.
+#. *[Line 18]* (Optional) Modularize the code to allow for evaluating the constraints `only`.
+
 
 .. code-block:: python
     :linenos:
-    :emphasize-lines: 4,10,31
+    :emphasize-lines: 4,10,14,18,20
 
     import torch
     import cooper
@@ -95,10 +98,19 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
 
         def closure(self, model, inputs, targets):
 
-            const_level1, const_level2 = self.problem_attributes
+            cmp_state = self.defect_fn(model, inputs, targets)
+
+            logits = cmp_state.misc["logits"]
+            loss = self.criterion(logits, targets)
+            cmp_state.loss = loss
+
+            return cmp_state
+
+        def defect_fn(self, model, inputs, targets):
 
             logits = model.forward(inputs)
-            loss = self.criterion(logits, targets)
+
+            const_level1, const_level2 = self.problem_attributes
 
             # Remember to write the constraints using the convention "g <= 0"!
 
@@ -108,13 +120,13 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
 
             # (Less than) Inequality that depends on the model's predictions
             # g_2 <= const_level2 --> g_2  - const_level2 <= 0
-            defect2 =  ineq_const2(logits) - const_level2
+            defect2 = ineq_const2(logits) - const_level2
 
             # We recommend using torch.stack to ensure the dependencies in the computational
             # graph are properly preserved.
             ineq_defect = torch.stack([defect1, defect2])
 
-            return cooper.CMPState(loss=entropy, ineq_defect=ineq_defect, eq_defect=None)
+            return cooper.CMPState(ineq_defect=ineq_defect, eq_defect=None, misc={'logits': logits})
 
 .. warning::
     **Cooper** is primarily oriented towards **non-convex** CMPs that arise
