@@ -39,7 +39,7 @@ A pair :math:`(x^*,\lambda^*)` is called a *saddle-point* of
 This approach can be interpreted as a zero-sum two-player game, where the
 "primal" player :math:`x` aims to minimize :math:`\mathcal{L}(x,\lambda)` and
 the goal of the "dual" player :math:`\lambda` is to maximize
-:math:`-\mathcal{L}(x,\lambda)` (or equiv. minimize
+:math:`\mathcal{L}(x,\lambda)` (or equiv. minimize
 :math:`-\mathcal{L}(x,\lambda)`).
 
 Note that the notion of a saddle-point of the Lagrangian is in fact equivalent
