@@ -156,7 +156,7 @@ the snippet below:
 ```bibtex
 @misc{gallegoPosada2022cooper,
     author={Gallego-Posada, Jose and Ramirez, Juan},
-    title={Cooper: a toolkit for Lagrangian-based constrained optimization},
+    title={{Cooper: a toolkit for Lagrangian-based constrained optimization}},
     howpublished={\url{https://github.com/cooper-org/cooper}},
     year={2022}
 }
