@@ -121,7 +121,7 @@ def test_checkpoint(aim_device, use_ineq):
     loaded_coop = cooper.ConstrainedOptimizer.load_from_state_dict(
         const_optim_state=coop_state_dict_100,
         formulation=loaded_formulation,
-        primal_optimizer=loaded_primal_optimizer,
+        primal_optimizers=[loaded_primal_optimizer],
         dual_optimizer_class=partial_dual_optim,
         dual_scheduler_class=None,
     )

@@ -78,7 +78,7 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-constrained_optimizer = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
+constrained_optimizer = cooper.ConstrainedOptimizer(formulation, [primal_optimizer], dual_optimizer)
 
 # Here is the actual training loop.
 # The steps follow closely the `loss -> backward -> step` Pytorch workflow.

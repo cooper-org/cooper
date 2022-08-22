@@ -63,7 +63,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optim,
+            primal_optimizers=[primal_optim],
         )
 
 - **Constrained problem**
@@ -82,7 +82,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=[primal_optimizer],
             dual_optimizer=dual_optimizer,
         )
 
@@ -124,7 +124,7 @@ Example
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=[primal_optimizer],
             dual_optimizer=dual_optimizer,
         )
 
@@ -196,8 +196,9 @@ on the dual parameters, with simultaneous updates.
 .. note::
 
     When applied to an unconstrained problem, :py:meth:`ConstrainedOptimizer.step`
-    will be equivalent to performing ``primal_optimizer.step()`` based on the
-    gradient of the loss with respect to the primal parameters.
+    will be equivalent to performing ``optimizer.step()`` on all of the
+    ``primal_optimizers`` based on the gradient of the loss with respect to the
+    primal parameters.
 
 
 .. include:: additional_features.rst

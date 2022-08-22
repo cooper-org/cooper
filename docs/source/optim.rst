@@ -99,7 +99,7 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
         const_optim = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=[primal_optimizer],
             dual_optimizer=dual_optimizer,
         )
 
@@ -150,7 +150,7 @@ for the learning rate schedulers.
         primal_scheduler = StepLR(primal_optimizer, step_size=1, gamma=0.1)
         dual_scheduler = cooper.optim.partial_scheduler(ExponentialLR, **scheduler_kwargs)
 
-        const_optim = cooper.ConstrainedOptimizer(..., primal_optimizer, dual_optimizer, dual_scheduler)
+        const_optim = cooper.ConstrainedOptimizer(..., [primal_optimizer], dual_optimizer, dual_scheduler)
 
         for step in range(num_steps):
             ...
@@ -162,7 +162,7 @@ Primal learning rate scheduler
 
 .. _primal_lr_scheduler:
 
-You must instantiate the scheduler for the learning rate used by the
+You must instantiate the scheduler for the learning rate used by each
 ``primal_optimizer`` and call the scheduler's ``step`` method explicitly, as is
 usual in Pytorch. See :py:mod:`torch.optim.lr_scheduler` for details.
 

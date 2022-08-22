@@ -170,7 +170,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
 
     constrained_optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizer=primal_optimizer,
+        primal_optimizers=[primal_optimizer],
         dual_optimizer=dual_optimizer,
     )
 

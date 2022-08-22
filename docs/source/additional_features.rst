@@ -138,7 +138,7 @@ Example
 
     constrained_optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizer=primal_optimizer,
+        primal_optimizers=[primal_optimizer],
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=False,
