@@ -488,7 +488,7 @@ class ConstrainedOptimizer:
                         "State dict contains dual_scheduler_state but dual_scheduler is None."
                     )
 
-                dual_scheduler = dual_scheduler(dual_optimizer)
+                dual_scheduler = dual_scheduler_class(dual_optimizer)
                 dual_scheduler.load_state_dict(const_optim_state.dual_scheduler_state)
             else:
                 dual_scheduler = None
