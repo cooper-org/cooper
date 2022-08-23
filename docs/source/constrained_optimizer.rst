@@ -27,7 +27,12 @@ Construction
 The main ingredients to build a ``ConstrainedOptimizer`` are a
 :py:class:`~cooper.problem.Formulation` (associated with a
 :py:class:`~cooper.problem.ConstrainedMinimizationProblem`) and a
-:py:class:`torch.optim.Optimizer` corresponding to the ``primal_optimizer``.
+:py:class:`torch.optim.Optimizer` corresponding to a ``primal_optimizer``.
+
+.. note::
+    **Cooper** supports the use of multiple ``primal_optimizers``, each
+    corresponding to different groups of primal variables. See
+    :ref:`multiple-primal_optimizers`.
 
 If the ``ConstrainedMinimizationProblem`` you are dealing with is in fact
 constrained, depending on your formulation, you might also need to provide a

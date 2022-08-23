@@ -4,10 +4,28 @@ Optim Module
 .. currentmodule:: cooper.optim
 
 
+.. _multiple-primal_optimizers:
+
+Multiple primal optimizers
+--------------------------
+
+When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+one or multiple primal optimizers can be provided. When a list of optimizers is provided
+for the ``primal_optimizers`` argument, they are all treated as if they were a single
+optimizer. In particular, every operation applied to one optimizer is
+simultaneously applied to the other primal, without intermediate calls to
+:py:meth:`cmp.closure()<cooper.problem.ConstrainedMinimizationProblem.closure>` or
+:py:meth:`formulation.custom_backward(lagrangian)<cooper.problem.Formulation.custom_backward>`.
+
+Allowing for multiple primal optimizers is useful when setting different groups of
+primal variables to have different optimizer classes and hyperparameters.
+
 .. _partial_optimizer_instantiation:
 
 Partial optimizer instantiation
 -------------------------------
+
+.. automethod:: cooper.optim.partial_optimizer
 
 When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`, the
 ``dual_optimizer`` parameter is expected to be a

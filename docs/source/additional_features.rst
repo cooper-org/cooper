@@ -26,7 +26,7 @@ variables. This two-stage process is handled by **Cooper** inside the
 
 .. math::
 
-    x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
+    x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
     \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
 
 
@@ -68,7 +68,7 @@ precision, **Cooper** implements a version of the Augmented Lagrangian method
 where the primal variables are updated using a gradient-based step.
 
 .. math::
-    x_{t+1} = \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)
+    x_{t+1} = \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)
 
 The new primal variables are then used to perform an
 :ref:`alternating update<alternating_updates>` on the Lagrange multipliers.

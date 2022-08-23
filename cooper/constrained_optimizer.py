@@ -23,16 +23,16 @@ from .utils import validate_state_dicts
 @dataclass
 class ConstrainedOptimizerState:
     """Represents the "state" of a Constrained Optimizer in terms of the state
-    dicts of the primal optimizer, as well as those of the dual optimizer and
+    dicts of the primal optimizers, as well as those of the dual optimizer and
     the dual scheduler if applicable. This is used for checkpointing.
 
     # TODO(JGP): Add docs about difference between this and FormulationState
     # here we focus on the optimizers, while the formulation contains dual vars.
 
     Args:
-        primal_optimizer_state: State dict for the primal optimizer.
+        primal_optimizer_states: State dict for the primal optimizers.
         dual_optimizer_state: State dict for the dual optimizer.
-        dual_scheduler_state: State dict for the primal optimizer.
+        dual_scheduler_state: State dict for the dual scheduler.
     """
 
     primal_optimizer_states: List[Dict]
@@ -71,9 +71,10 @@ class ConstrainedOptimizer:
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given its :py:class:`~cooper.problem.Formulation`.
 
-    A ``ConstrainedOptimizer`` includes one or two
-    :class:`torch.optim.Optimizer`\\s, for the primal and dual variables
-    associated with the ``Formulation``, respectively.
+    A ``ConstrainedOptimizer`` includes one or more
+    :class:`torch.optim.Optimizer`\\s for the primal variables and potentially
+    another :class:`torch.optim.Optimizer` for the dual variables
+    associated with the ``Formulation``.
 
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
     ``ConstrainedMinimizationProblem``\\s. Please refer to the documentation
@@ -500,7 +501,7 @@ class ConstrainedOptimizer:
         primal_optimizer_states = const_optim_state.primal_optimizer_states
         if len(primal_optimizer_states) != len(primal_optimizers):
             raise ValueError(
-                """The number of primal optimizers does not match the  number of
+                """The number of primal optimizers does not match the number of
                 primal optimizer states."""
             )
 
