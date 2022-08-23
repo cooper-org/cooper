@@ -5,6 +5,7 @@ for the unconstrained setting."""
 
 import os
 import tempfile
+from functools import partial
 
 # Import basic closure example from helpers
 import cooper_test_utils
@@ -57,9 +58,13 @@ def test_checkpoint(aim_device, use_ineq):
     if use_ineq:
         # Constrained case
         partial_dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
+        partial_dual_sch = cooper.optim.partial_scheduler(
+            torch.optim.lr_scheduler.StepLR, gamma=0.99, step_size=1
+        )
     else:
         # Unconstrained case
         partial_dual_optim = None
+        partial_dual_sch = None
 
     test_problem_data = cooper_test_utils.build_test_problem(
         aim_device=aim_device,
@@ -73,6 +78,7 @@ def test_checkpoint(aim_device, use_ineq):
         primal_optim_kwargs={"lr": 1e-2, "momentum": 0.3},
         dual_optim_kwargs={"lr": 1e-2},
         primal_model=model,
+        dual_scheduler=partial_dual_sch,
     )
 
     params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
@@ -123,7 +129,7 @@ def test_checkpoint(aim_device, use_ineq):
         formulation=loaded_formulation,
         primal_optimizer=loaded_primal_optimizer,
         dual_optimizer_class=partial_dual_optim,
-        dual_scheduler_class=None,
+        dual_scheduler_class=partial_dual_sch,
     )
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
