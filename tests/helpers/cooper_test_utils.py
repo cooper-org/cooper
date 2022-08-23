@@ -50,14 +50,25 @@ def build_test_problem(
     cmp = Toy2dCMP(use_ineq=use_ineq, use_proxy_ineq=use_proxy_ineq)
 
     if primal_init is None:
+        assert not isinstance(primal_optim_cls, list)
+
         primal_model.to(device)
-        primal_optimizer = primal_optim_cls(
-            primal_model.parameters(), **primal_optim_kwargs
-        )
         params = primal_model.parameters()
+        primal_optimizers = [primal_optim_cls(params, **primal_optim_kwargs)]
     else:
-        params = torch.nn.Parameter(torch.tensor(primal_init, device=device))
-        primal_optimizer = primal_optim_cls([params], **primal_optim_kwargs)
+        if isinstance(primal_optim_cls, list):
+            # Use a different optimizer for each parameter
+            params = [
+                torch.nn.Parameter(torch.tensor(_, device=device)) for _ in primal_init
+            ]
+
+            primal_optimizers = []
+            for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
+                primal_optimizers.append(cls([p], **kwargs))
+
+        else:
+            params = torch.nn.Parameter(torch.tensor(primal_init, device=device))
+            primal_optimizers = [primal_optim_cls([params], **primal_optim_kwargs)]
 
     if use_ineq:
         # Constrained case
@@ -72,7 +83,7 @@ def build_test_problem(
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizers=[primal_optimizer],
+        primal_optimizers=primal_optimizers,
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=dual_restarts,
