@@ -42,7 +42,8 @@ class Model(torch.nn.Module):
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 @pytest.mark.parametrize("use_ineq", [True, False])
-def test_checkpoint(aim_device, use_ineq):
+@pytest.mark.parametrize("multiple_optimizers", [True, False])
+def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
     """
     Test that checkpointing and loading works for the constrained and
     unconstrained cases.
@@ -50,9 +51,12 @@ def test_checkpoint(aim_device, use_ineq):
 
     model = Model(torch.tensor([0.0, -1.0]))
 
-    partial_primal_optim = cooper.optim.partial_optimizer(
-        torch.optim.SGD, lr=1e-2, momentum=0.3
-    )
+    if multiple_optimizers:
+        primal_optim_cls = [torch.optim.SGD, torch.optim.Adam]
+        primal_optim_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
+    else:
+        primal_optim_cls = torch.optim.SGD
+        primal_optim_kwargs = {"lr": 1e-2, "momentum": 0.3}
 
     if use_ineq:
         # Constrained case
@@ -63,14 +67,14 @@ def test_checkpoint(aim_device, use_ineq):
 
     test_problem_data = cooper_test_utils.build_test_problem(
         aim_device=aim_device,
-        primal_optim_cls=torch.optim.SGD,
+        primal_optim_cls=primal_optim_cls,
         primal_init=None,
         dual_optim_cls=torch.optim.SGD,
         use_ineq=use_ineq,
         use_proxy_ineq=False,
         dual_restarts=True,
         alternating=False,
-        primal_optim_kwargs={"lr": 1e-2, "momentum": 0.3},
+        primal_optim_kwargs=primal_optim_kwargs,
         dual_optim_kwargs={"lr": 1e-2},
         primal_model=model,
     )
@@ -110,7 +114,14 @@ def test_checkpoint(aim_device, use_ineq):
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device)
 
-    loaded_primal_optimizer = partial_primal_optim(loaded_model.parameters())
+    if multiple_optimizers:
+        loaded_primal_optimizers = []
+        for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
+            loaded_primal_optimizers.append(cls([p], **kwargs))
+    else:
+        loaded_primal_optimizers = [
+            primal_optim_cls(loaded_model.parameters(), **primal_optim_kwargs)
+        ]
 
     if use_ineq:
         loaded_formulation = cooper.LagrangianFormulation(cmp)
@@ -121,7 +132,7 @@ def test_checkpoint(aim_device, use_ineq):
     loaded_coop = cooper.ConstrainedOptimizer.load_from_state_dict(
         const_optim_state=coop_state_dict_100,
         formulation=loaded_formulation,
-        primal_optimizers=[loaded_primal_optimizer],
+        primal_optimizers=loaded_primal_optimizers,
         dual_optimizer_class=partial_dual_optim,
         dual_scheduler_class=None,
     )
