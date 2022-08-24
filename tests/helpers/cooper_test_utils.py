@@ -1,6 +1,7 @@
 """Cooper-related utilities for writing tests."""
 
 import functools
+from types import GeneratorType
 from dataclasses import dataclass
 from typing import Union
 
@@ -51,13 +52,27 @@ def build_test_problem(
 
     if primal_init is None:
         primal_model.to(device)
-        primal_optimizer = primal_optim_cls(
-            primal_model.parameters(), **primal_optim_kwargs
-        )
         params = primal_model.parameters()
+        params_ = params
     else:
         params = torch.nn.Parameter(torch.tensor(primal_init, device=device))
-        primal_optimizer = primal_optim_cls([params], **primal_optim_kwargs)
+        params_ = [params]
+
+    if isinstance(primal_optim_cls, list):
+        # params is created in a different way to avoid slicing issues with the
+        # autograd engine. Data contents of params are not modified.
+        sliceable_params = (
+            list(params)[0] if isinstance(params, GeneratorType) else params
+        )
+        params = [torch.nn.Parameter(_) for _ in sliceable_params.data]
+        params_ = params
+
+        primal_optimizers = []
+        for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
+            primal_optimizers.append(cls([p], **kwargs))
+
+    else:
+        primal_optimizers = [primal_optim_cls(params_, **primal_optim_kwargs)]
 
     if use_ineq:
         # Constrained case
@@ -72,7 +87,7 @@ def build_test_problem(
 
     coop = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizer=primal_optimizer,
+        primal_optimizers=primal_optimizers,
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=dual_restarts,

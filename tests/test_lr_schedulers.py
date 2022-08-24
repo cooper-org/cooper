@@ -53,14 +53,16 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
 
     params, cmp, coop, formulation, _, _ = test_problem_data.as_tuple()
 
-    primal_scheduler = scheduler_class(coop.primal_optimizer, **scheduler_kwargs)
+    # Only considering one primal_optimizer on this test.
+    primal_optimizer = coop.primal_optimizers[0]
+    primal_scheduler = scheduler_class(primal_optimizer, **scheduler_kwargs)
 
     for step_id in range(7):
         coop.zero_grad()
         lagrangian = formulation.composite_objective(cmp.closure, params)
         formulation.custom_backward(lagrangian)
 
-        if hasattr(coop.primal_optimizer, "extrapolation"):
+        if hasattr(primal_optimizer, "extrapolation"):
             # Only one dual_scheduler step should be performed even if
             # extrapolation is used
             coop.step(cmp.closure, params)

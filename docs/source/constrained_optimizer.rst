@@ -27,7 +27,13 @@ Construction
 The main ingredients to build a ``ConstrainedOptimizer`` are a
 :py:class:`~cooper.problem.Formulation` (associated with a
 :py:class:`~cooper.problem.ConstrainedMinimizationProblem`) and a
-:py:class:`torch.optim.Optimizer` corresponding to the ``primal_optimizer``.
+:py:class:`torch.optim.Optimizer` corresponding to a ``primal_optimizer``.
+
+.. note::
+    **Cooper** supports the use of multiple ``primal_optimizers``, each
+    corresponding to different groups of primal variables. The
+    ``primal_optimizers`` argument accepts a single optimizer, or a list
+    of optimizers. See :ref:`multiple-primal_optimizers`.
 
 If the ``ConstrainedMinimizationProblem`` you are dealing with is in fact
 constrained, depending on your formulation, you might also need to provide a
@@ -63,7 +69,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optim,
+            primal_optimizers=primal_optimizer,
         )
 
 - **Constrained problem**
@@ -82,7 +88,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
         )
 
@@ -124,7 +130,7 @@ Example
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
         )
 
@@ -196,8 +202,9 @@ on the dual parameters, with simultaneous updates.
 .. note::
 
     When applied to an unconstrained problem, :py:meth:`ConstrainedOptimizer.step`
-    will be equivalent to performing ``primal_optimizer.step()`` based on the
-    gradient of the loss with respect to the primal parameters.
+    will be equivalent to performing ``optimizer.step()`` on all of the
+    ``primal_optimizers`` based on the gradient of the loss with respect to the
+    primal parameters.
 
 
 .. include:: additional_features.rst

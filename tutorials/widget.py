@@ -281,7 +281,7 @@ class Toy2DWidget:
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=self.formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
             dual_restarts=dual_restarts,
         )

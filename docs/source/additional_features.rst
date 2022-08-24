@@ -26,7 +26,7 @@ variables. This two-stage process is handled by **Cooper** inside the
 
 .. math::
 
-    x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
+    x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
     \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
 
 
@@ -68,7 +68,7 @@ precision, **Cooper** implements a version of the Augmented Lagrangian method
 where the primal variables are updated using a gradient-based step.
 
 .. math::
-    x_{t+1} = \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)
+    x_{t+1} = \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)
 
 The new primal variables are then used to perform an
 :ref:`alternating update<alternating_updates>` on the Lagrange multipliers.
@@ -138,7 +138,7 @@ Example
 
     constrained_optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizer=primal_optimizer,
+        primal_optimizers=primal_optimizer,
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=False,
@@ -224,3 +224,21 @@ constraint was being violated in the past.
 .. warning::
     The behavior of dual restarts has only been tested using
     :py:class:`~cooper.DenseMultiplier` objects.
+
+
+.. _multiple-primal_optimizers:
+
+Multiple primal optimizers
+--------------------------
+
+When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+one or multiple primal optimizers (grouped in a list) can be provided. Allowing 
+for multiple primal optimizers is useful when setting separate groups of primal 
+variables to have different optimizer classes and hyperparameters.
+
+When a list of optimizers is provided for the ``primal_optimizers`` argument, they are
+treated "as if they were a single optimizer". In particular, all primal optimizers 
+operations such as :py:meth:`optimizer.step()<torch.optim.Optimizer.step>` are 
+executed simultaneously (without intermediate calls to
+:py:meth:`cmp.closure()<cooper.problem.ConstrainedMinimizationProblem.closure>` or
+:py:meth:`formulation.custom_backward(lagrangian)<cooper.problem.Formulation.custom_backward>`).

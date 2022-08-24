@@ -11,7 +11,7 @@ methods:
 import pdb
 import warnings
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Type
+from typing import Callable, Dict, List, Optional, Type, Union
 
 import torch
 
@@ -23,19 +23,19 @@ from .utils import validate_state_dicts
 @dataclass
 class ConstrainedOptimizerState:
     """Represents the "state" of a Constrained Optimizer in terms of the state
-    dicts of the primal optimizer, as well as those of the dual optimizer and
+    dicts of the primal optimizers, as well as those of the dual optimizer and
     the dual scheduler if applicable. This is used for checkpointing.
 
     # TODO(JGP): Add docs about difference between this and FormulationState
     # here we focus on the optimizers, while the formulation contains dual vars.
 
     Args:
-        primal_optimizer_state: State dict for the primal optimizer.
+        primal_optimizer_states: State dict for the primal optimizers.
         dual_optimizer_state: State dict for the dual optimizer.
-        dual_scheduler_state: State dict for the primal optimizer.
+        dual_scheduler_state: State dict for the dual scheduler.
     """
 
-    primal_optimizer_state: Dict
+    primal_optimizer_states: List[Dict]
     dual_optimizer_state: Optional[Dict] = None
     dual_scheduler_state: Optional[Dict] = None
     alternating: bool = False
@@ -54,7 +54,7 @@ class ConstrainedOptimizerState:
                 return False
 
         state_dict_names = [
-            "primal_optimizer_state",
+            "primal_optimizer_states",
             "dual_optimizer_state",
             "dual_scheduler_state",
         ]
@@ -71,9 +71,10 @@ class ConstrainedOptimizer:
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given its :py:class:`~cooper.problem.Formulation`.
 
-    A ``ConstrainedOptimizer`` includes one or two
-    :class:`torch.optim.Optimizer`\\s, for the primal and dual variables
-    associated with the ``Formulation``, respectively.
+    A ``ConstrainedOptimizer`` includes one or more
+    :class:`torch.optim.Optimizer`\\s for the primal variables and potentially
+    another :class:`torch.optim.Optimizer` for the dual variables
+    associated with the ``Formulation``.
 
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
     ``ConstrainedMinimizationProblem``\\s. Please refer to the documentation
@@ -85,8 +86,10 @@ class ConstrainedOptimizer:
         formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
             to be optimized.
 
-        primal_optimizer: Fully instantiated ``torch.optim.Optimizer`` used
-            to optimize the primal parameters (e.g. model parameters).
+        primal_optimizers: Fully instantiated ``torch.optim.Optimizer``\\s used
+            to optimize the primal parameters (e.g. model parameters). The primal
+            parameters can be partitioned into multiple optimizers, in this case
+            ``primal_optimizers`` accepts a list of ``torch.optim.Optimizer``\\s.
 
         dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
             used to optimize the dual variables (e.g. Lagrange multipliers).
@@ -113,7 +116,7 @@ class ConstrainedOptimizer:
     def __init__(
         self,
         formulation: Formulation,
-        primal_optimizer: torch.optim.Optimizer,
+        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
         dual_optimizer: Optional[torch.optim.Optimizer] = None,
         dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
         alternating: bool = False,
@@ -121,7 +124,11 @@ class ConstrainedOptimizer:
     ):
         self.formulation = formulation
         self.cmp = self.formulation.cmp
-        self.primal_optimizer = primal_optimizer
+
+        if isinstance(primal_optimizers, torch.optim.Optimizer):
+            primal_optimizers = [primal_optimizers]
+        self.primal_optimizers = primal_optimizers
+
         self.dual_optimizer = dual_optimizer
         self.dual_scheduler = dual_scheduler
 
@@ -136,12 +143,12 @@ class ConstrainedOptimizer:
 
         Raises:
             NotImplementedError: The ``Formulation`` has an augmented Lagrangian
-                coefficient and ``primal_optimizer`` has an ``extrapolation``
-                function. This is not supported because of possible unexpected
-                behavior.
-            RuntimeError: The ``primal_optimizer`` has an ``extrapolation``
-                function and ``alternating`` was set to True. Mixing
-                extrapolation and alternating updates is not supported.
+                coefficient and one of ``primal_optimizers`` has an
+                ``extrapolation`` function. This is not supported because of
+                possible unexpected behavior.
+            RuntimeError: One of the ``primal_optimizers`` has an
+                ``extrapolation`` function and ``alternating`` was set to True.
+                Mixing extrapolation and alternating updates is not supported.
             RuntimeError: a ``dual_optimizer`` was provided but the
                 ``ConstrainedMinimizationProblem`` of formulation was
                 unconstrained. There are no dual variables to optimize.
@@ -153,23 +160,38 @@ class ConstrainedOptimizer:
                 ``dual_optimizer`` was provided. Can not schedule the learning
                 rate of an unknown optimizer.
             RuntimeError: the considered ``ConstrainedMinimizationProblem`` is
-                unconstrained, but the provided ``primal_optimizer`` has an
-                ``extrapolation`` function. This is not supported because of
+                unconstrained, but one of the provided ``primal_optimizers`` has
+                an ``extrapolation`` function. This is not supported because of
                 unexpected behavior when using extrapolation to update the
                 primal parameters without any dual parameters.
-            RuntimeError: One of ``primal_optimizer`` or ``dual_optimizer`` has
-                an extrapolation function while the other does not.
-                Extrapolation on only one player is not supported.
+            RuntimeError: One of the ``primal_optimizers`` has an
+                ``extrapolation`` function while another does not. Extrapolation
+                on some of the primal variables and not others is not supported.
+            RuntimeError: The ``primal_optimizers`` have extrapolation
+                functions while the ``dual_optimizer`` does not. Alternatively,
+                the ``dual_optimizer`` has an extrapolation function while the
+                ``primal_optimizers`` do not. Extrapolation on only one player
+                is not supported.
         """
 
         is_alternating = self.alternating
         is_aug_lag = isinstance(self.formulation, AugmentedLagrangianFormulation)
 
-        # We assume that both optimizers agree on whether to use extrapolation
-        # or not, so we use the primal optimizer as reference for deciding
-        # whether to use extrapolation. See check below for matching
-        # extrapolation behavior.
-        self.is_extrapolation = hasattr(self.primal_optimizer, "extrapolation")
+        is_extrapolation_list = [
+            hasattr(_, "extrapolation") for _ in self.primal_optimizers
+        ]
+        if any(is_extrapolation_list) and not all(is_extrapolation_list):
+            raise RuntimeError(
+                """One of the primal optimizers has an extrapolation function
+                while another does not. Please ensure that all primal optimizers
+                agree on whether to perform extrapolation."""
+            )
+
+        # We assume that the dual_optimizer agrees with the primal_optimizers on
+        # whether to use extrapolation or not, so we use the primal_optimizers
+        # as reference for setting self.is_extrapolation. See check below for
+        # a matching extrapolation check.
+        self.is_extrapolation = any(is_extrapolation_list)
 
         if is_aug_lag:
             assert (
@@ -220,9 +242,7 @@ class ConstrainedOptimizer:
                 non-extrapolating optimizer instead."""
             )
 
-        if hasattr(self.primal_optimizer, "extrapolation") != hasattr(
-            self.dual_optimizer, "extrapolation"
-        ):
+        if self.is_extrapolation != hasattr(self.dual_optimizer, "extrapolation"):
             raise RuntimeError(
                 """Primal and dual optimizers do not agree on whether to use
                 extrapolation or not."""
@@ -281,11 +301,13 @@ class ConstrainedOptimizer:
         ), "At least one of closure or defect_fn must be provided for alternating updates"
 
         if self.is_extrapolation:
-            # Store parameter copy and compute t+1/2 iterates
-            self.primal_optimizer.extrapolation()  # type: ignore
+            for primal_optimizer in self.primal_optimizers:
+                # Store parameter copy and compute t+1/2 iterates
+                primal_optimizer.extrapolation()  # type: ignore
             if self.cmp.is_constrained:
-                # Call to dual_step flips sign of gradients, then triggers call
-                # to dual_optimizer.extrapolation and projects dual variables
+                # Call to dual_step flips sign of gradients, then triggers
+                # call to dual_optimizer.extrapolation and projects dual
+                # variables
                 self.dual_step(call_extrapolation=True)
 
             # Zero gradients and recompute loss at t+1/2
@@ -303,14 +325,16 @@ class ConstrainedOptimizer:
 
             # After this, the calls to `step` will update the stored copies with
             # the newly computed gradients
-            self.primal_optimizer.step()
+            for primal_optimizer in self.primal_optimizers:
+                primal_optimizer.step()
             if self.cmp.is_constrained:
                 self.dual_step()
 
         else:
             # Non-extrapolation case
 
-            self.primal_optimizer.step()
+            for primal_optimizer in self.primal_optimizers:
+                primal_optimizer.step()
 
             if self.cmp.is_constrained:
 
@@ -349,7 +373,8 @@ class ConstrainedOptimizer:
         # This is not a problem since we only need to compute the gradient wrt
         # the multipliers.
         if isinstance(self.formulation, AugmentedLagrangianFormulation):
-            # Use LR of dual optimizer as penalty coefficient for the augmented Lagrangian
+            # Use LR of dual optimizer as penalty coefficient for the augmented
+            # Lagrangian
             _ = self.formulation.composite_objective(
                 closure=None,
                 aug_lag_coeff_scheduler=self.dual_scheduler,
@@ -414,7 +439,8 @@ class ConstrainedOptimizer:
         """
 
         if not ignore_primal:
-            self.primal_optimizer.zero_grad()
+            for primal_optimizer in self.primal_optimizers:
+                primal_optimizer.zero_grad()
 
         if not ignore_dual:
 
@@ -432,7 +458,7 @@ class ConstrainedOptimizer:
         :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizerState`.
         """
 
-        primal_optimizer_state = self.primal_optimizer.state_dict()
+        primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
 
         if self.dual_optimizer is not None:
             dual_optimizer_state = self.dual_optimizer.state_dict()
@@ -445,7 +471,7 @@ class ConstrainedOptimizer:
             dual_scheduler_state = None
 
         return ConstrainedOptimizerState(
-            primal_optimizer_state=primal_optimizer_state,
+            primal_optimizer_states=primal_optimizer_states,
             dual_optimizer_state=dual_optimizer_state,
             dual_scheduler_state=dual_scheduler_state,
             alternating=self.alternating,
@@ -457,7 +483,7 @@ class ConstrainedOptimizer:
         cls,
         const_optim_state: ConstrainedOptimizerState,
         formulation: Formulation,
-        primal_optimizer: torch.optim.Optimizer,
+        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
         dual_optimizer_class: Type[torch.optim.Optimizer] = None,
         dual_scheduler_class: Type[torch.optim.lr_scheduler._LRScheduler] = None,
     ):
@@ -468,7 +494,18 @@ class ConstrainedOptimizer:
             state_dict: state of the ConstrainedOptimizer.
         """
 
-        primal_optimizer.load_state_dict(const_optim_state.primal_optimizer_state)
+        if isinstance(primal_optimizers, torch.optim.Optimizer):
+            primal_optimizers = [primal_optimizers]
+
+        primal_optimizer_states = const_optim_state.primal_optimizer_states
+        if len(primal_optimizer_states) != len(primal_optimizers):
+            raise ValueError(
+                """The number of primal optimizers does not match the number of
+                primal optimizer states."""
+            )
+
+        for optimizer, state in zip(primal_optimizers, primal_optimizer_states):
+            optimizer.load_state_dict(state)
 
         if const_optim_state.dual_optimizer_state is not None:
             if dual_optimizer_class is None:
@@ -499,7 +536,7 @@ class ConstrainedOptimizer:
 
         return ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=primal_optimizers,
             dual_optimizer=dual_optimizer,
             dual_scheduler=dual_scheduler,
             alternating=const_optim_state.alternating,

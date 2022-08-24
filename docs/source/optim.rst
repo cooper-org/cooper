@@ -3,11 +3,12 @@ Optim Module
 
 .. currentmodule:: cooper.optim
 
-
 .. _partial_optimizer_instantiation:
 
 Partial optimizer instantiation
 -------------------------------
+
+.. automethod:: cooper.optim.partial_optimizer
 
 When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`, the
 ``dual_optimizer`` parameter is expected to be a
@@ -99,7 +100,7 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
         const_optim = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizer=primal_optimizer,
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
         )
 
@@ -162,7 +163,7 @@ Primal learning rate scheduler
 
 .. _primal_lr_scheduler:
 
-You must instantiate the scheduler for the learning rate used by the
+You must instantiate the scheduler for the learning rate used by each
 ``primal_optimizer`` and call the scheduler's ``step`` method explicitly, as is
 usual in Pytorch. See :py:mod:`torch.optim.lr_scheduler` for details.
 
