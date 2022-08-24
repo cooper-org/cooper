@@ -53,7 +53,7 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
 
     params, cmp, coop, formulation, _, _ = test_problem_data.as_tuple()
 
-    # Only considering one primal_optimizer on this tests.
+    # Only considering one primal_optimizer on this test.
     primal_optimizer = coop.primal_optimizers[0]
     primal_scheduler = scheduler_class(primal_optimizer, **scheduler_kwargs)
 
