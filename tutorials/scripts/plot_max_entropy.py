@@ -65,7 +65,7 @@ dual_optimizer = cooper.optim.partial_optimizer(
 )
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-coop = cooper.ConstrainedOptimizer(formulation, [primal_optimizer], dual_optimizer)
+coop = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
 
 state_history = cooper.StateLogger(save_metrics=["loss", "eq_defect", "eq_multipliers"])
 
