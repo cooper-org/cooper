@@ -305,11 +305,11 @@ class ConstrainedOptimizer:
             for primal_optimizer in self.primal_optimizers:
                 # Store parameter copy and compute t+1/2 iterates
                 primal_optimizer.extrapolation()  # type: ignore
-                if self.cmp.is_constrained:
-                    # Call to dual_step flips sign of gradients, then triggers
-                    # call to dual_optimizer.extrapolation and projects dual
-                    # variables
-                    self.dual_step(call_extrapolation=True)
+            if self.cmp.is_constrained:
+                # Call to dual_step flips sign of gradients, then triggers
+                # call to dual_optimizer.extrapolation and projects dual
+                # variables
+                self.dual_step(call_extrapolation=True)
 
             # Zero gradients and recompute loss at t+1/2
             self.zero_grad()
