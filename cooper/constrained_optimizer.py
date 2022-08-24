@@ -242,8 +242,6 @@ class ConstrainedOptimizer:
                 non-extrapolating optimizer instead."""
             )
 
-        # self.is_extrapolation is set above depending on the whether the primal
-        # optimizers have an extrapolation function.
         if self.is_extrapolation != hasattr(self.dual_optimizer, "extrapolation"):
             raise RuntimeError(
                 """Primal and dual optimizers do not agree on whether to use
