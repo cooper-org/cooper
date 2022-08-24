@@ -138,7 +138,7 @@ Example
 
     constrained_optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,
-        primal_optimizers=[primal_optimizer],
+        primal_optimizers=primal_optimizer,
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=False,
@@ -224,3 +224,21 @@ constraint was being violated in the past.
 .. warning::
     The behavior of dual restarts has only been tested using
     :py:class:`~cooper.DenseMultiplier` objects.
+
+
+.. _multiple-primal_optimizers:
+
+Multiple primal optimizers
+--------------------------
+
+When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+one or multiple primal optimizers (grouped in a list) can be provided. Allowing 
+for multiple primal optimizers is useful when setting separate groups of primal 
+variables to have different optimizer classes and hyperparameters.
+
+When a list of optimizers is provided for the ``primal_optimizers`` argument, they are
+treated "as if they were a single optimizer". In particular, all primal optimizers 
+operations such as :py:meth:`optimizer.step()<torch.optim.Optimizer.step>` are 
+executed simultaneously (without intermediate calls to
+:py:meth:`cmp.closure()<cooper.problem.ConstrainedMinimizationProblem.closure>` or
+:py:meth:`formulation.custom_backward(lagrangian)<cooper.problem.Formulation.custom_backward>`).

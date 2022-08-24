@@ -31,8 +31,9 @@ The main ingredients to build a ``ConstrainedOptimizer`` are a
 
 .. note::
     **Cooper** supports the use of multiple ``primal_optimizers``, each
-    corresponding to different groups of primal variables. See
-    :ref:`multiple-primal_optimizers`.
+    corresponding to different groups of primal variables. The
+    ``primal_optimizers`` argument accepts a single optimizer, or a list
+    of optimizers. See :ref:`multiple-primal_optimizers`.
 
 If the ``ConstrainedMinimizationProblem`` you are dealing with is in fact
 constrained, depending on your formulation, you might also need to provide a
@@ -68,7 +69,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizers=[primal_optim],
+            primal_optimizers=primal_optimizer,
         )
 
 - **Constrained problem**
@@ -87,7 +88,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizers=[primal_optimizer],
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
         )
 
@@ -129,7 +130,7 @@ Example
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
             formulation=formulation,
-            primal_optimizers=[primal_optimizer],
+            primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
         )
 

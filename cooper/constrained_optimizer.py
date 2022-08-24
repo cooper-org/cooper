@@ -86,9 +86,10 @@ class ConstrainedOptimizer:
         formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
             to be optimized.
 
-        primal_optimizers: List of fully instantiated
-            ``torch.optim.Optimizer``\\s used to optimize the primal parameters
-            (e.g. model parameters).
+        primal_optimizers: Fully instantiated ``torch.optim.Optimizer``\\s used
+            to optimize the primal parameters (e.g. model parameters). The primal
+            parameters can be partitioned into multiple optimizers, in this case
+            ``primal_optimizers`` accepts a list of ``torch.optim.Optimizer``\\s.
 
         dual_optimizer: Partially instantiated ``torch.optim.Optimizer``
             used to optimize the dual variables (e.g. Lagrange multipliers).
@@ -182,8 +183,8 @@ class ConstrainedOptimizer:
         if any(is_extrapolation_list) and not all(is_extrapolation_list):
             raise RuntimeError(
                 """One of the primal optimizers has an extrapolation function
-                while another does not. Extrapolation on some of the primal
-                variables and not others is not supported."""
+                while another does not. Please ensure that all primal optimizers
+                agree on whether to perform extrapolation."""
             )
 
         # We assume that the dual_optimizer agrees with the primal_optimizers on
@@ -241,7 +242,7 @@ class ConstrainedOptimizer:
                 non-extrapolating optimizer instead."""
             )
 
-        # self.is_extrapolation is set to True above if all of the primal
+        # self.is_extrapolation is set above depending on the whether the primal
         # optimizers have an extrapolation function.
         if self.is_extrapolation != hasattr(self.dual_optimizer, "extrapolation"):
             raise RuntimeError(

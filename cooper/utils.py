@@ -48,12 +48,9 @@ def validate_state_dicts(model_state_dict_1, model_state_dict_2):
         return False
 
     if isinstance(model_state_dict_1, list) and isinstance(model_state_dict_2, list):
-        return all(
-            [
-                validate_state_dicts(ii, jj)
-                for ii, jj in zip(model_state_dict_1, model_state_dict_2)
-            ]
-        )
+        zipped_dicts = zip(model_state_dict_1, model_state_dict_2)
+        is_each_valid = [validate_state_dicts(ii, jj) for ii, jj in zipped_dicts]
+        return all(is_each_valid)
 
     # Replicate modules have "module" attached to their keys, so strip these off when comparing to local model.
     if next(iter(model_state_dict_1.keys())).startswith("module"):
