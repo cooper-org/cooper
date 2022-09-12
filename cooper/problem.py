@@ -68,7 +68,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         self._state = value
 
     @abc.abstractmethod
-    def closure(self) -> CMPState:
+    def closure(self, *args, **kwargs) -> CMPState:
         """
         Computes the state of the CMP based on the current value of the primal
         parameters.
