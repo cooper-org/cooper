@@ -17,12 +17,9 @@ except PackageNotFoundError:
 
 from cooper.augmented_lagrangian import AugmentedLagrangianFormulation
 from cooper.constrained_optimizer import ConstrainedOptimizer
+from cooper.formulation import Formulation, UnconstrainedFormulation
 from cooper.lagrangian_formulation import LagrangianFormulation
-from cooper.problem import (
-    CMPState,
-    ConstrainedMinimizationProblem,
-    UnconstrainedFormulation,
-)
+from cooper.problem import CMPState, ConstrainedMinimizationProblem
 from cooper.state_logger import StateLogger
 
 from . import optim, utils

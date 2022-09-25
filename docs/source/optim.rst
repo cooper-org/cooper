@@ -88,7 +88,7 @@ extra-gradient in the context of solving Variational Inequality Problems.
         model = ...
 
         cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
-        formulation = cooper.problem.Formulation(...)
+        formulation = cooper.Formulation(...)
 
         # Non-extra-gradient optimizers
         primal_optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)

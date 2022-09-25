@@ -16,7 +16,8 @@ from typing import Callable, Dict, List, Optional, Type, Union
 import torch
 
 from .augmented_lagrangian import AugmentedLagrangianFormulation
-from .problem import CMPState, Formulation
+from .formulation import Formulation
+from .problem import CMPState
 from .utils import validate_state_dicts
 
 
@@ -69,7 +70,7 @@ class ConstrainedOptimizerState:
 class ConstrainedOptimizer:
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    given its :py:class:`~cooper.problem.Formulation`.
+    given its :py:class:`~cooper.Formulation`.
 
     A ``ConstrainedOptimizer`` includes one or more
     :class:`torch.optim.Optimizer`\\s for the primal variables and potentially
@@ -79,7 +80,7 @@ class ConstrainedOptimizer:
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
     ``ConstrainedMinimizationProblem``\\s. Please refer to the documentation
     of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
-    :py:class:`~cooper.problem.Formulation` classes for further details on
+    :py:class:`~cooper.Formulation` classes for further details on
     handling unconstrained problems.
 
     Args:

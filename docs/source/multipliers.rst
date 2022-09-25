@@ -8,7 +8,7 @@ Multipliers
 .. note::
 
     Multipliers are mostly handled internally by the
-    :py:class:`~cooper.problem.Formulation`\s. This handling includes:
+    :py:class:`~cooper.Formulation`\s. This handling includes:
 
     - Their initialization in the
       :py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`

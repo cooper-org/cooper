@@ -1,8 +1,8 @@
 """Cooper-related utilities for writing tests."""
 
 import functools
-from types import GeneratorType
 from dataclasses import dataclass
+from types import GeneratorType
 from typing import Union
 
 import pytest
@@ -17,7 +17,7 @@ class TestProblemData:
     params: Union[torch.Tensor, torch.nn.Module]
     cmp: cooper.ConstrainedMinimizationProblem
     coop: cooper.ConstrainedOptimizer
-    formulation: cooper.problem.Formulation
+    formulation: cooper.Formulation
     device: torch.device
     mktensor: callable
 
