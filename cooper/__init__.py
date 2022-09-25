@@ -24,4 +24,4 @@ from cooper.formulation import (
 from cooper.problem import CMPState, ConstrainedMinimizationProblem
 from cooper.utils import StateLogger
 
-from . import formulation, optim, utils
+from . import formulation, multipliers, optim, utils
