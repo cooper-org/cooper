@@ -5,8 +5,9 @@ from typing import Callable, Optional, no_type_check
 
 import torch
 
-from .lagrangian_formulation import LagrangianFormulation
-from .problem import CMPState, ConstrainedMinimizationProblem
+from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
+from .lagrangian import LagrangianFormulation
 
 
 class AugmentedLagrangianFormulation(LagrangianFormulation):

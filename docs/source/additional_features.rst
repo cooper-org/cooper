@@ -134,7 +134,7 @@ Example
         torch.optim.lr_scheduler.LambdaLR, lr_lambda=lambda step: math.sqrt(step / 100)
     )
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp)
+    formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
 
     constrained_optimizer = cooper.ConstrainedOptimizer(
         formulation=formulation,

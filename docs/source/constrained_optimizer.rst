@@ -19,7 +19,7 @@ you are training.
 Additionally, a ``ConstrainedOptimizer`` includes a second
 :py:class:`torch.optim.Optimizer`, which performs updates on the "dual"
 parameters (e.g. the multipliers used in a
-:py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`).
+:py:class:`~cooper.formulation.LagrangianFormulation`).
 
 Construction
 ^^^^^^^^^^^^
@@ -110,7 +110,7 @@ will involve the following steps:
 
     #. (Optional) Iterate over your dataset and sample of mini-batch.
     #. Call :py:meth:`constrained_optimizer.zero_grad()<zero_grad>` to reset the parameters' gradients
-    #. Compute the current :py:class:`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using :py:meth:`lagrangian.composite_objective(cmp.closure, ...)<cooper.lagrangian_formulation.LagrangianFormulation.composite_objective>`.
+    #. Compute the current :py:class:`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using :py:meth:`lagrangian.composite_objective(cmp.closure, ...)<cooper.formulation.LagrangianFormulation.composite_objective>`.
     #. Populate the primal and dual gradients with :py:meth:`formulation.custom_backward(lagrangian)<cooper.Formulation.custom_backward>`
     #. Perform updates on the parameters using the primal and dual optimizers based on the recently computed gradients, via a call to :py:meth:`constrained_optimizer.step()<step>`.
 

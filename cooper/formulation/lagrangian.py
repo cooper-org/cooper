@@ -6,9 +6,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_ch
 
 import torch
 
+from cooper.multipliers import DenseMultiplier
+from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
 from .formulation import Formulation
-from .multipliers import DenseMultiplier
-from .problem import CMPState, ConstrainedMinimizationProblem
 
 
 class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):

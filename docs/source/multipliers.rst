@@ -11,14 +11,14 @@ Multipliers
     :py:class:`~cooper.Formulation`\s. This handling includes:
 
     - Their initialization in the
-      :py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`
-      method of :py:class:`~cooper.lagrangian_formulation.BaseLagrangianFormulation`.
+      :py:meth:`~cooper.formulation.lagrangian.BaseLagrangianFormulation.create_state`
+      method of :py:class:`~cooper.formulation.lagrangian.BaseLagrangianFormulation`.
     - Ensuring that their shape and device matches that of the constraint
       defects provided by the :py:class:`~cooper.problem.CMPState` of the
       considered :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
     - Using them for computing Lagrangians in the
-      :py:meth:`~cooper.lagrangian_formulation.LagrangianFormulation.composite_objective`
-      method of :py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`.
+      :py:meth:`~cooper.formulation.LagrangianFormulation.composite_objective`
+      method of :py:class:`~cooper.formulation.LagrangianFormulation`.
 
 Constructing a DenseMultiplier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -30,8 +30,8 @@ calculation of the Lagrangian involves an inner product between the multipliers
 and the constraint violations.
 
 We lazily initialize ``DenseMultiplier``\s via a call to the
-:py:meth:`~cooper.lagrangian_formulation.BaseLagrangianFormulation.create_state`
-method of a :py:class:`~cooper.lagrangian_formulation.BaseLagrangianFormulation`
+:py:meth:`~cooper.formulation.lagrangian.BaseLagrangianFormulation.create_state`
+method of a :py:class:`~cooper.formulation.lagrangian.BaseLagrangianFormulation`
 object. This happens when the first ``CMPState`` of the
 ``ConstrainedMinimizationProblem`` is evaluated. That way we can ensure that the
 ``DenseMultiplier``\s are initialized on the correct device and that their shape
@@ -46,7 +46,7 @@ After having performed a step on the dual variables inside the
 admissible. It is possible to override the :py:meth:`~DenseMultiplier.project_`
 method in order to apply a custom projection to the multipliers.
 
-In the case of a :py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`,
+In the case of a :py:class:`~cooper.formulation.LagrangianFormulation`,
 the projection only affects the Lagrange multipliers associated with the inequality
 constraints.
 

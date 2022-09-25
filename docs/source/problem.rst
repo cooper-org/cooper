@@ -153,6 +153,9 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
     constraints (e.g. orthogonal or PSD matrices), you might consider using
     `GeoTorch <https://github.com/Lezcano/geotorch>`_.
 
+
+.. currentmodule:: cooper.formulation
+
 Formulation
 ~~~~~~~~~~~
 
