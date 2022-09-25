@@ -15,9 +15,9 @@ from typing import Callable, Dict, List, Optional, Type, Union
 
 import torch
 
-from .formulation import AugmentedLagrangianFormulation, Formulation
-from .problem import CMPState
-from .utils import validate_state_dicts
+from cooper.formulation import AugmentedLagrangianFormulation, Formulation
+from cooper.problem import CMPState
+from cooper.utils import validate_state_dicts
 
 
 @dataclass
