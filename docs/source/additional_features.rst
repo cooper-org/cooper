@@ -18,7 +18,7 @@ Alternating updates
 It is possible to perform alternating updates between the primal and dual
 parameters by setting the flag ``alternating=True`` in the construction of the
 :py:class:`ConstrainedOptimizer`. In this case, the gradient computed by calling
-:py:meth:`~cooper.Formulation.custom_backward` is used to update the
+:py:meth:`~cooper.formulation.Formulation.custom_backward` is used to update the
 primal parameters. Then, the gradient with respect to the dual variables (given
 the new value of the primal parameters!) is computed and used to update the dual
 variables. This two-stage process is handled by **Cooper** inside the
@@ -241,4 +241,4 @@ treated "as if they were a single optimizer". In particular, all primal optimize
 operations such as :py:meth:`optimizer.step()<torch.optim.Optimizer.step>` are
 executed simultaneously (without intermediate calls to
 :py:meth:`cmp.closure()<cooper.problem.ConstrainedMinimizationProblem.closure>` or
-:py:meth:`formulation.custom_backward(lagrangian)<cooper.Formulation.custom_backward>`).
+:py:meth:`formulation.custom_backward(lagrangian)<cooper.formulation.Formulation.custom_backward>`).

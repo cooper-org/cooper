@@ -69,7 +69,7 @@ class ConstrainedOptimizerState:
 class ConstrainedOptimizer:
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    given its :py:class:`~cooper.Formulation`.
+    given its :py:class:`~cooper.formulation.Formulation`.
 
     A ``ConstrainedOptimizer`` includes one or more
     :class:`torch.optim.Optimizer`\\s for the primal variables and potentially
@@ -79,7 +79,7 @@ class ConstrainedOptimizer:
     A ``ConstrainedOptimizer`` can be used on constrained or unconstrained
     ``ConstrainedMinimizationProblem``\\s. Please refer to the documentation
     of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
-    :py:class:`~cooper.Formulation` classes for further details on
+    :py:class:`~cooper.formulation.Formulation` classes for further details on
     handling unconstrained problems.
 
     Args:

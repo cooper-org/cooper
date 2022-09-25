@@ -8,7 +8,7 @@ Multipliers
 .. note::
 
     Multipliers are mostly handled internally by the
-    :py:class:`~cooper.Formulation`\s. This handling includes:
+    :py:class:`~cooper.formulation.Formulation`\s. This handling includes:
 
     - Their initialization in the
       :py:meth:`~cooper.formulation.lagrangian.BaseLagrangianFormulation.create_state`
@@ -17,8 +17,8 @@ Multipliers
       defects provided by the :py:class:`~cooper.problem.CMPState` of the
       considered :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
     - Using them for computing Lagrangians in the
-      :py:meth:`~cooper.formulation.LagrangianFormulation.composite_objective`
-      method of :py:class:`~cooper.formulation.LagrangianFormulation`.
+      :py:meth:`~cooper.formulation.lagrangian.LagrangianFormulation.composite_objective`
+      method of :py:class:`~cooper.formulation.lagrangian.LagrangianFormulation`.
 
 Constructing a DenseMultiplier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -46,7 +46,7 @@ After having performed a step on the dual variables inside the
 admissible. It is possible to override the :py:meth:`~DenseMultiplier.project_`
 method in order to apply a custom projection to the multipliers.
 
-In the case of a :py:class:`~cooper.formulation.LagrangianFormulation`,
+In the case of a :py:class:`~cooper.formulation.lagrangian.LagrangianFormulation`,
 the projection only affects the Lagrange multipliers associated with the inequality
 constraints.
 
@@ -61,7 +61,7 @@ constraints, while ``positive=False`` corresponds to equality constraints.
 Extensions
 ^^^^^^^^^^
 
-Certain optimization problems comprise a very large number of constraints. For
+Certain optimization problems involve a very large number of constraints. For
 example, in a learning task one might impose a constraint *per data-point*.
 In these settings, explicitly maintaining one Lagrange multiplier per constraint
 becomes impractical :cite:p:`narasimhan2020multiplier`. We provide a
