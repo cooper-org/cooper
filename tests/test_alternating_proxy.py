@@ -2,8 +2,6 @@
 
 """Tests for Constrained Optimizer class."""
 
-import pdb
-
 import cooper_test_utils
 import pytest
 import torch

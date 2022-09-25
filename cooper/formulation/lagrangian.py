@@ -1,7 +1,6 @@
 """Lagrangian formulation"""
 
 import abc
-import pdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_check
 
 import torch

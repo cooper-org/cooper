@@ -8,7 +8,6 @@ methods:
 - :py:meth:`~ConstrainedOptimizer.step`
 """
 
-import pdb
 import warnings
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Type, Union

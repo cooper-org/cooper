@@ -1,6 +1,5 @@
 """Lagrangian formulation"""
 
-import pdb
 from typing import Callable, Optional, no_type_check
 
 import torch

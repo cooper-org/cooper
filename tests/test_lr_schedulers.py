@@ -2,8 +2,6 @@
 
 """Tests for LR schedulers."""
 
-import pdb
-
 import cooper_test_utils
 import pytest
 import torch

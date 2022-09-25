@@ -3,7 +3,6 @@
 """Tests for Augmented Lagrangian Formulation class."""
 
 import functools
-import pdb
 
 import cooper_test_utils
 import pytest
