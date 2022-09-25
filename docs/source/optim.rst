@@ -8,8 +8,6 @@ Optim Module
 Partial optimizer instantiation
 -------------------------------
 
-.. automethod:: cooper.optim.partial_optimizer
-
 When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`, the
 ``dual_optimizer`` parameter is expected to be a
 :py:class:`torch.optim.Optimizer` for which the ``params`` argument has **not
@@ -21,6 +19,83 @@ configuration for your ``dual_optimizer``\'s hyperparameters (e.g. learning
 rate, momentum, etc.)
 
 .. automethod:: cooper.optim.partial_optimizer
+
+Learning rate schedulers
+------------------------
+
+**Cooper** supports learning rate schedulers for the primal and dual optimizers.
+Recall that **Cooper** handles the primal and dual optimizers in slightly
+different ways: the primal optimizer is "fully" instantiated by the user, while
+we expect a "partially" instantiated dual optimizer. We follow a similar pattern
+for the learning rate schedulers.
+
+**Example:**
+
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 7,8,10,15
+
+        from torch.optim.lr_scheduler import StepLR, ExponentialLR
+
+        ...
+        primal_optimizer = torch.optim.SGD(...)
+        dual_optimizer = cooper.optim.partial_optimizer(...)
+
+        primal_scheduler = StepLR(primal_optimizer, step_size=1, gamma=0.1)
+        dual_scheduler = cooper.optim.partial_scheduler(ExponentialLR, **scheduler_kwargs)
+
+        const_optim = cooper.ConstrainedOptimizer(..., primal_optimizer, dual_optimizer, dual_scheduler)
+
+        for step in range(num_steps):
+            ...
+            const_optim.step() # Cooper calls dual_scheduler.step() internally
+            primal_scheduler.step()  # You must call this explicitly
+
+Primal learning rate scheduler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _primal_lr_scheduler:
+
+You must instantiate the scheduler for the learning rate used by each
+``primal_optimizer`` and call the scheduler's ``step`` method explicitly, as is
+usual in Pytorch. See :py:mod:`torch.optim.lr_scheduler` for details.
+
+Dual learning rate scheduler
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _dual_lr_scheduler:
+
+When constructing a
+:py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+the ``dual_scheduler`` parameter is expected to be a *partially instantiated*
+learning rate scheduler from Pytorch, for which the ``optimizer`` argument has
+**not yet** been passed. The :py:meth:`cooper.optim.partial_scheduler` method
+allows you to provide a  configuration for your ``dual_scheduler``\'s
+hyperparameters. The rest of the instantiation of the ``dual_scheduler`` is
+managed internally by **Cooper**.
+
+.. note::
+
+    The call to the ``step()`` method of the dual optimizer is handled
+    internally by **Cooper**. However, you must perform the call to the dual
+    scheduler's ``step`` method manually. This will usually come after several
+    calls to :py:meth:`cooper.constrained_optimizer.ConstrainedOptimizer.step`.
+
+    The reasoning behind this design is to provide you, the user, with greater
+    visibility and control on the dual learning rate scheduler. For example, you
+    might want to synchronize the changes in the dual learning rate scheduler
+    depending on the number of training epochs ellapsed so far.
+
+    This flexibility is also desirable when using an
+    :ref:`Augmented Lagrangian Formulation<augmented_lagrangian_formulation>`,
+    since the penalty coefficient for the augmented Lagrangian can be controlled
+    directly via the dual learning rate scheduler.
+
+
+``PartialScheduler`` Class
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automethod:: cooper.optim.partial_scheduler
 
 
 .. _extra-gradient_optimizers:
@@ -126,80 +201,3 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
 .. autoclass:: ExtraAdam
     :members:
-
-Learning rate schedulers
-------------------------
-
-**Cooper** supports learning rate schedulers for the primal and dual optimizers.
-Recall that **Cooper** handles the primal and dual optimizers in slightly
-different ways: the primal optimizer is "fully" instantiated by the user, while
-we expect a "partially" instantiated dual optimizer. We follow a similar pattern
-for the learning rate schedulers.
-
-**Example:**
-
-    .. code-block:: python
-        :linenos:
-        :emphasize-lines: 7,8,10,15
-
-        from torch.optim.lr_scheduler import StepLR, ExponentialLR
-
-        ...
-        primal_optimizer = torch.optim.SGD(...)
-        dual_optimizer = cooper.optim.partial_optimizer(...)
-
-        primal_scheduler = StepLR(primal_optimizer, step_size=1, gamma=0.1)
-        dual_scheduler = cooper.optim.partial_scheduler(ExponentialLR, **scheduler_kwargs)
-
-        const_optim = cooper.ConstrainedOptimizer(..., primal_optimizer, dual_optimizer, dual_scheduler)
-
-        for step in range(num_steps):
-            ...
-            const_optim.step() # Cooper calls dual_scheduler.step() internally
-            primal_scheduler.step()  # You must call this explicitly
-
-Primal learning rate scheduler
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _primal_lr_scheduler:
-
-You must instantiate the scheduler for the learning rate used by each
-``primal_optimizer`` and call the scheduler's ``step`` method explicitly, as is
-usual in Pytorch. See :py:mod:`torch.optim.lr_scheduler` for details.
-
-Dual learning rate scheduler
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. _dual_lr_scheduler:
-
-When constructing a
-:py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
-the ``dual_scheduler`` parameter is expected to be a *partially instantiated*
-learning rate scheduler from Pytorch, for which the ``optimizer`` argument has
-**not yet** been passed. The :py:meth:`cooper.optim.partial_scheduler` method
-allows you to provide a  configuration for your ``dual_scheduler``\'s
-hyperparameters. The rest of the instantiation of the ``dual_scheduler`` is
-managed internally by **Cooper**.
-
-.. note::
-
-    The call to the ``step()`` method of the dual optimizer is handled
-    internally by **Cooper**. However, you must perform the call to the dual
-    scheduler's ``step`` method manually. This will usually come after several
-    calls to :py:meth:`cooper.constrained_optimizer.ConstrainedOptimizer.step`.
-
-    The reasoning behind this design is to provide you, the user, with greater
-    visibility and control on the dual learning rate scheduler. For example, you
-    might want to synchronize the changes in the dual learning rate scheduler
-    depending on the number of training epochs ellapsed so far.
-
-    This flexibility is also desirable when using an
-    :ref:`Augmented Lagrangian Formulation<augmented_lagrangian_formulation>`,
-    since the penalty coefficient for the augmented Lagrangian can be controlled
-    directly via the dual learning rate scheduler.
-
-
-``PartialScheduler`` Class
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automethod:: cooper.optim.partial_scheduler
