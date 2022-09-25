@@ -22,6 +22,6 @@ from cooper.formulation import (
     UnconstrainedFormulation,
 )
 from cooper.problem import CMPState, ConstrainedMinimizationProblem
-from cooper.state_logger import StateLogger
+from cooper.utils import StateLogger
 
 from . import formulation, optim, utils

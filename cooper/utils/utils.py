@@ -1,12 +1,16 @@
 import logging
 from collections.abc import Iterable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 import torch
 
 
-def compare_values(val1, val2):
+def compare_values(val1: Any, val2: Any) -> bool:
+    """
+    Compares whether two objects match. Can be applied to tensors, iterables, or dicts.
+    """
 
     if isinstance(val1, torch.Tensor) and isinstance(val2, torch.Tensor):
         # convert both to the same CUDA device
@@ -32,7 +36,10 @@ def compare_values(val1, val2):
         return val1 == val2
 
 
-def validate_state_dicts(model_state_dict_1, model_state_dict_2):
+def validate_state_dicts(model_state_dict_1: dict, model_state_dict_2: dict) -> bool:
+    """
+    Verifies whether two state_dicts match.
+    """
     # Edited from: https://gist.github.com/rohan-varma/a0a75e9a0fbe9ccc7420b04bff4a7212
 
     if model_state_dict_1 is None and model_state_dict_2 is None:
