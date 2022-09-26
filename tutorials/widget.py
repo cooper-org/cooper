@@ -162,7 +162,7 @@ class Toy2DWidget:
         display(VBox([controls, output]))
 
         # ------------------------------ Initialize the CMP and its formulation
-        self.cmp = cmp_class(is_constrained=True)
+        self.cmp = cmp_class()
         self.formulation = cooper.LagrangianFormulation(self.cmp)
 
         # # Run the update a first time

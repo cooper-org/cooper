@@ -15,11 +15,18 @@ except PackageNotFoundError:
 
     warnings.warn("Could not retrieve cooper version!")
 
-from cooper.constrained_optimizer import ConstrainedOptimizer
 from cooper.formulation import (
     Formulation,
     LagrangianFormulation,
     UnconstrainedFormulation,
+)
+from cooper.optim import (
+    AlternatingConstrainedOptimizer,
+    ConstrainedOptimizer,
+    CooperOptimizer,
+    ExtrapolationConstrainedOptimizer,
+    SimultaneousConstrainedOptimizer,
+    UnconstrainedOptimizer,
 )
 from cooper.problem import CMPState, ConstrainedMinimizationProblem
 from cooper.utils import StateLogger

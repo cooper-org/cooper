@@ -101,11 +101,6 @@ class UnconstrainedFormulation(Formulation):
     ):
         """Construct new `UnconstrainedFormulation`"""
 
-        assert (
-            not cmp.is_constrained
-        ), "Trying to create an unconstrained formulation but a constrained \
-            problem was provided."
-
         self.cmp = cmp
 
     def create_state(self):

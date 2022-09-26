@@ -45,18 +45,9 @@ class CMPState:
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
-    """
-    Base class for constrained minimization problems.
+    """Base class for constrained minimization problems."""
 
-    Args:
-        is_constrained: We request the problem to be explicitly declared as
-            constrained or unconstrained to perform sanity checks when
-            initializing the :py:class:`~cooper.ConstrainedOptimizer`. Defaults
-            to ``False``.
-    """
-
-    def __init__(self, is_constrained: bool = False):
-        self.is_constrained = is_constrained
+    def __init__(self):
         self._state = CMPState()
 
     @property

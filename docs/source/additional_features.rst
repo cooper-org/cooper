@@ -1,4 +1,4 @@
-.. currentmodule:: cooper.constrained_optimizer
+.. currentmodule:: cooper.optim.constrained_optimizer
 
 Additional features
 -------------------
@@ -6,7 +6,7 @@ Additional features
 In this section we provide details on using "advanced features" such as
 alternating updates, the Augmented Lagrangian method or dual restarts, in
 conjunction with a
-:py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`.
+:py:class:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer`.
 
 --------------------------------------------------------------------------------
 
@@ -231,7 +231,7 @@ constraint was being violated in the past.
 Multiple primal optimizers
 --------------------------
 
-When constructing a :py:class:`~cooper.constrained_optimizer.ConstrainedOptimizer`,
+When constructing a :py:class:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer`,
 one or multiple primal optimizers (grouped in a list) can be provided. Allowing
 for multiple primal optimizers is useful when setting separate groups of primal
 variables to have different optimizer classes and hyperparameters.

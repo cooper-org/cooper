@@ -15,7 +15,7 @@ import cooper
 def test_augmented_lagrangian_formulation():
     class DummyCMP(cooper.ConstrainedMinimizationProblem):
         def __init__(self):
-            super().__init__(is_constrained=True)
+            super().__init__()
 
         def closure(self):
             pass

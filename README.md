@@ -47,7 +47,7 @@ import cooper
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, mean_constraint):
         self.mean_constraint = mean_constraint
-        super().__init__(is_constrained=True)
+        super().__init__()
 
     def closure(self, probs):
         # Verify domain of definition of the functions
@@ -78,7 +78,7 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
 
 # Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-constrained_optimizer = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
+constrained_optimizer = cooper.ExtrapolationConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
 # Here is the actual training loop.
 # The steps follow closely the `loss -> backward -> step` Pytorch workflow.
 for iter_num in range(5000):

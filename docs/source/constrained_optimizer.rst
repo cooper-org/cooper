@@ -1,7 +1,7 @@
 Constrained Optimizer
 =====================
 
-.. currentmodule:: cooper.constrained_optimizer
+.. currentmodule:: cooper.optim.constrained_optimizers.constrained_optimizer
 
 How to use a ``ConstrainedOptimizer``
 -------------------------------------
@@ -62,12 +62,12 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
         :linenos:
 
         model =  ModelClass(...)
-        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
+        cmp = cooper.ConstrainedMinimizationProblem()
         formulation = cooper.formulation.Formulation(...)
 
         primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
-        constrained_optimizer = cooper.ConstrainedOptimizer(
+        constrained_optimizer = cooper.UnconstrainedOptimizer(
             formulation=formulation,
             primal_optimizers=primal_optimizer,
         )
@@ -76,17 +76,17 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
     .. code-block:: python
         :linenos:
-        :emphasize-lines: 2,7,12
+        :emphasize-lines: 7,9,12
 
         model =  ModelClass(...)
-        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
+        cmp = cooper.ConstrainedMinimizationProblem()
         formulation = cooper.formulation.Formulation(...)
 
         primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # Note that dual_optimizer is "partly instantiated", *without* parameters
         dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3, momentum=0.9)
 
-        constrained_optimizer = cooper.ConstrainedOptimizer(
+        constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
             formulation=formulation,
             primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
