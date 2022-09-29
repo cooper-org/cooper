@@ -1,6 +1,5 @@
 import abc
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict
 
 import torch
 
@@ -11,21 +10,8 @@ from cooper.problem import CMPState, ConstrainedMinimizationProblem
 # https://github.com/google-research/tensorflow_constrained_optimization
 
 
-@dataclass
-class FormulationState:
-    """Represents the "state" of a Formulation. This is used for checkpointing.
-
-    Args:
-        dual_parameters: Trainable parameters for the formulation.
-        is_state_created: Whether the formulation state has been created.
-        state
-    """
-
-    dual_parameters: Optional[List[torch.Tensor]]
-
-
 class Formulation(abc.ABC):
-    """Base class for Lagrangian formulations."""
+    """Base class for formulations of CMPs."""
 
     def __init__(self):
         self.cmp = None
@@ -78,10 +64,6 @@ class Formulation(abc.ABC):
         method ``backward`` as it is a method of the ``LagrangianFormulation``
         object and not a method of a :py:class:`torch.Tensor` as is standard in
         Pytorch.
-
-        Args:
-            lagrangian: Value of the computed Lagrangian based on which the
-                gradients for the primal and dual variables are populated.
         """
         self._populate_gradients(*args, **kwargs)
 
@@ -95,10 +77,7 @@ class UnconstrainedFormulation(Formulation):
             to solve and which gives rise to the Lagrangian.
     """
 
-    def __init__(
-        self,
-        cmp: ConstrainedMinimizationProblem,
-    ):
+    def __init__(self, cmp: ConstrainedMinimizationProblem):
         """Construct new `UnconstrainedFormulation`"""
 
         self.cmp = cmp
@@ -121,6 +100,20 @@ class UnconstrainedFormulation(Formulation):
         """Returns ``None`` as there are no trainable dual parameters in an
         unconstrained formulation."""
         return None
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Generates the state dictionary for an unconstrained formulation.
+        """
+
+        return {}
+
+    def load_state_dict(self, state_dict: dict):
+        """
+        Loads the state dictionary for an unconstrained formulation. Since
+        unconstrained formulations are stateless, this is a no-op.
+        """
+        pass
 
     def composite_objective(
         self,
@@ -159,17 +152,3 @@ class UnconstrainedFormulation(Formulation):
             loss: Loss tensor for computing gradients for primal variables.
         """
         loss.backward()
-
-    def state_dict(self) -> Dict[str, Any]:
-        """
-        Generates the state dictionary for an unconstrained formulation.
-        """
-
-        return {}
-
-    def load_state_dict(self, state_dict: dict):
-        """
-        Loads the state dictionary for an unconstrained formulation. Since
-        unconstrained formulations are stateless, this is a no-op.
-        """
-        pass

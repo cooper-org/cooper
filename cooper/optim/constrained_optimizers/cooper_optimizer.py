@@ -24,8 +24,6 @@ class CooperOptimizerState:
     the dual scheduler if applicable. This is used for checkpointing.
 
     This class focuses on the state of the primal (and dual) optimizers involved.
-    In contrast, the :py:class:`cooper.formulation.FormulationState`, focuses on
-    the current values of the dual variables directly.
 
     Args:
         primal_optimizer_states: State dict for the primal optimizers.
