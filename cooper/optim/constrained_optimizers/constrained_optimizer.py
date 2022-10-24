@@ -3,14 +3,9 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
-import abc
 import warnings
-from typing import Callable, Dict, List, Optional, Type, Union
 
-import torch
-
-from cooper.formulation import AugmentedLagrangianFormulation, Formulation
-from cooper.problem import CMPState
+from cooper.formulation import AugmentedLagrangianFormulation
 
 from .cooper_optimizer import CooperOptimizer, CooperOptimizerState
 

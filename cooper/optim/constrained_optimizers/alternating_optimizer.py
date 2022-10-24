@@ -3,8 +3,7 @@
 Implementation of the :py:class:`AlternatingConstrainedOptimizer` class.
 """
 
-import warnings
-from typing import Callable, Dict, List, Optional, Type, Union
+from typing import Callable, List, Optional, Union
 
 import torch
 

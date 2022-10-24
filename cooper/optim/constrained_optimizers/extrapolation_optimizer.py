@@ -3,7 +3,7 @@
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Callable, List, Optional, Type, Union
+from typing import Callable, List, Optional, Union
 
 import torch
 
@@ -12,7 +12,6 @@ from cooper.optim.extra_optimizers import ExtragradientOptimizer
 from cooper.problem import CMPState
 
 from .constrained_optimizer import ConstrainedOptimizer
-from .cooper_optimizer import CooperOptimizerState
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
