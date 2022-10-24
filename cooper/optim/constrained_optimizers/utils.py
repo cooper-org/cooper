@@ -1,11 +1,11 @@
-from typing import List, Type, Union
+from typing import List, Optional, Type, Union
 
 import torch
 
 from cooper.formulation import Formulation
 
 from .alternating_optimizer import AlternatingConstrainedOptimizer
-from .cooper_optimizer import CooperOptimizerState
+from .cooper_optimizer import CooperOptimizer, CooperOptimizerState
 from .extrapolation_optimizer import ExtrapolationConstrainedOptimizer
 from .simultaneous_optimizer import SimultaneousConstrainedOptimizer
 from .unconstrained_optimizer import UnconstrainedOptimizer
@@ -14,47 +14,62 @@ from .unconstrained_optimizer import UnconstrainedOptimizer
 def create_optimizer_from_kwargs(
     formulation: Formulation,
     primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-    dual_optimizer: torch.optim.Optimizer,
-    dual_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    dual_optimizer: Optional[torch.optim.Optimizer],
+    dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
     extrapolation: bool,
     alternating: bool,
     dual_restarts: bool,
-):
+) -> CooperOptimizer:
+    """
+    Create a CooperOptimizer from a set of keyword arguments. This method
+    disambiguates the appropriate optimizer class to instantiate a new object.
 
-    if extrapolation:
-        return ExtrapolationConstrainedOptimizer(
-            formulation=formulation,
-            primal_optimizers=primal_optimizers,
-            dual_optimizer=dual_optimizer,
-            dual_scheduler=dual_scheduler,
-            dual_restarts=dual_restarts,
-        )
+    Args:
+        formulation: CMP formulation.
+        primal_optimizers: Fully instantiated optimizer(s) for the primal
+            variables.
+        dual_optimizer: Optional partially instantiated optimizer for the dual
+            variables.
+        dual_scheduler: Optional learning rate scheduler for the dual optimizer.
+        extrapolation: Whether the optimizer uses extrapolation.
+        alternating: Whether we perform alternating updates.
+        dual_restarts: Whether we perform restarts on the dual variables.
+    """
 
-    elif alternating:
-        return AlternatingConstrainedOptimizer(
-            formulation=formulation,
-            primal_optimizers=primal_optimizers,
-            dual_optimizer=dual_optimizer,
-            dual_scheduler=dual_scheduler,
-            dual_restarts=dual_restarts,
-        )
-
-    elif dual_optimizer is not None:
-        return SimultaneousConstrainedOptimizer(
-            formulation=formulation,
-            primal_optimizers=primal_optimizers,
-            dual_optimizer=dual_optimizer,
-            dual_scheduler=dual_scheduler,
-            dual_restarts=dual_restarts,
-        )
-
-    else:
+    if dual_optimizer is None:
         return UnconstrainedOptimizer(
-            formulation=formulation,
-            primal_optimizers=primal_optimizers,
+            formulation=formulation, primal_optimizers=primal_optimizers
         )
+    else:
+        if extrapolation:
+            return ExtrapolationConstrainedOptimizer(
+                formulation=formulation,
+                primal_optimizers=primal_optimizers,
+                dual_optimizer=dual_optimizer,
+                dual_scheduler=dual_scheduler,
+                dual_restarts=dual_restarts,
+            )
+
+        elif alternating:
+            return AlternatingConstrainedOptimizer(
+                formulation=formulation,
+                primal_optimizers=primal_optimizers,
+                dual_optimizer=dual_optimizer,
+                dual_scheduler=dual_scheduler,
+                dual_restarts=dual_restarts,
+            )
+
+        elif dual_optimizer is not None:
+            return SimultaneousConstrainedOptimizer(
+                formulation=formulation,
+                primal_optimizers=primal_optimizers,
+                dual_optimizer=dual_optimizer,
+                dual_scheduler=dual_scheduler,
+                dual_restarts=dual_restarts,
+            )
 
 
+# Generate an appropriate CooperOptimizer based on a CooperOptimizerState.
 def load_cooper_optimizer_from_state_dict(
     cooper_optimizer_state: CooperOptimizerState,
     formulation: Formulation,
@@ -62,11 +77,6 @@ def load_cooper_optimizer_from_state_dict(
     dual_optimizer_class: Type[torch.optim.Optimizer] = None,
     dual_scheduler_class: Type[torch.optim.lr_scheduler._LRScheduler] = None,
 ):
-    """
-    Generate an appropriate CooperOptimizer based on a CooperOptimizerState.
-    Args:
-        state_dict: state of the CooperOptimizer.
-    """
 
     if isinstance(primal_optimizers, torch.optim.Optimizer):
         primal_optimizers = [primal_optimizers]
