@@ -4,11 +4,11 @@ import torch
 
 from cooper.formulation import Formulation
 
+from ..unconstrained_optimizer import UnconstrainedOptimizer
 from .alternating_optimizer import AlternatingConstrainedOptimizer
 from .cooper_optimizer import CooperOptimizerState
 from .extrapolation_optimizer import ExtrapolationConstrainedOptimizer
 from .simultaneous_optimizer import SimultaneousConstrainedOptimizer
-from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def create_optimizer_from_kwargs(

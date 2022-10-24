@@ -5,7 +5,10 @@ import torch
 
 from cooper.formulation import Formulation, UnconstrainedFormulation
 
-from .cooper_optimizer import CooperOptimizer, CooperOptimizerState
+from .constrained_optimizers.cooper_optimizer import (
+    CooperOptimizer,
+    CooperOptimizerState,
+)
 
 
 class UnconstrainedOptimizer(CooperOptimizer):
