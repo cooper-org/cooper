@@ -1,4 +1,4 @@
-"""Utility functions for partial instantiation of dual optimizers and schedulers"""
+"""Utils for partial instantiation of dual optimizers and schedulers"""
 
 import functools
 from typing import Type, no_type_check

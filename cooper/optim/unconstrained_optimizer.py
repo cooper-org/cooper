@@ -3,7 +3,7 @@ from typing import List, Union
 
 import torch
 
-from cooper.formulation import Formulation, UnconstrainedFormulation
+from cooper.formulation import UnconstrainedFormulation
 
 from .constrained_optimizers.cooper_optimizer import (
     CooperOptimizer,

@@ -6,8 +6,6 @@ import cooper_test_utils
 import pytest
 import torch
 
-import cooper
-
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 def test_manual_alternating_proxy(aim_device):

@@ -5,7 +5,6 @@ for the unconstrained setting."""
 
 import os
 import tempfile
-from functools import partial
 
 # Import basic closure example from helpers
 import cooper_test_utils

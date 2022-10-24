@@ -7,8 +7,6 @@ import cooper_test_utils
 import pytest
 import torch
 
-import cooper
-
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
 @pytest.mark.parametrize("use_ineq", [True, False])

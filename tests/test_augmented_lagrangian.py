@@ -2,11 +2,8 @@
 
 """Tests for Augmented Lagrangian Formulation class."""
 
-import functools
-
 import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper

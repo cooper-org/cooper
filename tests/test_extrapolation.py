@@ -2,8 +2,6 @@
 
 """Tests for Extrapolation optimizers."""
 
-import functools
-
 # Import basic closure example from helpers
 import cooper_test_utils
 import pytest

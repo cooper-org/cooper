@@ -12,8 +12,6 @@ import abc
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-import torch
-
 from cooper.utils import validate_state_dicts
 
 
@@ -22,8 +20,6 @@ class CooperOptimizerState:
     """Represents the "state" of a Constrained Optimizer in terms of the state
     dicts of the primal optimizers, as well as those of the dual optimizer and
     the dual scheduler if applicable. This is used for checkpointing.
-
-    This class focuses on the state of the primal (and dual) optimizers involved.
 
     Args:
         primal_optimizer_states: State dict for the primal optimizers.

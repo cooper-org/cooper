@@ -3,16 +3,14 @@
 Implementation of the :py:class:`SimultaneousConstrainedOptimizer` class.
 """
 
-import warnings
-from typing import Callable, Dict, List, Optional, Type, Union
+from typing import Callable, List, Optional, Union
 
 import torch
 
-from cooper.formulation import AugmentedLagrangianFormulation, Formulation
+from cooper.formulation import Formulation
 from cooper.problem import CMPState
 
 from .constrained_optimizer import ConstrainedOptimizer
-from .cooper_optimizer import CooperOptimizerState
 
 
 class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
