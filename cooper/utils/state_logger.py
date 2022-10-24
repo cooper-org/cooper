@@ -2,7 +2,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import List
 
-from .problem import Formulation
+from cooper.formulation import Formulation
 
 
 class StateLogger:

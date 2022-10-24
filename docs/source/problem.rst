@@ -94,7 +94,7 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
         def __init__(self, problem_attributes, criterion):
             self.problem_attributes = problem_attributes
             self.criterion = criterion
-            super().__init__(is_constrained=True)
+            super().__init__()
 
         def closure(self, model, inputs, targets):
 
@@ -152,6 +152,9 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
     `CHOP <https://github.com/openopt/chop>`_. If your problems involves "manifold"
     constraints (e.g. orthogonal or PSD matrices), you might consider using
     `GeoTorch <https://github.com/Lezcano/geotorch>`_.
+
+
+.. currentmodule:: cooper.formulation
 
 Formulation
 ~~~~~~~~~~~

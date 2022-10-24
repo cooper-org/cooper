@@ -1,7 +1,7 @@
 State Logger
 ============
 
-.. currentmodule:: cooper.state_logger
+.. currentmodule:: cooper.utils.state_logger
 
 .. autoclass:: StateLogger
     :members:

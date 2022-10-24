@@ -2,12 +2,8 @@
 
 """Tests for Augmented Lagrangian Formulation class."""
 
-import functools
-import pdb
-
 import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper
@@ -16,14 +12,14 @@ import cooper
 def test_augmented_lagrangian_formulation():
     class DummyCMP(cooper.ConstrainedMinimizationProblem):
         def __init__(self):
-            super().__init__(is_constrained=True)
+            super().__init__()
 
         def closure(self):
             pass
 
     cmp = DummyCMP()
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp)
+    formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
     cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]))
     formulation.create_state(cmp.state)
 
@@ -31,7 +27,7 @@ def test_augmented_lagrangian_formulation():
         formulation.eq_multipliers is not None
     )
 
-    formulation = cooper.AugmentedLagrangianFormulation(cmp)
+    formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
     cmp.state = cooper.CMPState(
         eq_defect=torch.tensor([1.0]), ineq_defect=torch.tensor([1.0, 1.2])
     )
@@ -63,7 +59,7 @@ def test_convergence_augmented_lagrangian(aim_device):
         primal_optim_kwargs={"lr": 1e-2},
         dual_optim_kwargs={"lr": 1.0},
         dual_scheduler=dual_scheduler,
-        formulation_cls=cooper.AugmentedLagrangianFormulation,
+        formulation_cls=cooper.formulation.AugmentedLagrangianFormulation,
     )
 
     params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
@@ -117,7 +113,7 @@ def test_manual_augmented_lagrangian(aim_device):
         primal_optim_kwargs={"lr": 1e-2},
         dual_optim_kwargs={"lr": 1.0},
         dual_scheduler=dual_scheduler,
-        formulation_cls=cooper.AugmentedLagrangianFormulation,
+        formulation_cls=cooper.formulation.AugmentedLagrangianFormulation,
     )
 
     params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()

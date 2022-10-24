@@ -5,7 +5,6 @@ for the unconstrained setting."""
 
 import os
 import tempfile
-from functools import partial
 
 # Import basic closure example from helpers
 import cooper_test_utils
@@ -135,8 +134,8 @@ def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
         loaded_formulation = cooper.UnconstrainedFormulation(cmp)
     loaded_formulation.load_state_dict(form_state_dict_100)
 
-    loaded_coop = cooper.ConstrainedOptimizer.load_from_state_dict(
-        const_optim_state=coop_state_dict_100,
+    loaded_coop = cooper.optim.load_cooper_optimizer_from_state_dict(
+        cooper_optimizer_state=coop_state_dict_100,
         formulation=loaded_formulation,
         primal_optimizers=loaded_primal_optimizers,
         dual_optimizer_class=partial_dual_optim,

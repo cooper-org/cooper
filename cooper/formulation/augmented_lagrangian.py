@@ -1,12 +1,12 @@
 """Lagrangian formulation"""
 
-import pdb
 from typing import Callable, Optional, no_type_check
 
 import torch
 
-from .lagrangian_formulation import LagrangianFormulation
-from .problem import CMPState, ConstrainedMinimizationProblem
+from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
+from .lagrangian import LagrangianFormulation
 
 
 class AugmentedLagrangianFormulation(LagrangianFormulation):
@@ -32,11 +32,6 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         """Construct new `AugmentedLagrangianFormulation`"""
 
         super().__init__(cmp=cmp, ineq_init=ineq_init, eq_init=eq_init)
-
-        assert (
-            cmp.is_constrained
-        ), "Attempted to create an Augmented Lagrangian formulation for an unconstrained \
-            problem. Consider using an `UnconstrainedFormulation` instead."
 
     def weighted_violation(
         self, cmp_state: CMPState, constraint_type: str
@@ -157,7 +152,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         # Extract values from ProblemState object
         loss = cmp_state.loss
 
-        if self.cmp.is_constrained and (not self.is_state_created):
+        if not self.is_state_created:
             # If not done before, instantiate and initialize dual variables
             self.create_state(cmp_state)
 

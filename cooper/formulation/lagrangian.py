@@ -1,13 +1,14 @@
 """Lagrangian formulation"""
 
 import abc
-import pdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, no_type_check
 
 import torch
 
-from .multipliers import DenseMultiplier
-from .problem import CMPState, ConstrainedMinimizationProblem, Formulation
+from cooper.multipliers import DenseMultiplier
+from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
+from .formulation import Formulation
 
 
 class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
@@ -286,32 +287,26 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         # Extract values from ProblemState object
         loss = cmp_state.loss
 
-        if self.cmp.is_constrained and (not self.is_state_created):
+        if not self.is_state_created:
             # If not done before, instantiate and initialize dual variables
             self.create_state(cmp_state)
 
         # Purge previously accumulated constraint violations
         self.update_accumulated_violation(update=None)
 
-        # Compute Lagrangian based on current loss and values of multipliers
-        if self.cmp.is_constrained:
-            # Compute contribution of the constraint violations, weighted by the
-            # current multiplier values
+        # Compute contribution of the constraint violations, weighted by the
+        # current multiplier values
 
-            # If given proxy constraints, these are used to compute the terms
-            # added to the Lagrangian, and the multiplier updates are based on
-            # the non-proxy violations.
-            # If not given proxy constraints, then gradients and multiplier
-            # updates are based on the "regular" constraints.
-            ineq_viol = self.weighted_violation(cmp_state, "ineq")
-            eq_viol = self.weighted_violation(cmp_state, "eq")
+        # If given proxy constraints, these are used to compute the terms
+        # added to the Lagrangian, and the multiplier updates are based on
+        # the non-proxy violations.
+        # If not given proxy constraints, then gradients and multiplier
+        # updates are based on the "regular" constraints.
+        ineq_viol = self.weighted_violation(cmp_state, "ineq")
+        eq_viol = self.weighted_violation(cmp_state, "eq")
 
-            # Lagrangian = loss + \sum_i multiplier_i * defect_i
-            lagrangian = loss + ineq_viol + eq_viol
-
-        else:
-            assert cmp_state.loss is not None
-            lagrangian = cmp_state.loss
+        # Lagrangian = loss + \sum_i multiplier_i * defect_i
+        lagrangian = loss + ineq_viol + eq_viol
 
         return lagrangian
 
@@ -389,7 +384,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 variables are not populated.
         """
 
-        if ignore_primal and self.cmp.is_constrained:
+        if ignore_primal:
             # Only compute gradients wrt Lagrange multipliers
             # No need to call backward on Lagrangian as the dual variables have
             # been detached when computing the `weighted_violation`s
@@ -402,7 +397,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         # Fill in the gradients for the dual variables based on the violation of
         # the non-proxy constraints
-        if not (ignore_dual) and self.cmp.is_constrained:
+        if not ignore_dual:
             dual_vars = [_ for _ in self.state() if _ is not None]
             self.accumulated_violation_dot_prod.backward(inputs=dual_vars)
 

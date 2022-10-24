@@ -100,8 +100,9 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         self, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7
     ):
 
-        super().__init__(is_constrained=is_constrained)
+        super().__init__()
 
+        self.is_constrained = is_constrained
         self.const_level = const_level
         self.use_proxy = use_proxy
 
@@ -165,14 +166,18 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
         dual_optimizer = cooper.optim.partial_optimizer(
             torch.optim.SGD, lr=lr, momentum=0.7
         )
+
+        constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
+            formulation=formulation,
+            primal_optimizers=primal_optimizer,
+            dual_optimizer=dual_optimizer,
+        )
     else:
         dual_optimizer = None
 
-    constrained_optimizer = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizers=primal_optimizer,
-        dual_optimizer=dual_optimizer,
-    )
+        constrained_optimizer = cooper.UnconstrainedOptimizer(
+            formulation=formulation, primal_optimizers=primal_optimizer
+        )
 
     for i in range(num_iters):
         constrained_optimizer.zero_grad()

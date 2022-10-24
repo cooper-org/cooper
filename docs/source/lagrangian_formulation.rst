@@ -1,6 +1,6 @@
 .. _lagrangian_formulations:
 
-.. currentmodule:: cooper.lagrangian_formulation
+.. currentmodule:: cooper.formulation.lagrangian
 
 Lagrangian Formulations
 =======================
@@ -85,7 +85,7 @@ the existence of a pure Nash equilibrium is guaranteed :cite:p:`vonNeumann1928th
     :members:
 
 
-.. currentmodule:: cooper.augmented_lagrangian
+.. currentmodule:: cooper.formulation.augmented_lagrangian
 
 .. _augmented_lagrangian_formulation:
 
@@ -138,7 +138,7 @@ treatment of the Augmented Lagrangian method.
 
 
 
-.. currentmodule:: cooper.lagrangian_formulation
+.. currentmodule:: cooper.formulation.lagrangian
 
 Proxy-Lagrangian Formulation
 ----------------------------

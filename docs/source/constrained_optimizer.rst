@@ -1,7 +1,7 @@
 Constrained Optimizer
 =====================
 
-.. currentmodule:: cooper.constrained_optimizer
+.. currentmodule:: cooper.optim.constrained_optimizers.constrained_optimizer
 
 How to use a ``ConstrainedOptimizer``
 -------------------------------------
@@ -9,7 +9,7 @@ How to use a ``ConstrainedOptimizer``
 The :py:class:`ConstrainedOptimizer` class is the cornerstone of **Cooper**. A
 :py:class:`ConstrainedOptimizer` performs parameter updates to solve a
 :py:class:`~cooper.problem.ConstrainedMinimizationProblem` given a chosen
-:py:class:`~cooper.problem.Formulation`.
+:py:class:`~cooper.formulation.Formulation`.
 
 A ``ConstrainedOptimizer`` wraps a :py:class:`torch.optim.Optimizer`
 used for updating the "primal" parameters associated directly with the
@@ -19,13 +19,13 @@ you are training.
 Additionally, a ``ConstrainedOptimizer`` includes a second
 :py:class:`torch.optim.Optimizer`, which performs updates on the "dual"
 parameters (e.g. the multipliers used in a
-:py:class:`~cooper.lagrangian_formulation.LagrangianFormulation`).
+:py:class:`~cooper.formulation.LagrangianFormulation`).
 
 Construction
 ^^^^^^^^^^^^
 
 The main ingredients to build a ``ConstrainedOptimizer`` are a
-:py:class:`~cooper.problem.Formulation` (associated with a
+:py:class:`~cooper.formulation.Formulation` (associated with a
 :py:class:`~cooper.problem.ConstrainedMinimizationProblem`) and a
 :py:class:`torch.optim.Optimizer` corresponding to a ``primal_optimizer``.
 
@@ -62,12 +62,12 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
         :linenos:
 
         model =  ModelClass(...)
-        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=False)
-        formulation = cooper.problem.Formulation(...)
+        cmp = cooper.ConstrainedMinimizationProblem()
+        formulation = cooper.formulation.Formulation(...)
 
         primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
-        constrained_optimizer = cooper.ConstrainedOptimizer(
+        constrained_optimizer = cooper.UnconstrainedOptimizer(
             formulation=formulation,
             primal_optimizers=primal_optimizer,
         )
@@ -76,17 +76,17 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
 
     .. code-block:: python
         :linenos:
-        :emphasize-lines: 2,7,12
+        :emphasize-lines: 7,9,12
 
         model =  ModelClass(...)
-        cmp = cooper.ConstrainedMinimizationProblem(is_constrained=True)
-        formulation = cooper.problem.Formulation(...)
+        cmp = cooper.ConstrainedMinimizationProblem()
+        formulation = cooper.formulation.Formulation(...)
 
         primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # Note that dual_optimizer is "partly instantiated", *without* parameters
         dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3, momentum=0.9)
 
-        constrained_optimizer = cooper.ConstrainedOptimizer(
+        constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
             formulation=formulation,
             primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,
@@ -110,8 +110,8 @@ will involve the following steps:
 
     #. (Optional) Iterate over your dataset and sample of mini-batch.
     #. Call :py:meth:`constrained_optimizer.zero_grad()<zero_grad>` to reset the parameters' gradients
-    #. Compute the current :py:class:`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using :py:meth:`lagrangian.composite_objective(cmp.closure, ...)<cooper.lagrangian_formulation.LagrangianFormulation.composite_objective>`.
-    #. Populate the primal and dual gradients with :py:meth:`formulation.custom_backward(lagrangian)<cooper.problem.Formulation.custom_backward>`
+    #. Compute the current :py:class:`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using :py:meth:`lagrangian.composite_objective(cmp.closure, ...)<cooper.formulation.LagrangianFormulation.composite_objective>`.
+    #. Populate the primal and dual gradients with :py:meth:`formulation.custom_backward(lagrangian)<cooper.formulation.Formulation.custom_backward>`
     #. Perform updates on the parameters using the primal and dual optimizers based on the recently computed gradients, via a call to :py:meth:`constrained_optimizer.step()<step>`.
 
 Example

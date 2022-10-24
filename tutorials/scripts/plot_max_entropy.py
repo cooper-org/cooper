@@ -28,7 +28,7 @@ np.random.seed(0)
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, mean_constraint):
         self.mean_constraint = mean_constraint
-        super().__init__(is_constrained=True)
+        super().__init__()
 
     def closure(self, probs):
         # Verify domain of definition of the functions
@@ -64,8 +64,10 @@ dual_optimizer = cooper.optim.partial_optimizer(
     cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7
 )
 
-# Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-coop = cooper.ConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
+# Wrap the formulation and both optimizers inside a SimultaneousConstrainedOptimizer
+coop = cooper.ExtrapolationConstrainedOptimizer(
+    formulation, primal_optimizer, dual_optimizer
+)
 
 state_history = cooper.StateLogger(save_metrics=["loss", "eq_defect", "eq_multipliers"])
 

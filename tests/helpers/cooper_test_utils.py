@@ -1,8 +1,8 @@
 """Cooper-related utilities for writing tests."""
 
 import functools
-from types import GeneratorType
 from dataclasses import dataclass
+from types import GeneratorType
 from typing import Union
 
 import pytest
@@ -17,7 +17,7 @@ class TestProblemData:
     params: Union[torch.Tensor, torch.nn.Module]
     cmp: cooper.ConstrainedMinimizationProblem
     coop: cooper.ConstrainedOptimizer
-    formulation: cooper.problem.Formulation
+    formulation: cooper.Formulation
     device: torch.device
     mktensor: callable
 
@@ -85,14 +85,17 @@ def build_test_problem(
         dual_optimizer = None
         formulation = cooper.UnconstrainedFormulation(cmp)
 
-    coop = cooper.ConstrainedOptimizer(
-        formulation=formulation,
-        primal_optimizers=primal_optimizers,
-        dual_optimizer=dual_optimizer,
-        dual_scheduler=dual_scheduler,
-        dual_restarts=dual_restarts,
-        alternating=alternating,
-    )
+    cooper_optimizer_kwargs = {
+        "formulation": formulation,
+        "primal_optimizers": primal_optimizers,
+        "dual_optimizer": dual_optimizer,
+        "dual_scheduler": dual_scheduler,
+        "extrapolation": "Extra" in str(primal_optimizers[0]),
+        "alternating": alternating,
+        "dual_restarts": dual_restarts,
+    }
+
+    coop = cooper.optim.create_optimizer_from_kwargs(**cooper_optimizer_kwargs)
 
     # Helper function to instantiate tensors in correct device
     mktensor = functools.partial(torch.tensor, device=device)
@@ -127,7 +130,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     def __init__(self, use_ineq=False, use_proxy_ineq=False):
         self.use_ineq = use_ineq
         self.use_proxy_ineq = use_proxy_ineq
-        super().__init__(is_constrained=self.use_ineq)
+        super().__init__()
 
     def eval_params(self, params):
         if isinstance(params, torch.nn.Module):
