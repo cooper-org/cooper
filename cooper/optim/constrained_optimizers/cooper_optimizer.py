@@ -9,7 +9,7 @@ methods:
 """
 
 import abc
-from dataclasses import dataclass
+import dataclasses
 from typing import Dict, List, Optional
 
 import torch
@@ -17,7 +17,7 @@ import torch
 from cooper.utils import validate_state_dicts
 
 
-@dataclass
+@dataclasses.dataclass
 class CooperOptimizerState:
     """Represents the "state" of a Constrained Optimizer in terms of the state
     dicts of the primal optimizers, as well as those of the dual optimizer and
@@ -62,6 +62,9 @@ class CooperOptimizerState:
         all_checks.append(self.dual_restarts == other.dual_restarts)
 
         return all(all_checks)
+
+    def asdict(self):
+        return dataclasses.asdict(self)
 
 
 class CooperOptimizer(abc.ABC):
