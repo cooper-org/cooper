@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 import torch
 
@@ -13,8 +13,8 @@ from cooper.problem import CMPState, ConstrainedMinimizationProblem
 class Formulation(abc.ABC):
     """Base class for formulations of CMPs."""
 
-    def __init__(self):
-        self.cmp = None
+    def __init__(self, cmp: Optional[ConstrainedMinimizationProblem] = None):
+        self.cmp = cmp
 
     @abc.abstractmethod
     def state_dict(self) -> Dict[str, Any]:
@@ -67,6 +67,18 @@ class Formulation(abc.ABC):
         """
         self._populate_gradients(*args, **kwargs)
 
+    def write_cmp_state(self, cmp_state: CMPState):
+        """Provided that the formulation is linked to a
+        `ConstrainedMinimizationProblem`, writes a CMPState to the CMP."""
+
+        if self.cmp is None:
+            raise ValueError(
+                """Cannot write state to a formulation which is not linked to a
+                ConstrainedMinimizationProblem"""
+            )
+
+        self.cmp.state = cmp_state
+
 
 class UnconstrainedFormulation(Formulation):
     """
@@ -77,7 +89,7 @@ class UnconstrainedFormulation(Formulation):
             to solve and which gives rise to the Lagrangian.
     """
 
-    def __init__(self, cmp: ConstrainedMinimizationProblem):
+    def __init__(self, cmp: Optional[ConstrainedMinimizationProblem] = None):
         """Construct new `UnconstrainedFormulation`"""
 
         self.cmp = cmp
@@ -138,8 +150,9 @@ class UnconstrainedFormulation(Formulation):
         """
 
         cmp_state = closure(*closure_args, **closure_kwargs)
-        if write_state:
-            self.cmp.state = cmp_state
+
+        if write_state and self.cmp is not None:
+            self.write_cmp_state(cmp_state)
 
         return cmp_state.loss
 

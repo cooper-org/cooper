@@ -28,7 +28,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
 
     def __init__(
         self,
-        cmp: ConstrainedMinimizationProblem,
+        cmp: Optional[ConstrainedMinimizationProblem] = None,
         ineq_init: Optional[torch.Tensor] = None,
         eq_init: Optional[torch.Tensor] = None,
     ):
@@ -281,8 +281,8 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         else:
             cmp_state = closure(*closure_args, **closure_kwargs)
 
-        if write_state:
-            self.cmp.state = cmp_state
+        if write_state and self.cmp is not None:
+            self.write_cmp_state(cmp_state)
 
         # Extract values from ProblemState object
         loss = cmp_state.loss
