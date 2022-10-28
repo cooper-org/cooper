@@ -50,7 +50,7 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         self,
         formulation: Formulation,
         primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-        dual_optimizer: Optional[torch.optim.Optimizer] = None,
+        dual_optimizer: torch.optim.Optimizer,
         dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
         dual_restarts: bool = False,
     ):

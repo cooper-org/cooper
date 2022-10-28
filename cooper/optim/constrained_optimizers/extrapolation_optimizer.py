@@ -51,7 +51,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         self,
         formulation: Formulation,
         primal_optimizers: Union[List[ExtragradientOptimizer], ExtragradientOptimizer],
-        dual_optimizer: Optional[ExtragradientOptimizer],
+        dual_optimizer: ExtragradientOptimizer,
         dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
         dual_restarts: bool = False,
     ):
