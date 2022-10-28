@@ -104,7 +104,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         closure: Callable[..., CMPState] = None,
         *closure_args,
         pre_computed_state: Optional[CMPState] = None,
-        write_state: bool = True,
+        write_state: Optional[bool] = True,
         **closure_kwargs
     ) -> torch.Tensor:
         """

@@ -72,7 +72,7 @@ class Formulation(abc.ABC):
         `ConstrainedMinimizationProblem`, writes a CMPState to the CMP."""
 
         if self.cmp is None:
-            raise ValueError(
+            raise RuntimeError(
                 """Cannot write state to a formulation which is not linked to a
                 ConstrainedMinimizationProblem"""
             )
@@ -131,7 +131,7 @@ class UnconstrainedFormulation(Formulation):
         self,
         closure: Callable[..., CMPState],
         *closure_args,
-        write_state: bool = True,
+        write_state: Optional[bool] = True,
         **closure_kwargs
     ) -> torch.Tensor:
         """
