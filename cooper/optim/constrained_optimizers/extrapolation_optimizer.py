@@ -56,7 +56,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         dual_restarts: bool = False,
     ):
         self.formulation = formulation
-        self.cmp = self.formulation.cmp
 
         if isinstance(primal_optimizers, ExtragradientOptimizer):
             self.primal_optimizers = [primal_optimizers]

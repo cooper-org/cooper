@@ -55,7 +55,6 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         dual_restarts: bool = False,
     ):
         self.formulation = formulation
-        self.cmp = self.formulation.cmp
 
         if isinstance(primal_optimizers, torch.optim.Optimizer):
             self.primal_optimizers = [primal_optimizers]
