@@ -125,7 +125,7 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
 
         # Not passing lagrangian since we only want to update the gradients for
         # the dual variables
-        self.formulation._populate_gradients(
+        self.formulation.backward(
             lagrangian=None, ignore_primal=True, ignore_dual=False
         )
 

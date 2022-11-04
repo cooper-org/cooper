@@ -250,13 +250,13 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         If no explicit proxy-constraints are provided, we use the given
         inequality/equality constraints to compute the Lagrangian and to
         populate the primal and dual gradients. Note that gradients are _not_
-        populated by this function, but rather :py:meth:`._populate_gradient`.
+        populated by this function, but rather :py:meth:`.backward`.
 
         In case proxy constraints are provided in the CMPState, the non-proxy
         constraints (potentially non-differentiable) are used for computing the
         value of the Lagrangian. The accumulated proxy-constraints are used in
         the backward computation triggered by
-        :py:meth:`._populate_gradient` (and thus must be differentiable).
+        :py:meth:`.backward` (and thus must be differentiable).
 
         Args:
             closure: Callable returning a :py:class:`cooper.problem.CMPState`
@@ -361,7 +361,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
         return proxy_violation
 
     @no_type_check
-    def _populate_gradients(
+    def backward(
         self,
         lagrangian: torch.Tensor,
         ignore_primal: bool = False,

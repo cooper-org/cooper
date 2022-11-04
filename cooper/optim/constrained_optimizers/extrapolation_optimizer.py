@@ -174,7 +174,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         )  # type: ignore
 
         # Populate gradients at extrapolation point
-        self.formulation.custom_backward(lagrangian)
+        self.formulation.backward(lagrangian)
 
         # After this, the calls to `step` will update the stored copies with
         # the newly computed gradients

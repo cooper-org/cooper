@@ -22,7 +22,7 @@ def train_for_n_steps(coop, cmp, params, n_step=100):
 
         # When using the unconstrained formulation, lagrangian = loss
         lagrangian = coop.formulation.composite_objective(cmp.closure, params)
-        coop.formulation.custom_backward(lagrangian)
+        coop.formulation.backward(lagrangian)
 
         coop.step()
 

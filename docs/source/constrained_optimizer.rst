@@ -111,7 +111,7 @@ will involve the following steps:
     #. (Optional) Iterate over your dataset and sample of mini-batch.
     #. Call :py:meth:`constrained_optimizer.zero_grad()<zero_grad>` to reset the parameters' gradients
     #. Compute the current :py:class:`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using :py:meth:`lagrangian.composite_objective(cmp.closure, ...)<cooper.formulation.LagrangianFormulation.composite_objective>`.
-    #. Populate the primal and dual gradients with :py:meth:`formulation.custom_backward(lagrangian)<cooper.formulation.Formulation.custom_backward>`
+    #. Populate the primal and dual gradients with :py:meth:`formulation.backward(lagrangian)<cooper.formulation.Formulation.backward>`
     #. Perform updates on the parameters using the primal and dual optimizers based on the recently computed gradients, via a call to :py:meth:`constrained_optimizer.step()<step>`.
 
 Example
@@ -143,7 +143,7 @@ Example
             lagrangian = formulation.composite_objective(cmp.closure, ...)
 
             # Populate the primal and dual gradients
-            formulation.custom_backward(lagrangian)
+            formulation.backward(lagrangian)
 
             # Perform primal and dual parameter updates
             constrained_optimizer.step()

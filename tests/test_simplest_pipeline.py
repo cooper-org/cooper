@@ -62,7 +62,7 @@ def test_simplest_pipeline(params, formulation, constrained_optimizer):
         cmp_state = cooper.CMPState(loss=loss, ineq_defect=defect)
 
         lagrangian = formulation.composite_objective(pre_computed_state=cmp_state)
-        formulation.custom_backward(lagrangian)
+        formulation.backward(lagrangian)
 
         constrained_optimizer.step()
 
