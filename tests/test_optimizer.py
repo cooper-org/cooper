@@ -6,6 +6,7 @@ code behaves as expected for an unconstrained setting."""
 import cooper_test_utils
 import pytest
 import torch
+import cooper
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -42,8 +43,8 @@ def test_toy_problem(aim_device, use_ineq, multiple_optimizers):
         coop.zero_grad()
 
         # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = formulation.composite_objective(cmp.closure, params)
-        formulation.custom_backward(lagrangian)
+        lagrangian = cooper.compute_lagrangian(formulation, cmp.closure, params)
+        cooper.backward(formulation, lagrangian)
 
         coop.step()
 

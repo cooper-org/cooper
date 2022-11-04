@@ -299,8 +299,10 @@ class Toy2DWidget:
         for iter_num in range(num_iters):
 
             self.constrained_optimizer.zero_grad()
-            lagrangian = self.formulation.composite_objective(self.cmp.closure, params)
-            self.formulation.custom_backward(lagrangian)
+            lagrangian = cooper.compute_lagrangian(
+                self.formulation, self.cmp.closure, params
+            )
+            cooper.backward(self.formulation, lagrangian)
             self.constrained_optimizer.step(self.cmp.closure, params)
 
             # Ensure parameters remain in the domain of the functions

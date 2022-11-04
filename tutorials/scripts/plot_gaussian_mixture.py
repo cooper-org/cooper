@@ -182,10 +182,10 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     for i in range(num_iters):
         constrained_optimizer.zero_grad()
         if is_constrained:
-            lagrangian = formulation.composite_objective(
-                cmp.closure, model, inputs, targets
+            lagrangian = cooper.compute_lagrangian(
+                formulation, cmp.closure, model, inputs, targets
             )
-            formulation.custom_backward(lagrangian)
+            cooper.backward(formulation, lagrangian)
         else:
             # No Lagrangian in the unconstrained case
             loss = cmp.closure(model, inputs, targets).loss

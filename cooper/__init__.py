@@ -19,6 +19,8 @@ from cooper.formulation import (
     Formulation,
     LagrangianFormulation,
     UnconstrainedFormulation,
+    backward,
+    compute_lagrangian,
 )
 from cooper.optim import (
     AlternatingConstrainedOptimizer,
