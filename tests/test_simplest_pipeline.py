@@ -61,11 +61,8 @@ def test_simplest_pipeline(params, formulation, constrained_optimizer):
         # Create a CMPState object to hold the loss and defect values
         cmp_state = cooper.CMPState(loss=loss, ineq_defect=defect)
 
-        lagrangian = cooper.compute_lagrangian(
-            formulation, pre_computed_state=cmp_state
-        )
-
-        cooper.backward(formulation, lagrangian)
+        lagrangian = formulation.composite_objective(pre_computed_state=cmp_state)
+        formulation.custom_backward(lagrangian)
 
         constrained_optimizer.step()
 

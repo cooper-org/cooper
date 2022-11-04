@@ -108,14 +108,14 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         if isinstance(self.formulation, AugmentedLagrangianFormulation):
             # Use LR of dual optimizer as penalty coefficient for the augmented
             # Lagrangian
-            _ = self.formulation._composite_objective(
+            _ = self.formulation.composite_objective(
                 closure=None,
                 aug_lag_coeff_scheduler=self.dual_scheduler,
                 pre_computed_state=alternate_cmp_state,
                 write_state=True,
             )  # type: ignore
         else:
-            _ = self.formulation._composite_objective(
+            _ = self.formulation.composite_objective(
                 closure=None, pre_computed_state=alternate_cmp_state, write_state=True
             )  # type: ignore
         # Zero-out gradients for dual variables since they were already

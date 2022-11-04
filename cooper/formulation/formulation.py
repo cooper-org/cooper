@@ -49,7 +49,7 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def _composite_objective(self):
+    def composite_objective(self):
         pass
 
     @abc.abstractmethod
@@ -57,6 +57,15 @@ class Formulation(abc.ABC):
         """Performs the actual backward computation and populates the gradients
         for the trainable parameters for the dual variables."""
         pass
+
+    def custom_backward(self, *args, **kwargs):
+        """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
+        naming convention used in Pytorch. For clarity, we avoid naming this
+        method ``backward`` as it is a method of the ``LagrangianFormulation``
+        object and not a method of a :py:class:`torch.Tensor` as is standard in
+        Pytorch.
+        """
+        self._populate_gradients(*args, **kwargs)
 
     def write_cmp_state(self, cmp_state: CMPState):
         """Provided that the formulation is linked to a
@@ -118,7 +127,7 @@ class UnconstrainedFormulation(Formulation):
         """
         pass
 
-    def _composite_objective(
+    def composite_objective(
         self,
         closure: Callable[..., CMPState],
         *closure_args,

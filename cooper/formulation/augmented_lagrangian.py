@@ -98,7 +98,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         return proxy_violation, sq_proxy_violation
 
     @no_type_check
-    def _composite_objective(
+    def composite_objective(
         self,
         aug_lag_coeff_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
         closure: Callable[..., CMPState] = None,

@@ -7,7 +7,6 @@ from typing import Callable, List, Optional, Union
 
 import torch
 
-import cooper
 from cooper.formulation import AugmentedLagrangianFormulation, Formulation
 from cooper.optim.extra_optimizers import ExtragradientOptimizer
 from cooper.problem import CMPState
@@ -170,12 +169,12 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         # For extrapolation, we need closure args here as the parameter
         # values will have changed in the update applied on the
         # extrapolation step
-        lagrangian = self.formulation._composite_objective(
+        lagrangian = self.formulation.composite_objective(
             closure, *closure_args, **closure_kwargs
         )  # type: ignore
 
         # Populate gradients at extrapolation point
-        cooper.backwards(self.formulation, lagrangian)
+        self.formulation.custom_backward(lagrangian)
 
         # After this, the calls to `step` will update the stored copies with
         # the newly computed gradients
