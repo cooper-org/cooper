@@ -169,7 +169,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         # For extrapolation, we need closure args here as the parameter
         # values will have changed in the update applied on the
         # extrapolation step
-        lagrangian = self.formulation.composite_objective(
+        lagrangian = self.formulation.compute_lagrangian(
             closure, *closure_args, **closure_kwargs
         )  # type: ignore
 

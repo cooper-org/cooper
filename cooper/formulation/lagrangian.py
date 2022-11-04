@@ -235,7 +235,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
     """
 
     @no_type_check
-    def composite_objective(
+    def compute_lagrangian(
         self,
         closure: Callable[..., CMPState] = None,
         *closure_args,

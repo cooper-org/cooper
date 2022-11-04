@@ -28,7 +28,7 @@ def test_manual_alternating_proxy(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -60,7 +60,7 @@ def test_manual_alternating_proxy(aim_device):
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.3124))

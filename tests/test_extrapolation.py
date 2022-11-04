@@ -40,7 +40,7 @@ def test_extrapolation(aim_device, primal_optimizer_cls):
 
     for step_id in range(2000):
         coop.zero_grad()
-        lagrangian = formulation.composite_objective(cmp.closure, params)
+        lagrangian = formulation.compute_lagrangian(cmp.closure, params)
         formulation.backward(lagrangian)
         coop.step(cmp.closure, params)
 
@@ -68,7 +68,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer_cls):
     )
 
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))

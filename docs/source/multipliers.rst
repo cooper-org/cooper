@@ -17,7 +17,7 @@ Multipliers
       defects provided by the :py:class:`~cooper.problem.CMPState` of the
       considered :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
     - Using them for computing Lagrangians in the
-      :py:meth:`~cooper.formulation.lagrangian.LagrangianFormulation.composite_objective`
+      :py:meth:`~cooper.formulation.lagrangian.LagrangianFormulation.compute_lagrangian`
       method of :py:class:`~cooper.formulation.lagrangian.LagrangianFormulation`.
 
 Constructing a DenseMultiplier

@@ -157,7 +157,7 @@ Example
     for step_id in range(1000):
         coop.zero_grad()
 
-        lagrangian = formulation.composite_objective(
+        lagrangian = formulation.compute_lagrangian(
             aug_lag_coeff_scheduler=coop.dual_scheduler,
             closure=cmp.closure,
             params=params,

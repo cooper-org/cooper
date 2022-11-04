@@ -181,7 +181,7 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
         for step in range(num_steps):
             const_optim.zero_grad()
-            lagrangian = formulation.composite_objective(cmp.closure, model, inputs)
+            lagrangian = formulation.compute_lagrangian(cmp.closure, model, inputs)
             formulation.backward(lagrangian)
 
             # Non-extra-gradient optimizers

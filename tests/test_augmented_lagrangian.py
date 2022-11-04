@@ -72,7 +72,7 @@ def test_convergence_augmented_lagrangian(aim_device):
     for step_id in range(1500):
         coop.zero_grad()
 
-        lagrangian = formulation.composite_objective(
+        lagrangian = formulation.compute_lagrangian(
             aug_lag_coeff_scheduler=coop.dual_scheduler,
             closure=cmp.closure,
             params=params,
@@ -127,7 +127,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     coop.zero_grad()
 
-    lagrangian = formulation.composite_objective(
+    lagrangian = formulation.compute_lagrangian(
         aug_lag_coeff_scheduler=coop.dual_scheduler,
         closure=cmp.closure,
         params=params,
@@ -152,7 +152,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     coop.zero_grad()
 
-    lagrangian = formulation.composite_objective(
+    lagrangian = formulation.compute_lagrangian(
         aug_lag_coeff_scheduler=coop.dual_scheduler,
         closure=cmp.closure,
         params=params,

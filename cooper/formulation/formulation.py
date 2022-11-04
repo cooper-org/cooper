@@ -49,7 +49,7 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def composite_objective(self):
+    def compute_lagrangian(self):
         pass
 
     @abc.abstractmethod
@@ -119,7 +119,7 @@ class UnconstrainedFormulation(Formulation):
         """
         pass
 
-    def composite_objective(
+    def compute_lagrangian(
         self,
         closure: Callable[..., CMPState],
         *closure_args,

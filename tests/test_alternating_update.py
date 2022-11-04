@@ -37,7 +37,7 @@ def test_manual_alternating(aim_device, alternating, use_defect_fn):
     defect_fn = cmp.defect_fn if use_defect_fn else None
 
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -96,7 +96,7 @@ def test_convergence_alternating(aim_device, alternating, use_defect_fn):
         coop.zero_grad()
 
         # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = formulation.composite_objective(closure=cmp.closure, params=params)
+        lagrangian = formulation.compute_lagrangian(closure=cmp.closure, params=params)
         formulation.backward(lagrangian)
 
         # Need to pass closure to step function to perform alternating updates

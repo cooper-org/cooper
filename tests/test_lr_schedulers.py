@@ -57,7 +57,7 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
 
     for step_id in range(7):
         coop.zero_grad()
-        lagrangian = formulation.composite_objective(cmp.closure, params)
+        lagrangian = formulation.compute_lagrangian(cmp.closure, params)
         formulation.backward(lagrangian)
 
         if hasattr(primal_optimizer, "extrapolation"):
