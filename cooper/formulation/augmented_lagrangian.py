@@ -88,7 +88,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
 
             # This is the violation of the "actual" constraint. We use this
             # to update the value of the multipliers by lazily filling the
-            # multiplier gradients in `populate_gradients`
+            # multiplier gradients in `backward`
 
             # TODO (JGP): Verify that call to backward is general enough for
             # Lagrange Multiplier models
@@ -98,7 +98,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         return proxy_violation, sq_proxy_violation
 
     @no_type_check
-    def composite_objective(
+    def compute_lagrangian(
         self,
         aug_lag_coeff_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
         closure: Callable[..., CMPState] = None,
@@ -114,13 +114,13 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
         If no explicit proxy-constraints are provided, we use the given
         inequality/equality constraints to compute the Augmented Lagrangian and
         to populate the primal and dual gradients. Note that gradients are _not_
-        populated by this function, but rather :py:meth:`._populate_gradient`.
+        populated by this function, but rather :py:meth:`.backward`.
 
         In case proxy constraints are provided in the CMPState, the non-proxy
         constraints (potentially non-differentiable) are used for computing the
         value of the Augmented Lagrangian. The accumulated proxy-constraints
         are used in the backward computation triggered by
-        :py:meth:`._populate_gradient` (and thus must be differentiable).
+        :py:meth:`.backward` (and thus must be differentiable).
 
         Args:
             closure: Callable returning a :py:class:`cooper.problem.CMPState`

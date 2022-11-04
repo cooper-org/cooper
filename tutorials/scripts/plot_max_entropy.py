@@ -74,8 +74,8 @@ state_history = cooper.StateLogger(save_metrics=["loss", "eq_defect", "eq_multip
 # Here is the actual training loop
 for iter_num in range(5000):
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, probs)
-    formulation.custom_backward(lagrangian)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, probs)
+    formulation.backward(lagrangian)
     coop.step(cmp.closure, probs)
 
     # Store optimization metrics at each step

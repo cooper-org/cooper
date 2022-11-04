@@ -40,8 +40,8 @@ def test_extrapolation(aim_device, primal_optimizer_cls):
 
     for step_id in range(2000):
         coop.zero_grad()
-        lagrangian = formulation.composite_objective(cmp.closure, params)
-        formulation.custom_backward(lagrangian)
+        lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+        formulation.backward(lagrangian)
         coop.step(cmp.closure, params)
 
     if device == "cuda":
@@ -68,7 +68,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer_cls):
     )
 
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -82,7 +82,7 @@ def test_manual_extrapolation(aim_device, primal_optimizer_cls):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    formulation.custom_backward(lagrangian)
+    formulation.backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 

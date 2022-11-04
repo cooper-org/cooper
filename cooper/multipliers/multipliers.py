@@ -109,7 +109,7 @@ class DenseMultiplier(BaseMultiplier):
 
         assert self.positive, "Restarts is only supported for inequality multipliers"
 
-        # Call to formulation._populate_gradients has already flipped sign
+        # Call to formulation.backwards has already flipped sign
         # A currently *positive* gradient means original defect is negative, so
         # the constraint is being satisfied.
 

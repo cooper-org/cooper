@@ -42,8 +42,8 @@ def test_toy_problem(aim_device, use_ineq, multiple_optimizers):
         coop.zero_grad()
 
         # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = formulation.composite_objective(cmp.closure, params)
-        formulation.custom_backward(lagrangian)
+        lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+        formulation.backward(lagrangian)
 
         coop.step()
 

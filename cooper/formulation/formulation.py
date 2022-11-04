@@ -49,23 +49,15 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def composite_objective(self):
+    def compute_lagrangian(self):
         pass
 
     @abc.abstractmethod
-    def _populate_gradients(self, *args, **kwargs):
-        """Performs the actual backward computation and populates the gradients
-        for the trainable parameters for the dual variables."""
+    def backward(self, *args, **kwargs):
+        """Performs the backward computation and populates the gradients
+        for the primal and dual variables according to the design of the
+        formulation."""
         pass
-
-    def custom_backward(self, *args, **kwargs):
-        """Alias for :py:meth:`._populate_gradients` to keep the  ``backward``
-        naming convention used in Pytorch. For clarity, we avoid naming this
-        method ``backward`` as it is a method of the ``LagrangianFormulation``
-        object and not a method of a :py:class:`torch.Tensor` as is standard in
-        Pytorch.
-        """
-        self._populate_gradients(*args, **kwargs)
 
     def write_cmp_state(self, cmp_state: CMPState):
         """Provided that the formulation is linked to a
@@ -127,7 +119,7 @@ class UnconstrainedFormulation(Formulation):
         """
         pass
 
-    def composite_objective(
+    def compute_lagrangian(
         self,
         closure: Callable[..., CMPState],
         *closure_args,
@@ -156,10 +148,10 @@ class UnconstrainedFormulation(Formulation):
 
         return cmp_state.loss
 
-    def _populate_gradients(self, loss: torch.Tensor):
+    def backward(self, loss: torch.Tensor):
         """
-        Performs the actual backward computation which populates the gradients
-        for the primal variables.
+        Performs the backward computation which populates the gradients for the
+        primal variables.
 
         Args:
             loss: Loss tensor for computing gradients for primal variables.

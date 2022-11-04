@@ -83,8 +83,8 @@ constrained_optimizer = cooper.ExtrapolationConstrainedOptimizer(formulation, pr
 # The steps follow closely the `loss -> backward -> step` Pytorch workflow.
 for iter_num in range(5000):
     constrained_optimizer.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, probs)
-    formulation.custom_backward(lagrangian)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, probs)
+    formulation.backward(lagrangian)
     constrained_optimizer.step(cmp.closure, probs)
 ```
 

@@ -72,12 +72,12 @@ def test_convergence_augmented_lagrangian(aim_device):
     for step_id in range(1500):
         coop.zero_grad()
 
-        lagrangian = formulation.composite_objective(
+        lagrangian = formulation.compute_lagrangian(
             aug_lag_coeff_scheduler=coop.dual_scheduler,
             closure=cmp.closure,
             params=params,
         )
-        formulation.custom_backward(lagrangian)
+        formulation.backward(lagrangian)
 
         coop.step(defect_fn=cmp.defect_fn, params=params)
         coop.dual_scheduler.step()
@@ -127,7 +127,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     coop.zero_grad()
 
-    lagrangian = formulation.composite_objective(
+    lagrangian = formulation.compute_lagrangian(
         aug_lag_coeff_scheduler=coop.dual_scheduler,
         closure=cmp.closure,
         params=params,
@@ -136,7 +136,7 @@ def test_manual_augmented_lagrangian(aim_device):
     assert torch.allclose(cmp.state.loss, mktensor(2.0))
     assert torch.allclose(lagrangian, mktensor(4.0))
 
-    formulation.custom_backward(lagrangian)
+    formulation.backward(lagrangian)
 
     assert torch.allclose(params.grad, mktensor([-2.0, -6.0]))
 
@@ -152,7 +152,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     coop.zero_grad()
 
-    lagrangian = formulation.composite_objective(
+    lagrangian = formulation.compute_lagrangian(
         aug_lag_coeff_scheduler=coop.dual_scheduler,
         closure=cmp.closure,
         params=params,
@@ -161,7 +161,7 @@ def test_manual_augmented_lagrangian(aim_device):
     assert torch.allclose(cmp.state.loss, mktensor(1.7676))
     assert torch.allclose(lagrangian, mktensor(7.2972))
 
-    formulation.custom_backward(lagrangian)
+    formulation.backward(lagrangian)
 
     assert torch.allclose(params.grad, mktensor([-3.8, -7.6]))
 

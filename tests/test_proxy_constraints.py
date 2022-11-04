@@ -31,7 +31,7 @@ def test_manual_proxy_constraints(aim_device):
 
     # ----------------------- First iteration -----------------------
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -47,7 +47,7 @@ def test_manual_proxy_constraints(aim_device):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    formulation.custom_backward(lagrangian)
+    formulation.backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
@@ -58,7 +58,7 @@ def test_manual_proxy_constraints(aim_device):
 
     # ----------------------- Second iteration -----------------------
     coop.zero_grad()
-    lagrangian = formulation.composite_objective(cmp.closure, params)
+    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.316))
@@ -68,7 +68,7 @@ def test_manual_proxy_constraints(aim_device):
 
     # Check primal and dual gradients after backward. Dual gradient must match
     # ineq_defect
-    formulation.custom_backward(lagrangian)
+    formulation.backward(lagrangian)
     assert torch.allclose(params.grad, mktensor([-0.018, -3.22]))
     assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
