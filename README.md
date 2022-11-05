@@ -33,59 +33,67 @@ compatibility. ⚠️
 
 ## Getting Started
 
-Here we consider a simple convex optimization problem to illustrate how to use
-**Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
+Here we consider a simple convex constrained optimization problem that involves
+training a Logistic Regression clasifier on the MNIST dataset. The model is
+constrained so that the squared L2 norm of its parameters is less than 1.
 
-> _I am trying to solve the following problem using Pytorch: given a 6-sided die
-> whose average roll is known to be 4.5, what is the maximum entropy
-> distribution for the faces?_
+This example illustrates how **Cooper** integrates with:
+- constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousConstrainedOptimizer``
+- models defined using a ``torch.nn.Module``,
+- CUDA acceleration,
+- typical machine learning training loops,
+- extracting the value of the Lagrange multipliers from a ``cooper.LagrangianFormulation``.
+
+Please visit the entry in the **Tutorial Gallery** for a complete version of the code.
 
 ```python
-import torch
 import cooper
+import torch
 
-class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
-    def __init__(self, mean_constraint):
-        self.mean_constraint = mean_constraint
-        super().__init__()
+train_loader = ... # Create a Pytorch Dataloader for MNIST
+loss_fn = torch.nn.CrossEntropyLoss()
 
-    def closure(self, probs):
-        # Verify domain of definition of the functions
-        assert torch.all(probs >= 0)
+# Create a Logistic Regression model
+model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
+if torch.cuda.is_available():
+    model = model.cuda()
+primal_optimizer = torch.optim.Adagrad(model.parameters(), lr=5e-3)
 
-        # Negative signed removed since we want to *maximize* the entropy
-        entropy = torch.sum(probs * torch.log(probs))
+# Create a Cooper formulation, and pick a Pytorch optimizer class for the dual variables
+formulation = cooper.LagrangianFormulation()
+dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
 
-        # Entries of p >= 0 (equiv. -p <= 0)
-        ineq_defect = -probs
+# Create a ConstrainedOptimizer for performing simultaneous updates based on the
+# formulation, and the selected primal and dual optimizers.
+cooper_optimizer = cooper.SimultaneousConstrainedOptimizer(
+    formulation, primal_optimizer, dual_optimizer
+)
 
-        # Equality constraints for proper normalization and mean constraint
-        mean = torch.sum(torch.tensor(range(1, len(probs) + 1)) * probs)
-        eq_defect = torch.stack([torch.sum(probs) - 1, mean - self.mean_constraint])
+for epoch_num in range(50):
+    for batch_num, (inputs, targets) in enumerate(train_loader):
 
-        return cooper.CMPState(loss=entropy, eq_defect=eq_defect, ineq_defect=ineq_defect)
+        if torch.cuda.is_available():
+            inputs, targets = inputs.cuda(), targets.cuda()
 
-# Define the problem and formulation
-cmp = MaximumEntropy(mean_constraint=4.5)
-formulation = cooper.LagrangianFormulation(cmp)
+        logits = model.forward(inputs.view(inputs.shape[0], -1))
+        loss = loss_fn(logits, targets)
 
-# Define the primal parameters and optimizer
-probs = torch.nn.Parameter(torch.rand(6)) # Use a 6-sided die
-primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
+        sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
+        # Constraint defects use convention “g - \epsilon ≤ 0”
+        constraint_defect = sq_l2_norm - 1.0
 
-# Define the dual optimizer. Note that this optimizer has NOT been fully instantiated
-# yet. Cooper takes care of this, once it has initialized the formulation state.
-dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
+        # Create a CMPState object, which contains the loss and constraint defect
+        cmp_state = cooper.CMPState(loss=loss, ineq_defect=constraint_defect)
 
-# Wrap the formulation and both optimizers inside a ConstrainedOptimizer
-constrained_optimizer = cooper.ExtrapolationConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
-# Here is the actual training loop.
-# The steps follow closely the `loss -> backward -> step` Pytorch workflow.
-for iter_num in range(5000):
-    constrained_optimizer.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, probs)
-    formulation.backward(lagrangian)
-    constrained_optimizer.step(cmp.closure, probs)
+        cooper_optimizer.zero_grad()
+        lagrangian = formulation.compute_lagrangian(pre_computed_state=cmp_state)
+        formulation.backward(lagrangian)
+        cooper_optimizer.step()
+
+    # We can extract the value of the Lagrange multiplier for the constraint
+    # The dual variables are stored and updated internally by Cooper
+    lag_multiplier, _ = formulation.state()
+
 ```
 
 ## Installation

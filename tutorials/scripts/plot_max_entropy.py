@@ -16,10 +16,10 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 
 import cooper
+import tutorials.scripts.style_utils as style_utils
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -72,7 +72,7 @@ coop = cooper.ExtrapolationConstrainedOptimizer(
 state_history = cooper.StateLogger(save_metrics=["loss", "eq_defect", "eq_multipliers"])
 
 # Here is the actual training loop
-for iter_num in range(5000):
+for iter_num in range(2000):
     coop.zero_grad()
     lagrangian = formulation.compute_lagrangian(cmp.closure, probs)
     formulation.backward(lagrangian)
@@ -104,5 +104,4 @@ ax2.plot(all_metrics["iters"], all_metrics["loss"])
 ax2.axhline(optim_neg_entropy, c="gray", alpha=0.35)
 ax2.set_title("Objective")
 
-[_.semilogx() for _ in (ax0, ax1, ax2)]
 plt.show()
