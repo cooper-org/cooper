@@ -32,11 +32,11 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
+import tutorials.scripts.style_utils as style_utils
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -156,13 +156,14 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     use_proxy = problem_name.lower() == "proxy"
 
     model = torch.nn.Linear(2, 1)
-
-    cmp = MixtureSeparation(is_constrained, use_proxy, const_level)
-    formulation = cooper.LagrangianFormulation(cmp)
-
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
+    cmp = MixtureSeparation(is_constrained, use_proxy, const_level)
+
     if is_constrained:
+
+        formulation = cooper.LagrangianFormulation(cmp)
+
         dual_optimizer = cooper.optim.partial_optimizer(
             torch.optim.SGD, lr=lr, momentum=0.7
         )
@@ -173,6 +174,8 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
             dual_optimizer=dual_optimizer,
         )
     else:
+
+        formulation = cooper.UnconstrainedFormulation(cmp)
         dual_optimizer = None
 
         constrained_optimizer = cooper.UnconstrainedOptimizer(
