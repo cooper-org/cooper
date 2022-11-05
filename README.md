@@ -47,10 +47,8 @@ This example illustrates how **Cooper** integrates with:
 Please visit the entry in the **Tutorial Gallery** for a complete version of the code.
 
 ```python
-import torch
-from torchvision import datasets, transforms
-
 import cooper
+import torch
 
 train_loader = ... # Create a Pytorch Dataloader for MNIST
 loss_fn = torch.nn.CrossEntropyLoss()
