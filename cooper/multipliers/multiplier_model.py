@@ -1,7 +1,7 @@
-
 import torch
-import abc 
+import abc
 from cooper.multipliers import BaseMultiplier
+
 
 class MultiplierModel(BaseMultiplier, meta=abc.ABCMeta):
     """
