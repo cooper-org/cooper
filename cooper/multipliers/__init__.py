@@ -1,1 +1,1 @@
-from .multipliers import BaseMultiplier, DenseMultiplier
+from .multipliers import BaseMultiplier, DenseMultiplier, MultiplierModel
