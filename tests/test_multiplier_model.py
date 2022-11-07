@@ -3,7 +3,6 @@ import cooper
 import torch
 import abc
 
-
 def test_multiplier_model_init():
     # create a model
     model = torch.nn.Linear(10, 1)
