@@ -156,7 +156,6 @@ class MultiplierModel(BaseMultiplier):
         super().__init__()
         self.model = model
         self.is_positive = is_positive
-        self.device = next(self.model.parameters()).device
 
     @property
     def grad(self):
