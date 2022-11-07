@@ -1,7 +1,7 @@
 from typing import Callable, no_type_check, Tuple, Optional, Union, List
 
-from cooper.multipliers.multiplier_model import MultiplierModel
-from lagrangian import BaseLagrangianFormulation
+from cooper.multipliers import MultiplierModel
+from cooper.formulation.lagrangian import BaseLagrangianFormulation
 from cooper.problem import CMPState
 
 import torch
@@ -132,8 +132,6 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         self,
         closure: Callable[..., CMPState] = None,
         *closure_args,
-        # Remove multiplier model constructor
-        multiplier_model_constructor: Callable = None,
         pre_computed_state: Optional[CMPState] = None,
         write_state: bool = True,
         **closure_kwargs
