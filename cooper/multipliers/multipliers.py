@@ -158,6 +158,7 @@ class MultiplierModel(BaseMultiplier):
         self.is_positive = is_positive
         self.device = next(self.model.parameters()).device
 
+    @property
     def grad(self):
         """Yields the current gradients stored in each fo the model parameters."""
         for param in self.model.parameters():
@@ -167,6 +168,7 @@ class MultiplierModel(BaseMultiplier):
     def forward(self, constraint_features: torch.Tensor):
         return self.model(constraint_features)
 
+    @property
     def shape(self):
         """
         Returns the shape of the explicit multipliers. In the case of implicit
