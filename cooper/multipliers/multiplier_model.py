@@ -3,7 +3,7 @@ import abc
 from cooper.multipliers import BaseMultiplier
 
 
-class MultiplierModel(BaseMultiplier, meta=abc.ABCMeta):
+class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
     """
     A multiplier model. Holds a :py:class:`~torch.nn.Module`, which predicts
     the value of the Lagrange multipliers associated with the equality or
