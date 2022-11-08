@@ -1,15 +1,16 @@
-"""Cooper-related utilities for writing tests."""
+"""Utils for Lagrangian Model testing."""
 
-import functools
+
 from dataclasses import dataclass
+import functools
 from types import GeneratorType
 from typing import Union
 
+import cooper
 import pytest
-import testing_utils
 import torch
 
-import cooper
+import testing_utils
 
 
 @dataclass
@@ -27,20 +28,18 @@ class TestProblemData:
 
 
 def build_test_problem(
-    aim_device,
-    primal_optim_cls,
+    aim_device: bool,
+    sample_constraints: bool,
     primal_init,
+    primal_optim_cls,
     dual_optim_cls,
-    use_ineq,
-    use_proxy_ineq,
-    dual_restarts,
-    alternating,
     primal_optim_kwargs={"lr": 1e-2},
     dual_optim_kwargs={"lr": 1e-2},
-    dual_scheduler=None,
     primal_model=None,
-    formulation_cls=cooper.LagrangianFormulation,
+    formulation_cls=cooper.formulation.LagrangianModelFormulation,
+    dual_scheduler=None,
 ):
+    """Build a test problem for the Lagrangian Model."""
 
     # Retrieve available device, and signal to skip test if GPU is not available
     device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
@@ -48,7 +47,7 @@ def build_test_problem(
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    cmp = Toy2dCMP(use_ineq=use_ineq, use_proxy_ineq=use_proxy_ineq)
+    cmp = Toy2dLM(sample_constraints=sample_constraints, device=device)
 
     if primal_init is None:
         primal_model.to(device)
@@ -74,25 +73,22 @@ def build_test_problem(
     else:
         primal_optimizers = [primal_optim_cls(params_, **primal_optim_kwargs)]
 
-    if use_ineq:
-        # Constrained case
-        dual_optimizer = cooper.optim.partial_optimizer(
-            dual_optim_cls, **dual_optim_kwargs
-        )
-        formulation = formulation_cls(cmp)
-    else:
-        # Unconstrained case
-        dual_optimizer = None
-        formulation = cooper.UnconstrainedFormulation(cmp)
+    dual_optimizer = cooper.optim.partial_optimizer(dual_optim_cls, **dual_optim_kwargs)
+
+    ineq_multiplier_model = ToyMultiplierModel(3, 10)
+    if device == "cuda":
+        ineq_multiplier_model.cuda()
+
+    formulation = formulation_cls(cmp, ineq_multiplier_model=ineq_multiplier_model)
 
     cooper_optimizer_kwargs = {
         "formulation": formulation,
         "primal_optimizers": primal_optimizers,
         "dual_optimizer": dual_optimizer,
         "dual_scheduler": dual_scheduler,
-        "extrapolation": "Extra" in str(primal_optimizers[0]),
-        "alternating": alternating,
-        "dual_restarts": dual_restarts,
+        "extrapolation": False,  # use simultaneous optimizer for the tests
+        "alternating": False,
+        "dual_restarts": False,  # multiplier model cannnot be reset
     }
 
     coop = cooper.optim.create_optimizer_from_kwargs(**cooper_optimizer_kwargs)
@@ -103,7 +99,25 @@ def build_test_problem(
     return TestProblemData(params, cmp, coop, formulation, device, mktensor)
 
 
-class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
+class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
+    """
+    Simplest MultiplierModel possible, a linear model with a single output.
+    """
+
+    def __init__(self, n_params, n_hidden_units):
+        super().__init__()
+        self.linear1 = torch.nn.Linear(n_params, n_hidden_units)
+        self.linear2 = torch.nn.Linear(n_hidden_units, 1)
+
+
+    def forward(self, constraint_features: torch.Tensor):
+        x  = self.linear1(constraint_features)
+        x = torch.relu(x)
+        x = self.linear2(x)
+        return torch.nn.functional.relu(x)
+
+
+class Toy2dLM(cooper.ConstrainedMinimizationProblem):
     """
     Simple test on a 2D quadratically-constrained quadratic programming problem
         min x**2 + 2*y**2
@@ -111,25 +125,26 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             x + y >= 1
             x**2 + y <= 1
 
-    If proxy constrainst are used, the "differentiable" surrogates are:
-            0.9 * x + y >= 1
-            x**2 + 0.9 * y <= 1
-
     This is a convex optimization problem.
 
-    The constraint levels of the differentiable surrogates are not strictly
-    required since these functions are only employed via their gradients, thus
-    the constant contribution of the constraint level disappears. We include
-    them here for readability.
+    This problem is designed to be used with the Lagrangian Model, thus, we define
+    constraint features to feed into the `Multiplier Model`. The first two features
+    correspont to the exponent of the `x` and `y` variables, respectively. The last
+    feature correspond to the slack term and the direction of the inequality constraint
+    (i.e. `-1` for `>=` and `1` for `<=`).
 
     Verified solution from WolframAlpha of the original constrained problem:
         (x=2/3, y=1/3)
     Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
     """
 
-    def __init__(self, use_ineq=False, use_proxy_ineq=False):
-        self.use_ineq = use_ineq
-        self.use_proxy_ineq = use_proxy_ineq
+    def __init__(self, sample_constraints: bool, device: torch.device):
+        self.sample_constraints = sample_constraints
+
+        # Define constraint features
+        self.constraint_features = torch.tensor(
+            [[1.0, 1.0, -1.0], [2.0, 1.0, 1.0]], device=device
+        )
         super().__init__()
 
     def eval_params(self, params):
@@ -156,59 +171,30 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         param_x, param_y = self.eval_params(params)
 
-        # No equality constraints
-        eq_defect = None
+        # Loss
+        loss = param_x**2 + 2 * param_y**2
 
-        if self.use_ineq:
-            # Two inequality constraints
-            ineq_defect = torch.stack(
-                [
-                    -param_x - param_y + 1.0,  # x + y \ge 1
-                    param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
-                ]
-            )
-
-            if self.use_proxy_ineq:
-                # Using **slightly** different functions for the proxy
-                # constraints
-                proxy_ineq_defect = torch.stack(
-                    [
-                        # Orig constraint: x + y \ge 1
-                        -0.9 * param_x - param_y + 1.0,
-                        # Orig constraint: x**2 + y \le 1.0
-                        param_x**2 + 0.9 * param_y - 1.0,
-                    ]
-                )
-            else:
-                proxy_ineq_defect = None
-
-        else:
-            ineq_defect = None
-            proxy_ineq_defect = None
-
-        # Create inequality constraint features. The first feature is the exponent for
-        # the x, the second for the y, and the third is the slack term. The sign of the
-        # slack term depends on the constraint type (i.e. >= or <=).
-        misc = {
-            "ineq_constraint_features": torch.tensor(
-                [[1.0, 1.0, -1.0], [2.0, 1.0, 1.0]]
-            )
-        }
-
-        return cooper.CMPState(
-            loss=None,
-            eq_defect=eq_defect,
-            ineq_defect=ineq_defect,
-            proxy_ineq_defect=proxy_ineq_defect,
-            misc=misc,
+        # Two inequality constraints
+        ineq_defect = torch.stack(
+            [
+                -param_x - param_y + 1.0,  # x + y \ge 1
+                param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
+            ]
         )
 
+        if self.sample_constraints:
+            # Random number for sampling
+            rand = round(torch.rand(1).item())
 
-def get_optimizer_from_str(optimizer_str):
-    """
-    Returns an optimizer class from the string name of the optimizer.
-    """
-    try:
-        return getattr(cooper.optim, optimizer_str)
-    except:
-        return getattr(torch.optim, optimizer_str)
+            sampled_ineq_defect = ineq_defect[rand]
+            sampled_constraint_features = self.constraint_features[rand]
+
+        else:
+            sampled_ineq_defect = ineq_defect
+            sampled_constraint_features = self.constraint_features
+
+        return cooper.CMPState(
+            loss=loss,
+            ineq_defect=sampled_ineq_defect,
+            misc={"ineq_constraint_features": sampled_constraint_features},
+        )

@@ -150,35 +150,3 @@ class DenseMultiplier(BaseMultiplier):
 
         else:
             return False
-
-class MultiplierModel(BaseMultiplier):
-    def __init__(self, model: torch.nn.Module, is_positive: bool = False):
-        super().__init__()
-        self.model = model
-        self.is_positive = is_positive
-
-    @property
-    def grad(self):
-        """Yields the current gradients stored in each fo the model parameters."""
-        for param in self.model.parameters():
-            if param.grad is not None:
-                yield param.grad
-
-    def forward(self, constraint_features: torch.Tensor):
-        return self.model(constraint_features)
-
-    @property
-    def shape(self):
-        """
-        Returns the shape of the explicit multipliers. In the case of implicit
-        multipliers, this should return the *actual* predicted multipliers.
-        """
-        pass
-
-    def project_(self):
-        raise RuntimeError("""project_ method does not exist for MultiplierModel.""")
-
-    def restart_if_feasible_(self):
-        raise RuntimeError(
-            """restart_if_feasible_ method does not exist for MultiplierModel."""
-        )

@@ -1,6 +1,6 @@
 from typing import Callable, no_type_check, Tuple, Optional, Union, List
 
-from cooper.multipliers import MultiplierModel
+from cooper.multipliers.multiplier_model import MultiplierModel
 from cooper.formulation.lagrangian import BaseLagrangianFormulation
 from cooper.problem import CMPState
 
@@ -14,81 +14,62 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
 
     def __init__(
         self,
+        *args,
         ineq_multiplier_model: Optional[MultiplierModel] = None,
         eq_multiplier_model: Optional[MultiplierModel] = None,
-        *args,
         **kwargs,
-        ):
+    ):
         super().__init__(*args, **kwargs)
 
         self.ineq_multiplier_model = ineq_multiplier_model
         self.eq_multiplier_model = eq_multiplier_model
 
-
         if self.ineq_multiplier_model is None and self.eq_multiplier_model is None:
             # TODO: document this
             raise ValueError("At least one multiplier model must be provided.")
 
-        elif (not isinstance(self.ineq_multiplier_model, MultiplierModel) and
-            not isinstance(self.eq_multiplier_model, MultiplierModel)):
+        elif not isinstance(
+            self.ineq_multiplier_model, MultiplierModel
+        ) and not isinstance(self.eq_multiplier_model, MultiplierModel):
             # TODO: document this
             raise ValueError("Multiplier models must be instances of MultiplierModel.")
-
 
         # TODO: ensure output of multiplier model is 1 dim
 
     def create_state(
-            self,
-            cmp_state: CMPState,
-            mult_model: torch.nn.Module,
+        self,
+        cmp_state: CMPState,
+        mult_model: torch.nn.Module,
     ):
-        """
-        """
+        # TODO: Fix arguments and document this.
+        """ """
         pass
-
-        # for constraint_type in ["eq", "ineq"]:
-
-        #     mult_model_name = constraint_type + "_multiplier_model"
-
-        #     defect = getattr(cmp_state, constraint_type + "_defect")
-        #     proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
-
-        #     has_defect = defect is not None
-        #     has_proxy_defect = proxy_defect is not None
-
-        #     if has_defect or has_proxy_defect:
-
-        #         # Ensure dual variables have not been initialized previously
-        #         assert getattr(self, mult_model_name) is None
-
-        #         # If given proxy and non-proxy defects, sanity-check shapes
-        #         if has_defect and has_proxy_defect:
-        #             assert defect.shape == proxy_defect.shape
-
-        #         # TODO: Ensure model's output is 1 dim
-
-        #         # Choose a tensor for getting device and dtype information
-        #         defect_for_init = defect if has_defect else proxy_defect
-
-        #         casted_init_model = mult_model
-
-        #         # Enforce positivity if dealing with inequality
-        #         is_positive = constraint_type == "ineq"
-        #         multiplier = MultiplierModel(casted_init_model, positive=is_positive)
-
-        #         setattr(self, mult_model_name, multiplier)
 
     @property
     def is_state_created(self):
         """
         Returns ``True`` if any Lagrange multipliers have been initialized.
         """
-        return self.ineq_multiplier_model is not None or self.eq_multiplier_model is not None
+        return (
+            self.ineq_multiplier_model is not None
+            or self.eq_multiplier_model is not None
+        )
+
+    @property
+    def dual_parameters(self) -> List[torch.Tensor]:
+        """Returns a list gathering all dual parameters."""
+        all_dual_params = []
+
+        for mult in [self.ineq_multiplier_model, self.eq_multiplier_model]:
+            if mult is not None:
+                all_dual_params.extend(list(mult.parameters()))
+
+        return all_dual_params
 
     def state(
-            self,
-            eq_features: Optional[torch.Tensor],
-            ineq_features: Optional[torch.Tensor]
+        self,
+        eq_features: Optional[torch.Tensor] = None,
+        ineq_features: Optional[torch.Tensor] = None,
     ) -> Tuple[Union[None, torch.Tensor]]:
 
         # TODO: fix this
@@ -98,7 +79,9 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         type from the :py:class:`cooper.multipliers.DenseMultiplier` objects.
         """
 
-        assert eq_features is not None or ineq_features is not None
+        assert (
+            eq_features is not None or ineq_features is not None
+        ), "At least one of `eq_features` or `ineq_features` must be provided."
 
         if ineq_features is None:
             ineq_state = None
@@ -112,32 +95,30 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
 
         return ineq_state, eq_state
 
-    def flip_dual_gradients(self):
+    def flip_dual_gradients(self) -> None:
         """
         Flips the sign of the gradients for the dual variables. This is useful
         when using the dual formulation in conjunction with the alternating
         update scheme.
         """
-        # TODO: implement in every formulation
         for constraint_type in ["eq", "ineq"]:
-            mult_name = constraint_type + "_multipliers"
-            multiplier = getattr(self, mult_name)
-            if multiplier is not None:
-                for param_grad in multiplier.grad():
+            mult_name = constraint_type + "_multiplier_model"
+            multiplier_model = getattr(self, mult_name)
+            if multiplier_model is not None:
+                for param_grad in multiplier_model.grad:
                     if param_grad is not None:
-                        param_grad._mul(-1.0)
+                        param_grad.mul_(-1.0)
 
     @no_type_check
-    def composite_objective(
+    def compute_lagrangian(
         self,
         closure: Callable[..., CMPState] = None,
         *closure_args,
         pre_computed_state: Optional[CMPState] = None,
         write_state: bool = True,
-        **closure_kwargs
+        **closure_kwargs,
     ) -> torch.Tensor:
-        """
-        """
+        """ """
 
         assert (
             closure is not None or pre_computed_state is not None
@@ -149,26 +130,16 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
             cmp_state = closure(*closure_args, **closure_kwargs)
 
         if write_state:
-            self.cmp.state = cmp_state
+            self.write_cmp_state(cmp_state)
 
         # Extract values from ProblemState object
         loss = cmp_state.loss
 
-        # if not self.is_state_created:
-        #     # If not done before, instantiate and initialize dual variables
-        #     self.create_state(cmp_state, multiplier_model_constructor)
-
         # Purge previously accumulated constraint violations
         self.update_accumulated_violation(update=None)
 
-        # Compute contribution of the constraint violations, weighted by the
-        # current multiplier values
-
-        # If given proxy constraints, these are used to compute the terms
-        # added to the Lagrangian, and the multiplier updates are based on
-        # the non-proxy violations.
-        # If not given proxy constraints, then gradients and multiplier
-        # updates are based on the "regular" constraints.
+        # Compute contribution of the sampled constraint violations, weighted by the
+        # current multiplier values predicted by the multuplier model.
         ineq_viol = self.weighted_violation(cmp_state, "ineq")
         eq_viol = self.weighted_violation(cmp_state, "eq")
 
@@ -181,6 +152,7 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         self, cmp_state: CMPState, constraint_type: str
     ) -> torch.Tensor:
         """
+        # TODO: remove all proxy stuff and document with multiplier model
         Computes the dot product between the current multipliers and the
         constraint violations of type ``constraint_type``. If proxy-constraints
         are provided in the :py:class:`.CMPState`, the non-proxy (usually
@@ -196,25 +168,23 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         defect = getattr(cmp_state, constraint_type + "_defect")
         has_defect = defect is not None
 
-        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
-        has_proxy_defect = proxy_defect is not None
-
-        if not has_proxy_defect:
-            # If not given proxy constraints, then the regular defects are
-            # used for computing gradients and evaluating the multipliers
-            proxy_defect = defect
-
         if not has_defect:
             # We should always have at least the "regular" defects, if not, then
             # the problem instance does not have `constraint_type` constraints
-            proxy_violation = torch.tensor([0.0], device=cmp_state.loss.device)
+            violation = torch.tensor([0.0], device=cmp_state.loss.device)
         else:
             mult_model = getattr(self, constraint_type + "_multiplier_model")
 
             # Get multipliers by performing a prediction over the features of the
             # sampled constraints
-            constraint_features = cmp_state.misc[constraint_type + "_constraint_features"]
-            multipliers = mult_model.forward(constraint_features)
+            constraint_features = cmp_state.misc[
+                constraint_type + "_constraint_features"
+            ]
+            # TODO: Add assert for multipliers output shape and document this
+            multipliers = torch.transpose(mult_model.forward(constraint_features), 0, 1)
+
+            # Store the multiplier values
+            setattr(self, constraint_type + "_multipliers", multipliers)
 
             # Get sampled defects. It is assumed that the provided defects correspond to
             # the sampled feature constraints
@@ -222,7 +192,7 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
 
             # We compute (primal) gradients of this object with the sampled
             # constraints
-            proxy_violation = torch.sum(multipliers.detach() * defects)
+            violation = torch.sum(multipliers.detach() * defects)
 
             # This is the violation of the "actual/hard" constraint. We use this
             # to update the multipliers.
@@ -235,21 +205,10 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
             violation_for_update = torch.sum(multipliers * defects.detach())
             self.update_accumulated_violation(update=violation_for_update)
 
-        return proxy_violation
-
-    def dual_parameters(self) -> List[torch.Tensor]:
-        """Returns a list gathering all dual parameters."""
-
-        all_dual_params = []
-
-        for mult in [self.ineq_multiplier_model, self.eq_multiplier_model]:
-            if mult is not None:
-                all_dual_params.extend(list(mult.parameters()))
-
-        return all_dual_params
+        return violation
 
     @no_type_check
-    def _populate_gradients(
+    def backward(
         self,
         lagrangian: torch.Tensor,
         ignore_primal: bool = False,
@@ -286,5 +245,5 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         # Fill in the gradients for the dual variables based on the violation of
         # the non-proxy constraints
         if not ignore_dual:
-            dual_vars = self.dual_parameters()
+            dual_vars = self.dual_parameters
             self.accumulated_violation_dot_prod.backward(inputs=dual_vars)

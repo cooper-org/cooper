@@ -1,3 +1,5 @@
+from typing import Iterator
+
 import torch
 import abc
 from cooper.multipliers import BaseMultiplier
@@ -20,13 +22,6 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
     def __init__(self):
         super().__init__()
 
-    @property
-    def grad(self):
-        """Yields the current gradients stored in each fo the model parameters."""
-        for param in self.model.parameters():
-            if param.grad is not None:
-                yield param.grad
-
     @abc.abstractmethod
     def forward(self, constraint_features: torch.Tensor):
         """
@@ -36,8 +31,26 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
         """
         pass
 
-    def __str__(self):
-        return str(self.model.input.data)
+    @property
+    def shape(self):
+        """
+        Returns the shape of the explicit multipliers. In the case of implicit
+        multipliers, this should return the *actual* predicted multipliers.
+        """
+        pass
 
-    def __repr__(self):
-        pos_str = "inequality" if self.positive else "equality"
+    @property
+    def grad(self):
+        """Yields the current gradients stored in each fo the model parameters."""
+        for param in self.parameters():
+            yield param.grad
+
+    def project_(self):
+        raise RuntimeError("""project_ method does not exist for MultiplierModel.""")
+
+    def restart_if_feasible_(self):
+        raise RuntimeError(
+            """restart_if_feasible_ method does not exist for MultiplierModel."""
+        )
+
+    # TODO: Add __str__ and similar methods to MultiplierModel if possible
