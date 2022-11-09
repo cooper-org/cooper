@@ -30,6 +30,7 @@ class TestProblemData:
 def build_test_problem(
     aim_device: bool,
     sample_constraints: bool,
+    use_proxy_ineq: bool,
     primal_init,
     primal_optim_cls,
     dual_optim_cls,
@@ -114,7 +115,7 @@ class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
         x  = self.linear1(constraint_features)
         x = torch.relu(x)
         x = self.linear2(x)
-        return torch.nn.functional.relu(x)
+        return torch.transpose(torch.nn.functional.relu(x), 0, 1)
 
 
 class Toy2dLM(cooper.ConstrainedMinimizationProblem):
@@ -138,8 +139,14 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
     Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
     """
 
-    def __init__(self, sample_constraints: bool, device: torch.device):
+    def __init__(
+        self,
+        sample_constraints: bool,
+        device: torch.device,
+        use_proxy_ineq: bool = False
+    ):
         self.sample_constraints = sample_constraints
+        self.use_proxy_ineq = use_proxy_ineq
 
         # Define constraint features
         self.constraint_features = torch.tensor(
@@ -175,12 +182,24 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
         loss = param_x**2 + 2 * param_y**2
 
         # Two inequality constraints
-        ineq_defect = torch.stack(
+        ineq_defect = torch.reshape(torch.stack(
             [
                 -param_x - param_y + 1.0,  # x + y \ge 1
                 param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
             ]
-        )
+        ), (1, -1))
+
+        # Using **slightly** different functions for the proxy constraints
+        proxy_ineq_defect = None
+        if self.use_proxy_ineq:
+            proxy_ineq_defect = torch.reshape(torch.stack(
+                [
+                    # Orig constraint: x + y \ge 1
+                    -0.9 * param_x - param_y + 1.0,
+                    # Orig constraint: x**2 + y \le 1.0
+                    param_x**2 + 0.9 * param_y - 1.0,
+                ]
+            ), (1, -1))
 
         if self.sample_constraints:
             # Random number for sampling
@@ -189,12 +208,17 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
             sampled_ineq_defect = ineq_defect[rand]
             sampled_constraint_features = self.constraint_features[rand]
 
+            if self.use_proxy_ineq:
+                sampled_proxy_ineq_defect = proxy_ineq_defect[rand]
+
         else:
             sampled_ineq_defect = ineq_defect
             sampled_constraint_features = self.constraint_features
+            sampled_proxy_ineq_defect = proxy_ineq_defect
 
         return cooper.CMPState(
             loss=loss,
             ineq_defect=sampled_ineq_defect,
+            proxy_ineq_defect=sampled_proxy_ineq_defect,
             misc={"ineq_constraint_features": sampled_constraint_features},
         )

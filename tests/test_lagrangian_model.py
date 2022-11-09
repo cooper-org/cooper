@@ -53,6 +53,7 @@ def test_convergence_lagrangian_model(aim_device):
         primal_optim_cls=torch.optim.SGD,
         dual_optim_cls=torch.optim.SGD,
         sample_constraints=False,
+        use_proxy_ineq=False,
         primal_optim_kwargs={"lr": 1.5e-1},
         dual_optim_kwargs={"lr": 1.5e-2},
         formulation_cls=cooper.formulation.LagrangianModelFormulation,
@@ -73,15 +74,13 @@ def test_convergence_lagrangian_model(aim_device):
             params=params,
         )
         formulation.backward(lagrangian)
-        if step_id % 1 == 0:
+        if step_id % 5 == 0:
             mults.append(formulation.ineq_multipliers)
             mm_params.append(deepcopy(list(formulation.ineq_multiplier_model.parameters())))
             mm_grads.append(deepcopy(list(formulation.ineq_multiplier_model.grad)))
         coop.step()
 
-    # breakpoint()
-
-    # breakpoint()
+    breakpoint()
     if device == "cuda":
         assert cmp.state.loss.is_cuda
         assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
