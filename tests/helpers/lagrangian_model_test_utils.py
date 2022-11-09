@@ -29,7 +29,7 @@ class TestProblemData:
 
 def build_test_problem(
     aim_device: bool,
-    sample_constraints: bool,
+    do_constraint_sampling: bool,
     use_proxy_ineq: bool,
     primal_init,
     primal_optim_cls,
@@ -48,7 +48,7 @@ def build_test_problem(
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
 
-    cmp = Toy2dLM(sample_constraints=sample_constraints, device=device)
+    cmp = MiniToyProblem(do_constraint_sampling=do_constraint_sampling, device=device)
 
     if primal_init is None:
         primal_model.to(device)
@@ -118,7 +118,7 @@ class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
         return torch.transpose(torch.nn.functional.relu(x), 0, 1)
 
 
-class Toy2dLM(cooper.ConstrainedMinimizationProblem):
+class MiniToyProblem(cooper.ConstrainedMinimizationProblem):
     """
     Simple test on a 2D quadratically-constrained quadratic programming problem
         min x**2 + 2*y**2
@@ -141,11 +141,11 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
 
     def __init__(
         self,
-        sample_constraints: bool,
+        do_constraint_sampling: bool,
         device: torch.device,
         use_proxy_ineq: bool = False
     ):
-        self.sample_constraints = sample_constraints
+        self.do_constraint_sampling = do_constraint_sampling
         self.use_proxy_ineq = use_proxy_ineq
 
         # Define constraint features
@@ -201,7 +201,7 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
                 ]
             ), (1, -1))
 
-        if self.sample_constraints:
+        if self.do_constraint_sampling:
             # Random number for sampling
             rand = round(torch.rand(1).item())
 
@@ -222,3 +222,36 @@ class Toy2dLM(cooper.ConstrainedMinimizationProblem):
             proxy_ineq_defect=sampled_proxy_ineq_defect,
             misc={"ineq_constraint_features": sampled_constraint_features},
         )
+
+class LargeToyProblem(cooper.ConstrainedMinimizationProblem):
+    """
+    Least square minimization problem with possibly a large number of constraints.
+
+    min x^t x
+    st.
+        Ax <= b
+
+    This problem is designed to be used with the Lagrangian Model, thus, we define
+    constraint features to feed into the `Multiplier Model`. The features will
+    correspond to the rows of the augmented A|b matrix.
+    """
+
+    def __init__(self, do_constraint_sampling: bool, A: torch.Tensor, b: torch.Tensor):
+        self.do_constraint_sampling = do_constraint_sampling
+        self.A = A
+        self.b = b
+
+        # Define constraint features
+        self.constraint_features = torch.cat([A, b], dim=1)
+        super().__init__()
+
+    def closure(self, x):
+
+        loss = torch.transpose(x, 0, 1) @ x
+
+        # Inequality constraints
+        ineq_defect = self.A @ x - self.b
+
+
+
+
