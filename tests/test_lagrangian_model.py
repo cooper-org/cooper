@@ -18,7 +18,6 @@ torch.cuda.manual_seed(121211)
 
 
 def test_lagrangian_model():
-
     class DummyCMP(cooper.ConstrainedMinimizationProblem):
         def __init__(self):
             super().__init__()
@@ -80,7 +79,9 @@ def test_convergence_lagrangian_model(aim_device):
         formulation.backward(lagrangian)
         if step_id % 5 == 0:
             mults.append(formulation.ineq_multipliers)
-            mm_params.append(deepcopy(list(formulation.ineq_multiplier_model.parameters())))
+            mm_params.append(
+                deepcopy(list(formulation.ineq_multiplier_model.parameters()))
+            )
             mm_grads.append(deepcopy(list(formulation.ineq_multiplier_model.grad)))
         coop.step()
 

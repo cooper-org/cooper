@@ -31,6 +31,7 @@ def build_test_problem(
     aim_device: bool,
     do_constraint_sampling: bool,
     use_proxy_ineq: bool,
+    build_mini_problem: bool,
     primal_init,
     primal_optim_cls,
     dual_optim_cls,
@@ -47,8 +48,6 @@ def build_test_problem(
 
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
-
-    cmp = MiniToyProblem(do_constraint_sampling=do_constraint_sampling, device=device)
 
     if primal_init is None:
         primal_model.to(device)
@@ -76,11 +75,26 @@ def build_test_problem(
 
     dual_optimizer = cooper.optim.partial_optimizer(dual_optim_cls, **dual_optim_kwargs)
 
-    ineq_multiplier_model = ToyMultiplierModel(3, 10)
+    if build_mini_problem:
+
+        ineq_multiplier_model = ToyMultiplierModel(3, 10)
+
+        cmp = MiniToyProblem(
+            do_constraint_sampling=do_constraint_sampling, device=device
+        )
+        formulation = formulation_cls(cmp, ineq_multiplier_model=ineq_multiplier_model)
+
+    else:
+
+        ineq_multiplier_model = ToyMultiplierModel(3, 10)
+
+        cmp = LargeToyProblem(
+            do_constraint_sampling=do_constraint_sampling, device=device
+        )
+        formulation = formulation_cls(cmp, ineq_multiplier_model=ineq_multiplier_model)
+
     if device == "cuda":
         ineq_multiplier_model.cuda()
-
-    formulation = formulation_cls(cmp, ineq_multiplier_model=ineq_multiplier_model)
 
     cooper_optimizer_kwargs = {
         "formulation": formulation,
@@ -110,9 +124,8 @@ class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
         self.linear1 = torch.nn.Linear(n_params, n_hidden_units)
         self.linear2 = torch.nn.Linear(n_hidden_units, 1)
 
-
     def forward(self, constraint_features: torch.Tensor):
-        x  = self.linear1(constraint_features)
+        x = self.linear1(constraint_features)
         x = torch.relu(x)
         x = self.linear2(x)
         return torch.transpose(torch.nn.functional.relu(x), 0, 1)
@@ -143,7 +156,7 @@ class MiniToyProblem(cooper.ConstrainedMinimizationProblem):
         self,
         do_constraint_sampling: bool,
         device: torch.device,
-        use_proxy_ineq: bool = False
+        use_proxy_ineq: bool = False,
     ):
         self.do_constraint_sampling = do_constraint_sampling
         self.use_proxy_ineq = use_proxy_ineq
@@ -182,24 +195,30 @@ class MiniToyProblem(cooper.ConstrainedMinimizationProblem):
         loss = param_x**2 + 2 * param_y**2
 
         # Two inequality constraints
-        ineq_defect = torch.reshape(torch.stack(
-            [
-                -param_x - param_y + 1.0,  # x + y \ge 1
-                param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
-            ]
-        ), (1, -1))
+        ineq_defect = torch.reshape(
+            torch.stack(
+                [
+                    -param_x - param_y + 1.0,  # x + y \ge 1
+                    param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
+                ]
+            ),
+            (1, -1),
+        )
 
         # Using **slightly** different functions for the proxy constraints
         proxy_ineq_defect = None
         if self.use_proxy_ineq:
-            proxy_ineq_defect = torch.reshape(torch.stack(
-                [
-                    # Orig constraint: x + y \ge 1
-                    -0.9 * param_x - param_y + 1.0,
-                    # Orig constraint: x**2 + y \le 1.0
-                    param_x**2 + 0.9 * param_y - 1.0,
-                ]
-            ), (1, -1))
+            proxy_ineq_defect = torch.reshape(
+                torch.stack(
+                    [
+                        # Orig constraint: x + y \ge 1
+                        -0.9 * param_x - param_y + 1.0,
+                        # Orig constraint: x**2 + y \le 1.0
+                        param_x**2 + 0.9 * param_y - 1.0,
+                    ]
+                ),
+                (1, -1),
+            )
 
         if self.do_constraint_sampling:
             # Random number for sampling
@@ -222,6 +241,7 @@ class MiniToyProblem(cooper.ConstrainedMinimizationProblem):
             proxy_ineq_defect=sampled_proxy_ineq_defect,
             misc={"ineq_constraint_features": sampled_constraint_features},
         )
+
 
 class LargeToyProblem(cooper.ConstrainedMinimizationProblem):
     """
@@ -251,7 +271,3 @@ class LargeToyProblem(cooper.ConstrainedMinimizationProblem):
 
         # Inequality constraints
         ineq_defect = self.A @ x - self.b
-
-
-
-
