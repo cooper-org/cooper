@@ -89,5 +89,5 @@ def test_convergence_lagrangian_model(aim_device):
         assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
         assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
 
-    assert torch.allclose(params[0], mktensor(2.0 / 3.0), atol=1e-3)
-    assert torch.allclose(params[1], mktensor(1.0 / 3.0), atol=1e-3)
+    assert torch.allclose(params[0], mktensor(2.0 / 3.0), atol=1e-2)
+    assert torch.allclose(params[1], mktensor(1.0 / 3.0), atol=1e-2)
