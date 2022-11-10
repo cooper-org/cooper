@@ -56,6 +56,7 @@ def test_convergence_lagrangian_model(aim_device):
         primal_optim_cls=torch.optim.SGD,
         dual_optim_cls=torch.optim.SGD,
         do_constraint_sampling=False,
+        build_mini_problem=True,
         use_proxy_ineq=False,
         primal_optim_kwargs={"lr": 1.5e-1},
         dual_optim_kwargs={"lr": 1.5e-2},
