@@ -34,6 +34,11 @@ class Formulation(abc.ABC):
         """Returns the internal state of formulation (e.g. multipliers)."""
         pass
 
+    @abc.abstractmethod
+    def flip_dual_gradients(self):
+        """Flips the sign of the dual gradients."""
+        pass
+
     @property
     @abc.abstractmethod
     def is_state_created(self):
@@ -117,6 +122,11 @@ class UnconstrainedFormulation(Formulation):
         Loads the state dictionary for an unconstrained formulation. Since
         unconstrained formulations are stateless, this is a no-op.
         """
+        pass
+
+    def flip_dual_gradients(self):
+        """Flips the sign of the dual gradients. This is a no-op for
+        unconstrained formulations."""
         pass
 
     def compute_lagrangian(

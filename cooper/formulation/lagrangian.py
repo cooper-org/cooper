@@ -220,6 +220,14 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             ), "LagrangianFormulation received unknown key: {}".format(key)
             setattr(self, key, val)
 
+    def flip_dual_gradients(self):
+        """
+        Flip the sign of the gradients of the dual variables.
+        """
+        for multiplier in self.state():
+            if multiplier is not None:
+                multiplier.grad.mul_(-1.0)
+
 
 class LagrangianFormulation(BaseLagrangianFormulation):
     """
