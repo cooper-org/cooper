@@ -33,6 +33,7 @@ def build_test_problem(
     dual_optim_cls,
     use_ineq,
     use_proxy_ineq,
+    use_mult_model,
     dual_restarts,
     alternating,
     primal_optim_kwargs={"lr": 1e-2},
@@ -47,8 +48,6 @@ def build_test_problem(
 
     if skip.do_skip:
         pytest.skip(skip.skip_reason)
-
-    cmp = Toy2dCMP(use_ineq=use_ineq, use_proxy_ineq=use_proxy_ineq)
 
     if primal_init is None:
         primal_model.to(device)
@@ -74,12 +73,30 @@ def build_test_problem(
     else:
         primal_optimizers = [primal_optim_cls(params_, **primal_optim_kwargs)]
 
-    if use_ineq:
+    cmp = Toy2dCMP(
+        device,
+        use_ineq=use_ineq,
+        use_proxy_ineq=use_proxy_ineq,
+        use_mult_model=use_mult_model,
+    )
+
+    if use_mult_model or use_ineq:
         # Constrained case
         dual_optimizer = cooper.optim.partial_optimizer(
             dual_optim_cls, **dual_optim_kwargs
         )
+
+    if use_mult_model:
+        # Exclusive for the model formulation
+        ineq_multiplier_model = ToyMultiplierModel(3, 10, device)
+        formulation = cooper.formulation.LagrangianModelFormulation(
+            cmp, ineq_multiplier_model=ineq_multiplier_model
+        )
+
+    elif use_ineq:
+        # Constrained case different from model formulation
         formulation = formulation_cls(cmp)
+
     else:
         # Unconstrained case
         dual_optimizer = None
@@ -103,6 +120,23 @@ def build_test_problem(
     return TestProblemData(params, cmp, coop, formulation, device, mktensor)
 
 
+class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
+    """
+    Simplest MultiplierModel possible, a linear model with a single output.
+    """
+
+    def __init__(self, n_params, n_hidden_units, device):
+        super().__init__()
+        self.linear1 = torch.nn.Linear(n_params, n_hidden_units, device=device)
+        self.linear2 = torch.nn.Linear(n_hidden_units, 1, device=device)
+
+    def forward(self, constraint_features: torch.Tensor):
+        x = self.linear1(constraint_features)
+        x = torch.relu(x)
+        x = self.linear2(x)
+        return torch.reshape(torch.nn.functional.relu(x), (-1,))
+
+
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     """
     Simple test on a 2D quadratically-constrained quadratic programming problem
@@ -122,14 +156,28 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     the constant contribution of the constraint level disappears. We include
     them here for readability.
 
+    This problem is designed to be used with the Lagrangian Model, thus, we define
+    constraint features to feed into the `Multiplier Model`. The first two features
+    correspont to the exponent of the `x` and `y` variables, respectively. The last
+    feature correspond to the slack term and the direction of the inequality constraint
+    (i.e. `-1` for `>=` and `1` for `<=`).
+
     Verified solution from WolframAlpha of the original constrained problem:
         (x=2/3, y=1/3)
     Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
     """
 
-    def __init__(self, use_ineq=False, use_proxy_ineq=False):
+    def __init__(
+        self, device, use_ineq=False, use_proxy_ineq=False, use_mult_model=False
+    ):
         self.use_ineq = use_ineq
         self.use_proxy_ineq = use_proxy_ineq
+        self.use_mult_model = use_mult_model
+
+        # Define constraint features
+        self.constraint_features = torch.tensor(
+            [[1.0, 1.0, -1.0], [2.0, 1.0, 1.0]], device=device
+        )
         super().__init__()
 
     def eval_params(self, params):
@@ -159,7 +207,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         # No equality constraints
         eq_defect = None
 
-        if self.use_ineq:
+        if self.use_ineq or self.use_mult_model:
             # Two inequality constraints
             ineq_defect = torch.stack(
                 [
@@ -189,11 +237,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         # Create inequality constraint features. The first feature is the exponent for
         # the x, the second for the y, and the third is the slack term. The sign of the
         # slack term depends on the constraint type (i.e. >= or <=).
-        misc = {
-            "ineq_constraint_features": torch.tensor(
-                [[1.0, 1.0, -1.0], [2.0, 1.0, 1.0]]
-            )
-        }
+        misc = None
+        if self.use_mult_model:
+            misc = {"ineq_constraint_features": self.constraint_features}
 
         return cooper.CMPState(
             loss=None,

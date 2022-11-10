@@ -7,7 +7,7 @@ import os
 import tempfile
 
 # Import basic closure example from helpers
-import cooper_test_utils
+from .helpers import cooper_test_utils
 import pytest
 import torch
 
@@ -76,6 +76,7 @@ def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=use_ineq,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=True,
         alternating=False,
         primal_optim_kwargs=primal_optim_kwargs,

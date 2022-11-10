@@ -3,7 +3,7 @@
 """Tests for Extrapolation optimizers."""
 
 # Import basic closure example from helpers
-import cooper_test_utils
+from .helpers import cooper_test_utils
 import pytest
 import torch
 
@@ -19,6 +19,7 @@ def problem_data(aim_device, primal_optim_cls):
         dual_optim_cls=cooper.optim.ExtraSGD,
         use_ineq=True,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=False,
     )

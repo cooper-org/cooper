@@ -2,7 +2,7 @@
 
 """Tests for Constrained Optimizer class."""
 
-import cooper_test_utils
+from .helpers import cooper_test_utils
 import pytest
 import torch
 
@@ -18,6 +18,7 @@ def test_manual_alternating_proxy(aim_device):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=True,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=True,
         primal_optim_kwargs={"lr": 5e-2, "momentum": 0.0},

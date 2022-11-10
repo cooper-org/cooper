@@ -7,9 +7,8 @@ import pytest
 import torch
 import random
 import numpy as np
-from copy import deepcopy
 
-from .helpers import lagrangian_model_test_utils
+from .helpers import cooper_test_utils
 
 random.seed(121212)
 np.random.seed(121212)
@@ -27,7 +26,7 @@ def test_lagrangian_model():
 
     cmp = DummyCMP()
 
-    mm = lagrangian_model_test_utils.ToyMultiplierModel(10, 10)
+    mm = cooper_test_utils.ToyMultiplierModel(10, 10, "cpu")
 
     lmf = cooper.formulation.LagrangianModelFormulation(
         cmp, ineq_multiplier_model=mm, eq_multiplier_model=mm
@@ -48,18 +47,21 @@ def test_lagrangian_model():
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_convergence_lagrangian_model(aim_device):
+def test_convergence_small_toy_problem(aim_device):
 
-    test_problem_data = lagrangian_model_test_utils.build_test_problem(
+    test_problem_data = cooper_test_utils.build_test_problem(
         aim_device=aim_device,
-        primal_init=[0.0, -1.0],
         primal_optim_cls=torch.optim.SGD,
+        primal_init=[0.0, -1.0],
         dual_optim_cls=torch.optim.SGD,
-        do_constraint_sampling=False,
-        build_mini_problem=True,
+        use_ineq=True,
         use_proxy_ineq=False,
-        primal_optim_kwargs={"lr": 1.5e-1},
-        dual_optim_kwargs={"lr": 1.5e-2},
+        use_mult_model=True,
+        dual_restarts=False,
+        alternating=False,
+        primal_optim_kwargs={"lr": 1e-2},
+        dual_optim_kwargs={"lr": 1e-2},
+        dual_scheduler=None,
         formulation_cls=cooper.formulation.LagrangianModelFormulation,
     )
 
@@ -67,10 +69,7 @@ def test_convergence_lagrangian_model(aim_device):
 
     coop.instantiate_dual_optimizer_and_scheduler()
 
-    mults = []
-    mm_params = [deepcopy(list(formulation.ineq_multiplier_model.parameters()))]
-    mm_grads = []
-    for step_id in range(200):
+    for step_id in range(400):
         coop.zero_grad()
 
         lagrangian = formulation.compute_lagrangian(
@@ -78,12 +77,6 @@ def test_convergence_lagrangian_model(aim_device):
             params=params,
         )
         formulation.backward(lagrangian)
-        if step_id % 5 == 0:
-            mults.append(formulation.ineq_multipliers)
-            mm_params.append(
-                deepcopy(list(formulation.ineq_multiplier_model.parameters()))
-            )
-            mm_grads.append(deepcopy(list(formulation.ineq_multiplier_model.grad)))
         coop.step()
 
     if device == "cuda":

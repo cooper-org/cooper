@@ -2,7 +2,7 @@
 
 """Tests for Augmented Lagrangian Formulation class."""
 
-import cooper_test_utils
+from .helpers import cooper_test_utils
 import pytest
 import torch
 
@@ -54,6 +54,7 @@ def test_convergence_augmented_lagrangian(aim_device):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=True,
         primal_optim_kwargs={"lr": 1e-2},
@@ -108,6 +109,7 @@ def test_manual_augmented_lagrangian(aim_device):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=True,
         primal_optim_kwargs={"lr": 1e-2},
