@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Union
 
 import torch
 
-from cooper.formulation import AugmentedLagrangianFormulation, Formulation
+from cooper.formulation import AugmentedLagrangianFormulation, Formulation, LagrangianModelFormulation
 from cooper.problem import CMPState
 
 from .constrained_optimizer import ConstrainedOptimizer
@@ -134,14 +134,13 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         # Flip gradients for multipliers to perform ascent.
         # We only do the flipping *right before* applying the optimizer step to
         # avoid accidental double sign flips.
-        for multiplier in self.formulation.state():
-            if multiplier is not None:
-                multiplier.grad.mul_(-1.0)
+        self.formulation.flip_dual_gradients()
 
         # Update multipliers based on current constraint violations (gradients)
         self.dual_optimizer.step()
 
-        if self.formulation.ineq_multipliers is not None:
+        if (self.formulation.ineq_multipliers is not None and
+            not isinstance(self.formulation, LagrangianModelFormulation)):
             if self.dual_restarts:
                 # "Reset" value of inequality multipliers to zero as soon as
                 # solution becomes feasible

@@ -65,6 +65,8 @@ class ConstrainedOptimizer(CooperOptimizer):
         Perform sanity checks on the initialization of ``ConstrainedOptimizer``.
         """
 
+        # TODO: ensure that the dual optimizer and the dual scheduler is initialized when LagrangeModelFormulation
+
         if self.dual_optimizer is None:
             raise RuntimeError("No dual optimizer was provided.")
 
