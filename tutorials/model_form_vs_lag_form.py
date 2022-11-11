@@ -21,12 +21,13 @@ torch.manual_seed(121212)
 torch.cuda.manual_seed(121211)
 
 config = {
-    "use_mult_model": False,
+    "use_mult_model": True,
     "primal_lr": 1e-2,
     "dual_lr": 1e-2,
     "use_wandb": True,
     "use_wandb_offline": False,
 }
+
 
 @dataclass
 class TestProblemData:
@@ -193,6 +194,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_ineq = use_ineq
         self.use_proxy_ineq = use_proxy_ineq
         self.use_mult_model = use_mult_model
+        self.device = device
 
         # Define constraint features
         self.constraint_features = torch.tensor(
@@ -208,9 +210,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         return param_x, param_y
 
-    def closure(self, params):
+    def closure(self, params, use_third_constraint):
 
-        cmp_state = self.defect_fn(params)
+        cmp_state = self.defect_fn(params, use_third_constraint)
         cmp_state.loss = self.loss_fn(params)
 
         return cmp_state
@@ -220,7 +222,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         return param_x**2 + 2 * param_y**2
 
-    def defect_fn(self, params):
+    def defect_fn(self, params, use_third_constraint):
 
         param_x, param_y = self.eval_params(params)
 
@@ -254,6 +256,17 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             ineq_defect = None
             proxy_ineq_defect = None
 
+        if use_third_constraint:
+            # Append a third constraint
+            third_defect = torch.tensor([param_x + param_y - 1.0], device=self.device)
+            ineq_defect = torch.cat([ineq_defect, third_defect])
+
+            if self.use_proxy_ineq:
+                proxy_third_defect = torch.tensor(
+                    [-0.9 * param_x - param_y + 1.0], device=self.device
+                )
+                proxy_ineq_defect = torch.cat([proxy_ineq_defect, proxy_third_defect])
+
         # Create inequality constraint features. The first feature is the exponent for
         # the x, the second for the y, and the third is the slack term. The sign of the
         # slack term depends on the constraint type (i.e. >= or <=).
@@ -272,7 +285,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
 def main(device, use_mult_model, primal_lr, dual_lr):
 
-    wandb.init(entity="many-constraints", project="toy-problem", config=config)
+    if config["use_wandb"]:
+        wandb.init(entity="many-constraints", project="toy-problem", config=config)
 
     if use_mult_model:
         formulation_cls = cooper.formulation.LagrangianModelFormulation
@@ -300,21 +314,43 @@ def main(device, use_mult_model, primal_lr, dual_lr):
     if use_mult_model:
         coop.instantiate_dual_optimizer_and_scheduler()
 
-    for step_id in range(400):
+    use_third_constraint = False
+    for step_id in range(500):
         coop.zero_grad()
         lagrangian = formulation.compute_lagrangian(
             closure=cmp.closure,
             params=params,
+            use_third_constraint=use_third_constraint,
         )
         formulation.backward(lagrangian)
-        coop.step(cmp.closure, params)
+        coop.step(cmp.closure, params, use_third_constraint)
 
         if config["use_wandb"]:
             logs = metric_logger(cmp.state, formulation, lagrangian, params)
             wandb.log(logs, step_id)
 
+        if step_id == 400:
+            use_third_constraint = True
+            if use_mult_model:
+                cmp.constraint_features = torch.cat(
+                    (
+                        cmp.constraint_features,
+                        torch.tensor([[1.0, 1.0, 1.0]], device=device),
+                    )
+                )
+            else:
+                # Get the current multipliers
+                ineq_mult = formulation.state()[0]
+                # Third multiplier init
+                third_mult = torch.tensor([0.0], device=device)
+                # Initialize a new multiplier tensor and set the third constraint
+                # multiplier to zero
+                new_ineq_mult_init = torch.cat((ineq_mult, third_mult), dim=-1)
+                # Reinitialize the formulation with new multipliers
+                formulation = cooper.LagrangianFormulation(cmp, new_ineq_mult_init)
+
         if step_id % 10 == 0:
-                print(f"Iteration {step_id}")
+            print(f"Iteration {step_id}")
 
 
 def metric_logger(cmp_state, formulation, lagrangian, params):
@@ -366,6 +402,7 @@ def setup_wandb_logging(config):
     else:
         if config["use_wandb_offline"]:
             os.environ["WANDB_MODE"] = "offline"
+
 
 if __name__ == "__main__":
     if torch.cuda.is_available():
