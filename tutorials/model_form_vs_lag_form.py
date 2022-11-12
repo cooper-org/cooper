@@ -99,7 +99,7 @@ def build_test_problem(
 
     if use_mult_model:
         # Exclusive for the model formulation
-        ineq_multiplier_model = ToyMultiplierModel(3, 10, device)
+        ineq_multiplier_model = ToyMultiplierModel(5, 10, device)
         formulation = cooper.formulation.LagrangianModelFormulation(
             cmp, ineq_multiplier_model=ineq_multiplier_model
         )
@@ -166,6 +166,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             x + y >= 1
             x**2 + y <= 1
 
+    Added Constraints:
+            x - y >= 1/16
+
     If proxy constrainst are used, the "differentiable" surrogates are:
             0.9 * x + y >= 1
             x**2 + 0.9 * y <= 1
@@ -198,7 +201,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         # Define constraint features
         self.constraint_features = torch.tensor(
-            [[1.0, 1.0, -1.0], [2.0, 1.0, 1.0]], device=device
+            [[-1.0, 1.0, -1.0, 1.0, 1.0], [1.0, 2.0, 1.0, 1.0, -1.0]], device=device
         )
         super().__init__()
 
@@ -258,7 +261,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         if use_third_constraint:
             # Append a third constraint
-            third_defect = torch.tensor([param_x + param_y - 1.0], device=self.device)
+            third_defect = torch.tensor([param_x - param_y - 0.3], device=self.device)
             ineq_defect = torch.cat([ineq_defect, third_defect])
 
             if self.use_proxy_ineq:
@@ -315,7 +318,7 @@ def main(device, use_mult_model, primal_lr, dual_lr):
         coop.instantiate_dual_optimizer_and_scheduler()
 
     use_third_constraint = False
-    for step_id in range(500):
+    for step_id in range(6000):
         coop.zero_grad()
         lagrangian = formulation.compute_lagrangian(
             closure=cmp.closure,
@@ -335,7 +338,7 @@ def main(device, use_mult_model, primal_lr, dual_lr):
                 cmp.constraint_features = torch.cat(
                     (
                         cmp.constraint_features,
-                        torch.tensor([[1.0, 1.0, 1.0]], device=device),
+                        torch.tensor([[1.0, 1.0, -1.0, 1.0, -0.3]], device=device),
                     )
                 )
             else:
