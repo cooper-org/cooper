@@ -2,6 +2,7 @@
 import cooper
 import torch
 
+
 class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
     """
     Simplest MultiplierModel possible, a linear model with a single output.
@@ -17,6 +18,7 @@ class ToyMultiplierModel(cooper.multipliers.MultiplierModel):
         x = torch.relu(x)
         x = self.linear2(x)
         return torch.reshape(torch.nn.functional.relu(x), (-1,))
+
 
 def test_multiplier_model_init():
 
