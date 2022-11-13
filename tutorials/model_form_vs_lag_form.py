@@ -10,6 +10,7 @@ import random
 from types import GeneratorType
 from typing import Union
 
+from copy import deepcopy
 import cooper
 import numpy as np
 import torch
@@ -22,8 +23,8 @@ torch.cuda.manual_seed(121211)
 
 config = {
     "use_mult_model": True,
-    "primal_lr": 1e-2,
-    "dual_lr": 1e-2,
+    "primal_lr": 3e-2,
+    "dual_lr": 3e-2,
     "use_wandb": True,
     "use_wandb_offline": False,
 }
@@ -167,7 +168,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             x**2 + y <= 1
 
     Added Constraints:
-            x - y >= 1/16
+            y <= 1
 
     If proxy constrainst are used, the "differentiable" surrogates are:
             0.9 * x + y >= 1
@@ -201,7 +202,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         # Define constraint features
         self.constraint_features = torch.tensor(
-            [[-1.0, 1.0, -1.0, 1.0, 1.0], [1.0, 2.0, 1.0, 1.0, -1.0]], device=device
+            [[1.0, 2.0, 1.0, 1.0, -1.0]], device=device
+            ##[[-1.0, 1.0, -1.0, 1.0, 1.0], [1.0, 2.0, 1.0, 1.0, -1.0]], device=device
         )
         super().__init__()
 
@@ -236,7 +238,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             # Two inequality constraints
             ineq_defect = torch.stack(
                 [
-                    -param_x - param_y + 1.0,  # x + y \ge 1
+                    ##-param_x - param_y + 1.0  # x + y \ge 1
                     param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
                 ]
             )
@@ -247,7 +249,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                 proxy_ineq_defect = torch.stack(
                     [
                         # Orig constraint: x + y \ge 1
-                        -0.9 * param_x - param_y + 1.0,
+                        ##-0.9 * param_x - param_y + 1.0
                         # Orig constraint: x**2 + y \le 1.0
                         param_x**2 + 0.9 * param_y - 1.0,
                     ]
@@ -261,12 +263,12 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         if use_third_constraint:
             # Append a third constraint
-            third_defect = torch.tensor([param_x - param_y - 0.3], device=self.device)
+            third_defect = torch.tensor([-param_x - param_y + 1.0], device=self.device)
             ineq_defect = torch.cat([ineq_defect, third_defect])
 
             if self.use_proxy_ineq:
                 proxy_third_defect = torch.tensor(
-                    [-0.9 * param_x - param_y + 1.0], device=self.device
+                    [-param_x - param_y + 1.0 ], device=self.device
                 )
                 proxy_ineq_defect = torch.cat([proxy_ineq_defect, proxy_third_defect])
 
@@ -318,7 +320,7 @@ def main(device, use_mult_model, primal_lr, dual_lr):
         coop.instantiate_dual_optimizer_and_scheduler()
 
     use_third_constraint = False
-    for step_id in range(6000):
+    for step_id in range(800):
         coop.zero_grad()
         lagrangian = formulation.compute_lagrangian(
             closure=cmp.closure,
@@ -338,7 +340,7 @@ def main(device, use_mult_model, primal_lr, dual_lr):
                 cmp.constraint_features = torch.cat(
                     (
                         cmp.constraint_features,
-                        torch.tensor([[1.0, 1.0, -1.0, 1.0, -0.3]], device=device),
+                        torch.tensor([[-1.0, 1.0, -1.0, 1.0, 1.0]], device=device),
                     )
                 )
             else:
@@ -370,9 +372,16 @@ def metric_logger(cmp_state, formulation, lagrangian, params):
         "lagrangian": lagrangian.item(),
         "ineq_defect": wandb.Histogram(_to_cpu_numpy(cmp_state.ineq_defect)),
         "ineq_multipliers": wandb.Histogram(_to_cpu_numpy(multipliers)),
+        "Multiplier 1": multipliers[0], 
+        ## "Multiplier 2": multipliers[1],
+        "Defect 1": deepcopy(formulation.cmp.state.ineq_defect.data)[0],
+       ## "Defect 2": deepcopy(formulation.cmp.state.ineq_defect.data)[1],
         "x": params[0].item(),
         "y": params[1].item(),
     }
+    if len(multipliers) > 1:
+        logs["Multiplier 2"] = multipliers[1]
+        logs["Defect 2"] = deepcopy(formulation.cmp.state.ineq_defect.data)[1]
 
     return logs
 
