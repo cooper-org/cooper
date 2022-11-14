@@ -23,8 +23,10 @@ torch.cuda.manual_seed(121211)
 
 config = {
     "use_mult_model": True,
-    "primal_lr": 3e-2,
-    "dual_lr": 3e-2,
+    "primal_lr": 1e-2,
+    "dual_lr": 1e-3,
+    "second_primal_lr": 1e-2,
+    "second_dual_lr": 1e-2,
     "use_wandb": True,
     "use_wandb_offline": False,
 }
@@ -44,13 +46,13 @@ class TestProblemData:
         return (getattr(self, _) for _ in field_names)
 
 
-def build_test_problem(
+def get_optimizer(
+    formulation,
     device,
     primal_optim_cls,
     primal_init,
     dual_optim_cls,
     use_ineq,
-    use_proxy_ineq,
     use_mult_model,
     dual_restarts,
     alternating,
@@ -58,7 +60,6 @@ def build_test_problem(
     dual_optim_kwargs={"lr": 1e-2},
     dual_scheduler=None,
     primal_model=None,
-    formulation_cls=cooper.LagrangianFormulation,
 ):
 
     if primal_init is None:
@@ -85,18 +86,52 @@ def build_test_problem(
     else:
         primal_optimizers = [primal_optim_cls(params_, **primal_optim_kwargs)]
 
+    if use_mult_model or use_ineq:
+        # Constrained case
+        dual_optimizer = cooper.optim.partial_optimizer(
+            dual_optim_cls, **dual_optim_kwargs
+        )
+    else:
+        # Unconstrained case
+        dual_optimizer = None
+
+    cooper_optimizer_kwargs = {
+        "formulation": formulation,
+        "primal_optimizers": primal_optimizers,
+        "dual_optimizer": dual_optimizer,
+        "dual_scheduler": dual_scheduler,
+        "extrapolation": "Extra" in str(primal_optimizers[0]),
+        "alternating": alternating,
+        "dual_restarts": dual_restarts,
+    }
+
+    coop = cooper.optim.create_optimizer_from_kwargs(**cooper_optimizer_kwargs)
+
+    return params, coop
+
+
+def build_test_problem(
+    device,
+    primal_optim_cls,
+    primal_init,
+    dual_optim_cls,
+    use_ineq,
+    use_proxy_ineq,
+    use_mult_model,
+    dual_restarts,
+    alternating,
+    primal_optim_kwargs={"lr": 1e-2},
+    dual_optim_kwargs={"lr": 1e-2},
+    dual_scheduler=None,
+    primal_model=None,
+    formulation_cls=cooper.LagrangianFormulation,
+):
     cmp = Toy2dCMP(
         device,
         use_ineq=use_ineq,
         use_proxy_ineq=use_proxy_ineq,
         use_mult_model=use_mult_model,
     )
-
-    if use_mult_model or use_ineq:
-        # Constrained case
-        dual_optimizer = cooper.optim.partial_optimizer(
-            dual_optim_cls, **dual_optim_kwargs
-        )
 
     if use_mult_model:
         # Exclusive for the model formulation
@@ -110,21 +145,23 @@ def build_test_problem(
         formulation = formulation_cls(cmp)
 
     else:
-        # Unconstrained case
-        dual_optimizer = None
         formulation = cooper.UnconstrainedFormulation(cmp)
 
-    cooper_optimizer_kwargs = {
-        "formulation": formulation,
-        "primal_optimizers": primal_optimizers,
-        "dual_optimizer": dual_optimizer,
-        "dual_scheduler": dual_scheduler,
-        "extrapolation": "Extra" in str(primal_optimizers[0]),
-        "alternating": alternating,
-        "dual_restarts": dual_restarts,
-    }
-
-    coop = cooper.optim.create_optimizer_from_kwargs(**cooper_optimizer_kwargs)
+    params, coop = get_optimizer(
+        formulation,
+        device,
+        primal_optim_cls,
+        primal_init,
+        dual_optim_cls,
+        use_ineq,
+        use_mult_model,
+        dual_restarts,
+        alternating,
+        primal_optim_kwargs,
+        dual_optim_kwargs,
+        dual_scheduler,
+        primal_model,
+    )
 
     # Helper function to instantiate tensors in correct device
     mktensor = functools.partial(torch.tensor, device=device)
@@ -168,7 +205,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             x**2 + y <= 1
 
     Added Constraints:
-            y <= 1
+            x - y <= 0
 
     If proxy constrainst are used, the "differentiable" surrogates are:
             0.9 * x + y >= 1
@@ -182,10 +219,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     them here for readability.
 
     This problem is designed to be used with the Lagrangian Model, thus, we define
-    constraint features to feed into the `Multiplier Model`. The first two features
-    correspont to the exponent of the `x` and `y` variables, respectively. The last
-    feature correspond to the slack term and the direction of the inequality constraint
-    (i.e. `-1` for `>=` and `1` for `<=`).
+    constraint features to feed into the `Multiplier Model`. The first two constraints
+    corresponf to the multiplying term of x and its exponent, respectively. The third
+    and fourth constraints correspond to the multiplying term of y and its exponent,
+    respectively. The last constraint corresponds to the slack term. Note that the
+    sign of the terms correspond to the ones that appear in the <= format.
 
     Verified solution from WolframAlpha of the original constrained problem:
         (x=2/3, y=1/3)
@@ -202,8 +240,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         # Define constraint features
         self.constraint_features = torch.tensor(
-            [[1.0, 2.0, 1.0, 1.0, -1.0]], device=device
-            ##[[-1.0, 1.0, -1.0, 1.0, 1.0], [1.0, 2.0, 1.0, 1.0, -1.0]], device=device
+            [
+                [-1.0, 1.0, -1.0, 1.0, 1.0],  # -x - y + 1 <= 0
+                [1.0, 2.0, 1.0, 1.0, -1.0],  # x**2 + y - 1 <= 0
+            ],
+            device=device,
         )
         super().__init__()
 
@@ -235,13 +276,26 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         eq_defect = None
 
         if self.use_ineq or self.use_mult_model:
-            # Two inequality constraints
-            ineq_defect = torch.stack(
-                [
-                    ##-param_x - param_y + 1.0  # x + y \ge 1
-                    param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
-                ]
-            )
+
+            if use_third_constraint:
+
+                # Two inequality constraints
+                ineq_defect = torch.stack(
+                    [
+                        -param_x - param_y + 1.0,  # x + y \ge 1
+                        param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
+                        param_x - param_y,  # x - y \le 0
+                    ]
+                )
+
+            else:
+                # Two inequality constraints
+                ineq_defect = torch.stack(
+                    [
+                        -param_x - param_y + 1.0,  # x + y \ge 1
+                        param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
+                    ]
+                )
 
             if self.use_proxy_ineq:
                 # Using **slightly** different functions for the proxy
@@ -249,7 +303,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                 proxy_ineq_defect = torch.stack(
                     [
                         # Orig constraint: x + y \ge 1
-                        ##-0.9 * param_x - param_y + 1.0
+                        -0.9 * param_x - param_y + 1.0,
                         # Orig constraint: x**2 + y \le 1.0
                         param_x**2 + 0.9 * param_y - 1.0,
                     ]
@@ -260,17 +314,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         else:
             ineq_defect = None
             proxy_ineq_defect = None
-
-        if use_third_constraint:
-            # Append a third constraint
-            third_defect = torch.tensor([-param_x - param_y + 1.0], device=self.device)
-            ineq_defect = torch.cat([ineq_defect, third_defect])
-
-            if self.use_proxy_ineq:
-                proxy_third_defect = torch.tensor(
-                    [-param_x - param_y + 1.0 ], device=self.device
-                )
-                proxy_ineq_defect = torch.cat([proxy_ineq_defect, proxy_third_defect])
 
         # Create inequality constraint features. The first feature is the exponent for
         # the x, the second for the y, and the third is the slack term. The sign of the
@@ -288,20 +331,40 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         )
 
 
-def main(device, use_mult_model, primal_lr, dual_lr):
+def get_mean_params(param_list):
+
+    if len(param_list) > 20:
+        my_param_list = param_list[-10:]
+    else:
+        my_param_list = param_list
+
+    mean_params = torch.stack(my_param_list).mean(dim=0)
+
+    return mean_params
+
+
+def main(
+    device,
+    use_mult_model,
+    primal_lr,
+    dual_lr,
+    second_primal_lr,
+    second_dual_lr,
+):
 
     if config["use_wandb"]:
         wandb.init(entity="many-constraints", project="toy-problem", config=config)
 
     if use_mult_model:
-        formulation_cls = cooper.formulation.LagrangianModelFormulation
+        # formulation_cls = cooper.formulation.LagrangianModelFormulation
+        formulation_cls = cooper.formulation.MockLagrangianModelFormulation
     else:
         formulation_cls = cooper.formulation.LagrangianFormulation
 
     test_problem_data = build_test_problem(
         device=device,
         primal_optim_cls=torch.optim.SGD,
-        primal_init=[0.0, -1.0],
+        primal_init=[0.75, 0.25],
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=False,
@@ -314,13 +377,28 @@ def main(device, use_mult_model, primal_lr, dual_lr):
         formulation_cls=formulation_cls,
     )
 
-    params, cmp, coop, formulation, _, _ = test_problem_data.as_tuple()
+    params, cmp, coop, formulation, _, mktensor = test_problem_data.as_tuple()
+
+    # Indicate the cmp that we want to use the third constraint
+    use_third_constraint = False
+
+    # if use_mult_model:
+    #     # If using the mult model, we need to update the constraint features so they
+    #     # include the third constraint.
+    #     cmp.constraint_features = torch.cat(
+    #         (
+    #             cmp.constraint_features,
+    #             torch.tensor([[-1.0, 1.0, -1.0, 1.0, 0.0]], device=device),
+    #         )
+    #     )
 
     if use_mult_model:
         coop.instantiate_dual_optimizer_and_scheduler()
 
-    use_third_constraint = False
-    for step_id in range(800):
+    # use_third_constraint = False
+    last_step = 0
+    param_list = []
+    for step_id in range(10000):
         coop.zero_grad()
         lagrangian = formulation.compute_lagrangian(
             closure=cmp.closure,
@@ -334,28 +412,93 @@ def main(device, use_mult_model, primal_lr, dual_lr):
             logs = metric_logger(cmp.state, formulation, lagrangian, params)
             wandb.log(logs, step_id)
 
-        if step_id == 400:
-            use_third_constraint = True
-            if use_mult_model:
-                cmp.constraint_features = torch.cat(
-                    (
-                        cmp.constraint_features,
-                        torch.tensor([[-1.0, 1.0, -1.0, 1.0, 1.0]], device=device),
-                    )
-                )
-            else:
-                # Get the current multipliers
-                ineq_mult = formulation.state()[0]
-                # Third multiplier init
-                third_mult = torch.tensor([0.0], device=device)
-                # Initialize a new multiplier tensor and set the third constraint
-                # multiplier to zero
-                new_ineq_mult_init = torch.cat((ineq_mult, third_mult), dim=-1)
-                # Reinitialize the formulation with new multipliers
-                formulation = cooper.LagrangianFormulation(cmp, new_ineq_mult_init)
+        if step_id % 10 == 0:
+            print(f"Iteration {step_id}")
+
+        # Add the parameters to the list and get mean of last 10 iterations
+        param_list.append(params.clone().detach())
+        mean_params = get_mean_params(param_list)
+
+        if torch.allclose(
+            mean_params[0], mktensor(2.0 / 3.0), atol=1e-2
+        ) and torch.allclose(mean_params[1], mktensor(1.0 / 3.0), atol=1e-2):
+            # When the solution is found, break out of the loop so we can add third
+            # constraint and see if the algorithm can find the new solution.
+            last_step = step_id
+            print(f"Iteration: {step_id}, Found solution!")
+            break
+
+    # Indicate the cmp that we want to use the third constraint
+    use_third_constraint = True
+
+    if use_mult_model:
+        # If using the mult model, we need to update the constraint features so they
+        # include the third constraint.
+        cmp.constraint_features = torch.cat(
+            (
+                cmp.constraint_features,
+                torch.tensor([[-1.0, 1.0, -1.0, 1.0, 0.0]], device=device),
+            )
+        )
+    else:
+        # Get the current multipliers
+        ineq_mult = formulation.state()[0]
+        # Third multiplier init
+        third_mult_init = torch.tensor([0.0], device=device)
+        # Initialize a new multiplier tensor and set the third constraint
+        # multiplier to zero
+        new_ineq_mult_init = torch.cat((ineq_mult, third_mult_init), dim=-1)
+        # Reinitialize the formulation with new multipliers
+        formulation = cooper.LagrangianFormulation(cmp, new_ineq_mult_init.tolist())
+
+
+    # Increasing Augmented Lagrangian coefficient schedule
+    lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
+    dual_scheduler = None # cooper.optim.partial_scheduler(
+    #     torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
+    # )
+
+    # Reinitialize the optimizer with the new formulation
+    params, coop = get_optimizer(
+        formulation=formulation,  # Pass the new lagrangian formulation or the model formulation
+        device=device,
+        primal_optim_cls=torch.optim.SGD,
+        primal_init=params.tolist(),  # Pass the current parameters as the initial parameters
+        dual_optim_cls=torch.optim.SGD,
+        use_ineq=True,
+        use_mult_model=use_mult_model,
+        dual_restarts=False,
+        alternating=False,
+        primal_optim_kwargs={"lr": second_primal_lr},
+        dual_optim_kwargs={"lr": second_dual_lr},
+        dual_scheduler=dual_scheduler,
+    )
+
+    if use_mult_model:
+        coop.instantiate_dual_optimizer_and_scheduler()
+
+    for step_id in range(last_step, last_step + 10000):
+        coop.zero_grad()
+        lagrangian = formulation.compute_lagrangian(
+            closure=cmp.closure,
+            params=params,
+            use_third_constraint=use_third_constraint,
+        )
+        formulation.backward(lagrangian)
+        coop.step(cmp.closure, params, use_third_constraint)
+
+        param_list.append(params.clone().detach())
+
+        if config["use_wandb"]:
+            logs = metric_logger(cmp.state, formulation, lagrangian, params)
+            wandb.log(logs, step_id)
 
         if step_id % 10 == 0:
             print(f"Iteration {step_id}")
+
+    if config["use_wandb"]:
+        log_param_history_plot(param_list)
+        wandb.finish()
 
 
 def metric_logger(cmp_state, formulation, lagrangian, params):
@@ -372,19 +515,31 @@ def metric_logger(cmp_state, formulation, lagrangian, params):
         "lagrangian": lagrangian.item(),
         "ineq_defect": wandb.Histogram(_to_cpu_numpy(cmp_state.ineq_defect)),
         "ineq_multipliers": wandb.Histogram(_to_cpu_numpy(multipliers)),
-        "Multiplier 1": multipliers[0], 
-        ## "Multiplier 2": multipliers[1],
-        "Defect 1": deepcopy(formulation.cmp.state.ineq_defect.data)[0],
-       ## "Defect 2": deepcopy(formulation.cmp.state.ineq_defect.data)[1],
+        # "Multiplier 1": multipliers[0],
+        # "Multiplier 2": multipliers[1],
+        # "Defect 1": deepcopy(formulation.cmp.state.ineq_defect.data)[0],
+        # "Defect 2": deepcopy(formulation.cmp.state.ineq_defect.data)[1],
         "x": params[0].item(),
         "y": params[1].item(),
     }
-    if len(multipliers) > 1:
-        logs["Multiplier 2"] = multipliers[1]
-        logs["Defect 2"] = deepcopy(formulation.cmp.state.ineq_defect.data)[1]
+    # if len(multipliers) > 1:
+    #     logs["Multiplier 2"] = multipliers[1]
+    #     logs["Defect 2"] = deepcopy(formulation.cmp.state.ineq_defect.data)[1]
 
     return logs
 
+
+def log_param_history_plot(param_list):
+
+    param_tensor = _to_cpu_numpy(torch.stack(param_list))
+    wandb.log(
+        {
+            "param_history": wandb.plot.line_series(
+                xs=param_tensor[:, 0],
+                ys=[param_tensor[:, 1]],
+            )
+        }
+    )
 
 def _to_cpu_numpy(
     x: Union[torch.Tensor, list, dict[str, torch.Tensor]]
@@ -418,6 +573,20 @@ def setup_wandb_logging(config):
 
 if __name__ == "__main__":
     if torch.cuda.is_available():
-        main("cuda", config["use_mult_model"], config["primal_lr"], config["dual_lr"])
+        main(
+            "cuda",
+            config["use_mult_model"],
+            config["primal_lr"],
+            config["dual_lr"],
+            config["second_primal_lr"],
+            config["second_dual_lr"],
+        )
     else:
-        main("cpu", config["use_mult_model"], config["primal_lr"], config["dual_lr"])
+        main(
+            "cpu",
+            config["use_mult_model"],
+            config["primal_lr"],
+            config["dual_lr"],
+            config["second_primal_lr"],
+            config["second_dual_lr"],
+        )
