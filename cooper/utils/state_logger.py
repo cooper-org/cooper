@@ -2,7 +2,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import List
 
-from cooper.formulation import Formulation
+from cooper.problem import CMPState
 
 
 class StateLogger:
@@ -22,7 +22,7 @@ class StateLogger:
 
     def store_metrics(
         self,
-        formulation: Formulation,
+        cmp_state: CMPState,
         step_id: int,
         partial_dict: dict = None,
     ):
@@ -30,8 +30,7 @@ class StateLogger:
         Store a new screenshot of the metrics.
 
         Args:
-            formulation: Formulation from which to take the current metric
-                values.
+            cmp_state: State of the CMP to be stored.
             step_id: Identifier for the optimization step.
             partial_dict: Auxiliary dictionary with other metrics to be logged,
                 but which are not part of the "canonical" options available in
@@ -41,15 +40,11 @@ class StateLogger:
 
         for metric in self.save_metrics:
             if metric == "loss":
-                aux_dict[metric] = formulation.cmp.state.loss.item()
+                aux_dict[metric] = cmp_state.loss.item()
             elif metric == "ineq_defect":
-                aux_dict[metric] = deepcopy(formulation.cmp.state.ineq_defect.data)
+                aux_dict[metric] = deepcopy(cmp_state.ineq_defect.data)
             elif metric == "eq_defect":
-                aux_dict[metric] = deepcopy(formulation.cmp.state.eq_defect.data)
-            elif metric == "ineq_multipliers":
-                aux_dict[metric] = deepcopy(formulation.state()[0].data)
-            elif metric == "eq_multipliers":
-                aux_dict[metric] = deepcopy(formulation.state()[1].data)
+                aux_dict[metric] = deepcopy(cmp_state.eq_defect.data)
 
         if partial_dict is not None:
             aux_dict.update(partial_dict)
