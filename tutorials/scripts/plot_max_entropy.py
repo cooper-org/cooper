@@ -19,7 +19,7 @@ import numpy as np
 import torch
 
 import cooper
-import tutorials.scripts.style_utils as style_utils
+from style_utils import *
 
 torch.manual_seed(0)
 np.random.seed(0)

@@ -36,7 +36,8 @@ import torch
 from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
-import tutorials.scripts.style_utils as style_utils
+import style_utils
+from style_utils import *
 
 torch.manual_seed(0)
 np.random.seed(0)
