@@ -11,6 +11,7 @@ cooper/version.py
 
 # Tutorial auxiliary folder
 tutorials/data/
+tutorials/scripts/data/
 
 # Ignore generated files for tutorial gallery
 docs/source/auto_tutorials

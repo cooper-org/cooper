@@ -19,7 +19,7 @@ import numpy as np
 import torch
 
 import cooper
-import tutorials.scripts.style_utils as style_utils
+from style_utils import *
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -79,8 +79,19 @@ for iter_num in range(2000):
     coop.step(cmp.closure, probs)
 
     # Store optimization metrics at each step
-    partial_dict = {"params": copy.deepcopy(probs.data)}
-    state_history.store_metrics(formulation, iter_num, partial_dict)
+    partial_dict = {
+        "params": copy.deepcopy(probs.data),
+        "ineq_multipliers": copy.deepcopy(formulation.state()[0].data),
+        "eq_multipliers": copy.deepcopy(formulation.state()[1].data),
+    }
+
+    # Store optimization metrics at each step
+    state_history.store_metrics(
+        cmp_state=cmp.state,
+        step_id=iter_num,
+        partial_dict=partial_dict,
+    )
+
 
 all_metrics = state_history.unpack_stored_metrics()
 
