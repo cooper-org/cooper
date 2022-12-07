@@ -307,11 +307,17 @@ class Toy2DWidget:
             params[:, 0].data.clamp_(min=0, max=np.pi / 2)
             params[:, 1].data.clamp_(min=0, max=3)
 
+            partial_dict = {
+                "params": copy.deepcopy(params.data),
+                "ineq_multipliers": copy.deepcopy(self.formulation.state()[0].data),
+                "eq_multipliers": copy.deepcopy(self.formulation.state()[1].data),
+            }
+
             # Store optimization metrics at each step
             state_history.store_metrics(
-                self.formulation,
-                iter_num,
-                partial_dict={"params": copy.deepcopy(params.data)},
+                cmp_state=self.cmp.state,
+                step_id=iter_num,
+                partial_dict=partial_dict,
             )
 
         return state_history
