@@ -264,4 +264,3 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
             # merging into main
             # new_loss = lagrangian - self.accumulated_violation_dot_prod
             # new_loss.backward(inputs=dual_vars)
-            
