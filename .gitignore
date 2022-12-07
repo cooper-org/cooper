@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Ignore wandb logs
-wandb/
-
 # Ignore generated version file by setuptools
 cooper/version.py
 
