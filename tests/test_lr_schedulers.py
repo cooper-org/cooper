@@ -2,11 +2,12 @@
 
 """Tests for LR schedulers."""
 
-from .helpers import cooper_test_utils
 import pytest
 import torch
 
 import cooper
+
+from .helpers import cooper_test_utils
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])

@@ -2,11 +2,12 @@
 
 """Tests for Augmented Lagrangian Formulation class."""
 
-from .helpers import cooper_test_utils
 import pytest
 import torch
 
 import cooper
+
+from .helpers import cooper_test_utils
 
 
 def test_augmented_lagrangian_formulation():

@@ -3,9 +3,10 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
-from .helpers import cooper_test_utils
 import pytest
 import torch
+
+from .helpers import cooper_test_utils
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])

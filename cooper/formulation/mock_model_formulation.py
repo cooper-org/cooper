@@ -1,10 +1,11 @@
-from typing import Callable, no_type_check, Tuple, Optional, Union, List
-
-from cooper.multipliers import MultiplierModel
-from cooper.formulation.lagrangian_model import LagrangianModelFormulation
-from cooper.problem import CMPState
+from typing import Callable, List, Optional, Tuple, Union, no_type_check
 
 import torch
+
+from cooper.formulation.lagrangian_model import LagrangianModelFormulation
+from cooper.multipliers import MultiplierModel
+from cooper.problem import CMPState
+
 
 class MockLagrangianModelFormulation(LagrangianModelFormulation):
     """

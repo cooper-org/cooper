@@ -3,17 +3,18 @@ LagrangianModelFormulation against the regular LagrangianFormulation. The result
 will be logged to a wandb team project. Please note that wandb is not a dependecy of the
 project so you will have to install it manually."""
 
-from dataclasses import dataclass
 import functools
 import os
 import random
+from copy import deepcopy
+from dataclasses import dataclass
 from types import GeneratorType
 from typing import Union
 
-from copy import deepcopy
-import cooper
 import numpy as np
 import torch
+
+import cooper
 import wandb
 
 random.seed(121212)
@@ -451,10 +452,9 @@ def main(
         # Reinitialize the formulation with new multipliers
         formulation = cooper.LagrangianFormulation(cmp, new_ineq_mult_init.tolist())
 
-
     # Increasing Augmented Lagrangian coefficient schedule
     lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
-    dual_scheduler = None # cooper.optim.partial_scheduler(
+    dual_scheduler = None  # cooper.optim.partial_scheduler(
     #     torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
     # )
 
@@ -540,6 +540,7 @@ def log_param_history_plot(param_list):
             )
         }
     )
+
 
 def _to_cpu_numpy(
     x: Union[torch.Tensor, list, dict[str, torch.Tensor]]

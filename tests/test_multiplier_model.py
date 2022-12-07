@@ -1,6 +1,7 @@
 # create class that inherits from cooper.multipliers.MultiplierModel
-import cooper
 import torch
+
+import cooper
 
 
 class ToyMultiplierModel(cooper.multipliers.MultiplierModel):

@@ -1,7 +1,8 @@
+import abc
 from typing import Iterator
 
 import torch
-import abc
+
 from cooper.multipliers import BaseMultiplier
 
 

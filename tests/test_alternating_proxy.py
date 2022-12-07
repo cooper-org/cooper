@@ -2,9 +2,10 @@
 
 """Tests for Constrained Optimizer class."""
 
-from .helpers import cooper_test_utils
 import pytest
 import torch
+
+from .helpers import cooper_test_utils
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])

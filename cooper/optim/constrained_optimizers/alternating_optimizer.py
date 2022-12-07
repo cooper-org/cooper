@@ -143,8 +143,9 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         # Update multipliers based on current constraint violations (gradients)
         self.dual_optimizer.step()
 
-        if (self.formulation.ineq_multipliers is not None and
-            not isinstance(self.formulation, LagrangianModelFormulation)):
+        if self.formulation.ineq_multipliers is not None and not isinstance(
+            self.formulation, LagrangianModelFormulation
+        ):
             if self.dual_restarts:
                 # "Reset" value of inequality multipliers to zero as soon as
                 # solution becomes feasible

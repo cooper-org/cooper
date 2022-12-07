@@ -105,8 +105,9 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         self.dual_optimizer.step()
 
         # TODO: Check if the isintance flag has to be added to other optimizers
-        if (self.formulation.ineq_multipliers is not None and
-            not isinstance(self.formulation, LagrangianModelFormulation)):
+        if self.formulation.ineq_multipliers is not None and not isinstance(
+            self.formulation, LagrangianModelFormulation
+        ):
             if self.dual_restarts:
                 # "Reset" value of inequality multipliers to zero as soon as
                 # solution becomes feasible

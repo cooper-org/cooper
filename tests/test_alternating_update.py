@@ -2,9 +2,10 @@
 
 """Tests for Extrapolation optimizers."""
 
-from .helpers import cooper_test_utils
 import pytest
 import torch
+
+from .helpers import cooper_test_utils
 
 
 def problem_data(aim_device, alternating):

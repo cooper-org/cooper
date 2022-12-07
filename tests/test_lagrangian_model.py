@@ -2,11 +2,13 @@
 
 """Tests for Lagrangian Formulation class."""
 
-import cooper
+import random
+
+import numpy as np
 import pytest
 import torch
-import random
-import numpy as np
+
+import cooper
 
 from .helpers import cooper_test_utils
 

@@ -4,10 +4,11 @@
 
 import random
 
-import cooper
 import numpy as np
 import pytest
 import torch
+
+import cooper
 
 from .helpers import cooper_test_utils
 

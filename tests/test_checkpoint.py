@@ -6,13 +6,14 @@ for the unconstrained setting."""
 import os
 import tempfile
 
-# Import basic closure example from helpers
-from .helpers import cooper_test_utils
 import pytest
 import torch
 
 import cooper
 from cooper.utils import validate_state_dicts
+
+# Import basic closure example from helpers
+from .helpers import cooper_test_utils
 
 
 def train_for_n_steps(coop, cmp, params, n_step=100):

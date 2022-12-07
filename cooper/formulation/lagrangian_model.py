@@ -1,10 +1,10 @@
-from typing import Callable, no_type_check, Tuple, Optional, Union, List
-
-from cooper.multipliers import MultiplierModel
-from cooper.formulation.lagrangian import BaseLagrangianFormulation
-from cooper.problem import CMPState
+from typing import Callable, List, Optional, Tuple, Union, no_type_check
 
 import torch
+
+from cooper.formulation.lagrangian import BaseLagrangianFormulation
+from cooper.multipliers import MultiplierModel
+from cooper.problem import CMPState
 
 
 class LagrangianModelFormulation(BaseLagrangianFormulation):
@@ -29,12 +29,14 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
             # TODO: document this
             raise ValueError("At least one multiplier model must be provided.")
 
-        if (self.ineq_multiplier_model is not None and
-            not isinstance(self.ineq_multiplier_model, MultiplierModel)):
+        if self.ineq_multiplier_model is not None and not isinstance(
+            self.ineq_multiplier_model, MultiplierModel
+        ):
             raise ValueError("The `ineq_multiplier_model` must be a `MultiplierModel`.")
 
-        if (self.eq_multiplier_model is not None and
-            not isinstance(self.eq_multiplier_model, MultiplierModel)):
+        if self.eq_multiplier_model is not None and not isinstance(
+            self.eq_multiplier_model, MultiplierModel
+        ):
             raise ValueError("The `eq_multiplier_model` must be a `MultiplierModel`.")
 
     def create_state(self):

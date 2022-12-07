@@ -2,12 +2,13 @@
 
 """Tests for Extrapolation optimizers."""
 
-# Import basic closure example from helpers
-from .helpers import cooper_test_utils
 import pytest
 import torch
 
 import cooper
+
+# Import basic closure example from helpers
+from .helpers import cooper_test_utils
 
 
 def problem_data(aim_device, primal_optim_cls):
