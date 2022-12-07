@@ -2,4 +2,3 @@ from .augmented_lagrangian import AugmentedLagrangianFormulation
 from .formulation import Formulation, UnconstrainedFormulation
 from .lagrangian import LagrangianFormulation, ProxyLagrangianFormulation
 from .lagrangian_model import LagrangianModelFormulation
-from .mock_model_formulation import MockLagrangianModelFormulation
