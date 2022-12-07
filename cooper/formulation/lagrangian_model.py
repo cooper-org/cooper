@@ -45,6 +45,10 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         instantiation of the object, since it is necessary to provide a `MultiplerModel`
         for each of the contraint types."""
         pass
+    
+    # TODO(IsitaRex): create_state_from_metadata missing
+    def create_state_from_metadata(self):
+        pass
 
     @property
     def is_state_created(self):
@@ -102,6 +106,9 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         when using the dual formulation in conjunction with the alternating
         update scheme.
         """
+        # FIXME(IsitaRex): We are accessing grad from the multiplier_model,
+        # but not from the multiplier_model.parameters(). Check if this is 
+        # correct.
         for constraint_type in ["eq", "ineq"]:
             mult_name = constraint_type + "_multiplier_model"
             multiplier_model = getattr(self, mult_name)
