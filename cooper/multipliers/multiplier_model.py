@@ -41,10 +41,11 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
         pass
 
     @property
+    # FIXME(IsitaRex): Rename this.
     def grad(self):
         """Yields the current gradients stored in each fo the model parameters."""
-        for param in self.parameters():
-            yield param.grad
+        for parameter in self.parameters():
+            yield parameter.grad
 
     def project_(self):
         raise RuntimeError("""project_ method does not exist for MultiplierModel.""")
