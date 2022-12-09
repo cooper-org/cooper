@@ -11,13 +11,8 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
     A multiplier model. Holds a :py:class:`~torch.nn.Module`, which predicts
     the value of the Lagrange multipliers associated with the equality or
     inequality constraints of a
-    :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
-
-    Args:
-        model: A :py:class:`~torch.nn.Module` which predicts the values of the
-            Lagrange multipliers.
-        is_positive: Whether to enforce non-negativity on the values of the
-            multiplier.
+    :py:class:`~cooper.problem.ConstrainedMinimizationProblem`. This is class is meant
+    to be inherited by the user to implement their own multiplier model.
     """
 
     def __init__(self):
