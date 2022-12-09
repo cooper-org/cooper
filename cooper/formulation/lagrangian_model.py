@@ -9,8 +9,23 @@ from cooper.problem import CMPState
 
 class LagrangianModelFormulation(BaseLagrangianFormulation):
     """
-    # TODO: document this
-    Computes the Lagrangian based on the predictions of a `MultiplierModel`.
+    Computes the Lagrangian based on the predictions of a `MultiplierModel`. This
+    formulation is useful when the Lagrange multipliers are not kept explicitly, but
+    are instead predicted by a model, e.i. neural network. This formulation is meant to
+    be used along the :py:class:`~cooper.multipliers.MultiplierModel`.
+
+    Attributes:
+        ineq_multiplier_model: The model used to predict the Lagrange multipliers
+            associated with the inequality constraints. If ``None``, the
+            :py:meth:`~cooper.formulation.lagrangian_model.LagrangianModelFormulation.state`
+            method will not return the Lagrange multipliers associated with the
+            inequality constraints.
+        eq_multiplier_model: The model used to predict the Lagrange multipliers
+            associated with the equality constraints. If ``None``, the
+            :py:meth:`~cooper.formulation.lagrangian_model.LagrangianModelFormulation.state`
+            method will not return the Lagrange multipliers associated with the
+            equality constraints.
+        **kwargs: Additional keyword arguments to be passed to the
     """
 
     def __init__(
@@ -26,7 +41,8 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         self.eq_multiplier_model = eq_multiplier_model
 
         if self.ineq_multiplier_model is None and self.eq_multiplier_model is None:
-            # TODO: document this
+            # This formulation cannot perform any prediction if no multiplier model is
+            # provided.
             raise ValueError("At least one multiplier model must be provided.")
 
         if self.ineq_multiplier_model is not None and not isinstance(
@@ -45,7 +61,7 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         instantiation of the object, since it is necessary to provide a `MultiplerModel`
         for each of the contraint types."""
         pass
-    
+
     # TODO(IsitaRex): create_state_from_metadata missing
     def create_state_from_metadata(self):
         pass
@@ -107,7 +123,7 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         update scheme.
         """
         # FIXME(IsitaRex): We are accessing grad from the multiplier_model,
-        # but not from the multiplier_model.parameters(). Check if this is 
+        # but not from the multiplier_model.parameters(). Check if this is
         # correct.
         for constraint_type in ["eq", "ineq"]:
             mult_name = constraint_type + "_multiplier_model"
@@ -126,7 +142,27 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         write_state: bool = True,
         **closure_kwargs,
     ) -> torch.Tensor:
-        """ """
+        """
+        Computes the Lagrangian of the problem, given the current state of the
+        optimization problem. This method is used to compute the loss function
+        for the optimization problem.
+
+        Args:
+            closure: A function that returns a :py:class:`CMPState` object. This
+                function is used to compute the loss function and the constraint
+                violations. If ``None``, the ``pre_computed_state`` argument must be
+                provided.
+            *closure_args: Positional arguments to be passed to the ``closure``
+                function.
+            pre_computed_state: A :py:class:`CMPState` object containing the
+                pre-computed loss function and constraint violations. If ``None``,
+                the ``closure`` argument must be provided.
+            write_state: If ``True``, the state of the optimization problem is
+                written to the ``cmp_state`` attribute of the :py:class:`CMPState`
+                object.
+            **closure_kwargs: Keyword arguments to be passed to the ``closure``
+                function.
+        """
 
         assert (
             closure is not None or pre_computed_state is not None
