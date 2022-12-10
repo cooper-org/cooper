@@ -16,6 +16,7 @@ except PackageNotFoundError:
     warnings.warn("Could not retrieve cooper version!")
 
 from cooper.formulation import (
+    AugmentedLagrangianFormulation,
     Formulation,
     LagrangianFormulation,
     UnconstrainedFormulation,
