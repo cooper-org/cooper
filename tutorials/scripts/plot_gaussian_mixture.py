@@ -32,12 +32,12 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
+import style_utils
 import torch
+from style_utils import *
 from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
-import style_utils
-from style_utils import *
 
 torch.manual_seed(0)
 np.random.seed(0)

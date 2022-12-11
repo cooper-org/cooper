@@ -17,9 +17,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from style_utils import *
 
 import cooper
-from style_utils import *
 
 torch.manual_seed(0)
 np.random.seed(0)

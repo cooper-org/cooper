@@ -18,10 +18,10 @@ This example illustrates how **Cooper** integrates with:
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from style_utils import *
 from torchvision import datasets, transforms
 
 import cooper
-from style_utils import *
 
 np.random.seed(0)
 torch.manual_seed(0)
