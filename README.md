@@ -142,6 +142,14 @@ the repository.
 **Cooper** is distributed under an MIT license, as found in the
 [LICENSE](https://github.com/cooper-org/cooper/tree/master/LICENSE) file.
 
+## Projects built with Cooper
+
+- J. Gallego-Posada et al. Controlled Sparsity via Constrained Optimization or: How I Learned to Stop Tuning Penalties and Love Constraints. In [NeurIPS 2022](https://arxiv.org/abs/2208.04425).
+- S. Lachapelle and S. Lacoste-Julien. Partial Disentanglement via Mechanism Sparsity. In [CLR Workshop at UAI 2022](https://arxiv.org/abs/2207.07732).
+- J. Ramirez and J. Gallego-Posada. L0onie: Compressing COINS with L0-constraints. In [Sparsity in Neural Networks Workshop 2022](https://arxiv.org/abs/2207.04144).
+
+*If you would like your work to be highlighted in this list, please open a pull request.*
+
 ## Acknowledgements
 
 **Cooper** supports the use of extra-gradient style optimizers for solving the
