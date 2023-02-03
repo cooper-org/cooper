@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Tests for Lagrangian Formulation class."""
+"""Tests for Lagrangian Model Formulation class."""
 
 import random
 
@@ -26,24 +26,36 @@ def test_lagrangian_model():
         def closure(self):
             pass
 
-    cmp = DummyCMP()
+    class DummyMultiplierModel(cooper.multipliers.MultiplierModel):
+        def __init__(self):
+            super().__init__()
+            self.linear = torch.nn.Linear(10, 1)
 
-    mm = cooper_test_utils.ToyMultiplierModel(10, 10, "cpu")
+        def forward(self, constraint_features):
+            return self.linear(constraint_features)
+
+    cmp = DummyCMP()
+    mm = DummyMultiplierModel()
+
+    # Test is_state_created
+    lmf = cooper.formulation.LagrangianModelFormulation(
+        cmp, eq_multiplier_model=mm
+    )
+    assert lmf.is_state_created
 
     lmf = cooper.formulation.LagrangianModelFormulation(
         cmp, ineq_multiplier_model=mm, eq_multiplier_model=mm
     )
-
-    # Test is_state_created
     assert lmf.is_state_created
 
-    # test lf state
+    # Test state()
     eq_featurs = torch.randn(100, 10)
     ineq_featurs = torch.randn(100, 10)
     ineq_state, eq_state = lmf.state(ineq_featurs, eq_featurs)
 
     assert ineq_state is not None
     assert eq_state is not None
+
 
     # TODO: evaluate if it is necessary to test dual_parameters and flip_dual_gradients
 
@@ -71,7 +83,7 @@ def test_convergence_small_toy_problem(aim_device):
 
     coop.instantiate_dual_optimizer_and_scheduler()
 
-    for step_id in range(400):
+    for _ in range(400):
         coop.zero_grad()
 
         lagrangian = formulation.compute_lagrangian(
