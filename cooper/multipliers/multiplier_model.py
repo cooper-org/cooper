@@ -49,5 +49,3 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
         raise RuntimeError(
             """restart_if_feasible_ method does not exist for MultiplierModel."""
         )
-
-    # TODO: Add __str__ and similar methods to MultiplierModel if possible
