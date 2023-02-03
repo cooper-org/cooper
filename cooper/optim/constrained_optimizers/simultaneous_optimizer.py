@@ -94,8 +94,6 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
 
     def dual_step(self):
 
-        # TODO: Fill the flip dual gradients and model formulation flag with other optimizers
-
         # Flip gradients for multipliers to perform ascent.
         # We only do the flipping *right before* applying the optimizer step to
         # avoid accidental double sign flips.
@@ -104,7 +102,6 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         # Update multipliers based on current constraint violations (gradients)
         self.dual_optimizer.step()
 
-        # TODO: Check if the isintance flag has to be added to other optimizers
         if self.formulation.ineq_multipliers is not None and not isinstance(
             self.formulation, LagrangianModelFormulation
         ):
