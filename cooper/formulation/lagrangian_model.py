@@ -302,8 +302,3 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         if not ignore_dual:
             dual_vars = self.dual_parameters
             self.accumulated_violation_dot_prod.backward(inputs=dual_vars)
-            # FIXME(IsitaRex): Alternative implementation had the code below
-            # It's unclear why this difference exists. Must be checked before
-            # merging into main
-            # new_loss = lagrangian - self.accumulated_violation_dot_prod
-            # new_loss.backward(inputs=dual_vars)
