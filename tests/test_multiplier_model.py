@@ -2,7 +2,6 @@ import cooper
 
 def test_multiplier_model_init():
     class DummyMultiplierModel(cooper.multipliers.MultiplierModel):
-
         def __init__(self):
             super().__init__()
 
