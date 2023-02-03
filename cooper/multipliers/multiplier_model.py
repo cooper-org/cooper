@@ -3,7 +3,7 @@ from typing import Iterator
 
 import torch
 
-from cooper.multipliers import BaseMultiplier
+from .multipliers import BaseMultiplier
 
 
 class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
@@ -37,7 +37,7 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
 
     @property
     # FIXME(IsitaRex): Rename this.
-    def grad(self):
+    def grad(self) -> Iterator[torch.Tensor]:
         """Yields the current gradients stored in each fo the model parameters."""
         for parameter in self.parameters():
             yield parameter.grad
