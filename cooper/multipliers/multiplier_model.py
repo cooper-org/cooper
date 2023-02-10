@@ -21,26 +21,18 @@ class MultiplierModel(BaseMultiplier, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def forward(self, constraint_features: torch.Tensor):
         """
-        Returns the *actual* value of the multipliers by
-        passing the "features" of the constraint to predict the corresponding
-        multiplier.
+        Returns the *actual* value of the multipliers by passing the "features" of the
+        constraint to predict the corresponding multiplier.
         """
         pass
+
+    @property
+    def grad(self) -> Iterator[torch.Tensor]:
+        raise RuntimeError("""grad method does not exist for MultiplierModel.""")
 
     @property
     def shape(self):
-        """
-        Returns the shape of the explicit multipliers. In the case of implicit
-        multipliers, this should return the *actual* predicted multipliers.
-        """
-        pass
-
-    @property
-    # FIXME(IsitaRex): Rename this.
-    def grad(self) -> Iterator[torch.Tensor]:
-        """Yields the current gradients stored in each fo the model parameters."""
-        for parameter in self.parameters():
-            yield parameter.grad
+        raise RuntimeError("""shape method does not exist for MultiplierModel.""")
 
     def project_(self):
         raise RuntimeError("""project_ method does not exist for MultiplierModel.""")
