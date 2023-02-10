@@ -51,7 +51,7 @@ def test_extrapolation(aim_device, primal_optimizer_cls):
         assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
         assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
 
-    # TODO: Why do we need such relaxed tolerance for this test to pass?
+    # TODO(gallego-posada): Why do we need such relaxed tolerance for this test to pass?
     if primal_optimizer_cls == cooper.optim.ExtraSGD:
         atol = 1e-8
     else:
