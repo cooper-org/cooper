@@ -1,10 +1,67 @@
-from typing import Callable, List, Optional, Tuple, Union, no_type_check
+from dataclasses import dataclass
+from typing import (
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    no_type_check,
+    Dict,
+    Any,
+    Iterator,
+)
 
 import torch
 
-from cooper.formulation.lagrangian import BaseLagrangianFormulation
+from .lagrangian import BaseLagrangianFormulation
 from cooper.multipliers import MultiplierModel
-from cooper.problem import CMPState
+
+@dataclass
+class CMPModelState:
+    """
+    Represents the "state" of a Constrained Minimization Problem in terms of
+    the value of its loss and constraint violations/defects. The main difference between
+    this object and `CMPState` is that it also stores the features for the constraints
+    that are going to be passed to the multiplier models to predict the Lagrange
+    multipliers.
+
+    Args:
+        loss: Value of the loss or main objective to be minimized :math:`f(x)`
+        ineq_defect: Violation of the inequality constraints :math:`g(x)`
+        eq_defect: Violation of the equality constraints :math:`h(x)`
+        proxy_ineq_defect: Differentiable surrogate for the inequality
+            constraints as proposed by :cite:t:`cotter2019JMLR`.
+        proxy_eq_defect: Differentiable surrogate for the equality constraints
+            as proposed by :cite:t:`cotter2019JMLR`.
+        ineq_constraint_features: Features for the inequality constraints that are
+            going to be passed to the inequality multiplier model to predict the Lagrange
+            multipliers.
+        eq_constraint_features: Features for the equality constraints that are going to
+            be passed to the equality multiplier model to predict the Lagrange multipliers.
+        misc: Optional additional information to be store along with the state
+            of the CMP
+    """
+
+    loss: Optional[torch.Tensor] = None
+    ineq_defect: Optional[torch.Tensor] = None
+    eq_defect: Optional[torch.Tensor] = None
+    proxy_ineq_defect: Optional[torch.Tensor] = None
+    proxy_eq_defect: Optional[torch.Tensor] = None
+    ineq_constraint_features: Optional[torch.Tensor] = None
+    eq_constraint_features: Optional[torch.Tensor] = None
+    misc: Optional[dict] = None
+
+    def as_tuple(self) -> tuple:
+        return (
+            self.loss,
+            self.ineq_defect,
+            self.eq_defect,
+            self.proxy_ineq_defect,
+            self.proxy_eq_defect,
+            self.ineq_constraint_features,
+            self.eq_constraint_features,
+            self.misc,
+        )
 
 
 class LagrangianModelFormulation(BaseLagrangianFormulation):
@@ -40,6 +97,13 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         self.ineq_multiplier_model = ineq_multiplier_model
         self.eq_multiplier_model = eq_multiplier_model
 
+        self.base_sanity_checks()
+
+    def base_sanity_checks(self):
+        """
+        Perform sanity checks on the initialization of ``LagrangianModelFormulation``.
+        """
+
         if self.ineq_multiplier_model is None and self.eq_multiplier_model is None:
             # This formulation cannot perform any prediction if no multiplier model is
             # provided.
@@ -55,27 +119,6 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         ):
             raise ValueError("The `eq_multiplier_model` must be a `MultiplierModel`.")
 
-    def create_state(self):
-        """This method is not implemented for this formulation. It originally
-        instantiates the dual variables, but in this formulation this is done since the
-        instantiation of the object, since it is necessary to provide a `MultiplerModel`
-        for each of the contraint types."""
-        pass
-
-    # TODO(IsitaRex): create_state_from_metadata missing
-    def create_state_from_metadata(self):
-        pass
-
-    @property
-    def is_state_created(self):
-        """
-        Returns ``True`` if any Lagrange multipliers have been initialized.
-        """
-        return (
-            self.ineq_multiplier_model is not None
-            or self.eq_multiplier_model is not None
-        )
-
     @property
     def dual_parameters(self) -> List[torch.Tensor]:
         """Returns a list gathering all dual parameters."""
@@ -87,34 +130,74 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
 
         return all_dual_params
 
-    def state(
-        self,
-        eq_features: Optional[torch.Tensor] = None,
-        ineq_features: Optional[torch.Tensor] = None,
-    ) -> Tuple[Union[None, torch.Tensor]]:
+    def state(self) -> Tuple[Union[None, Iterator[torch.nn.Parameter]]]:
 
         """
         Collects all dual variables and returns a tuple containing their
-        :py:class:`torch.Tensor` values. Note that the *values* are the output of a
-        `MultiplierModel`, thus, it is necessary to pass the model inputs to obtain the
-        predictions.
+        :py:class:`Iterator[torch.nn.Parameter]` values. Note that the *values*
+        correspond to the parameters of the `MultiplierModel`.
         """
 
-        assert (
-            eq_features is not None or ineq_features is not None
-        ), "At least one of `eq_features` or `ineq_features` must be provided."
-
-        if ineq_features is None:
+        if self.ineq_multiplier_model is None:
             ineq_state = None
         else:
-            ineq_state = self.ineq_multiplier_model.forward(ineq_features)
+            ineq_state = self.ineq_multiplier_model.parameters()
 
-        if eq_features is None:
+        if self.eq_multiplier_model is None:
             eq_state = None
         else:
-            eq_state = self.eq_multiplier_model.forward(eq_features)
+            eq_state = self.eq_multiplier_model.parameters()
 
         return ineq_state, eq_state
+
+    def create_state(self):
+        """This method is not implemented for this formulation. It originally
+        instantiates the dual variables, but in this formulation this is done since the
+        instantiation of the object, since it is necessary to provide a `MultiplerModel`
+        for each of the contraint types."""
+        pass
+
+    @property
+    def is_state_created(self):
+        """
+        Returns ``True`` if any Multiplier Model have been initialized.
+        """
+        return (
+            self.ineq_multiplier_model is not None
+            or self.eq_multiplier_model is not None
+        )
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Generates the state dictionary for a Lagrangian model formulation.
+        """
+
+        state_dict = {
+            "ineq_multiplier_model": self.ineq_multiplier_model.state_dict(),
+            "eq_multiplier_model": self.eq_multiplier_model.state_dict(),
+        }
+        return state_dict
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads the state dictionary of a Lagrangian formulation.
+
+        Args:
+            state_dict: state dictionary to be loaded.
+        """
+
+        known_attrs = ["ineq_multiplier_model", "eq_multiplier_model"]
+
+        for key, val in state_dict.items():
+
+            if key not in known_attrs:
+                raise ValueError(
+                    f"LagrangianModelFormulation received unknown key: {key}. Valid keys are {known_attrs}"
+                )
+
+            if key in ["ineq_multiplier_model", "eq_multiplier_model"]:
+                multiplier_model = getattr(self, key)
+                multiplier_model.load_state_dict(val)
 
     def flip_dual_gradients(self) -> None:
         """
@@ -122,23 +205,19 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         when using the dual formulation in conjunction with the alternating
         update scheme.
         """
-        # FIXME(IsitaRex): We are accessing grad from the multiplier_model,
-        # but not from the multiplier_model.parameters(). Check if this is
-        # correct.
-        for constraint_type in ["eq", "ineq"]:
-            mult_name = constraint_type + "_multiplier_model"
-            multiplier_model = getattr(self, mult_name)
-            if multiplier_model is not None:
-                for param_grad in multiplier_model.grad:
-                    if param_grad is not None:
-                        param_grad.mul_(-1.0)
+
+        for multiplier_model_state in self.state():
+            if multiplier_model_state is not None:
+                for param in multiplier_model_state:
+                    if param.grad is not None:
+                        param.grad.mul_(-1.0)
 
     @no_type_check
     def compute_lagrangian(
         self,
-        closure: Callable[..., CMPState] = None,
+        closure: Callable[..., CMPModelState] = None,
         *closure_args,
-        pre_computed_state: Optional[CMPState] = None,
+        pre_computed_state: Optional[CMPModelState] = None,
         write_state: bool = True,
         **closure_kwargs,
     ) -> torch.Tensor:
@@ -148,17 +227,17 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         for the optimization problem.
 
         Args:
-            closure: A function that returns a :py:class:`CMPState` object. This
+            closure: A function that returns a :py:class:`CMPModelState` object. This
                 function is used to compute the loss function and the constraint
                 violations. If ``None``, the ``pre_computed_state`` argument must be
                 provided.
             *closure_args: Positional arguments to be passed to the ``closure``
                 function.
-            pre_computed_state: A :py:class:`CMPState` object containing the
+            pre_computed_state: A :py:class:`CMPModelState` object containing the
                 pre-computed loss function and constraint violations. If ``None``,
                 the ``closure`` argument must be provided.
             write_state: If ``True``, the state of the optimization problem is
-                written to the ``cmp_state`` attribute of the :py:class:`CMPState`
+                written to the ``cmp_model_state`` attribute of the :py:class:`CMPModelState`
                 object.
             **closure_kwargs: Keyword arguments to be passed to the ``closure``
                 function.
@@ -169,23 +248,23 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         ), "At least one of closure or pre_computed_state must be provided"
 
         if pre_computed_state is not None:
-            cmp_state = pre_computed_state
+            cmp_model_state = pre_computed_state
         else:
-            cmp_state = closure(*closure_args, **closure_kwargs)
+            cmp_model_state = closure(*closure_args, **closure_kwargs)
 
         if write_state:
-            self.write_cmp_state(cmp_state)
+            self.write_cmp_state(cmp_model_state)
 
         # Extract values from ProblemState object
-        loss = cmp_state.loss
+        loss = cmp_model_state.loss
 
         # Purge previously accumulated constraint violations
         self.update_accumulated_violation(update=None)
 
         # Compute contribution of the sampled constraint violations, weighted by the
         # current multiplier values predicted by the multuplier model.
-        ineq_viol = self.weighted_violation(cmp_state, "ineq")
-        eq_viol = self.weighted_violation(cmp_state, "eq")
+        ineq_viol = self.weighted_violation(cmp_model_state, "ineq")
+        eq_viol = self.weighted_violation(cmp_model_state, "eq")
 
         # Lagrangian = loss + \sum_i multiplier_i * defect_i
         lagrangian = loss + ineq_viol + eq_viol
@@ -193,28 +272,27 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         return lagrangian
 
     def weighted_violation(
-        self, cmp_state: CMPState, constraint_type: str
+        self, cmp_model_state: CMPModelState, constraint_type: str
     ) -> torch.Tensor:
         """
         Computes the dot product between the current multipliers and the
         constraint violations of type ``constraint_type``. The multiplier correspond to
         the output of a `MultiplierModel` provided when the formulation was initialized.
-        The model is trained on `constraint_features`, which are provided to the
-        CMPState in the misc, and is optimized with respect to the lagrangian. If proxy-
-        constraints are provided in the :py:class:`.CMPState`, the non-proxy (usually
-        non-differentiable) constraints are used for computing the dot product,
-        while the "proxy-constraint" dot products are accumulated under
+        The model is trained on `constraint_features` provided in the CMPModelState.
+        If proxy-constraints are provided in the :py:class:`.CMPModelState`, the non-
+        proxy (usually non-differentiable) constraints are used for computing the dot
+        product, while the "proxy-constraint" dot products are accumulated under
         ``self.accumulated_violation_dot_prod``.
 
         Args:
-            cmp_state: current ``CMPState``
+            cmp_model_state: current ``CMPModelState``
             constraint_type: type of constrained to be used, e.g. "eq" or "ineq".
         """
 
-        defect = getattr(cmp_state, constraint_type + "_defect")
+        defect = getattr(cmp_model_state, constraint_type + "_defect")
         has_defect = defect is not None
 
-        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+        proxy_defect = getattr(cmp_model_state, "proxy_" + constraint_type + "_defect")
         has_proxy_defect = proxy_defect is not None
 
         if not has_proxy_defect:
@@ -225,17 +303,15 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
         if not has_defect:
             # We should always have at least the "regular" defects, if not, then
             # the problem instance does not have `constraint_type` constraints
-            violation = torch.tensor([0.0], device=cmp_state.loss.device)
+            violation = torch.tensor([0.0], device=cmp_model_state.loss.device)
         else:
-            mult_model = getattr(self, constraint_type + "_multiplier_model")
+            multiplier_model = getattr(self, constraint_type + "_multiplier_model")
 
             # Get multipliers by performing a prediction over the features of the
             # sampled constraints
-            constraint_features = cmp_state.misc[
-                constraint_type + "_constraint_features"
-            ]
+            constraint_features = getattr(cmp_model_state, constraint_type + "_constraint_features")
 
-            multipliers = mult_model.forward(constraint_features)
+            multipliers = multiplier_model.forward(constraint_features)
 
             # The violations are computed via inner product between the multipliers
             # and the defects, they should have the same shape. If given proxy-defects
@@ -255,7 +331,7 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
             # on `accumulated_violation_dot_prod`. This enables easy
             # extensibility to multiplier classes beyond DenseMultiplier.
 
-            # TODO (JGP): Verify that call to backward is general enough for
+            # TODO (gallego-posada): Verify that call to backward is general enough for
             # Lagrange Multiplier models
             violation_for_update = torch.sum(multipliers * defect.detach())
             self.update_accumulated_violation(update=violation_for_update)
