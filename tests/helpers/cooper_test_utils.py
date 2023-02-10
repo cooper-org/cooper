@@ -10,6 +10,7 @@ import testing_utils
 import torch
 
 import cooper
+from cooper.formulation.lagrangian_model import CMPModelState
 
 
 @dataclass
@@ -237,16 +238,20 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         # Create inequality constraint features. The first feature is the exponent for
         # the x, the second for the y, and the third is the slack term. The sign of the
         # slack term depends on the constraint type (i.e. >= or <=).
-        misc = None
         if self.use_mult_model:
-            misc = {"ineq_constraint_features": self.constraint_features}
+            return CMPModelState(
+                loss=None,
+                eq_defect=eq_defect,
+                ineq_defect=ineq_defect,
+                proxy_ineq_defect=proxy_ineq_defect,
+                ineq_constraint_features=self.constraint_features,
+            )
 
         return cooper.CMPState(
             loss=None,
             eq_defect=eq_defect,
             ineq_defect=ineq_defect,
-            proxy_ineq_defect=proxy_ineq_defect,
-            misc=misc,
+            proxy_ineq_defect=proxy_ineq_defect
         )
 
 
