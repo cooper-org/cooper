@@ -16,6 +16,7 @@ import torch
 from .lagrangian import BaseLagrangianFormulation
 from cooper.multipliers import MultiplierModel
 
+
 @dataclass
 class CMPModelState:
     """
@@ -309,7 +310,9 @@ class LagrangianModelFormulation(BaseLagrangianFormulation):
 
             # Get multipliers by performing a prediction over the features of the
             # sampled constraints
-            constraint_features = getattr(cmp_model_state, constraint_type + "_constraint_features")
+            constraint_features = getattr(
+                cmp_model_state, constraint_type + "_constraint_features"
+            )
 
             multipliers = multiplier_model.forward(constraint_features)
 

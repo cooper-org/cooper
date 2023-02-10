@@ -251,7 +251,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             loss=None,
             eq_defect=eq_defect,
             ineq_defect=ineq_defect,
-            proxy_ineq_defect=proxy_ineq_defect
+            proxy_ineq_defect=proxy_ineq_defect,
         )
 
 

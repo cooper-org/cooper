@@ -7,7 +7,11 @@ from typing import Callable, List, Optional, Union
 
 import torch
 
-from cooper.formulation import AugmentedLagrangianFormulation, Formulation, LagrangianModelFormulation
+from cooper.formulation import (
+    AugmentedLagrangianFormulation,
+    Formulation,
+    LagrangianModelFormulation,
+)
 from cooper.optim.extra_optimizers import ExtragradientOptimizer
 from cooper.problem import CMPState
 
