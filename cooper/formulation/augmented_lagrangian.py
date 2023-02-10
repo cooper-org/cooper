@@ -90,7 +90,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             # to update the value of the multipliers by lazily filling the
             # multiplier gradients in `backward`
 
-            # TODO (JGP): Verify that call to backward is general enough for
+            # TODO (gallego-posada): Verify that call to backward is general enough for
             # Lagrange Multiplier models
             violation_for_update = torch.sum(multipliers * defect.detach())
             self.update_accumulated_violation(update=violation_for_update)
