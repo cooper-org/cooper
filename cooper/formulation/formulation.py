@@ -1,9 +1,12 @@
 import abc
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 import torch
 
 from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
+# from .lagrangian_model import CMPModelState
+
 
 # Formulation, and some other classes below, are heavily inspired by the design
 # of the TensorFlow Constrained Optimization (TFCO) library :
@@ -64,7 +67,8 @@ class Formulation(abc.ABC):
         formulation."""
         pass
 
-    def write_cmp_state(self, cmp_state: CMPState):
+    # TODO(daoterog): fix circular import type hint can be correct
+    def write_cmp_state(self, cmp_state: CMPState):  # Union[CMPState, CMPModelState]):
         """Provided that the formulation is linked to a
         `ConstrainedMinimizationProblem`, writes a CMPState to the CMP."""
 
