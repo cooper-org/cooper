@@ -42,7 +42,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         # Store user-provided initializations for dual variables
         self.ineq_init = ineq_init
         self.eq_init = eq_init
-
+        # TODO(gallego-posada): comment what is the meaning of this object
         self.accumulated_violation_dot_prod: torch.Tensor = None
 
     @property
@@ -193,11 +193,11 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         """
         Generates the state dictionary for a Lagrangian formulation.
         """
-
+        # TODO(gallego-posada): fix in next PR
         state_dict = {
             "ineq_multipliers": self.ineq_multipliers,
             "eq_multipliers": self.eq_multipliers,
-            "accumulated_violation_dot_prod": self.accumulated_violation_dot_prod,
+            # "accumulated_violation_dot_prod": self.accumulated_violation_dot_prod,
         }
         return state_dict
 
@@ -361,7 +361,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
             # on `accumulated_violation_dot_prod`. This enables easy
             # extensibility to multiplier classes beyond DenseMultiplier.
 
-            # TODO (JGP): Verify that call to backward is general enough for
+            # TODO (gallego-posada): Verify that call to backward is general enough for
             # Lagrange Multiplier models
             violation_for_update = torch.sum(multipliers * defect.detach())
             self.update_accumulated_violation(update=violation_for_update)
