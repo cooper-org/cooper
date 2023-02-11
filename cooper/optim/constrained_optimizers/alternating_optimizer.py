@@ -13,6 +13,7 @@ from cooper.formulation import (
     LagrangianModelFormulation,
 )
 from cooper.problem import CMPState
+from cooper.formulation.lagrangian_model import CMPModelState
 
 from .constrained_optimizer import ConstrainedOptimizer
 
@@ -44,9 +45,9 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
 
     def step(
         self,
-        closure: Optional[Callable[..., CMPState]] = None,
+        closure: Optional[Callable[..., Union[CMPState, CMPModelState]]] = None,
         *closure_args,
-        defect_fn: Optional[Callable[..., CMPState]] = None,
+        defect_fn: Optional[Callable[..., Union[CMPState, CMPModelState]]] = None,
         **closure_kwargs,
     ):
         """

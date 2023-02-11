@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from copy import deepcopy
-from typing import List
+from typing import List, Union
 
 from cooper.problem import CMPState
+from cooper.formulation.lagrangian_model import CMPModelState
 
 
 class StateLogger:
@@ -22,7 +23,7 @@ class StateLogger:
 
     def store_metrics(
         self,
-        cmp_state: CMPState,
+        cmp_state: Union[CMPState, CMPModelState],
         step_id: int,
         partial_dict: dict = None,
     ):
