@@ -2,9 +2,10 @@
 
 """Tests for Extrapolation optimizers."""
 
-import cooper_test_utils
 import pytest
 import torch
+
+from .helpers import cooper_test_utils
 
 
 def problem_data(aim_device, alternating):
@@ -16,6 +17,7 @@ def problem_data(aim_device, alternating):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=alternating,
     )

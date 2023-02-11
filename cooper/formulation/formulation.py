@@ -1,9 +1,12 @@
 import abc
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 import torch
 
 from cooper.problem import CMPState, ConstrainedMinimizationProblem
+
+# from .lagrangian_model import CMPModelState
+
 
 # Formulation, and some other classes below, are heavily inspired by the design
 # of the TensorFlow Constrained Optimization (TFCO) library :
@@ -34,6 +37,11 @@ class Formulation(abc.ABC):
         """Returns the internal state of formulation (e.g. multipliers)."""
         pass
 
+    @abc.abstractmethod
+    def flip_dual_gradients(self):
+        """Flips the sign of the dual gradients."""
+        pass
+
     @property
     @abc.abstractmethod
     def is_state_created(self):
@@ -59,7 +67,8 @@ class Formulation(abc.ABC):
         formulation."""
         pass
 
-    def write_cmp_state(self, cmp_state: CMPState):
+    # TODO(daoterog): fix circular import type hint can be correct
+    def write_cmp_state(self, cmp_state: CMPState):  # Union[CMPState, CMPModelState]):
         """Provided that the formulation is linked to a
         `ConstrainedMinimizationProblem`, writes a CMPState to the CMP."""
 
@@ -117,6 +126,11 @@ class UnconstrainedFormulation(Formulation):
         Loads the state dictionary for an unconstrained formulation. Since
         unconstrained formulations are stateless, this is a no-op.
         """
+        pass
+
+    def flip_dual_gradients(self):
+        """Flips the sign of the dual gradients. This is a no-op for
+        unconstrained formulations."""
         pass
 
     def compute_lagrangian(

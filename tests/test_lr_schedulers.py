@@ -2,11 +2,12 @@
 
 """Tests for LR schedulers."""
 
-import cooper_test_utils
 import pytest
 import torch
 
 import cooper
+
+from .helpers import cooper_test_utils
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -40,6 +41,7 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
         dual_optim_cls=optimizer_cls,
         use_ineq=True,
         use_proxy_ineq=True,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=False,
         primal_optim_kwargs={"lr": base_lr},

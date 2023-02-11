@@ -2,9 +2,10 @@
 
 """Tests for Constrained Optimizer class."""
 
-import cooper_test_utils
 import pytest
 import torch
+
+from .helpers import cooper_test_utils
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -21,6 +22,7 @@ def test_manual_proxy_constraints(aim_device):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=True,
         use_proxy_ineq=True,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=False,
         primal_optim_kwargs={"lr": 5e-2},

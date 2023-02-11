@@ -6,13 +6,14 @@ for the unconstrained setting."""
 import os
 import tempfile
 
-# Import basic closure example from helpers
-import cooper_test_utils
 import pytest
 import torch
 
 import cooper
 from cooper.utils import validate_state_dicts
+
+# Import basic closure example from helpers
+from .helpers import cooper_test_utils
 
 
 def train_for_n_steps(coop, cmp, params, n_step=100):
@@ -76,6 +77,7 @@ def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
         dual_optim_cls=torch.optim.SGD,
         use_ineq=use_ineq,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=True,
         alternating=False,
         primal_optim_kwargs=primal_optim_kwargs,

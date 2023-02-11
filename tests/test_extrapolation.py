@@ -2,12 +2,13 @@
 
 """Tests for Extrapolation optimizers."""
 
-# Import basic closure example from helpers
-import cooper_test_utils
 import pytest
 import torch
 
 import cooper
+
+# Import basic closure example from helpers
+from .helpers import cooper_test_utils
 
 
 def problem_data(aim_device, primal_optim_cls):
@@ -19,6 +20,7 @@ def problem_data(aim_device, primal_optim_cls):
         dual_optim_cls=cooper.optim.ExtraSGD,
         use_ineq=True,
         use_proxy_ineq=False,
+        use_mult_model=False,
         dual_restarts=False,
         alternating=False,
     )
@@ -49,7 +51,7 @@ def test_extrapolation(aim_device, primal_optimizer_cls):
         assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
         assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
 
-    # TODO: Why do we need such relaxed tolerance for this test to pass?
+    # TODO(gallego-posada): Why do we need such relaxed tolerance for this test to pass?
     if primal_optimizer_cls == cooper.optim.ExtraSGD:
         atol = 1e-8
     else:

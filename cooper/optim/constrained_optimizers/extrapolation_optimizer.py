@@ -7,9 +7,14 @@ from typing import Callable, List, Optional, Union
 
 import torch
 
-from cooper.formulation import AugmentedLagrangianFormulation, Formulation
+from cooper.formulation import (
+    AugmentedLagrangianFormulation,
+    Formulation,
+    LagrangianModelFormulation,
+)
 from cooper.optim.extra_optimizers import ExtragradientOptimizer
 from cooper.problem import CMPState
+from cooper.formulation.lagrangian_model import CMPModelState
 
 from .constrained_optimizer import ConstrainedOptimizer
 
@@ -123,9 +128,9 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     def step(
         self,
-        closure: Optional[Callable[..., CMPState]] = None,
+        closure: Optional[Callable[..., Union[CMPState, CMPModelState]]] = None,
         *closure_args,
-        defect_fn: Optional[Callable[..., CMPState]] = None,
+        defect_fn: Optional[Callable[..., Union[CMPState, CMPModelState]]] = None,
         **closure_kwargs,
     ):
         """
@@ -188,9 +193,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         # Flip gradients for multipliers to perform ascent.
         # We only do the flipping *right before* applying the optimizer step to
         # avoid accidental double sign flips.
-        for multiplier in self.formulation.state():
-            if multiplier is not None:
-                multiplier.grad.mul_(-1.0)
+        self.formulation.flip_dual_gradients()
 
         # Update multipliers based on current constraint violations (gradients)
         if call_extrapolation:
@@ -198,7 +201,9 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         else:
             self.dual_optimizer.step()
 
-        if self.formulation.ineq_multipliers is not None:
+        if self.formulation.ineq_multipliers is not None and not isinstance(
+            self.formulation, LagrangianModelFormulation
+        ):
             if self.dual_restarts:
                 # "Reset" value of inequality multipliers to zero as soon as
                 # solution becomes feasible
