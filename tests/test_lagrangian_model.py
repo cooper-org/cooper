@@ -18,46 +18,141 @@ torch.manual_seed(121212)
 torch.cuda.manual_seed(121211)
 
 
-def test_lagrangian_model():
-    class DummyCMP(cooper.ConstrainedMinimizationProblem):
-        def __init__(self):
-            super().__init__()
+class DummyCMP(cooper.ConstrainedMinimizationProblem):
+    def __init__(self):
+        super().__init__()
 
-        def closure(self):
-            pass
+    def closure(self):
+        pass
 
-    class DummyMultiplierModel(cooper.multipliers.MultiplierModel):
-        def __init__(self):
-            super().__init__()
-            self.linear = torch.nn.Linear(10, 1)
 
-        def forward(self, constraint_features):
-            return self.linear(constraint_features)
+class DummyMultiplierModel(cooper.multipliers.MultiplierModel):
+    def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(10, 1)
 
-    cmp = DummyCMP()
-    mm = DummyMultiplierModel()
+    def forward(self, constraint_features):
+        return self.linear(constraint_features)
 
-    # Test is_state_created
-    lmf = cooper.formulation.LagrangianModelFormulation(
-        cmp, eq_multiplier_model=mm
+
+@pytest.fixture
+def get_dummy_cmp():
+    return DummyCMP()
+
+
+@pytest.fixture
+def get_ineq_multiplier_model():
+    return DummyMultiplierModel()
+
+
+@pytest.fixture
+def get_eq_multiplier_model():
+    return DummyMultiplierModel()
+
+
+def return_fixture_values(cmp, ineq_multiplier_model, eq_multiplier_model, request):
+    cmp = request.getfixturevalue(cmp)
+    if ineq_multiplier_model is not None:
+        ineq_multiplier_model = request.getfixturevalue(ineq_multiplier_model)
+    if eq_multiplier_model is not None:
+        eq_multiplier_model = request.getfixturevalue(eq_multiplier_model)
+    return cmp, ineq_multiplier_model, eq_multiplier_model
+
+
+@pytest.mark.parametrize("cmp", ["get_dummy_cmp"])
+@pytest.mark.parametrize("ineq_multiplier_model", [None, "get_ineq_multiplier_model"])
+@pytest.mark.parametrize("eq_multiplier_model", [None, "get_eq_multiplier_model"])
+def test_is_state_created(cmp, ineq_multiplier_model, eq_multiplier_model, request):
+
+    cmp, ineq_multiplier_model, eq_multiplier_model = return_fixture_values(
+        cmp, ineq_multiplier_model, eq_multiplier_model, request
     )
-    assert lmf.is_state_created
+
+    if ineq_multiplier_model is None and eq_multiplier_model is None:
+        with pytest.raises(ValueError):
+            cooper.formulation.LagrangianModelFormulation(
+                cmp,
+                ineq_multiplier_model=ineq_multiplier_model,
+                eq_multiplier_model=eq_multiplier_model,
+            )
+    else:
+        lmf = cooper.formulation.LagrangianModelFormulation(
+            cmp,
+            ineq_multiplier_model=ineq_multiplier_model,
+            eq_multiplier_model=eq_multiplier_model,
+        )
+        assert lmf.is_state_created
+
+
+@pytest.mark.parametrize(
+    "cmp, ineq_multiplier_model, eq_multiplier_model",
+    [
+        ("get_dummy_cmp", "get_ineq_multiplier_model", None),
+        ("get_dummy_cmp", None, "get_eq_multiplier_model"),
+        ("get_dummy_cmp", "get_ineq_multiplier_model", "get_eq_multiplier_model"),
+    ],
+)
+def test_state(cmp, ineq_multiplier_model, eq_multiplier_model, request):
+
+    cmp, ineq_multiplier_model, eq_multiplier_model = return_fixture_values(
+        cmp, ineq_multiplier_model, eq_multiplier_model, request
+    )
 
     lmf = cooper.formulation.LagrangianModelFormulation(
-        cmp, ineq_multiplier_model=mm, eq_multiplier_model=mm
+        cmp,
+        ineq_multiplier_model=ineq_multiplier_model,
+        eq_multiplier_model=eq_multiplier_model,
     )
-    assert lmf.is_state_created
 
-    # Test state()
-    eq_featurs = torch.randn(100, 10)
-    ineq_featurs = torch.randn(100, 10)
-    ineq_state, eq_state = lmf.state(ineq_featurs, eq_featurs)
+    ineq_state, eq_state = lmf.state()
 
-    assert ineq_state is not None
-    assert eq_state is not None
+    if ineq_multiplier_model is None:
+        assert ineq_state is None
+    else:
+        assert ineq_state is not None
+
+    if eq_multiplier_model is None:
+        assert eq_state is None
+    else:
+        assert eq_state is not None
 
 
-    # TODO: evaluate if it is necessary to test dual_parameters and flip_dual_gradients
+@pytest.mark.parametrize(
+    "cmp, ineq_multiplier_model, eq_multiplier_model",
+    [
+        ("get_dummy_cmp", "get_ineq_multiplier_model", None),
+        ("get_dummy_cmp", None, "get_eq_multiplier_model"),
+        ("get_dummy_cmp", "get_ineq_multiplier_model", "get_eq_multiplier_model"),
+    ],
+)
+def test_flip_dual_gradients(cmp, ineq_multiplier_model, eq_multiplier_model, request):
+
+    cmp, ineq_multiplier_model, eq_multiplier_model = return_fixture_values(
+        cmp, ineq_multiplier_model, eq_multiplier_model, request
+    )
+
+    lmf = cooper.formulation.LagrangianModelFormulation(
+        cmp,
+        ineq_multiplier_model=ineq_multiplier_model,
+        eq_multiplier_model=eq_multiplier_model,
+    )
+
+    for constraint_type in ["eq", "ineq"]:
+        mult_name = constraint_type + "_multiplier_model"
+        multiplier_model = getattr(lmf, mult_name)
+        if multiplier_model is not None:
+            for param in multiplier_model.parameters():
+                param.requires_grad = True
+                param.grad = torch.ones_like(param)
+
+    lmf.flip_dual_gradients()
+
+    for constraint_type in ["eq", "ineq"]:
+        mult_name = constraint_type + "_multiplier_model"
+        multiplier_model = getattr(lmf, mult_name)
+        if multiplier_model is not None:
+            for param in multiplier_model.parameters():
+                assert torch.all(param.grad == -1)
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
