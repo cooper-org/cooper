@@ -158,9 +158,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()  # type: ignore
 
-        # Call to dual_step flips sign of gradients, then triggers
-        # call to dual_optimizer.extrapolation and projects dual
-        # variables
+        # Call to dual_step triggers call to dual_optimizer.extrapolation and
+        # projects dual variables
         self.dual_step(call_extrapolation=True)
 
         # Zero gradients and recompute loss at t+1/2
@@ -169,9 +168,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         # For extrapolation, we need closure args here as the parameter
         # values will have changed in the update applied on the
         # extrapolation step
-        lagrangian = self.formulation.compute_lagrangian(
-            closure, *closure_args, **closure_kwargs
-        )  # type: ignore
+        lagrangian = self.formulation.compute_lagrangian(closure, *closure_args, **closure_kwargs)  # type: ignore
 
         # Populate gradients at extrapolation point
         self.formulation.backward(lagrangian)
@@ -184,13 +181,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         self.dual_step()
 
     def dual_step(self, call_extrapolation=False):
-
-        # Flip gradients for multipliers to perform ascent.
-        # We only do the flipping *right before* applying the optimizer step to
-        # avoid accidental double sign flips.
-        for multiplier in self.formulation.state():
-            if multiplier is not None:
-                multiplier.grad.mul_(-1.0)
 
         # Update multipliers based on current constraint violations (gradients)
         if call_extrapolation:

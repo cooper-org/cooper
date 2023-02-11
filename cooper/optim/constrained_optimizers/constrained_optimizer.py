@@ -87,7 +87,9 @@ class ConstrainedOptimizer(CooperOptimizer):
         assert self.dual_optimizer is not None and callable(self.dual_optimizer)
 
         # Checks if needed and instantiates dual_optimizer
-        self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
+        self.dual_optimizer = self.dual_optimizer(
+            self.formulation.dual_parameters, maximize=True
+        )
 
         if self.dual_scheduler is not None:
             assert callable(self.dual_scheduler), "dual_scheduler must be callable"

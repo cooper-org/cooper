@@ -131,13 +131,6 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
 
     def dual_step(self):
 
-        # Flip gradients for multipliers to perform ascent.
-        # We only do the flipping *right before* applying the optimizer step to
-        # avoid accidental double sign flips.
-        for multiplier in self.formulation.state():
-            if multiplier is not None:
-                multiplier.grad.mul_(-1.0)
-
         # Update multipliers based on current constraint violations (gradients)
         self.dual_optimizer.step()
 

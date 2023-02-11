@@ -109,13 +109,12 @@ class DenseMultiplier(BaseMultiplier):
 
         assert self.positive, "Restarts is only supported for inequality multipliers"
 
-        # Call to formulation.backwards has already flipped sign
-        # A currently *positive* gradient means original defect is negative, so
-        # the constraint is being satisfied.
+        # A *negative* gradient means that the constraint violation is negative,
+        # so the constraint is being satisfied.
 
         # The code below still works in the case of proxy constraints, since the
         # multiplier updates are computed based on *non-proxy* constraints
-        feasible_filter = self.weight.grad > 0
+        feasible_filter = self.weight.grad < 0
         self.weight.grad[feasible_filter] = 0.0
         self.weight.data[feasible_filter] = 0.0
 
