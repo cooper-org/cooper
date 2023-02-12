@@ -61,9 +61,7 @@ def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
     if use_ineq:
         # Constrained case
         partial_dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-        partial_dual_sch = cooper.optim.partial_scheduler(
-            torch.optim.lr_scheduler.StepLR, gamma=0.99, step_size=1
-        )
+        partial_dual_sch = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.StepLR, gamma=0.99, step_size=1)
     else:
         # Unconstrained case
         partial_dual_optim = None
@@ -124,9 +122,7 @@ def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
         for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
             loaded_primal_optimizers.append(cls([p], **kwargs))
     else:
-        loaded_primal_optimizers = [
-            primal_optim_cls(loaded_model.parameters(), **primal_optim_kwargs)
-        ]
+        loaded_primal_optimizers = [primal_optim_cls(loaded_model.parameters(), **primal_optim_kwargs)]
 
     if use_ineq:
         loaded_formulation = cooper.LagrangianFormulation(cmp)

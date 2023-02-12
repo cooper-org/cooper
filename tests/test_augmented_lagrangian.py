@@ -23,18 +23,12 @@ def test_augmented_lagrangian_formulation():
     cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]))
     formulation.create_state(cmp.state)
 
-    assert (formulation.ineq_multipliers is None) and (
-        formulation.eq_multipliers is not None
-    )
+    assert (formulation.ineq_multipliers is None) and (formulation.eq_multipliers is not None)
 
     formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
-    cmp.state = cooper.CMPState(
-        eq_defect=torch.tensor([1.0]), ineq_defect=torch.tensor([1.0, 1.2])
-    )
+    cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]), ineq_defect=torch.tensor([1.0, 1.2]))
     formulation.create_state(cmp.state)
-    assert (formulation.ineq_multipliers is not None) and (
-        formulation.eq_multipliers is not None
-    )
+    assert (formulation.ineq_multipliers is not None) and (formulation.eq_multipliers is not None)
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
@@ -43,9 +37,7 @@ def test_convergence_augmented_lagrangian(aim_device):
 
     # Increasing Augmented Lagrangian coefficient schedule
     lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
-    dual_scheduler = cooper.optim.partial_scheduler(
-        torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
-    )
+    dual_scheduler = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda)
 
     test_problem_data = cooper_test_utils.build_test_problem(
         aim_device=aim_device,
@@ -64,9 +56,7 @@ def test_convergence_augmented_lagrangian(aim_device):
 
     params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
-    formulation.create_state_from_metadata(
-        dtype=params.dtype, device=device, ineq_size=torch.Size([2])
-    )
+    formulation.create_state_from_metadata(dtype=params.dtype, device=device, ineq_size=torch.Size([2]))
     coop.instantiate_dual_optimizer_and_scheduler()
 
     for step_id in range(1500):
@@ -97,9 +87,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     # No change <-> constant dual learning rate
     lr_lambda = lambda epoch: 1.0
-    dual_scheduler = cooper.optim.partial_scheduler(
-        torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda
-    )
+    dual_scheduler = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda)
 
     test_problem_data = cooper_test_utils.build_test_problem(
         aim_device=aim_device,
@@ -118,9 +106,7 @@ def test_manual_augmented_lagrangian(aim_device):
 
     params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
 
-    formulation.create_state_from_metadata(
-        dtype=params.dtype, device=device, ineq_size=torch.Size([2])
-    )
+    formulation.create_state_from_metadata(dtype=params.dtype, device=device, ineq_size=torch.Size([2]))
     coop.instantiate_dual_optimizer_and_scheduler()
 
     # ---------- First iteration ----------

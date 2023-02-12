@@ -27,9 +27,7 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
 
     except:
         scheduler_class, scheduler_kwargs = None, None
-        pytest.skip(
-            "Requested scheduler is not implemented in this version of Pytorch."
-        )
+        pytest.skip("Requested scheduler is not implemented in this version of Pytorch.")
 
     base_lr = 1e1
 
@@ -44,9 +42,7 @@ def test_lr_schedulers(aim_device, scheduler_name, optimizer_cls):
         alternating=False,
         primal_optim_kwargs={"lr": base_lr},
         dual_optim_kwargs={"lr": base_lr},
-        dual_scheduler=cooper.optim.partial_scheduler(
-            scheduler_class, **scheduler_kwargs
-        ),
+        dual_scheduler=cooper.optim.partial_scheduler(scheduler_class, **scheduler_kwargs),
     )
 
     params, cmp, coop, formulation, _, _ = test_problem_data.as_tuple()

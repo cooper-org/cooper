@@ -33,9 +33,7 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
 
         super().__init__(cmp=cmp, ineq_init=ineq_init, eq_init=eq_init)
 
-    def weighted_violation(
-        self, cmp_state: CMPState, constraint_type: str
-    ) -> torch.Tensor:
+    def weighted_violation(self, cmp_state: CMPState, constraint_type: str) -> torch.Tensor:
         """
         Computes the dot product between the current multipliers and the
         constraint violations of type ``constraint_type``. If proxy-constraints
@@ -189,8 +187,6 @@ class AugmentedLagrangianFormulation(LagrangianFormulation):
             # If using augmented Lagrangian, add squared sum of constraints
             # Following the formulation on Marc Toussaint slides (p 17-20)
             # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
-            lagrangian += (
-                0.5 * augmented_lagrangian_coefficient * (sq_ineq_viol + sq_eq_viol)
-            )
+            lagrangian += 0.5 * augmented_lagrangian_coefficient * (sq_ineq_viol + sq_eq_viol)
 
         return lagrangian

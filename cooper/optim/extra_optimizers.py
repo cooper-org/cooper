@@ -234,9 +234,7 @@ class ExtraAdam(ExtragradientOptimizer):
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
-        defaults = dict(
-            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad
-        )
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad)
         super(ExtraAdam, self).__init__(params, defaults)
 
     def __setstate__(self, state):
@@ -249,9 +247,7 @@ class ExtraAdam(ExtragradientOptimizer):
             return None
         grad = p.grad.data
         if grad.is_sparse:
-            raise RuntimeError(
-                "Adam does not support sparse gradients, please consider SparseAdam instead"
-            )
+            raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
         amsgrad = group["amsgrad"]
 
         state = self.state[p]

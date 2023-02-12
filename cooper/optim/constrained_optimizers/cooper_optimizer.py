@@ -40,9 +40,7 @@ class CooperOptimizerState:
 
         def compare_state_dicts(dict_name):
             try:
-                return validate_state_dicts(
-                    getattr(self, dict_name), getattr(other, dict_name)
-                )
+                return validate_state_dicts(getattr(self, dict_name), getattr(other, dict_name))
             except:
                 return False
 

@@ -72,15 +72,11 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        self.populate_alternating_dual_gradient(
-            closure, defect_fn, *closure_args, **closure_kwargs
-        )
+        self.populate_alternating_dual_gradient(closure, defect_fn, *closure_args, **closure_kwargs)
 
         self.dual_step()
 
-    def populate_alternating_dual_gradient(
-        self, closure, defect_fn, *closure_args, **closure_kwargs
-    ):
+    def populate_alternating_dual_gradient(self, closure, defect_fn, *closure_args, **closure_kwargs):
 
         # Once having updated the primal parameters, re-compute gradient wrt
         # multipliers. Skip gradient wrt primal parameters to avoid wasteful
@@ -125,9 +121,7 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
 
         # Not passing lagrangian since we only want to update the gradients for
         # the dual variables
-        self.formulation.backward(
-            lagrangian=None, ignore_primal=True, ignore_dual=False
-        )
+        self.formulation.backward(lagrangian=None, ignore_primal=True, ignore_dual=False)
 
     def dual_step(self):
 

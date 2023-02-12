@@ -44,9 +44,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         mean = torch.sum(torch.tensor(range(1, len(probs) + 1)) * probs)
         eq_defect = torch.stack([torch.sum(probs) - 1, mean - self.mean_constraint])
 
-        return cooper.CMPState(
-            loss=neg_entropy, eq_defect=eq_defect, ineq_defect=ineq_defect
-        )
+        return cooper.CMPState(loss=neg_entropy, eq_defect=eq_defect, ineq_defect=ineq_defect)
 
 
 # Define the problem and formulation
@@ -60,14 +58,10 @@ primal_optimizer = cooper.optim.ExtraSGD([probs], lr=3e-2, momentum=0.7)
 
 # Define the dual optimizer. Note that this optimizer has NOT been fully instantiated
 # yet. Cooper takes care of this, once it has initialized the formulation state.
-dual_optimizer = cooper.optim.partial_optimizer(
-    cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7
-)
+dual_optimizer = cooper.optim.partial_optimizer(cooper.optim.ExtraSGD, lr=9e-3, momentum=0.7)
 
 # Wrap the formulation and both optimizers inside a SimultaneousConstrainedOptimizer
-coop = cooper.ExtrapolationConstrainedOptimizer(
-    formulation, primal_optimizer, dual_optimizer
-)
+coop = cooper.ExtrapolationConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
 
 state_history = cooper.StateLogger(save_metrics=["loss", "eq_defect", "eq_multipliers"])
 

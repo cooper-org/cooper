@@ -37,9 +37,7 @@ def create_optimizer_from_kwargs(
     """
 
     if dual_optimizer is None:
-        return UnconstrainedOptimizer(
-            formulation=formulation, primal_optimizers=primal_optimizers
-        )
+        return UnconstrainedOptimizer(formulation=formulation, primal_optimizers=primal_optimizers)
     else:
         if extrapolation:
             return ExtrapolationConstrainedOptimizer(
@@ -93,9 +91,7 @@ def load_cooper_optimizer_from_state_dict(
 
     if cooper_optimizer_state.dual_optimizer_state is not None:
         if dual_optimizer_class is None:
-            raise ValueError(
-                "State dict contains dual_opt_state but dual_optimizer is None."
-            )
+            raise ValueError("State dict contains dual_opt_state but dual_optimizer is None.")
 
         # This assumes a checkpoint-loaded formulation has been provided in
         # the initialization of the ``ConstrainedOptimizer``. This ensure
@@ -105,9 +101,7 @@ def load_cooper_optimizer_from_state_dict(
 
         if cooper_optimizer_state.dual_scheduler_state is not None:
             if dual_scheduler_class is None:
-                raise ValueError(
-                    "State dict contains dual_scheduler_state but dual_scheduler is None."
-                )
+                raise ValueError("State dict contains dual_scheduler_state but dual_scheduler is None.")
 
             dual_scheduler = dual_scheduler_class(dual_optimizer)
             dual_scheduler.load_state_dict(cooper_optimizer_state.dual_scheduler_state)

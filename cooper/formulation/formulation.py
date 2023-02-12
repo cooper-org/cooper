@@ -120,11 +120,7 @@ class UnconstrainedFormulation(Formulation):
         pass
 
     def compute_lagrangian(
-        self,
-        closure: Callable[..., CMPState],
-        *closure_args,
-        write_state: Optional[bool] = True,
-        **closure_kwargs
+        self, closure: Callable[..., CMPState], *closure_args, write_state: Optional[bool] = True, **closure_kwargs
     ) -> torch.Tensor:
         """
         Computes the loss based on a new evaluation of the

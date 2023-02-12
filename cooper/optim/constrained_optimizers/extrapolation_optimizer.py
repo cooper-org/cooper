@@ -146,9 +146,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         """
 
         if closure is None:
-            raise RuntimeError(
-                "Closure must be provided to step when using extrapolation."
-            )
+            raise RuntimeError("Closure must be provided to step when using extrapolation.")
 
         # If necessary, instantiate dual components
         if not hasattr(self.dual_optimizer, "param_groups"):
@@ -169,9 +167,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         # For extrapolation, we need closure args here as the parameter
         # values will have changed in the update applied on the
         # extrapolation step
-        lagrangian = self.formulation.compute_lagrangian(
-            closure, *closure_args, **closure_kwargs
-        )  # type: ignore
+        lagrangian = self.formulation.compute_lagrangian(closure, *closure_args, **closure_kwargs)  # type: ignore
 
         # Populate gradients at extrapolation point
         self.formulation.backward(lagrangian)

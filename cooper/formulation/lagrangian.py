@@ -91,14 +91,10 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
         dummy_cmp_state = CMPState()
 
         if ineq_size is not None:
-            dummy_cmp_state.ineq_defect = torch.empty(
-                size=ineq_size, dtype=dtype, device=device
-            )
+            dummy_cmp_state.ineq_defect = torch.empty(size=ineq_size, dtype=dtype, device=device)
 
         if eq_size is not None:
-            dummy_cmp_state.eq_defect = torch.empty(
-                size=eq_size, dtype=dtype, device=device
-            )
+            dummy_cmp_state.eq_defect = torch.empty(size=eq_size, dtype=dtype, device=device)
 
         self.create_state(dummy_cmp_state)
 
@@ -177,9 +173,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             self.accumulated_violation_dot_prod += update
 
     @abc.abstractmethod
-    def weighted_violation(
-        self, cmp_state: CMPState, constraint_type: str
-    ) -> torch.Tensor:
+    def weighted_violation(self, cmp_state: CMPState, constraint_type: str) -> torch.Tensor:
         """
         Abstract method for computing the weighted violation of a constraint.
 
@@ -215,9 +209,7 @@ class BaseLagrangianFormulation(Formulation, metaclass=abc.ABCMeta):
             "accumulated_violation_dot_prod",
         ]
         for key, val in state_dict.items():
-            assert (
-                key in known_attrs
-            ), "LagrangianFormulation received unknown key: {}".format(key)
+            assert key in known_attrs, "LagrangianFormulation received unknown key: {}".format(key)
             setattr(self, key, val)
 
 
@@ -310,9 +302,7 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 
         return lagrangian
 
-    def weighted_violation(
-        self, cmp_state: CMPState, constraint_type: str
-    ) -> torch.Tensor:
+    def weighted_violation(self, cmp_state: CMPState, constraint_type: str) -> torch.Tensor:
         """
         Computes the dot product between the current multipliers and the
         constraint violations of type ``constraint_type``. If proxy-constraints

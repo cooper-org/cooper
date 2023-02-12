@@ -76,9 +76,7 @@ class ConstrainedOptimizer(CooperOptimizer):
 
         if isinstance(self.formulation, AugmentedLagrangianFormulation):
             if not self.alternating:
-                raise RuntimeError(
-                    "Augmented Lagrangian formulation requires alternating updates."
-                )
+                raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
 
     def instantiate_dual_optimizer_and_scheduler(self):
         """Instantiates the dual optimizer and scheduler."""
@@ -122,9 +120,7 @@ class ConstrainedOptimizer(CooperOptimizer):
 
             if self.formulation.is_state_created:
                 if self.dual_optimizer is None:
-                    raise RuntimeError(
-                        "Requested zeroing gradients but dual_optimizer is None."
-                    )
+                    raise RuntimeError("Requested zeroing gradients but dual_optimizer is None.")
                 else:
                     self.dual_optimizer.zero_grad()
 

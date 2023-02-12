@@ -40,9 +40,7 @@ class Toy2DWidget:
             problem_type_dropdown = fixed(problem_type)
 
         if epsilon is None:
-            epsilon_slider = widgets.FloatSlider(
-                min=-0.2, max=1.5, step=0.05, value=0.7, description="Const. level"
-            )
+            epsilon_slider = widgets.FloatSlider(min=-0.2, max=1.5, step=0.05, value=0.7, description="Const. level")
         else:
             epsilon_slider = fixed(epsilon)
 
@@ -115,21 +113,15 @@ class Toy2DWidget:
             y_slider = fixed(y)
 
         num_iters = 300 if num_iters is None else num_iters
-        iters_textbox = widgets.IntSlider(
-            min=100, max=3000, value=num_iters, step=100, description="Max Iters"
-        )
+        iters_textbox = widgets.IntSlider(min=100, max=3000, value=num_iters, step=100, description="Max Iters")
 
         if dual_restarts is None:
-            restarts_checkbox = widgets.Checkbox(
-                value=False, description="Dual restarts"
-            )
+            restarts_checkbox = widgets.Checkbox(value=False, description="Dual restarts")
         else:
             restarts_checkbox = fixed(dual_restarts)
 
         if extrapolation is None:
-            extrapolation_checkbox = widgets.Checkbox(
-                value=False, description="Extrapolation"
-            )
+            extrapolation_checkbox = widgets.Checkbox(value=False, description="Extrapolation")
         else:
             extrapolation_checkbox = fixed(extrapolation)
 
@@ -265,18 +257,10 @@ class Toy2DWidget:
             primal_optim = "Extra" + primal_optim
             dual_optim = "Extra" + dual_optim
 
-        primal_opt_class = (
-            getattr(cooper.optim, primal_optim)
-            if extrapolation
-            else getattr(torch.optim, primal_optim)
-        )
+        primal_opt_class = getattr(cooper.optim, primal_optim) if extrapolation else getattr(torch.optim, primal_optim)
         primal_optimizer = primal_opt_class([params], **primal_kwargs)
 
-        dual_opt_class = (
-            getattr(cooper.optim, dual_optim)
-            if extrapolation
-            else getattr(torch.optim, dual_optim)
-        )
+        dual_opt_class = getattr(cooper.optim, dual_optim) if extrapolation else getattr(torch.optim, dual_optim)
         dual_optimizer = cooper.optim.partial_optimizer(dual_opt_class, **dual_kwargs)
 
         constrained_optimizer = cooper.ConstrainedOptimizer(
@@ -292,9 +276,7 @@ class Toy2DWidget:
         """Train."""
 
         # Store CMPStates and param values throughout the optimization process
-        state_history = cooper.StateLogger(
-            save_metrics=["loss", "ineq_defect", "ineq_multipliers"]
-        )
+        state_history = cooper.StateLogger(save_metrics=["loss", "ineq_defect", "ineq_multipliers"])
 
         for iter_num in range(num_iters):
 
@@ -358,9 +340,7 @@ class Toy2DWidget:
         y_range = torch.tensor(100 * [1.0])
         all_states = self.cmp.closure(torch.stack([x_range, y_range], axis=1))
         self.pareto_front = (all_states.loss, all_states.ineq_defect.squeeze())
-        self.loss_defect_axis.plot(
-            self.pareto_front[0], self.pareto_front[1], c="black", alpha=0.7
-        )
+        self.loss_defect_axis.plot(self.pareto_front[0], self.pareto_front[1], c="black", alpha=0.7)
 
         # Add styling
         self.loss_defect_axis.set_xlabel(r"Objective $f$")
@@ -408,22 +388,16 @@ class Toy2DWidget:
 
         # -------------------------------- Trajectory in loss-defect plane
         defects = np.stack(all_metrics["ineq_defect"]).squeeze()
-        self.loss_defect_axis.scatter(
-            all_metrics["loss"], defects, alpha=0.5, s=20, c=cmap_vals, cmap=cmap_name
-        )
+        self.loss_defect_axis.scatter(all_metrics["loss"], defects, alpha=0.5, s=20, c=cmap_vals, cmap=cmap_name)
         # Add marker signaling the final iterate
-        self.loss_defect_axis.scatter(
-            all_metrics["loss"][-1], defects[-1], marker="*", s=150, zorder=10, c=yellow
-        )
+        self.loss_defect_axis.scatter(all_metrics["loss"][-1], defects[-1], marker="*", s=150, zorder=10, c=yellow)
         self.loss_defect_axis.set_title(r"Loss vs. constraint $(f, g)$ space")
         self.loss_defect_axis.set_xlim(-0.1, 1.3)
         self.loss_defect_axis.set_ylim(-self.cmp.epsilon - 0.1, 1.3 - self.cmp.epsilon)
         self.loss_defect_axis.set_aspect("equal")
 
         # -------------------------------- Loss history
-        self.loss_iter_axis.plot(
-            all_metrics["iters"], all_metrics["loss"], c=blue, linewidth=2
-        )
+        self.loss_iter_axis.plot(all_metrics["iters"], all_metrics["loss"], c=blue, linewidth=2)
         self.loss_iter_axis.set_title(r"Objective $f$")
         self.loss_iter_axis.set_xlabel("Iteration")
 
@@ -444,9 +418,7 @@ class Toy2DWidget:
             label="Multiplier",
         )
         self.defect_iter_axis.set_xlabel("Iteration")
-        self.defect_iter_axis.legend(
-            ncol=2, loc="upper right", bbox_to_anchor=(0.9, 1.3)
-        )
+        self.defect_iter_axis.legend(ncol=2, loc="upper right", bbox_to_anchor=(0.9, 1.3))
 
         # -------------------------------- Colorbar
         last = len(all_metrics["loss"])

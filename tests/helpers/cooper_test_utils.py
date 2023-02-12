@@ -61,9 +61,7 @@ def build_test_problem(
     if isinstance(primal_optim_cls, list):
         # params is created in a different way to avoid slicing issues with the
         # autograd engine. Data contents of params are not modified.
-        sliceable_params = (
-            list(params)[0] if isinstance(params, GeneratorType) else params
-        )
+        sliceable_params = list(params)[0] if isinstance(params, GeneratorType) else params
         params = [torch.nn.Parameter(_) for _ in sliceable_params.data]
         params_ = params
 
@@ -76,9 +74,7 @@ def build_test_problem(
 
     if use_ineq:
         # Constrained case
-        dual_optimizer = cooper.optim.partial_optimizer(
-            dual_optim_cls, **dual_optim_kwargs
-        )
+        dual_optimizer = cooper.optim.partial_optimizer(dual_optim_cls, **dual_optim_kwargs)
         formulation = formulation_cls(cmp)
     else:
         # Unconstrained case

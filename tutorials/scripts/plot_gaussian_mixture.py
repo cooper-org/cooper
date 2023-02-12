@@ -97,9 +97,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
             to ``0.7``.
     """
 
-    def __init__(
-        self, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7
-    ):
+    def __init__(self, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7):
 
         super().__init__()
 
@@ -165,9 +163,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
 
         formulation = cooper.LagrangianFormulation(cmp)
 
-        dual_optimizer = cooper.optim.partial_optimizer(
-            torch.optim.SGD, lr=lr, momentum=0.7
-        )
+        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=lr, momentum=0.7)
 
         constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
             formulation=formulation,
@@ -186,9 +182,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     for i in range(num_iters):
         constrained_optimizer.zero_grad()
         if is_constrained:
-            lagrangian = formulation.compute_lagrangian(
-                cmp.closure, model, inputs, targets
-            )
+            lagrangian = formulation.compute_lagrangian(cmp.closure, model, inputs, targets)
             formulation.backward(lagrangian)
         else:
             # No Lagrangian in the unconstrained case
@@ -217,9 +211,7 @@ num_iters = 5000
 
 for idx, name in enumerate(titles):
 
-    model, achieved_const = train(
-        name, inputs, labels, lr=lr, num_iters=num_iters, const_level=const_level
-    )
+    model, achieved_const = train(name, inputs, labels, lr=lr, num_iters=num_iters, const_level=const_level)
 
     # Compute decision boundary
     weight, bias = model.weight.data.flatten().numpy(), model.bias.data.numpy()

@@ -24,9 +24,7 @@ def constrained_optimizer(params, formulation):
     primal_optim = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
     dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
 
-    return cooper.SimultaneousConstrainedOptimizer(
-        formulation, primal_optim, dual_optim, dual_restarts=True
-    )
+    return cooper.SimultaneousConstrainedOptimizer(formulation, primal_optim, dual_optim, dual_restarts=True)
 
 
 def loss_fn(params):

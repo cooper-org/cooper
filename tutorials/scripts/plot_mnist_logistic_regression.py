@@ -26,9 +26,7 @@ import cooper
 np.random.seed(0)
 torch.manual_seed(0)
 
-data_transforms = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-)
+data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST("data", train=True, download=True, transform=data_transforms),
     batch_size=256,
@@ -50,9 +48,7 @@ dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
 
 # Create a ConstrainedOptimizer for performing simultaneous updates based on the
 # formulation, and the selected primal and dual optimizers.
-cooper_optimizer = cooper.SimultaneousConstrainedOptimizer(
-    formulation, primal_optimizer, dual_optimizer
-)
+cooper_optimizer = cooper.SimultaneousConstrainedOptimizer(formulation, primal_optimizer, dual_optimizer)
 
 all_metrics = {
     "batch_ix": [],

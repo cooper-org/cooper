@@ -28,15 +28,11 @@ def problem_data(aim_device, primal_optim_cls):
 
 
 @pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-@pytest.mark.parametrize(
-    "primal_optimizer_cls", [cooper.optim.ExtraSGD, cooper.optim.ExtraAdam]
-)
+@pytest.mark.parametrize("primal_optimizer_cls", [cooper.optim.ExtraSGD, cooper.optim.ExtraAdam])
 def test_extrapolation(aim_device, primal_optimizer_cls):
     """ """
 
-    params, cmp, coop, formulation, device, _ = problem_data(
-        aim_device, primal_optimizer_cls
-    )
+    params, cmp, coop, formulation, device, _ = problem_data(aim_device, primal_optimizer_cls)
 
     for step_id in range(2000):
         coop.zero_grad()
@@ -63,9 +59,7 @@ def test_extrapolation(aim_device, primal_optimizer_cls):
 def test_manual_extrapolation(aim_device, primal_optimizer_cls):
     """ """
 
-    params, cmp, coop, formulation, device, mktensor = problem_data(
-        aim_device, primal_optimizer_cls
-    )
+    params, cmp, coop, formulation, device, mktensor = problem_data(aim_device, primal_optimizer_cls)
 
     coop.zero_grad()
     lagrangian = formulation.compute_lagrangian(cmp.closure, params)
