@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from typing import Literal, Optional, Tuple
 
@@ -5,7 +6,7 @@ import torch
 
 from cooper import multipliers
 
-CONSTRAINT_TYPE = Literal["eq", "ineq"]
+CONSTRAINT_TYPE = Literal["eq", "ineq", "penalty"]
 FORMULATION_TYPE = Literal["penalized", "lagrangian", "augmented_lagrangian"]
 
 
@@ -36,22 +37,41 @@ class ConstraintGroup:
         self._state: ConstraintState = None
 
         self.constraint_type = constraint_type
-        self.formulation = Formulation(formulation_type, **formulation_kwargs)
+        self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
-        if (formulation_type == "penalized") != isinstance(multiplier, multipliers.ConstantMultiplier):
-            # This check implicitly verifies that if the formulation is penalized, then
-            # we are receiving an instantiated ConstantMultiplier.
-            raise ValueError("A ConstantMultiplier must be provided along with a `penalized` formulation.")
+        if multiplier is None:
+            multiplier = self.build_multiplier(shape=shape, dtype=dtype, device=device, is_sparse=is_sparse)
+        self.sanity_check_multiplier(multiplier)
+        self.multiplier = multiplier
 
-        if multiplier is not None:
-            if isinstance(multiplier, multipliers.ExplicitMultiplier):
-                multiplier_type = "ineq" if multiplier.positive else "eq"
-                if multiplier_type != constraint_type:
-                    raise ValueError(f"{multiplier_type} multiplier inconsistent with {constraint_type} constraint.")
+    def build_formulation(self, formulation_type, formulation_kwargs):
+        if self.constraint_type == "penalty":
+            # `penalty` constraints must be paired with "penalized" formulations. If no formulation is provided, we
+            # default to a "penalized" formulation.
+            if formulation_type != "penalized":
+                warning_message = (
+                    "A constraint of type `penalty` must be used with a `penalized` formulation, but received"
+                    f" formulation_type={formulation_type}. The formulation type will be set to `penalized`."
+                    " Please review your configuration and override the default formulation_type='lagrangian'."
+                )
+                warnings.warn(warning_message)
+            formulation_type = "penalized"
 
-            self.multiplier = multiplier
-        else:
-            self.initialize_multiplier(shape=shape, dtype=dtype, device=device, is_sparse=is_sparse)
+        return Formulation(formulation_type, **formulation_kwargs)
+
+    def sanity_check_multiplier(self, multiplier: multipliers.MULTIPLIER_TYPE) -> None:
+
+        if (self.constraint_type == "penalty") != isinstance(multiplier, multipliers.ConstantMultiplier):
+            # If a penalty "constraint" is used, then we must have been provided a ConstantMultiplier.
+            raise ValueError("A ConstantMultiplier must be provided along with a `penalty` constraint.")
+
+        if isinstance(multiplier, multipliers.ConstantMultiplier):
+            if any(multiplier() < 0) and (self.constraint_type == "ineq"):
+                raise ValueError("All entries of ConstantMultiplier must be non-negative for inequality constraints.")
+
+        if isinstance(multiplier, multipliers.ExplicitMultiplier):
+            if multiplier.implicit_constraint_type != self.constraint_type:
+                raise ValueError(f"Provided multiplier is inconsistent with {self.constraint_type} constraint.")
 
     @property
     def state(self) -> ConstraintState:
@@ -65,22 +85,14 @@ class ConstraintGroup:
 
         self._state = value
 
-    def initialize_multiplier(self, shape: int, dtype: torch.dtype, device: torch.device, is_sparse: bool) -> None:
+    def build_multiplier(self, shape: int, dtype: torch.dtype, device: torch.device, is_sparse: bool) -> None:
+
+        multiplier_class = multipliers.SparseMultiplier if is_sparse else multipliers.DenseMultiplier
 
         tensor_factory = dict(dtype=dtype, device=device)
         tensor_factory["size"] = (shape, 1) if is_sparse else (shape,)
 
-        positive = self.constraint_type == "ineq"
-        multiplier_class = multipliers.SparseMultiplier if is_sparse else multipliers.DenseMultiplier
-        multiplier_init = torch.zeros(**tensor_factory)
-
-        self.multiplier = multiplier_class(init=multiplier_init, positive=positive)
-
-    def evaluate_multiplier(self, *args) -> torch.Tensor:
-        if isinstance(self.multiplier, (multipliers.DenseMultiplier, multipliers.ConstantMultiplier)):
-            return self.multiplier.weight
-
-        return self.multiplier(*args)
+        return multiplier_class(init=torch.zeros(**tensor_factory), enforce_positive=(self.constraint_type == "ineq"))
 
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None
@@ -90,13 +102,12 @@ class ConstraintGroup:
             constraint_state = self.state
 
         if constraint_state is None:
-            raise ValueError("Can not compute Lagrangian contribution with `None` constraint state.")
+            raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
 
-        multiplier_inputs = ()
-        if constraint_state.constraint_features is not None:
-            multiplier_inputs = (constraint_state.constraint_features,)
-
-        multiplier = self.evaluate_multiplier(*multiplier_inputs)
+        if constraint_state.constraint_features is None:
+            multiplier_value = self.multiplier()
+        else:
+            multiplier_value = self.multiplier(constraint_state.constraint_features)
 
         # Strict violation represents the "actual" violation of the constraint.
         # We use it to update the value of the multiplier.
@@ -108,10 +119,10 @@ class ConstraintGroup:
             strict_violation = constraint_state.violation
 
         primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
-            multiplier, constraint_state.violation, strict_violation
+            multiplier_value, constraint_state.violation, strict_violation
         )
 
-        return multiplier, primal_contribution, dual_contribution
+        return multiplier_value, primal_contribution, dual_contribution
 
     def __repr__(self):
         return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier})"
@@ -123,6 +134,9 @@ class Formulation:
         formulation_type: FORMULATION_TYPE,
         augmented_lagrangian_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
     ):
+
+        if formulation_type not in ["penalized", "lagrangian", "augmented_lagrangian"]:
+            raise ValueError(f"Formulation type {formulation_type} not understood.")
 
         if (formulation_type == "augmented_lagrangian") and (augmented_lagrangian_scheduler is None):
             raise ValueError("An augmented Lagrangian formulation requires an augmented Lagrangian scheduler.")
