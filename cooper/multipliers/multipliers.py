@@ -40,10 +40,14 @@ class ExplicitMultiplier(torch.nn.Module):
         positive: Whether to enforce non-negativity on the values of the multiplier.
     """
 
-    def __init__(self, init: torch.Tensor, *, positive: bool = False):
+    def __init__(self, init: torch.Tensor, *, enforce_positive: bool = False):
         super().__init__()
+        self.enforce_positive = enforce_positive
+
+        if self.enforce_positive and any(init < 0):
+            raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
+
         self.weight = torch.nn.Parameter(init)
-        self.positive = positive
         self.device = self.weight.device
 
     def project_(self):
@@ -53,6 +57,10 @@ class ExplicitMultiplier(torch.nn.Module):
         if self.positive:
             self.weight.relu_()
 
+    @property
+    def implicit_constraint_type(self):
+        return "ineq" if self.enforce_positive else "eq"
+
     def restart_if_feasible_(self, feasible_indices: torch.Tensor):
         """
         In-place restart function for multipliers.
@@ -61,7 +69,7 @@ class ExplicitMultiplier(torch.nn.Module):
             feasible_indices: Indices or binary masks denoting the feasible constraints.
         """
 
-        if not self.positive:
+        if not self.enforce_positive:
             raise RuntimeError("Restarts are only supported for inequality multipliers")
 
         self.weight.data[feasible_indices, ...] = 0.0
@@ -70,12 +78,12 @@ class ExplicitMultiplier(torch.nn.Module):
 
     def state_dict(self):
         _state_dict = super().state_dict()
-        _state_dict["positive"] = self.positive
+        _state_dict["enforce_positive"] = self.enforce_positive
         return _state_dict
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
-        self.positive = state_dict["positive"]
+        self.enforce_positive = state_dict["enforce_positive"]
         self.device = self.weight.device
 
 
@@ -85,9 +93,7 @@ class DenseMultiplier(ExplicitMultiplier):
         return self.weight
 
     def __repr__(self):
-        constraint_type = "ineq" if self.positive else "eq"
-        rep = f"DenseMultiplier({constraint_type}, shape={self.weight.shape})"
-        return rep
+        return f"DenseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
 
 class SparseMultiplier(ExplicitMultiplier):
@@ -96,9 +102,7 @@ class SparseMultiplier(ExplicitMultiplier):
         return torch.nn.functional.embedding(indices, self.weight, sparse=True).squeeze()
 
     def __repr__(self):
-        constraint_type = "ineq" if self.positive else "eq"
-        rep = f"SparseMultiplier({constraint_type}, shape={self.weight.shape})"
-        return rep
+        return f"SparseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
 
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
