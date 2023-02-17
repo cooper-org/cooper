@@ -134,7 +134,7 @@ class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
     def forward(self):
         pass
 
-    def post_step(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
+    def post_step(self):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and allows for additional post-processing of the implicit
