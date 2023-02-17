@@ -61,7 +61,7 @@ class ExplicitMultiplier(torch.nn.Module):
     def implicit_constraint_type(self):
         return "ineq" if self.enforce_positive else "eq"
 
-    def restart_if_feasible_(self, feasible_indices: torch.Tensor):
+    def restart_if_feasible_(self, feasible_indices: torch.Tensor, restart_value: float = 0.0):
         """
         In-place restart function for multipliers.
 
@@ -72,7 +72,7 @@ class ExplicitMultiplier(torch.nn.Module):
         if not self.enforce_positive:
             raise RuntimeError("Restarts are only supported for inequality multipliers")
 
-        self.weight.data[feasible_indices, ...] = 0.0
+        self.weight.data[feasible_indices, ...] = restart_value
         if self.weight.grad is not None:
             self.weight.grad[feasible_indices, ...] = 0.0
 
