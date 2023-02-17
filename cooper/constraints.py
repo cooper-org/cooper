@@ -124,5 +124,17 @@ class ConstraintGroup:
 
         return multiplier_value, primal_contribution, dual_contribution
 
+    def state_dict(self):
+        return {
+            "constraint_type": self.constraint_type,
+            "formulation": self.formulation.state_dict(),
+            "multiplier_state_dict": self.multiplier.state_dict(),
+        }
+
+    def load_state_dict(self, state_dict):
+        self.constraint_type = state_dict["constraint_type"]
+        self.formulation.load_state_dict(state_dict["formulation"])
+        self.multiplier.load_state_dict(state_dict["multiplier_state_dict"])
+
     def __repr__(self):
         return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier})"

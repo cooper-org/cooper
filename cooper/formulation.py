@@ -82,5 +82,15 @@ class Formulation:
 
         return weighted_violation_for_primal, weighted_violation_for_dual
 
+    def state_dict(self):
+        return {
+            "formulation_type": self.formulation_type,
+            "augmented_lagrangian_scheduler_state_dict": self.augmented_lagrangian_scheduler.state_dict(),
+        }
+
+    def load_state_dict(self, state_dict):
+        self.formulation_type = state_dict["formulation_type"]
+        self.augmented_lagrangian_scheduler.load_state_dict(state_dict["augmented_lagrangian_scheduler_state_dict"])
+
     def __repr__(self):
         return f"Formulation(formulation_type={self.formulation_type}, has_scheduler={self.augmented_lagrangian_scheduler is not None})"
