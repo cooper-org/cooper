@@ -1,7 +1,7 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 import abc
-
 from typing import Optional
+
 import torch
 
 
@@ -32,21 +32,22 @@ class ConstantMultiplier:
 
 class ExplicitMultiplier(torch.nn.Module):
     """
-    A dense multiplier. Holds a :py:class:`~torch.nn.parameter.Parameter`, which
-    contains the value of the Lagrange multipliers associated with the equality or
-    inequality constraints of a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`.
+    An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
+    contains (explicitly) the value of the Lagrange multipliers associated with a
+    :py:class:`~cooper.constraints.ConstraintGroup` in a
+    :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
     Args:
         init: Initial value of the multiplier.
-        enforce_positive: Whether to enforce non-negativity on the values of the 
+        enforce_positive: Whether to enforce non-negativity on the values of the
             multiplier.
-        restart_on_feasible: Whether to restart the value of the multiplier (to 0 by 
+        restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
             default) when the constrain is feasible.
     """
 
     def __init__(self, init: torch.Tensor, *, enforce_positive: bool = False, restart_on_feasible: bool = False):
         super().__init__()
-        
+
         self.enforce_positive = enforce_positive
         self.restart_on_feasible = restart_on_feasible
 
@@ -63,7 +64,7 @@ class ExplicitMultiplier(torch.nn.Module):
     def post_step(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
         """
         Post-step function for multipliers. This function is called after each step of
-        the dual optimizer, and ensures that (if required) the multipliers are 
+        the dual optimizer, and ensures that (if required) the multipliers are
         non-negative. It also restarts the value of the multipliers for constraints that
         are feasible.
 
@@ -114,6 +115,29 @@ class SparseMultiplier(ExplicitMultiplier):
 
 
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
+    """
+    An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
+    of a Lagrange multiplier associated with a :py:class:`~cooper.constraints.ConstraintGroup`
+    based on "features" for each constraint. The multiplier for a specific constraint is
+    thus (implicitly) represented by the constraint's features and the calculation that
+    takes place in the :py:meth:`~ImplicitMultiplier.forward` method.
+
+    Args:
+        init: Initial value of the multiplier.
+        enforce_positive: Whether to enforce non-negativity on the values of the
+            multiplier.
+        restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
+            default) when the constrain is feasible.
+    """
+
     @abc.abstractmethod
     def forward(self):
+        pass
+
+    def post_step(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
+        """
+        Post-step function for multipliers. This function is called after each step of
+        the dual optimizer, and allows for additional post-processing of the implicit
+        multiplier module or its parameters.
+        """
         pass
