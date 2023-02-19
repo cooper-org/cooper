@@ -62,6 +62,7 @@ class ExplicitMultiplier(torch.nn.Module):
         return "ineq" if self.enforce_positive else "eq"
 
     def post_step(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
+        # TODO(juan43ramirez): apply naming convention of inplace functions?
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
