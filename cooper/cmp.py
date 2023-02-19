@@ -93,19 +93,21 @@ class CMPState:
         else:
             return self._primal_lagrangian
 
-    def backward(self) -> None:
+    def backward(self, ignore_primal: bool = False, ignore_dual: bool = False) -> None:
         """
         Populates the gradient of the Lagrangian with respect to the primal and dual
         parameters.
         """
 
-        # Populate the gradient of the Lagrangian w.r.t. the primal parameters
-        if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
-            self._primal_lagrangian.backward()
+        if not ignore_primal:
+            # Populate the gradient of the Lagrangian w.r.t. the primal parameters
+            if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
+                self._primal_lagrangian.backward()
 
-        # Populate the gradient of the Lagrangian w.r.t. the dual parameters
-        if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
-            self._dual_lagrangian.backward()
+        if not ignore_dual:
+            # Populate the gradient of the Lagrangian w.r.t. the dual parameters
+            if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
+                self._dual_lagrangian.backward()
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
@@ -124,6 +126,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     @abc.abstractmethod
     def closure(self, *args, **kwargs) -> CMPState:
+        # TODO(juan43ramirez): refactor closure to compute_cmp_state
         """
         Computes the state of the CMP based on the current value of the primal
         parameters.
