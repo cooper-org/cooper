@@ -1,9 +1,9 @@
-from collections.abc import Iterable
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 import torch
 
 from cooper.constraints import ConstraintGroup
+from cooper.utils import ensure_iterable
 
 from ..unconstrained_optimizer import UnconstrainedOptimizer
 from . import (
@@ -13,14 +13,6 @@ from . import (
     ExtrapolationConstrainedOptimizer,
     SimultaneousConstrainedOptimizer,
 )
-
-
-def ensure_iterable(argument: Any):
-
-    if not isinstance(argument, Iterable):
-        return [argument]
-
-    return argument
 
 
 def create_optimizer_from_kwargs(

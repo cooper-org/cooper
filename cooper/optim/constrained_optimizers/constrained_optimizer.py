@@ -11,9 +11,7 @@ from typing import Dict, List, Optional, Union
 import torch
 
 from cooper.constraints import ConstraintGroup
-from cooper.utils import validate_state_dicts
-
-from .utils import ensure_iterable
+from cooper.utils import ensure_iterable, validate_state_dicts
 
 
 @dataclasses.dataclass

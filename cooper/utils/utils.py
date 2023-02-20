@@ -7,6 +7,14 @@ logger = logging.getLogger(__name__)
 import torch
 
 
+def ensure_iterable(argument: Any):
+
+    if not isinstance(argument, Iterable):
+        return [argument]
+
+    return argument
+
+
 def compare_values(val1: Any, val2: Any) -> bool:
     """
     Compares whether two objects match. Can be applied to tensors, iterables, or dicts.

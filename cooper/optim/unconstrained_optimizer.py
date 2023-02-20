@@ -2,7 +2,8 @@ import warnings
 from typing import List, Union
 
 import torch
-from constrained_optimizers.constrained_optimizer import CooperOptimizerState
+
+from .constrained_optimizers.constrained_optimizer import CooperOptimizerState
 
 
 class UnconstrainedOptimizer:
