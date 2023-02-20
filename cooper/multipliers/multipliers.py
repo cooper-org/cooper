@@ -91,9 +91,9 @@ class ExplicitMultiplier(torch.nn.Module):
         return _state_dict
 
     def load_state_dict(self, state_dict):
+        self.enforce_positive = state_dict.pop("enforce_positive")
+        self.restart_on_feasible = state_dict.pop("restart_on_feasible")
         super().load_state_dict(state_dict)
-        self.enforce_positive = state_dict["enforce_positive"]
-        self.restart_on_feasible = state_dict["restart_on_feasible"]
         self.device = self.weight.device
 
 
@@ -109,7 +109,13 @@ class DenseMultiplier(ExplicitMultiplier):
 class SparseMultiplier(ExplicitMultiplier):
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
-        return torch.nn.functional.embedding(indices, self.weight, sparse=True).squeeze()
+
+        if indices.dtype != torch.long:
+            # Not allowing for boolean "indices", which are treated as indices by
+            # torch.nn.functional.embedding and *not* as masks.
+            raise ValueError("Indices must be of type torch.long.")
+
+        return torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
     def __repr__(self):
         return f"SparseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
