@@ -2,37 +2,21 @@ import warnings
 from typing import List, Union
 
 import torch
-
-from cooper.formulation import UnconstrainedFormulation
-
-from .constrained_optimizers.cooper_optimizer import CooperOptimizer, CooperOptimizerState
+from constrained_optimizers.constrained_optimizer import CooperOptimizerState
 
 
-class UnconstrainedOptimizer(CooperOptimizer):
+class UnconstrainedOptimizer:
     """
     Fallback class to handle unconstrained problems in a unified way.
 
     Args:
-        cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
-            rise to the Lagrangian.
-        ineq_init: Initialization values for the inequality multipliers.
-        eq_init: Initialization values for the equality multipliers.
 
     """
 
-    def __init__(
-        self,
-        formulation: UnconstrainedFormulation,
-        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-    ):
+    extrapolation = False
+    alternating = False
 
-        if not isinstance(formulation, UnconstrainedFormulation):
-            warnings.warn(
-                """Creating an unconstrained optimizer for a constrained formulation. \
-                The optimizer will ignore the constraints of this CMP."""
-            )
-
-        self.formulation = formulation
+    def __init__(self, primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer]):
 
         if isinstance(primal_optimizers, torch.optim.Optimizer):
             self.primal_optimizers = [primal_optimizers]
@@ -55,4 +39,8 @@ class UnconstrainedOptimizer(CooperOptimizer):
         `CooperOptimizerState` object.
         """
         primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
-        return CooperOptimizerState(primal_optimizer_states=primal_optimizer_states)
+        return CooperOptimizerState(
+            primal_optimizer_states=primal_optimizer_states,
+            extrapolation=self.extrapolation,
+            alternating=self.alternating,
+        )

@@ -7,8 +7,8 @@ from typing import Callable, List, Optional, Union
 
 import torch
 
-from cooper.formulation import Formulation
-from cooper.problem import CMPState
+from cooper.cmp import CMPState
+from cooper.constraints import ConstraintGroup
 
 from .constrained_optimizer import ConstrainedOptimizer
 
@@ -46,28 +46,17 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
 
     """
 
+    extrapolation = False
+    alternating = False
+
     def __init__(
         self,
-        formulation: Formulation,
+        constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
         primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-        dual_optimizer: torch.optim.Optimizer,
-        dual_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
-        dual_restarts: bool = False,
+        dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
     ):
-        self.formulation = formulation
 
-        if isinstance(primal_optimizers, torch.optim.Optimizer):
-            self.primal_optimizers = [primal_optimizers]
-        else:
-            self.primal_optimizers = primal_optimizers
-
-        self.dual_optimizer = dual_optimizer
-        self.dual_scheduler = dual_scheduler
-
-        self.dual_restarts = dual_restarts
-
-        self.extrapolation = False
-        self.alternating = False
+        super().__init__(constraint_groups, primal_optimizers, dual_optimizers)
 
         self.base_sanity_checks()
 
@@ -83,10 +72,6 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         variables.
         """
 
-        # If necessary, instantiate dual components
-        if not hasattr(self.dual_optimizer, "param_groups"):
-            self.instantiate_dual_optimizer_and_scheduler()
-
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
@@ -94,21 +79,33 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
 
     def dual_step(self):
 
-        # Flip gradients for multipliers to perform ascent.
-        # We only do the flipping *right before* applying the optimizer step to
-        # avoid accidental double sign flips.
-        for multiplier in self.formulation.state():
-            if multiplier is not None:
-                multiplier.grad.mul_(-1.0)
+        for constraint, dual_optimizer in zip(self.constraint_groups, self.dual_optimizers):
 
-        # Update multipliers based on current constraint violations (gradients)
-        self.dual_optimizer.step()
+            # TODO(juan43ramirez): which convention will we use to access the gradient
+            # of the multipliers?
+            _multiplier = constraint.multiplier
 
-        if self.formulation.ineq_multipliers is not None:
-            if self.dual_restarts:
-                # "Reset" value of inequality multipliers to zero as soon as
-                # solution becomes feasible
-                self.restart_dual_variables()
+            if _multiplier.weight.grad is not None:
 
-            # Apply projection step to inequality multipliers
-            self.formulation.ineq_multipliers.project_()
+                # Flip gradients for multipliers to perform ascent.
+                # We only do the flipping *right before* applying the optimizer step to
+                # avoid accidental double sign flips.
+                _multiplier.weight.grad.mul_(-1.0)
+
+                # Update multipliers based on current constraint violations (gradients)
+                dual_optimizer.step()
+
+                # Select the indices of multipliers corresponding to feasible constraints
+                if _multiplier.implicit_constraint_type == "ineq":
+                    # TODO(juan43ramirez): could alternatively access the state of the
+                    # constraint, which would be more transparent.
+
+                    # Feasibility is attained when the violation is negative. Given that
+                    # the gradient sign is flipped, a negative violation corresponds to
+                    # a positive gradient.
+                    feasible_indices = _multiplier.weight.grad > 0.0
+                else:
+                    # TODO(juan43ramirez): add comment
+                    feasible_indices = None
+
+                _multiplier.post_step(feasible_indices, restart_value=0.0)

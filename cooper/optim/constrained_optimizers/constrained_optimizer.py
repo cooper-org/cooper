@@ -3,14 +3,59 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
+import dataclasses
 import warnings
+from collections.abc import Iterable
+from typing import Dict, List, Optional, Union
 
-from cooper.formulation import AugmentedLagrangianFormulation
+import torch
 
-from .cooper_optimizer import CooperOptimizer, CooperOptimizerState
+from cooper.constraints import ConstraintGroup
+from cooper.utils import validate_state_dicts
+
+from .utils import ensure_iterable
 
 
-class ConstrainedOptimizer(CooperOptimizer):
+@dataclasses.dataclass
+class CooperOptimizerState:
+    """Represents the "state" of a Constrained Optimizer in terms of the state
+    dicts of the primal optimizers, as well as those of the dual optimizer and
+    the dual scheduler if applicable. This is used for checkpointing.
+
+    Args:
+        primal_optimizer_states: State dict for the primal optimizers.
+        dual_optimizer_state: State dict for the dual optimizer.
+        dual_scheduler_state: State dict for the dual scheduler.
+    """
+
+    primal_optimizer_states: List[Dict]
+    dual_optimizer_states: Optional[List[Dict]] = None
+    extrapolation: bool = False
+    alternating: bool = False
+
+    def __eq__(self, other):
+
+        assert isinstance(other, CooperOptimizerState)
+
+        def compare_state_dicts(dict_name):
+            try:
+                return validate_state_dicts(getattr(self, dict_name), getattr(other, dict_name))
+            except:
+                return False
+
+        state_dict_names = ["primal_optimizer_states", "dual_optimizer_states"]
+        all_checks = [compare_state_dicts(_) for _ in state_dict_names]
+
+        all_checks.append(self.extrapolation == other.extrapolation)
+        all_checks.append(self.alternating == other.alternating)
+
+        return all(all_checks)
+
+    def asdict(self):
+        return dataclasses.asdict(self)
+
+
+class ConstrainedOptimizer:
 
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
@@ -29,8 +74,7 @@ class ConstrainedOptimizer(CooperOptimizer):
     handling unconstrained problems.
 
     Args:
-        formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
-            to be optimized.
+        constraint_groups:
 
         primal_optimizers: Fully instantiated ``torch.optim.Optimizer``\\s used
             to optimize the primal parameters (e.g. model parameters). The primal
@@ -60,43 +104,50 @@ class ConstrainedOptimizer(CooperOptimizer):
 
     """
 
+    def __init__(
+        self,
+        constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
+        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
+        dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
+    ):
+
+        self.constraint_groups = ensure_iterable(constraint_groups)
+        self.primal_optimizers = ensure_iterable(primal_optimizers)
+        self.dual_optimizers = ensure_iterable(dual_optimizers)
+
     def base_sanity_checks(self):
         """
         Perform sanity checks on the initialization of ``ConstrainedOptimizer``.
         """
 
-        if self.dual_optimizer is None:
+        if len(self.constraint_groups) != len(self.dual_optimizers):
+            raise RuntimeError("One dual optimizer must be provided for each constraint group.")
+
+        if self.constraint_groups is None:
+            raise RuntimeError("No constraints were provided.")
+
+        if self.primal_optimizers is None:
+            raise RuntimeError("No primal optimizer was provided.")
+
+        if self.dual_optimizers is None:
             raise RuntimeError("No dual optimizer was provided.")
 
-        if self.alternating and self.dual_restarts:
+        any_restart_on_feasible = False
+        any_is_augmented_lagrangian = False
+        for constraint in self.constraint_groups:
+            if hasattr(constraint.multiplier.restart_on_feasible) and constraint.multiplier.restart_on_feasible:
+                any_restart_on_feasible = True
+            if constraint.formulation.formulation_type == "augmented_lagrangian":
+                any_is_augmented_lagrangian = True
+
+        if self.alternating and any_restart_on_feasible:
             warnings.warn(
                 """Using alternating updates with dual restarts is untested.
                 Please use with caution."""
             )
 
-        if isinstance(self.formulation, AugmentedLagrangianFormulation):
-            if not self.alternating:
-                raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
-
-    def instantiate_dual_optimizer_and_scheduler(self):
-        """Instantiates the dual optimizer and scheduler."""
-
-        # Makes sure that dual optimizer indeed requires to be initialized
-        assert self.dual_optimizer is not None and callable(self.dual_optimizer)
-
-        # Checks if needed and instantiates dual_optimizer
-        self.dual_optimizer = self.dual_optimizer(self.formulation.dual_parameters)
-
-        if self.dual_scheduler is not None:
-            assert callable(self.dual_scheduler), "dual_scheduler must be callable"
-            # Instantiates the dual_scheduler
-            self.dual_scheduler = self.dual_scheduler(self.dual_optimizer)
-
-    def restart_dual_variables(self):
-        """
-        Execute restart for multipliers associated with inequality constraints
-        """
-        self.formulation.ineq_multipliers.restart_if_feasible_()
+        if any_is_augmented_lagrangian and not self.alternating:
+            raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
 
     def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
         """
@@ -117,12 +168,8 @@ class ConstrainedOptimizer(CooperOptimizer):
                 primal_optimizer.zero_grad()
 
         if not ignore_dual:
-
-            if self.formulation.is_state_created:
-                if self.dual_optimizer is None:
-                    raise RuntimeError("Requested zeroing gradients but dual_optimizer is None.")
-                else:
-                    self.dual_optimizer.zero_grad()
+            for dual_optimizer in self.dual_optimizers:
+                dual_optimizer.zero_grad()
 
     def state_dict(self) -> CooperOptimizerState:
         """
@@ -131,18 +178,11 @@ class ConstrainedOptimizer(CooperOptimizer):
         """
 
         primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
-        dual_optimizer_state = self.dual_optimizer.state_dict()
-
-        if self.dual_scheduler is not None:
-            dual_scheduler_state = self.dual_scheduler.state_dict()
-        else:
-            dual_scheduler_state = None
+        dual_optimizer_states = [_.state_dict() for _ in self.dual_optimizers]
 
         return CooperOptimizerState(
             primal_optimizer_states=primal_optimizer_states,
-            dual_optimizer_state=dual_optimizer_state,
-            dual_scheduler_state=dual_scheduler_state,
+            dual_optimizer_states=dual_optimizer_states,
             extrapolation=self.extrapolation,
             alternating=self.alternating,
-            dual_restarts=self.dual_restarts,
         )
