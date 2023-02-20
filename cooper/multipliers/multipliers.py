@@ -77,7 +77,7 @@ class ExplicitMultiplier(torch.nn.Module):
 
         if self.enforce_positive:
             # Ensures non-negativity for multipliers associated with inequality constraints.
-            self.weight.relu_()
+            self.weight.data = torch.relu(self.weight.data)
 
         if self.restart_on_feasible and feasible_indices is not None:
             self.weight.data[feasible_indices, ...] = restart_value
