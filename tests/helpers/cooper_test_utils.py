@@ -1,105 +1,14 @@
 """Cooper-related utilities for writing tests."""
 
 import functools
-from dataclasses import dataclass
-from types import GeneratorType
-from typing import Union
+from typing import List, Type
 
-import pytest
-import testing_utils
 import torch
 
 import cooper
 
 
-@dataclass
-class TestProblemData:
-    params: Union[torch.Tensor, torch.nn.Module]
-    cmp: cooper.ConstrainedMinimizationProblem
-    coop: cooper.ConstrainedOptimizer
-    formulation: cooper.Formulation
-    device: torch.device
-    mktensor: callable
-
-    def as_tuple(self):
-        field_names = ["params", "cmp", "coop", "formulation", "device", "mktensor"]
-        return (getattr(self, _) for _ in field_names)
-
-
-def build_test_problem(
-    aim_device,
-    primal_optim_cls,
-    primal_init,
-    dual_optim_cls,
-    use_ineq,
-    use_proxy_ineq,
-    dual_restarts,
-    alternating,
-    primal_optim_kwargs={"lr": 1e-2},
-    dual_optim_kwargs={"lr": 1e-2},
-    dual_scheduler=None,
-    primal_model=None,
-    formulation_cls=cooper.LagrangianFormulation,
-):
-
-    # Retrieve available device, and signal to skip test if GPU is not available
-    device, skip = testing_utils.get_device_skip(aim_device, torch.cuda.is_available())
-
-    if skip.do_skip:
-        pytest.skip(skip.skip_reason)
-
-    cmp = Toy2dCMP(use_ineq=use_ineq, use_proxy_ineq=use_proxy_ineq)
-
-    if primal_init is None:
-        primal_model.to(device)
-        params = primal_model.parameters()
-        params_ = params
-    else:
-        params = torch.nn.Parameter(torch.tensor(primal_init, device=device))
-        params_ = [params]
-
-    if isinstance(primal_optim_cls, list):
-        # params is created in a different way to avoid slicing issues with the
-        # autograd engine. Data contents of params are not modified.
-        sliceable_params = list(params)[0] if isinstance(params, GeneratorType) else params
-        params = [torch.nn.Parameter(_) for _ in sliceable_params.data]
-        params_ = params
-
-        primal_optimizers = []
-        for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
-            primal_optimizers.append(cls([p], **kwargs))
-
-    else:
-        primal_optimizers = [primal_optim_cls(params_, **primal_optim_kwargs)]
-
-    if use_ineq:
-        # Constrained case
-        dual_optimizer = cooper.optim.partial_optimizer(dual_optim_cls, **dual_optim_kwargs)
-        formulation = formulation_cls(cmp)
-    else:
-        # Unconstrained case
-        dual_optimizer = None
-        formulation = cooper.UnconstrainedFormulation(cmp)
-
-    cooper_optimizer_kwargs = {
-        "formulation": formulation,
-        "primal_optimizers": primal_optimizers,
-        "dual_optimizer": dual_optimizer,
-        "dual_scheduler": dual_scheduler,
-        "extrapolation": "Extra" in str(primal_optimizers[0]),
-        "alternating": alternating,
-        "dual_restarts": dual_restarts,
-    }
-
-    coop = cooper.optim.create_optimizer_from_kwargs(**cooper_optimizer_kwargs)
-
-    # Helper function to instantiate tensors in correct device
-    mktensor = functools.partial(torch.tensor, device=device)
-
-    return TestProblemData(params, cmp, coop, formulation, device, mktensor)
-
-
-class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
+class Toy2dCMP:
     """
     Simple test on a 2D quadratically-constrained quadratic programming problem
         min x**2 + 2*y**2
@@ -107,7 +16,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             x + y >= 1
             x**2 + y <= 1
 
-    If proxy constrainst are used, the "differentiable" surrogates are:
+    If hard violations are used, the "differentiable" surrogates are set to:
             0.9 * x + y >= 1
             x**2 + 0.9 * y <= 1
 
@@ -123,78 +32,85 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
     """
 
-    def __init__(self, use_ineq=False, use_proxy_ineq=False):
-        self.use_ineq = use_ineq
-        self.use_proxy_ineq = use_proxy_ineq
+    def __init__(self, use_ineq_constraints=False, use_constraint_surrogate=False):
+        self.use_ineq_constraints = use_ineq_constraints
+        self.use_constraint_surrogate = use_constraint_surrogate
         super().__init__()
 
-    def eval_params(self, params):
-        if isinstance(params, torch.nn.Module):
-            param_x, param_y = params.forward()
-        else:
-            param_x, param_y = params
+        if self.use_ineq_constraints:
+            self.cg1 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1)
+            self.cg2 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1)
 
-        return param_x, param_y
+    def analytical_gradients(self, params):
+        """Returns the analytical gradients of the loss and constraints for a given
+        value of the parameters."""
+
+        param_x, param_y = params() if callable(params) else params
+
+        # Params are detached and cloned for safety
+        param_x = param_x.detach().clone()
+        param_y = param_y.detach().clone()
+
+        loss_grad = torch.stack([2 * param_x, 4 * param_y])
+
+        if not self.use_ineq_constraints:
+            return loss_grad
+
+        if not self.use_constraint_surrogate:
+            cg1_grad = torch.tensor([-1.0, -1.0], device=param_x.device)
+            cg2_grad = torch.tensor([2 * param_x, 1.0], device=param_x.device)
+        else:
+            cg1_grad = torch.tensor([-0.9, -1.0], device=param_x.device)
+            cg2_grad = torch.tensor([2 * param_x, 0.9], device=param_x.device)
+
+        return loss_grad, cg1_grad, cg2_grad
 
     def closure(self, params):
 
-        cmp_state = self.defect_fn(params)
-        cmp_state.loss = self.loss_fn(params)
+        param_x, param_y = params() if callable(params) else params
 
-        return cmp_state
+        loss = param_x**2 + 2 * param_y**2
 
-    def loss_fn(self, params):
-        param_x, param_y = self.eval_params(params)
+        if self.use_ineq_constraints:
 
-        return param_x**2 + 2 * param_y**2
+            # Orig constraint: x + y \ge 1
+            cg1_violation = -param_x - param_y + 1.0
+            cg1_surrogate = -0.9 * param_x - param_y + 1.0
 
-    def defect_fn(self, params):
+            # Orig constraint: x**2 + y \le 1.0
+            cg2_violation = param_x**2 + param_y - 1.0
+            cg2_surrogate = param_x**2 + 0.9 * param_y - 1.0
 
-        param_x, param_y = self.eval_params(params)
-
-        # No equality constraints
-        eq_defect = None
-
-        if self.use_ineq:
-            # Two inequality constraints
-            ineq_defect = torch.stack(
-                [
-                    -param_x - param_y + 1.0,  # x + y \ge 1
-                    param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
-                ]
-            )
-
-            if self.use_proxy_ineq:
-                # Using **slightly** different functions for the proxy
-                # constraints
-                proxy_ineq_defect = torch.stack(
-                    [
-                        # Orig constraint: x + y \ge 1
-                        -0.9 * param_x - param_y + 1.0,
-                        # Orig constraint: x**2 + y \le 1.0
-                        param_x**2 + 0.9 * param_y - 1.0,
-                    ]
-                )
+            if self.use_constraint_surrogate:
+                self.cg1.state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
+                self.cg2.state = cooper.ConstraintState(violation=cg2_surrogate, strict_violation=cg2_violation)
             else:
-                proxy_ineq_defect = None
+                self.cg1.state = cooper.ConstraintState(violation=cg1_violation)
+                self.cg2.state = cooper.ConstraintState(violation=cg1_violation)
 
+            observed_constraints = [self.cg1, self.cg2]
         else:
-            ineq_defect = None
-            proxy_ineq_defect = None
+            observed_constraints = []
 
-        return cooper.CMPState(
-            loss=None,
-            eq_defect=eq_defect,
-            ineq_defect=ineq_defect,
-            proxy_ineq_defect=proxy_ineq_defect,
-        )
+        return cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
 
 
-def get_optimizer_from_str(optimizer_str):
+def get_optimizer_from_str(optimizer_str: str) -> Type[torch.optim.Optimizer]:
     """
     Returns an optimizer class from the string name of the optimizer.
     """
+    # TODO(juan43ramirez): this helper function could be useful for Cooper users.
+    # Consider moving it to the optim module.
     try:
         return getattr(cooper.optim, optimizer_str)
     except:
         return getattr(torch.optim, optimizer_str)
+
+
+def build_params_from_init(init: List[float], device: torch.device) -> torch.nn.Parameter:
+    """Builds a torch.nn.Parameter object from a list of initial values."""
+    return [torch.nn.Parameter(torch.tensor([elem], device=device, requires_grad=True)) for elem in init]
+
+
+def mktensor(device):
+    return functools.partial(torch.tensor, device=device)
