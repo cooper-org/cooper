@@ -42,12 +42,26 @@ class ExplicitMultiplier(torch.nn.Module):
     :py:class:`~cooper.constraints.ConstraintGroup` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
+    .. warning::
+        When `restart_on_feasible=True`, the entries of the multiplier which correspond
+        to feasible constraints in the :py:class:`~cooper.constraints.ConstraintGroup`
+        are reset to a default value (typically zero) by the
+        :py:meth:`~cooper.multipliers.ExplicitMultiplier.post_step_` method. Note that
+        we do **not** perform any modification to the dual optimizer associated with
+        this multiplier.
+        We discourage the use of `restart_on_feasible` along with stateful optimizers
+        (such as :py:class:`~torch.optim.SGD` with momentum or
+        :py:class:`~torch.optim.Adam`) since this combination can lead to the optimizer
+        buffers becoming stale/wrong for the entries of the multiplier which have been
+        reset due to the feasibility of their associated constraint.
+
     Args:
         init: Initial value of the multiplier.
         enforce_positive: Whether to enforce non-negativity on the values of the
             multiplier.
         restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
-            default) when the constrain is feasible.
+            default) when the constrain is feasible. This is only supported for
+            inequality constraints (i.e. enforce_positive=True)
     """
 
     def __init__(self, init: torch.Tensor, *, enforce_positive: bool = False, restart_on_feasible: bool = False):
@@ -107,6 +121,17 @@ class ExplicitMultiplier(torch.nn.Module):
 
 
 class DenseMultiplier(ExplicitMultiplier):
+    """
+    This is the simplest kind of trainable Lagrange multiplier.
+    :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
+    :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
+    in the group are measured constantly.
+
+    For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
+    one constraint per training example) you may consider using a
+    :py:class:`~cooper.multipliers.SparseMultiplier`.
+    """
+
     def forward(self):
         """Return the current value of the multiplier."""
         return self.weight
@@ -116,6 +141,20 @@ class DenseMultiplier(ExplicitMultiplier):
 
 
 class SparseMultiplier(ExplicitMultiplier):
+    """
+    Sparse multipliers extend the functionality of
+    :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
+    constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
+    This situation may arise, for example, when imposing point-wise constraints over all
+    the training samples in a learning task.
+
+    In such cases, it might be computationally prohibitive to measure the value for all
+    the constraints in the :py:class:`~cooper.constraints.ConstraintGroup` and one may
+    typically resort to sampling. :py:class:`~cooper.multipliers.SparseMultiplier`\\s
+    enable time-efficient retrieval of the multipliers for the sampled constraints only,
+    and memory-efficient sparse gradients.
+    """
+
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
 
@@ -133,17 +172,15 @@ class SparseMultiplier(ExplicitMultiplier):
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
     """
     An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
-    of a Lagrange multiplier associated with a :py:class:`~cooper.constraints.ConstraintGroup`
-    based on "features" for each constraint. The multiplier for a specific constraint is
-    thus (implicitly) represented by the constraint's features and the calculation that
-    takes place in the :py:meth:`~ImplicitMultiplier.forward` method.
+    of a Lagrange multiplier associated with a
+    :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
+    constraint. The multiplier is _implicitly_  represented by the features of its
+    associated constraint as well as the computation that takes place in the
+    :py:meth:`~cooper.multipliers.ImplicitMultiplier.forward` method.
 
-    Args:
-        init: Initial value of the multiplier.
-        enforce_positive: Whether to enforce non-negativity on the values of the
-            multiplier.
-        restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
-            default) when the constrain is feasible.
+    Thanks to their functional nature, implicit multipliers can allow for
+    (approximately) representing _infinitely_ many constraints. This feature is based on
+     the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
     """
 
     @abc.abstractmethod
