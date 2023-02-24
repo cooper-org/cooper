@@ -14,7 +14,6 @@ from .constrained_optimizer import ConstrainedOptimizer
 
 
 class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
-
     extrapolation = False
     alternating = True
 
@@ -24,7 +23,6 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
         dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
     ):
-
         super().__init__(constraint_groups, primal_optimizers, dual_optimizers)
 
         self.base_sanity_checks()
@@ -58,17 +56,31 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        self.populate_alternating_dual_gradient(closure, defect_fn, *closure_args, **closure_kwargs)
+        alternate_cmp_state = self.populate_alternating_dual_gradient(
+            closure, defect_fn, *closure_args, **closure_kwargs
+        )
 
         self.dual_step()
 
-    def populate_alternating_dual_gradient(self, closure, defect_fn, *closure_args, **closure_kwargs):
+        return alternate_cmp_state
+
+    def populate_alternating_dual_gradient(
+        self,
+        closure: Optional[Callable[..., CMPState]] = None,
+        *closure_args,
+        defect_fn: Optional[Callable[..., CMPState]] = None,
+        **closure_kwargs,
+    ):
+        # TODO(juan43ramirez): rename alternate_cmp_state to something more informative.
+
+        # Zero-out gradients for dual variables since they were already populated. We
+        # also zero-out primal gradients for safety although not really necessary.
+        self.zero_grad()
 
         # Once having updated the primal parameters, re-compute gradient wrt
         # multipliers. Skip gradient wrt primal parameters to avoid wasteful
         # computation, as we only need gradient wrt multipliers.
         with torch.no_grad():
-
             assert closure is not None or defect_fn is not None
 
             if defect_fn is not None:
@@ -81,11 +93,6 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
             elif closure is not None:
                 alternate_cmp_state = closure(*closure_args, **closure_kwargs)
 
-            for constraint, constraint_state in alternate_cmp_state.observed_constraints:
-                # TODO(juan43ramirez): do we want to overwrite the state of the constraint
-                # given this intermediate state?
-                constraint.state = constraint_state
-
         # We have already computed the new CMP state with the new values of the
         # parameters. Now we only need to recalculate the Lagrangian so we can get the
         # gradients wrt the multipliers.
@@ -95,26 +102,20 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
         # the multipliers.
         _ = alternate_cmp_state.populate_lagrangian()
 
-        # Zero-out gradients for dual variables since they were already populated. We
-        # also zero-out primal gradients for safety although not really necessary.
-        self.zero_grad(ignore_primal=False, ignore_dual=False)
+        # We only want to compute the gradients for the dual variables
+        alternate_cmp_state.dual_backward()
 
-        # Not passing lagrangian since we only want to update the gradients for
-        # the dual variables
-        alternate_cmp_state.backward(ignore_primal=True, ignore_dual=False)
+        return alternate_cmp_state
 
     def dual_step(self):
-
         # TODO(juan43ramirez): this function is exactly the same as SimultaneousOptimizer.dual_step.
 
         for constraint, dual_optimizer in zip(self.constraint_groups, self.dual_optimizers):
-
             # TODO(juan43ramirez): which convention will we use to access the gradient
             # of the multipliers?
             _multiplier = constraint.multiplier
 
             if _multiplier.weight.grad is not None:
-
                 # Flip gradients for multipliers to perform ascent.
                 # We only do the flipping *right before* applying the optimizer step to
                 # avoid accidental double sign flips.

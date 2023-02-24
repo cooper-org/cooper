@@ -32,7 +32,6 @@ class CooperOptimizerState:
     alternating: bool = False
 
     def __eq__(self, other):
-
         assert isinstance(other, CooperOptimizerState)
 
         def compare_state_dicts(dict_name):
@@ -108,7 +107,6 @@ class ConstrainedOptimizer:
         primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
         dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
     ):
-
         self.constraint_groups = ensure_iterable(constraint_groups)
         self.primal_optimizers = ensure_iterable(primal_optimizers)
         self.dual_optimizers = ensure_iterable(dual_optimizers)
@@ -147,27 +145,17 @@ class ConstrainedOptimizer:
         if any_is_augmented_lagrangian and not self.alternating:
             raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
 
-    def zero_grad(self, ignore_primal: bool = False, ignore_dual: bool = False):
+    def zero_grad(self):
         """
         Sets the gradients of all optimized
         :py:class:`~torch.nn.parameter.Parameter`\\s to zero. This includes both
         the primal and dual variables.
-
-        Args:
-            ignore_primal: If True, the gradients of the primal variables will
-                not be zeroed. Defaults to False.
-
-            ignore_dual: If True, the gradients of the dual variables will not
-                be zeroed. Defaults to False.
         """
+        for primal_optimizer in self.primal_optimizers:
+            primal_optimizer.zero_grad()
 
-        if not ignore_primal:
-            for primal_optimizer in self.primal_optimizers:
-                primal_optimizer.zero_grad()
-
-        if not ignore_dual:
-            for dual_optimizer in self.dual_optimizers:
-                dual_optimizer.zero_grad()
+        for dual_optimizer in self.dual_optimizers:
+            dual_optimizer.zero_grad()
 
     def state_dict(self) -> CooperOptimizerState:
         """
