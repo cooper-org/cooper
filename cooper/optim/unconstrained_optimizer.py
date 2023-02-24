@@ -18,7 +18,6 @@ class UnconstrainedOptimizer:
     alternating = False
 
     def __init__(self, primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer]):
-
         if isinstance(primal_optimizers, torch.optim.Optimizer):
             self.primal_optimizers = [primal_optimizers]
         else:
@@ -45,3 +44,6 @@ class UnconstrainedOptimizer:
             extrapolation=self.extrapolation,
             alternating=self.alternating,
         )
+
+
+# TODO(juan43ramirez): implement UnconstrainedExtrapolationOptimizer
