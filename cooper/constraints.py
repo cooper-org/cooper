@@ -61,7 +61,7 @@ class ConstraintGroup:
 
     def sanity_check_multiplier(self, multiplier: multipliers.MULTIPLIER_TYPE) -> None:
 
-        if (self.constraint_type == "penalty") != isinstance(multiplier, multipliers.ConstantMultiplier):
+        if (self.constraint_type == "penalty") and not isinstance(multiplier, multipliers.ConstantMultiplier):
             # If a penalty "constraint" is used, then we must have been provided a ConstantMultiplier.
             raise ValueError("A ConstantMultiplier must be provided along with a `penalty` constraint.")
 
