@@ -29,7 +29,6 @@ class CMPState:
         observed_constraints: Optional[Iterable[Tuple[ConstraintGroup, Optional[ConstraintState]]]] = (),
         misc: Optional[dict] = None,
     ):
-
         self.loss = loss
         self.observed_constraints = observed_constraints
         self.misc = misc
@@ -61,7 +60,6 @@ class CMPState:
             observed_multiplier_values = []
 
         for constraint_tuple in self.observed_constraints:
-
             if isinstance(constraint_tuple, ConstraintGroup):
                 constraint_group = constraint_tuple
                 constraint_state = constraint_group.state
@@ -93,21 +91,23 @@ class CMPState:
         else:
             return self._primal_lagrangian
 
-    def backward(self, ignore_primal: bool = False, ignore_dual: bool = False) -> None:
+    def primal_backward(self) -> None:
+        """Populates the gradient of the Lagrangian with respect to the primal parameters."""
+        if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
+            self._primal_lagrangian.backward()
+
+    def dual_backward(self) -> None:
+        """Populates the gradient of the Lagrangian with respect to the dual parameters."""
+        if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
+            self._dual_lagrangian.backward()
+
+    def backward(self) -> None:
         """
-        Populates the gradient of the Lagrangian with respect to the primal and dual
+        Populates the gradient of the Lagrangian with respect to the primal *and* dual
         parameters.
         """
-
-        if not ignore_primal:
-            # Populate the gradient of the Lagrangian w.r.t. the primal parameters
-            if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
-                self._primal_lagrangian.backward()
-
-        if not ignore_dual:
-            # Populate the gradient of the Lagrangian w.r.t. the dual parameters
-            if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
-                self._dual_lagrangian.backward()
+        self.primal_backward()
+        self.dual_backward()
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
@@ -145,6 +145,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
     def defect_fn(self) -> CMPState:
+        # TODO(juan43ramirez): refactor defect_fn to compute_violations
         """
         Computes the constraints of the CMP based on the current value of the
         primal parameters. This function returns a
