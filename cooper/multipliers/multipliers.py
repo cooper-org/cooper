@@ -23,6 +23,11 @@ class ConstantMultiplier:
         """Return the current value of the multiplier."""
         return self.weight
 
+    def parameters(self):
+        """Return an empty iterator for consistency with multipliers which are
+        :py:class:`~torch.nn.Module`."""
+        return iter(())
+
     def state_dict(self):
         return {"weight": self.weight}
 
@@ -54,6 +59,9 @@ class ExplicitMultiplier(torch.nn.Module):
         if self.enforce_positive and any(init < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
+        if not self.enforce_positive and restart_on_feasible:
+            raise ValueError("Restart on feasible is not supported for equality constraints.")
+
         self.weight = torch.nn.Parameter(init)
         self.device = self.weight.device
 
@@ -79,10 +87,12 @@ class ExplicitMultiplier(torch.nn.Module):
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
-        if self.restart_on_feasible and feasible_indices is not None:
-            self.weight.data[feasible_indices, ...] = restart_value
-            if self.weight.grad is not None:
-                self.weight.grad[feasible_indices, ...] = 0.0
+            # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+            # about the pitfalls of using dual_restars with stateful optimizers.
+            if self.restart_on_feasible and feasible_indices is not None:
+                self.weight.data[feasible_indices, ...] = restart_value
+                if self.weight.grad is not None:
+                    self.weight.grad[feasible_indices, ...] = 0.0
 
     def state_dict(self):
         _state_dict = super().state_dict()
