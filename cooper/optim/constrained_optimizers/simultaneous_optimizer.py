@@ -101,4 +101,4 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
                         # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
                         # about the pitfalls of using dual_restars with stateful optimizers.
 
-                        multiplier.post_step(feasible_indices, restart_value=0.0)
+                        multiplier.post_step_(feasible_indices, restart_value=0.0)

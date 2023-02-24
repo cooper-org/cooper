@@ -79,9 +79,9 @@ def test_ineq_multiplier_init(ineq_multiplier, init_tensor, all_indices, is_spar
     assert ineq_multiplier.implicit_constraint_type == "ineq"
 
 
-def test_eq_post_step(eq_multiplier, feasible_indices, init_tensor, restart_on_feasible, all_indices, is_sparse):
+def test_eq_post_step_(eq_multiplier, feasible_indices, init_tensor, restart_on_feasible, all_indices, is_sparse):
 
-    eq_multiplier.post_step(feasible_indices=feasible_indices)
+    eq_multiplier.post_step_(feasible_indices=feasible_indices)
     multiplier_values = eq_multiplier(all_indices) if is_sparse else eq_multiplier()
 
     if not restart_on_feasible:
@@ -93,7 +93,7 @@ def test_eq_post_step(eq_multiplier, feasible_indices, init_tensor, restart_on_f
         assert torch.allclose(multiplier_values[~feasible_indices], init_tensor[~feasible_indices])
 
 
-def test_ineq_post_step(ineq_multiplier, feasible_indices, init_tensor, restart_on_feasible, all_indices, is_sparse):
+def test_ineq_post_step_(ineq_multiplier, feasible_indices, init_tensor, restart_on_feasible, all_indices, is_sparse):
 
     # Overwrite the multiplier to have some *negative* entries and gradients
     ineq_multiplier.weight.data = init_tensor.clone()
@@ -101,14 +101,14 @@ def test_ineq_post_step(ineq_multiplier, feasible_indices, init_tensor, restart_
 
     # Post-step should ensure non-negativity. Note that no feasible indices are passed,
     # so "feasible" multipliers and their gradients are not reset.
-    ineq_multiplier.post_step()
+    ineq_multiplier.post_step_()
     multiplier_values = ineq_multiplier(all_indices) if is_sparse else ineq_multiplier()
 
     assert torch.allclose(multiplier_values, init_tensor.relu())
     assert torch.allclose(ineq_multiplier.weight.grad, init_tensor)
 
     # Perform post-step again, this time with feasible indices
-    ineq_multiplier.post_step(feasible_indices=feasible_indices)
+    ineq_multiplier.post_step_(feasible_indices=feasible_indices)
     multiplier_values = ineq_multiplier(all_indices) if is_sparse else ineq_multiplier()
 
     if not restart_on_feasible:

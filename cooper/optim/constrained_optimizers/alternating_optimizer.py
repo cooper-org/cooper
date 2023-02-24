@@ -137,4 +137,4 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
                     # TODO(juan43ramirez): add comment
                     feasible_indices = None
 
-                _multiplier.post_step(feasible_indices, restart_value=0.0)
+                _multiplier.post_step_(feasible_indices, restart_value=0.0)

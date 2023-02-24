@@ -133,7 +133,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             primal_optimizer.extrapolation()  # type: ignore
 
         # Call to dual_step flips sign of gradients, then triggers call to
-        # dual_optimizer.extrapolation and applies post_step
+        # dual_optimizer.extrapolation and applies post_step_
         self.dual_step(call_extrapolation=True)
 
         # Zero gradients and recompute loss at extrapolated point
@@ -190,4 +190,4 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                     # TODO(juan43ramirez): add comment
                     feasible_indices = None
 
-                _multiplier.post_step(feasible_indices, restart_value=0.0)
+                _multiplier.post_step_(feasible_indices, restart_value=0.0)
