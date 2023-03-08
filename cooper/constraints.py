@@ -20,7 +20,10 @@ class ConstraintState:
 
 
 class ConstraintGroup:
-    """Constraint Group."""
+    """Constraint Group.
+    TODO(gallego-posada): add docstring explaining that when passing the multiplier
+    directly, the other kwargs (shape, dtype, device)
+    """
 
     def __init__(
         self,
@@ -99,7 +102,7 @@ class ConstraintGroup:
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         if constraint_state is None:
-            constraint_state = self.state
+            constraint_state = self._state
 
         if constraint_state is None:
             raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
