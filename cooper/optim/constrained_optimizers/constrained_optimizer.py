@@ -131,7 +131,7 @@ class ConstrainedOptimizer:
         any_restart_on_feasible = False
         any_is_augmented_lagrangian = False
         for constraint in self.constraint_groups:
-            if hasattr(constraint.multiplier.restart_on_feasible) and constraint.multiplier.restart_on_feasible:
+            if hasattr(constraint.multiplier, "restart_on_feasible") and constraint.multiplier.restart_on_feasible:
                 any_restart_on_feasible = True
             if constraint.formulation.formulation_type == "augmented_lagrangian":
                 any_is_augmented_lagrangian = True
