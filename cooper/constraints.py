@@ -22,7 +22,7 @@ class ConstraintState:
 class ConstraintGroup:
     """Constraint Group.
     TODO(gallego-posada): add docstring explaining that when passing the multiplier
-    directly, the other kwargs (shape, dtype, device)
+    directly, the other kwargs (shape, dtype, device) are ignored.
     """
 
     def __init__(
