@@ -11,12 +11,17 @@ from ipywidgets import HBox, Layout, VBox, fixed, interactive
 from matplotlib.gridspec import GridSpec
 
 import cooper
+from cooper import ConstraintGroup
+from cooper.optim import SimultaneousConstrainedOptimizer
 
 
 class Toy2DWidget:
     def __init__(
         self,
         cmp_class,
+        cmp_kwargs={
+            "ineq_group": ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32, device="cpu"),
+        },
         problem_type=None,
         epsilon=None,
         primal_lr=None,
@@ -154,8 +159,8 @@ class Toy2DWidget:
         display(VBox([controls, output]))
 
         # ------------------------------ Initialize the CMP and its formulation
-        self.cmp = cmp_class()
-        self.formulation = cooper.LagrangianFormulation(self.cmp)
+        self.cmp = cmp_class(**cmp_kwargs)
+        self.ineq_group = cmp_kwargs["ineq_group"]
 
         # # Run the update a first time
         widget.update()
@@ -170,8 +175,7 @@ class Toy2DWidget:
         self.cmp.state = None
 
         # Reset multipliers
-        self.formulation.ineq_multipliers = None
-        self.formulation.eq_multipliers = None
+        # self.ineq_group.multiplier = None
 
     def update(
         self,
@@ -261,13 +265,12 @@ class Toy2DWidget:
         primal_optimizer = primal_opt_class([params], **primal_kwargs)
 
         dual_opt_class = getattr(cooper.optim, dual_optim) if extrapolation else getattr(torch.optim, dual_optim)
-        dual_optimizer = cooper.optim.partial_optimizer(dual_opt_class, **dual_kwargs)
+        dual_optimizer = dual_opt_class([self.ineq_group.multiplier.weight], **dual_kwargs)
 
-        constrained_optimizer = cooper.ConstrainedOptimizer(
-            formulation=self.formulation,
+        constrained_optimizer = SimultaneousConstrainedOptimizer(
+            constraint_groups=self.ineq_group,
             primal_optimizers=primal_optimizer,
-            dual_optimizer=dual_optimizer,
-            dual_restarts=dual_restarts,
+            dual_optimizers=dual_optimizer,
         )
 
         return constrained_optimizer
@@ -276,31 +279,28 @@ class Toy2DWidget:
         """Train."""
 
         # Store CMPStates and param values throughout the optimization process
-        state_history = cooper.StateLogger(save_metrics=["loss", "ineq_defect", "ineq_multipliers"])
+        # state_history = cooper.StateLogger(save_metrics=["loss", "ineq_defect", "ineq_multipliers"])
+        state_history = {}
 
         for iter_num in range(num_iters):
 
             self.constrained_optimizer.zero_grad()
-            lagrangian = self.formulation.compute_lagrangian(self.cmp.closure, params)
-            self.formulation.backward(lagrangian)
-            self.constrained_optimizer.step(self.cmp.closure, params)
+            cmp_state = self.cmp.compute_cmp_state(params)
+            _ = cmp_state.populate_lagrangian()
+            cmp_state.backward()
+            self.constrained_optimizer.step()
 
             # Ensure parameters remain in the domain of the functions
             params[:, 0].data.clamp_(min=0, max=np.pi / 2)
             params[:, 1].data.clamp_(min=0, max=3)
 
-            partial_dict = {
-                "params": copy.deepcopy(params.data),
-                "ineq_multipliers": copy.deepcopy(self.formulation.state()[0].data),
-                "eq_multipliers": copy.deepcopy(self.formulation.state()[1].data),
-            }
-
             # Store optimization metrics at each step
-            state_history.store_metrics(
-                cmp_state=self.cmp.state,
-                step_id=iter_num,
-                partial_dict=partial_dict,
-            )
+            state_history[iter_num] = {
+                "params": copy.deepcopy(params.data),
+                "loss": copy.deepcopy(cmp_state.loss.item()),
+                "ineq_defect": copy.deepcopy(cmp_state.observed_constraints[0].state.violation.item()),
+                "ineq_multipliers": copy.deepcopy(cmp_state.observed_constraints[0].multiplier.weight.data),
+            }
 
         return state_history
 
@@ -312,7 +312,7 @@ class Toy2DWidget:
         grid_x, grid_y = torch.meshgrid(x_range, y_range, indexing="ij")
 
         grid_params = torch.stack([grid_x.flatten(), grid_y.flatten()], axis=1)
-        all_states = self.cmp.closure(grid_params)
+        all_states = self.cmp.compute_cmp_state(grid_params)
         loss_grid = all_states.loss.reshape(len(x_range), len(y_range))
 
         # Plot the contours
@@ -328,7 +328,7 @@ class Toy2DWidget:
         # Add styling
         self.xy_axis.clabel(loss_contours, inline=1)
 
-        defect_grid = all_states.ineq_defect.reshape(len(x_range), len(y_range))
+        defect_grid = all_states.observed_constraints[0].state.violation.reshape(len(x_range), len(y_range))
         return (grid_x, grid_y, defect_grid)
 
     def plot_pareto_front(self):
@@ -338,8 +338,8 @@ class Toy2DWidget:
         # non-dominated solution. x parametrizes location on the Pareto front
         x_range = torch.tensor(np.linspace(0, np.pi / 2, 100))
         y_range = torch.tensor(100 * [1.0])
-        all_states = self.cmp.closure(torch.stack([x_range, y_range], axis=1))
-        self.pareto_front = (all_states.loss, all_states.ineq_defect.squeeze())
+        all_states = self.cmp.compute_cmp_state(torch.stack([x_range, y_range], axis=1))
+        self.pareto_front = (all_states.loss, all_states.observed_constraints[0].state.violation.squeeze())
         self.loss_defect_axis.plot(self.pareto_front[0], self.pareto_front[1], c="black", alpha=0.7)
 
         # Add styling
@@ -353,7 +353,16 @@ class Toy2DWidget:
         green = style_utils.COLOR_DICT["green"]
         yellow = style_utils.COLOR_DICT["yellow"]
 
-        all_metrics = state_history.unpack_stored_metrics()
+        iters, params_hist, loss_hist, multipliers_hist, violation_hist = zip(
+            *[(k, v["params"], v["loss"], v["ineq_multipliers"], v["ineq_defect"]) for k, v in state_history.items()]
+        )
+        all_metrics = {
+            "iters": iters,
+            "params": params_hist,
+            "loss": loss_hist,
+            "ineq_defect": violation_hist,
+            "ineq_multipliers": multipliers_hist,
+        }
         cmap_vals = np.linspace(0, 1, len(all_metrics["loss"]))
         cmap_name = "viridis"
 
