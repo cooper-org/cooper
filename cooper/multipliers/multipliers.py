@@ -77,21 +77,25 @@ class ExplicitMultiplier(torch.nn.Module):
         self.enforce_positive = enforce_positive
         self.restart_on_feasible = restart_on_feasible
 
-        if self.enforce_positive and any(init < 0):
-            raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
-
-        if not self.enforce_positive and restart_on_feasible:
-            raise ValueError("Restart on feasible is not supported for equality constraints.")
-
-        if (default_restart_value < 0) and restart_on_feasible:
-            raise ValueError("Default restart value must be positive.")
-
-        if (default_restart_value > 0) and not restart_on_feasible:
-            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
-
         self.weight = torch.nn.Parameter(init)
         self.device = self.weight.device
         self.default_restart_value = default_restart_value
+
+        self.base_sanity_checks()
+
+    def base_sanity_checks(self):
+
+        if self.enforce_positive and any(self.weight.data < 0):
+            raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
+
+        if not self.enforce_positive and self.restart_on_feasible:
+            raise ValueError("Restart on feasible is not supported for equality constraints.")
+
+        if (self.default_restart_value < 0) and self.restart_on_feasible:
+            raise ValueError("Default restart value must be positive.")
+
+        if (self.default_restart_value > 0) and not self.restart_on_feasible:
+            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
 
     @property
     def implicit_constraint_type(self):
@@ -129,7 +133,7 @@ class ExplicitMultiplier(torch.nn.Module):
     def load_state_dict(self, state_dict):
         self.enforce_positive = state_dict.pop("enforce_positive")
         self.restart_on_feasible = state_dict.pop("restart_on_feasible")
-        self.default_restart_value = state_dict.pop("default_restart_value") 
+        self.default_restart_value = state_dict.pop("default_restart_value")
         super().load_state_dict(state_dict)
         self.device = self.weight.device
 
