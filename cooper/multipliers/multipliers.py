@@ -64,7 +64,14 @@ class ExplicitMultiplier(torch.nn.Module):
             inequality constraints (i.e. enforce_positive=True)
     """
 
-    def __init__(self, init: torch.Tensor, *, enforce_positive: bool = False, restart_on_feasible: bool = False):
+    def __init__(
+        self,
+        init: torch.Tensor,
+        *,
+        enforce_positive: bool = False,
+        restart_on_feasible: bool = False,
+        default_restart_value: float = 0.0,
+    ):
         super().__init__()
 
         self.enforce_positive = enforce_positive
@@ -76,14 +83,21 @@ class ExplicitMultiplier(torch.nn.Module):
         if not self.enforce_positive and restart_on_feasible:
             raise ValueError("Restart on feasible is not supported for equality constraints.")
 
+        if (default_restart_value < 0) and restart_on_feasible:
+            raise ValueError("Default restart value must be positive.")
+
+        if (default_restart_value > 0) and not restart_on_feasible:
+            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
+
         self.weight = torch.nn.Parameter(init)
         self.device = self.weight.device
+        self.default_restart_value = default_restart_value
 
     @property
     def implicit_constraint_type(self):
         return "ineq" if self.enforce_positive else "eq"
 
-    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
+    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
@@ -92,8 +106,6 @@ class ExplicitMultiplier(torch.nn.Module):
 
         Args:
             feasible_indices: Indices or binary masks denoting the feasible constraints.
-            restart_value: Default value of the multiplier after applying the restart
-                on feasibility.
         """
 
         if self.enforce_positive:
@@ -103,7 +115,7 @@ class ExplicitMultiplier(torch.nn.Module):
             # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
             # about the pitfalls of using dual_restars with stateful optimizers.
             if self.restart_on_feasible and feasible_indices is not None:
-                self.weight.data[feasible_indices, ...] = restart_value
+                self.weight.data[feasible_indices, ...] = self.default_restart_value
                 if self.weight.grad is not None:
                     self.weight.grad[feasible_indices, ...] = 0.0
 
@@ -111,11 +123,13 @@ class ExplicitMultiplier(torch.nn.Module):
         _state_dict = super().state_dict()
         _state_dict["enforce_positive"] = self.enforce_positive
         _state_dict["restart_on_feasible"] = self.restart_on_feasible
+        _state_dict["default_restart_value"] = self.default_restart_value
         return _state_dict
 
     def load_state_dict(self, state_dict):
         self.enforce_positive = state_dict.pop("enforce_positive")
         self.restart_on_feasible = state_dict.pop("restart_on_feasible")
+        self.default_restart_value = state_dict.pop("default_restart_value") 
         super().load_state_dict(state_dict)
         self.device = self.weight.device
 
