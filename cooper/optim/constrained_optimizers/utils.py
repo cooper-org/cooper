@@ -1,4 +1,5 @@
-from typing import List, Optional, Union
+import warnings
+from typing import Iterable, List, Optional, Union
 
 import torch
 
@@ -13,6 +14,29 @@ from . import (
     ExtrapolationConstrainedOptimizer,
     SimultaneousConstrainedOptimizer,
 )
+
+
+def sanity_check_constraints_and_optimizer(
+    constrained_optimizer: ConstrainedOptimizer, constraint_groups: Optional[Iterable[ConstraintGroup]] = None
+):
+    """
+    Execute sanity checks on the properties of the provided constraints and optimizer to
+    raise appropriate exceptions or warnings when detecting invalid or untested
+    configurations.
+    """
+
+    if constraint_groups is not None:
+        fn_restart_on_feasible = lambda constraint: getattr(constraint.multiplier, "restart_on_feasible", False)
+        any_restart_on_feasible = any(map(fn_restart_on_feasible, constraint_groups))
+
+        fn_augmented_lagrangian = lambda constraint: constraint.formulation.formulation_type == "augmented_lagrangian"
+        any_is_augmented_lagrangian = any(map(fn_augmented_lagrangian, constraint_groups))
+
+        if constrained_optimizer.alternating and any_restart_on_feasible:
+            warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
+
+        if any_is_augmented_lagrangian and not constrained_optimizer.alternating:
+            raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
 
 
 def create_optimizer_from_kwargs(
@@ -40,23 +64,17 @@ def create_optimizer_from_kwargs(
 
     if extrapolation:
         return ExtrapolationConstrainedOptimizer(
-            constraint_groups=constraint_groups,
-            primal_optimizers=primal_optimizers,
-            dual_optimizers=dual_optimizers,
+            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
         )
 
     elif alternating:
         return AlternatingConstrainedOptimizer(
-            constraint_groups=constraint_groups,
-            primal_optimizers=primal_optimizers,
-            dual_optimizers=dual_optimizers,
+            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
         )
 
     else:
         return SimultaneousConstrainedOptimizer(
-            constraint_groups=constraint_groups,
-            primal_optimizers=primal_optimizers,
-            dual_optimizers=dual_optimizers,
+            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
         )
 
 
