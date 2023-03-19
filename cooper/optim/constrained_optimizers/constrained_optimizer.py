@@ -109,7 +109,7 @@ class ConstrainedOptimizer:
         self.primal_optimizers = ensure_iterable(primal_optimizers)
         self.dual_optimizers = ensure_iterable(dual_optimizers)
 
-        if (constraint_groups is None) ^ (multipliers is None):
+        if not ((constraint_groups is None) ^ (multipliers is None)):
             raise ValueError("Exactly one of `constraint_groups` and `multipliers` must be not None.")
 
         if multipliers is not None:
