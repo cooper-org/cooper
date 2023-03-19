@@ -64,7 +64,7 @@ class CMPState:
                 of the multiplier for each of the observed_constraints.
         """
 
-        primal_lagrangian = self.loss
+        primal_lagrangian = 0.0 + self.loss
         dual_lagrangian = 0.0
 
         if return_multipliers:
