@@ -17,7 +17,6 @@ from torch.utils.data.sampler import RandomSampler
 
 torch.manual_seed(0)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {DEVICE}")
 
 
 class LinearConstraintSystem(Dataset):
