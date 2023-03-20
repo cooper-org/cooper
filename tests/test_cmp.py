@@ -6,9 +6,14 @@ import torch
 import cooper
 
 
-def test_cmp(device):
+@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
+def params_init(device, request):
+    return torch.tensor(request.param, device=device)
 
-    params = torch.nn.Parameter(torch.tensor([0.1, 0.5], device=device))
+
+def test_cmp(params_init, device):
+
+    params = torch.nn.Parameter(params_init)
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, device=device)
 
     primal_optimizer = torch.optim.SGD([params], lr=1e-2)
@@ -20,7 +25,7 @@ def test_cmp(device):
         primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.constraint_groups
     )
 
-    for step_id in range(1000):
+    for step_id in range(1500):
 
         constrained_optimizer.zero_grad()
         cmp_state = cmp.compute_cmp_state(params)
