@@ -25,8 +25,8 @@ class CooperOptimizerState:
     primal_optimizer_states: Sequence[Dict]
     dual_optimizer_states: Optional[Sequence[Dict]] = None
     multiplier_states: Optional[Sequence[Dict]] = None
-    extrapolation: Optional[bool] = False
-    alternating: Optional[bool] = False
+    extrapolation: bool = False
+    alternating: bool = False
 
     def asdict(self):
         return dataclasses.asdict(self)
