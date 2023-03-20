@@ -13,6 +13,7 @@ class Formulation:
         formulation_type: FORMULATION_TYPE,
         augmented_lagrangian_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
     ):
+        # TODO(gallego-posada): Add documentation
 
         if formulation_type not in ["penalized", "lagrangian", "augmented_lagrangian"]:
             raise ValueError(f"Formulation type {formulation_type} not understood.")

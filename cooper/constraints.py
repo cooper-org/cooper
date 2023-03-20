@@ -13,6 +13,7 @@ CONSTRAINT_TYPE = Literal["eq", "ineq", "penalty"]
 @dataclass
 class ConstraintState:
     """Constraint state."""
+    # TODO(gallego-posada): Add documentation
 
     violation: torch.Tensor
     strict_violation: Optional[torch.Tensor] = None
@@ -21,6 +22,7 @@ class ConstraintState:
 
 class ConstraintGroup:
     """Constraint Group."""
+    # TODO(gallego-posada): Add documentation
 
     def __init__(
         self,
