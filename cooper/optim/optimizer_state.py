@@ -42,12 +42,10 @@ class CooperOptimizerState:
         state_dict_names = ["primal_optimizer_states", "dual_optimizer_states", "multiplier_states"]
         for state_dict_name in state_dict_names:
             try:
-                state_dicts_match = validate_state_dicts(
-                    getattr(self, state_dict_name), getattr(other, state_dict_name)
-                )
+                dicts_match = validate_state_dicts(getattr(self, state_dict_name), getattr(other, state_dict_name))
             except:
-                state_dicts_match = False
-            if not state_dicts_match:
+                dicts_match = False
+            if not dicts_match:
                 return False
 
         return True
