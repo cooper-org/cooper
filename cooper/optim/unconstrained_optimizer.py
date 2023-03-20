@@ -36,10 +36,10 @@ class UnconstrainedOptimizer:
             primal_optimizer.step()
 
     def state_dict(self) -> CooperOptimizerState:
-        """
-        Collects the state dicts of the primal optimizers and wraps them in a
+        """Collects the state dicts of the primal optimizers and wraps them in a
         :py:class:`~cooper.optim.CooperOptimizerState` object.
         """
+
         primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
         return CooperOptimizerState(
             primal_optimizer_states=primal_optimizer_states,

@@ -9,7 +9,7 @@ from cooper.utils import validate_state_dicts
 
 @dataclasses.dataclass
 class CooperOptimizerState:
-    """Represents the "state" of a Constrained Optimizer in terms of the state dicts of
+    """Represents the state of a Constrained Optimizer in terms of the state dicts of
     the primal optimizers, as well as those of the dual optimizer and the dual scheduler
     if applicable. This class can be used for producing checkpoints of a Cooper-related
     optimizer.

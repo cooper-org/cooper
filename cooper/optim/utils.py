@@ -14,8 +14,7 @@ def sanity_check_constraints_and_optimizer(
     constrained_optimizer: constrained_optimizers.ConstrainedOptimizer,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
 ):
-    """
-    Execute sanity checks on the properties of the provided constraints and optimizer to
+    """Execute sanity checks on the properties of the provided constraints and optimizer to
     raise appropriate exceptions or warnings when detecting invalid or untested
     configurations.
     """

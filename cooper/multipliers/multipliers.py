@@ -6,8 +6,7 @@ import torch
 
 
 class ConstantMultiplier:
-    """
-    Constant (non-trainable) multiplier class used for penalized formulations.
+    """Constant (non-trainable) multiplier class used for penalized formulations.
 
     Args:
         init: Value of the multiplier.
@@ -139,8 +138,8 @@ class ExplicitMultiplier(torch.nn.Module):
 
 
 class DenseMultiplier(ExplicitMultiplier):
-    """
-    This is the simplest kind of trainable Lagrange multiplier.
+    """Simplest kind of trainable Lagrange multiplier.
+
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
     :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
     in the group are measured constantly.
@@ -159,8 +158,7 @@ class DenseMultiplier(ExplicitMultiplier):
 
 
 class SparseMultiplier(ExplicitMultiplier):
-    """
-    Sparse multipliers extend the functionality of
+    """Sparse multipliers extend the functionality of
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
     constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
@@ -188,8 +186,7 @@ class SparseMultiplier(ExplicitMultiplier):
 
 
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
-    """
-    An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
+    """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
     :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
     constraint. The multiplier is _implicitly_  represented by the features of its
