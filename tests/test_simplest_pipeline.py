@@ -3,65 +3,73 @@
 """Tests for Constrained Optimizer class. This test already verifies that the
 code behaves as expected for an unconstrained setting."""
 
+from typing import List
+
 import pytest
 import torch
 
 import cooper
 
 
-@pytest.fixture()
-def params():
-    return torch.nn.Parameter(torch.tensor([0.0, -1.0]))
+@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
+def params_init(device, request):
+    return torch.tensor(request.param, device=device)
 
 
-@pytest.fixture()
-def formulation():
-    return cooper.LagrangianFormulation()
-
-
-@pytest.fixture()
-def constrained_optimizer(params, formulation):
-    primal_optim = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
-    dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-
-    return cooper.SimultaneousConstrainedOptimizer(formulation, primal_optim, dual_optim, dual_restarts=True)
-
-
-def loss_fn(params):
+def evaluate_loss(params):
     param_x, param_y = params
 
     return param_x**2 + 2 * param_y**2
 
 
-def defect_fn(params):
+def evaluate_constraints(params) -> List[cooper.ConstraintState]:
 
     param_x, param_y = params
 
-    # Two inequality constraints
-    defect = torch.stack(
-        [
-            -param_x - param_y + 1.0,  # x + y \ge 1
-            param_x**2 + param_y - 1.0,  # x**2 + y \le 1.0
-        ]
+    cg0_state = cooper.ConstraintState(violation=-param_x - param_y + 1.0)  # x + y \ge 1
+    cg1_state = cooper.ConstraintState(violation=param_x**2 + param_y - 1.0)  # x**2 + y \le 1.0
+
+    return [cg0_state, cg1_state]
+
+
+def test_simplest_pipeline(params_init, device):
+    """Test correct behavior of simultaneous updates on a 2-dimensional constrained
+    problem without requiring the user to implement a CMP class explicitly. The only
+    required methods are a function to evaluate the loss, and a function to evaluate
+    the constraints.
+    """
+
+    params = torch.nn.Parameter(params_init)
+    primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
+
+    cg0 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device)
+    cg1 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device)
+    constraint_groups = [cg0, cg1]
+
+    dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
+    dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
+
+    constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
+        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=constraint_groups
     )
-
-    return defect
-
-
-def test_simplest_pipeline(params, formulation, constrained_optimizer):
 
     for step_id in range(1500):
         constrained_optimizer.zero_grad()
 
-        loss = loss_fn(params)
-        defect = defect_fn(params)
+        loss = evaluate_loss(params)
 
-        # Create a CMPState object to hold the loss and defect values
-        cmp_state = cooper.CMPState(loss=loss, ineq_defect=defect)
+        cg0_state, cg1_state = evaluate_constraints(params)
+        observed_constraints = [(cg0, cg0_state), (cg1, cg1_state)]
 
-        lagrangian = formulation.compute_lagrangian(pre_computed_state=cmp_state)
-        formulation.backward(lagrangian)
+        # # Alternatively, one could assign the constraint states directly to the
+        # # constraint groups and collect only the constraint groups when gathering the
+        # # observed constraints.
+        # cg0.state, cg1.state = evaluate_constraints(params)
+        # observed_constraints = [cg0, cg1]
 
+        cmp_state = cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
+        lagrangian, multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+        cmp_state.backward()
         constrained_optimizer.step()
 
     assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
