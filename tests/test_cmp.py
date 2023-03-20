@@ -6,33 +6,40 @@ import torch
 import cooper
 
 
-@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
-def params_init(device, request):
-    return torch.tensor(request.param, device=device)
-
-
-def test_cmp(params_init, device):
-
-    params = torch.nn.Parameter(params_init)
-    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, device=device)
+def build_optimizer(params, cmp, use_ineq_constraints):
 
     primal_optimizer = torch.optim.SGD([params], lr=1e-2)
 
-    dual_params = [{"params": constraint.multiplier.parameters()} for constraint in cmp.constraint_groups]
-    dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
+    if use_ineq_constraints:
+        dual_params = [{"params": constraint.multiplier.parameters()} for constraint in cmp.constraint_groups]
+        dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
 
-    constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.constraint_groups
-    )
+        constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.constraint_groups
+        )
+
+        return constrained_optimizer
+    else:
+        unconstrained_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
+
+        return unconstrained_optimizer
+
+
+def test_cmp(device, Toy2dCMP_params_init, Toy2dCMP_problem_properties):
+
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    solution = Toy2dCMP_problem_properties["solution"]
+
+    params = torch.nn.Parameter(Toy2dCMP_params_init)
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
+
+    cooper_optimizer = build_optimizer(params, cmp, use_ineq_constraints)
 
     for step_id in range(1500):
-
-        constrained_optimizer.zero_grad()
+        cooper_optimizer.zero_grad()
         cmp_state = cmp.compute_cmp_state(params)
-        lagrangian, multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+        lagrangian = cmp_state.populate_lagrangian()
         cmp_state.backward()
-        constrained_optimizer.step()
+        cooper_optimizer.step()
 
-    # Constrained optimum is located at [2/3, 1/3]
-    assert torch.allclose(params[0], torch.tensor(2.0 / 3.0))
-    assert torch.allclose(params[1], torch.tensor(1.0 / 3.0))
+    assert torch.allclose(params, solution)

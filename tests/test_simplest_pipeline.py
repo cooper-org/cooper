@@ -11,35 +11,26 @@ import torch
 import cooper
 
 
-@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
-def params_init(device, request):
-    return torch.tensor(request.param, device=device)
-
-
 def evaluate_loss(params):
     param_x, param_y = params
-
     return param_x**2 + 2 * param_y**2
 
 
 def evaluate_constraints(params) -> List[cooper.ConstraintState]:
-
     param_x, param_y = params
-
     cg0_state = cooper.ConstraintState(violation=-param_x - param_y + 1.0)  # x + y \ge 1
     cg1_state = cooper.ConstraintState(violation=param_x**2 + param_y - 1.0)  # x**2 + y \le 1.0
-
     return [cg0_state, cg1_state]
 
 
-def test_simplest_pipeline(params_init, device):
+def test_simplest_pipeline(Toy2dCMP_params_init, device):
     """Test correct behavior of simultaneous updates on a 2-dimensional constrained
     problem without requiring the user to implement a CMP class explicitly. The only
     required methods are a function to evaluate the loss, and a function to evaluate
     the constraints.
     """
 
-    params = torch.nn.Parameter(params_init)
+    params = torch.nn.Parameter(Toy2dCMP_params_init)
     primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
 
     cg0 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device)
