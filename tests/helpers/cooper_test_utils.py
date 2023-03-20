@@ -1,5 +1,6 @@
 """Cooper-related utilities for writing tests."""
 
+import pytest
 import torch
 
 import cooper
@@ -106,3 +107,19 @@ class Toy2dCMP:
             observed_constraints = []
 
         return cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
+
+
+@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
+def Toy2dCMP_params_init(device, request):
+    return torch.tensor(request.param, device=device)
+
+
+@pytest.fixture(params=[True, False])
+def Toy2dCMP_problem_properties(request, device):
+    use_ineq_constraints = request.param
+    if use_ineq_constraints:
+        solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
+    else:
+        solution = torch.tensor([0.0, 0.0], device=device)
+
+    return dict(use_ineq_constraints=use_ineq_constraints, solution=solution)
