@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -7,12 +7,12 @@ logger = logging.getLogger(__name__)
 import torch
 
 
-def ensure_iterable(argument: Any):
-
-    if not isinstance(argument, Iterable):
-        return [argument]
-
-    return argument
+def ensure_sequence(argument: Any):
+    """
+    Ensures that an argument is an instance of Sequence by wrapping it into a list
+    whenever necessary.
+    """
+    return argument if isinstance(argument, Sequence) else [argument]
 
 
 def compare_values(val1: Any, val2: Any) -> bool:
