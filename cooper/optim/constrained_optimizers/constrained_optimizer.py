@@ -3,55 +3,15 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
-import dataclasses
-import warnings
-from collections.abc import Iterable
-from typing import Dict, List, Optional, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import torch
 
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
-from cooper.utils import ensure_iterable, validate_state_dicts
-
-
-@dataclasses.dataclass
-class CooperOptimizerState:
-    """Represents the "state" of a Constrained Optimizer in terms of the state
-    dicts of the primal optimizers, as well as those of the dual optimizer and
-    the dual scheduler if applicable. This is used for checkpointing.
-
-    Args:
-        primal_optimizer_states: State dicts for the primal optimizers.
-        dual_optimizer_states: State dicts for the dual optimizers.
-        multiplier_states: State dicts for the multipliers.
-    """
-
-    primal_optimizer_states: List[Dict]
-    dual_optimizer_states: Optional[List[Dict]] = None
-    multiplier_states: Optional[List[Dict]] = None
-    extrapolation: Optional[bool] = False
-    alternating: Optional[bool] = False
-
-    def __eq__(self, other):
-        assert isinstance(other, CooperOptimizerState)
-
-        def compare_state_dicts(dict_name):
-            try:
-                return validate_state_dicts(getattr(self, dict_name), getattr(other, dict_name))
-            except:
-                return False
-
-        state_dict_names = ["primal_optimizer_states", "dual_optimizer_states", "multiplier_states"]
-        all_checks = [compare_state_dicts(_) for _ in state_dict_names]
-
-        all_checks.append(self.extrapolation == other.extrapolation)
-        all_checks.append(self.alternating == other.alternating)
-
-        return all(all_checks)
-
-    def asdict(self):
-        return dataclasses.asdict(self)
+from cooper.optim.optimizer_state import CooperOptimizerState
+from cooper.utils import ensure_sequence
 
 
 class ConstrainedOptimizer:
@@ -101,21 +61,21 @@ class ConstrainedOptimizer:
 
     def __init__(
         self,
-        primal_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
-        dual_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
-        multipliers: Optional[Union[MULTIPLIER_TYPE, List[MULTIPLIER_TYPE]]] = None,
-        constraint_groups: Optional[Union[List[ConstraintGroup], ConstraintGroup]] = None,
+        primal_optimizers: Union[torch.optim.Optimizer, Sequence[torch.optim.Optimizer]],
+        dual_optimizers: Union[torch.optim.Optimizer, Sequence[torch.optim.Optimizer]],
+        multipliers: Optional[Union[MULTIPLIER_TYPE, Sequence[MULTIPLIER_TYPE]]] = None,
+        constraint_groups: Optional[Union[ConstraintGroup, Sequence[ConstraintGroup]]] = None,
     ):
-        self.primal_optimizers = ensure_iterable(primal_optimizers)
-        self.dual_optimizers = ensure_iterable(dual_optimizers)
+        self.primal_optimizers = ensure_sequence(primal_optimizers)
+        self.dual_optimizers = ensure_sequence(dual_optimizers)
 
         if not ((constraint_groups is None) ^ (multipliers is None)):
             raise ValueError("Exactly one of `constraint_groups` and `multipliers` must be not None.")
 
         if multipliers is not None:
-            self.multipliers = ensure_iterable(multipliers)
+            self.multipliers = ensure_sequence(multipliers)
         else:
-            self.multipliers = [constraint.multiplier for constraint in ensure_iterable(constraint_groups)]
+            self.multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
 
     def base_sanity_checks(self):
         """
