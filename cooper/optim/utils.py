@@ -1,23 +1,18 @@
 import warnings
-from typing import Iterable, List, Optional, Union
+from collections.abc import Sequence
+from typing import List, Optional, TypeVar, Union
 
 import torch
 
 from cooper.constraints import ConstraintGroup
-from cooper.utils import ensure_iterable
-
-from ..unconstrained_optimizer import UnconstrainedOptimizer
-from . import (
-    AlternatingConstrainedOptimizer,
-    ConstrainedOptimizer,
-    CooperOptimizerState,
-    ExtrapolationConstrainedOptimizer,
-    SimultaneousConstrainedOptimizer,
-)
+from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.optim import CooperOptimizerState, UnconstrainedOptimizer, constrained_optimizers
+from cooper.utils import OneOrSequence, ensure_sequence
 
 
 def sanity_check_constraints_and_optimizer(
-    constrained_optimizer: ConstrainedOptimizer, constraint_groups: Optional[Iterable[ConstraintGroup]] = None
+    constrained_optimizer: constrained_optimizers.ConstrainedOptimizer,
+    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
 ):
     """
     Execute sanity checks on the properties of the provided constraints and optimizer to
@@ -26,6 +21,9 @@ def sanity_check_constraints_and_optimizer(
     """
 
     if constraint_groups is not None:
+
+        constraint_groups = ensure_sequence(constraint_groups)
+
         fn_restart_on_feasible = lambda constraint: getattr(constraint.multiplier, "restart_on_feasible", False)
         any_restart_on_feasible = any(map(fn_restart_on_feasible, constraint_groups))
 
@@ -40,89 +38,99 @@ def sanity_check_constraints_and_optimizer(
 
 
 def create_optimizer_from_kwargs(
-    constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
-    primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-    dual_optimizers: Optional[Union[List[torch.optim.Optimizer], torch.optim.Optimizer]],
+    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     extrapolation: bool,
     alternating: bool,
-) -> Union[UnconstrainedOptimizer, ConstrainedOptimizer]:
-    """
-    Create a CooperOptimizer from a set of keyword arguments. This method
-    disambiguates the appropriate optimizer class to instantiate a new object.
+    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
+    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
+    multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
+    """Creates a constrained or unconstrained optimizer from a set of keyword arguments.
+    This method disambiguates the appropriate optimizer class to instantiate.
 
     Args:
-        primal_optimizers: Fully instantiated optimizer(s) for the primal
-            variables.
-        dual_optimizer: Optional partially instantiated optimizer for the dual
-            variables.
+        primal_optimizers: Optimizer(s) for the primal variables.
+        dual_optimizer: Optional optimizer(s) for the dual variables.
         extrapolation: Whether the optimizer uses extrapolation.
-        alternating: Whether we perform alternating updates.
+        alternating: Whether the optimizer performs alternating updates.
     """
 
     if dual_optimizers is None:
-        return UnconstrainedOptimizer(constraint_groups=constraint_groups, primal_optimizers=primal_optimizers)
+        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+
+    optimizer_kwargs = dict(
+        primal_optimizers=primal_optimizers,
+        dual_optimizers=dual_optimizers,
+        multipliers=multipliers,
+        constraint_groups=constraint_groups,
+    )
 
     if extrapolation:
-        return ExtrapolationConstrainedOptimizer(
-            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
-        )
-
+        return constrained_optimizers.ExtrapolationConstrainedOptimizer(**optimizer_kwargs)
     elif alternating:
-        return AlternatingConstrainedOptimizer(
-            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
-        )
-
+        return constrained_optimizers.AlternatingConstrainedOptimizer(**optimizer_kwargs)
     else:
-        return SimultaneousConstrainedOptimizer(
-            constraint_groups=constraint_groups, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
-        )
+        return constrained_optimizers.SimultaneousConstrainedOptimizer(**optimizer_kwargs)
 
 
-# Generate an appropriate CooperOptimizer based on a CooperOptimizerState.
 def load_cooper_optimizer_from_state_dict(
     cooper_optimizer_state: CooperOptimizerState,
-    constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
-    primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-    dual_optimizers: Optional[Union[List[torch.optim.Optimizer], torch.optim.Optimizer]],
+    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
+    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
+    multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
 ):
+    """Creates a Cooper optimizer and loads the state_dicts contained in a
+    :py:class:`~cooper.optim.CooperOptimizerState` onto instantiated primal and dual
+    optimizers and constraint groups or multipliers.
+    """
 
-    primal_optimizers = ensure_iterable(primal_optimizers)
-
+    primal_optimizers = ensure_sequence(primal_optimizers)
     primal_optimizer_states = cooper_optimizer_state.primal_optimizer_states
+
     if len(primal_optimizer_states) != len(primal_optimizers):
-        raise ValueError(
-            """The number of primal optimizers does not match the number of
-            primal optimizer states."""
-        )
+        raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 
     for primal_optimizer, primal_state in zip(primal_optimizers, primal_optimizer_states):
         primal_optimizer.load_state_dict(primal_state)
 
+    dual_optimizer_states = cooper_optimizer_state.dual_optimizer_states
     if dual_optimizers is None:
-        if cooper_optimizer_state.dual_optimizer_state is not None:
-            raise ValueError("State dict contains dual_opt_state but dual_optimizer is None.")
-
+        if dual_optimizer_states is not None:
+            raise ValueError("Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None.")
     else:
-        dual_optimizer_states = cooper_optimizer_state.dual_optimizer_states
-        dual_optimizers = ensure_iterable(dual_optimizers)
+        dual_optimizers = ensure_sequence(dual_optimizers)
 
         if dual_optimizer_states is None:
-            raise ValueError("State dict does not contain dual_optimizer_states but dual optimizers were provided.")
+            raise ValueError("`dual_optimizers` were provided but state dict does not contain `dual_optimizer_states`.")
 
         if len(dual_optimizer_states) != len(dual_optimizers):
-            raise ValueError(
-                """The number of dual optimizers does not match the number of
-                dual optimizer states."""
-            )
+            raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 
         for dual_optimizer, dual_state in zip(dual_optimizers, dual_optimizer_states):
             dual_optimizer.load_state_dict(dual_state)
 
-    # Now we disambiguate the appropriate optimizer class to instantiate a new object
+    if multipliers is not None:
+        multipliers = ensure_sequence(multipliers)
+    else:
+        multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
+
+    if len(primal_optimizer_states) != len(multipliers):
+        raise ValueError("The number of multipliers does not match the number of multiplier states.")
+
+    if len(multipliers) > 0:
+        if cooper_optimizer_state.multiplier_states is None:
+            raise ValueError("Unable to load multiplier states since state dict does not contain `multiplier_states`.")
+
+        for multiplier, multiplier_state in zip(multipliers, cooper_optimizer_state.multiplier_states):
+            multiplier.load_state_dict(multiplier_state)
+
+    # Since we have extracted the multiplier information above, we discard the constraint_groups below
     return create_optimizer_from_kwargs(
-        constraint_groups=constraint_groups,
         primal_optimizers=primal_optimizers,
-        dual_optimizers=dual_optimizers,
         extrapolation=cooper_optimizer_state.extrapolation,
         alternating=cooper_optimizer_state.alternating,
+        dual_optimizers=dual_optimizers,
+        constraint_groups=None,
+        multipliers=multipliers,
     )
