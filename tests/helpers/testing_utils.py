@@ -6,6 +6,17 @@ from typing import List, Sequence, Tuple
 import torch
 
 
+def frozen_rand_generator(seed=2147483647):
+    """Creates a pseudo random number generator object with a fixed seed for
+    reproducible tests.
+    """
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    generator = torch.Generator(device)
+    generator.manual_seed(seed)
+    return generator
+
+
 def get_device_or_skip(aim_device: torch.device, cuda_available: bool) -> Tuple[torch.device, bool, str]:
     """Verifies availability of a GPU and sets a flag to skip a test if GPU execution
     was requested, but no GPU was available.
