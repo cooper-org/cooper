@@ -1,4 +1,4 @@
-"""Top-level package for Constrained Optimization in Pytorch."""
+"""Top-level package for Cooper."""
 
 import sys
 
@@ -17,12 +17,5 @@ except PackageNotFoundError:
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem
 from cooper.constraints import ConstraintGroup, ConstraintState
-from cooper.optim import (
-    AlternatingConstrainedOptimizer,
-    ConstrainedOptimizer,
-    ExtrapolationConstrainedOptimizer,
-    SimultaneousConstrainedOptimizer,
-    UnconstrainedOptimizer,
-)
 
 from . import multipliers, optim, utils
