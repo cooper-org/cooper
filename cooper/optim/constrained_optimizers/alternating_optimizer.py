@@ -9,6 +9,7 @@ import torch
 
 from cooper.cmp import CMPState
 from cooper.constraints import ConstraintGroup
+from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
 
 from .constrained_optimizer import ConstrainedOptimizer
 
@@ -19,122 +20,120 @@ class AlternatingConstrainedOptimizer(ConstrainedOptimizer):
 
     def __init__(
         self,
-        constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
-        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-        dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
+        primal_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
+        dual_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
+        multipliers: Optional[Union[MULTIPLIER_TYPE, List[MULTIPLIER_TYPE]]] = None,
+        constraint_groups: Optional[Union[List[ConstraintGroup], ConstraintGroup]] = None,
     ):
-        super().__init__(constraint_groups, primal_optimizers, dual_optimizers)
+
+        super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
 
         self.base_sanity_checks()
 
     def step(
         self,
-        closure: Optional[Callable[..., CMPState]] = None,
-        *closure_args,
-        defect_fn: Optional[Callable[..., CMPState]] = None,
-        **closure_kwargs,
+        compute_cmp_state_fn: Optional[Callable[..., CMPState]] = None,
+        compute_violations_fn: Optional[Callable[..., CMPState]] = None,
+        return_multipliers: bool = False,
     ):
-        """
-        Performs a single optimization step on both the primal and dual
-        variables.
+        """Performs an alternating optimization step: use the existing gradients to
+        update the primal variables, and re-evaluate the constraints (or full CMP state)
+        to update the dual variables.
 
         Args:
-            closure: Closure ``Callable`` required for re-evaluating the
-                objective and constraints when performing alternating updates.
+            compute_cmp_state_fn: ``Callable`` for re-evaluating the objective and
+                constraints when performing alternating updates. Defaults to None.
+
+            compute_violations_fn: ``Callable`` for re-evaluating the constraint
+                violations only when performing alternating updates. When this argument
+                is provided, it takes precedence over the `compute_cmp_state_fn`.
                 Defaults to None.
-
-            *closure_args: Arguments to be passed to the closure function
-                when re-evaluating.
-
-            **closure_kwargs: Keyword arguments to be passed to the closure
-                function when re-evaluating.
         """
 
-        if (closure is None) and (defect_fn is None):
-            raise RuntimeError("At least one of closure or defect_fn must be provided for alternating updates.")
+        if (compute_cmp_state_fn is None) and (compute_violations_fn is None):
+            error_message = "One of `compute_cmp_state_fn` or `compute_violations_fn` required for alternating update."
+            raise RuntimeError(error_message)
 
+        # Start by performing a gradient step on the primal variables
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        alternate_cmp_state = self.populate_alternating_dual_gradient(
-            closure, defect_fn, *closure_args, **closure_kwargs
-        )
+        # Zero-out gradients for dual variables since they were already populated.
+        for dual_optimizer in self.dual_optimizers:
+            dual_optimizer.zero_grad()
 
-        self.dual_step()
-
-        return alternate_cmp_state
-
-    def populate_alternating_dual_gradient(
-        self,
-        closure: Optional[Callable[..., CMPState]] = None,
-        *closure_args,
-        defect_fn: Optional[Callable[..., CMPState]] = None,
-        **closure_kwargs,
-    ):
-        # TODO(juan43ramirez): rename alternate_cmp_state to something more informative.
-
-        # Zero-out gradients for dual variables since they were already populated. We
-        # also zero-out primal gradients for safety although not really necessary.
-        self.zero_grad()
-
-        # Once having updated the primal parameters, re-compute gradient wrt
-        # multipliers. Skip gradient wrt primal parameters to avoid wasteful
-        # computation, as we only need gradient wrt multipliers.
         with torch.no_grad():
-            assert closure is not None or defect_fn is not None
+            # We skip gradient wrt primal parameters to avoid wasteful computation,
+            # since we only need the gradient wrt the dual variables.
+            # Note that the dual variables do not intervene in the compuation of the
+            # CMP state.
+            if compute_violations_fn is not None:
+                cmp_state_after_primal_update = compute_violations_fn()
+            else:
+                cmp_state_after_primal_update = compute_cmp_state_fn()
 
-            if defect_fn is not None:
-                alternate_cmp_state = defect_fn(*closure_args, **closure_kwargs)
-
-                if alternate_cmp_state.loss is None:
-                    # Store a placeholder loss which does not contribute to the Lagrangian
-                    alternate_cmp_state.loss = 0.0
-
-            elif closure is not None:
-                alternate_cmp_state = closure(*closure_args, **closure_kwargs)
+            if cmp_state_after_primal_update._dual_lagrangian is not None:
+                error_message = (
+                    "Expected a fresh CMP state for alternating update but the provided state has a non-None value"
+                    " for the `_dual_lagrangian` attribute."
+                )
+                raise RuntimeError(error_message)
 
         # We have already computed the new CMP state with the new values of the
         # parameters. Now we only need to recalculate the Lagrangian so we can get the
         # gradients wrt the multipliers.
         #
-        # Note that the call to defect_fn might _not_ have populated the loss.
-        # This is not a problem since we only need to compute the gradient wrt
-        # the multipliers.
-        _ = alternate_cmp_state.populate_lagrangian()
+        # Note that the call to defect_fn might _not_ have populated the loss. This is
+        # not a problem since we only need to compute the gradient wrt the dual
+        # variables.
+        lagrangian_return = cmp_state_after_primal_update.populate_lagrangian(return_multipliers=return_multipliers)
 
-        # We only want to compute the gradients for the dual variables
-        alternate_cmp_state.dual_backward()
+        # We only need to compute the gradients for the dual variables, so we skip
+        # the primal_backward call.
+        cmp_state_after_primal_update.dual_backward()
 
-        return alternate_cmp_state
+        self.dual_step()
+
+        if return_multipliers:
+            multipliers = lagrangian_return[1]
+            return cmp_state_after_primal_update, multipliers
+        else:
+            return cmp_state_after_primal_update
 
     def dual_step(self):
-        # TODO(juan43ramirez): this function is exactly the same as SimultaneousOptimizer.dual_step.
+        """
+        Perform a gradient step on the parameters associated with the dual variables.
+        Since the dual problem involves *maximizing* over the dual variables, we flip
+        the sign of the gradient to perform ascent.
 
-        for constraint, dual_optimizer in zip(self.constraint_groups, self.dual_optimizers):
-            # TODO(juan43ramirez): which convention will we use to access the gradient
-            # of the multipliers?
-            _multiplier = constraint.multiplier
+        After being updated by the dual optimizer steps, the multipliers are
+        post-processed (e.g. to ensure feasibility for equality constraints, or to
+        apply dual restarts).
+        """
+        for multiplier in self.multipliers:
+            for param in multiplier.parameters():
+                if param.grad is not None:
+                    # Flip gradients for multipliers to perform ascent.
+                    # We only do the flipping *right before* applying the optimizer
+                    # step to avoid accidental double sign flips.
+                    param.grad.mul_(-1.0)
 
-            if _multiplier.weight.grad is not None:
-                # Flip gradients for multipliers to perform ascent.
-                # We only do the flipping *right before* applying the optimizer step to
-                # avoid accidental double sign flips.
-                _multiplier.weight.grad.mul_(-1.0)
+        for dual_optimizer in self.dual_optimizers:
+            # Update multipliers based on current constraint violations (gradients)
+            # For unobserved constraints the gradient is None, so this is a no-op.
+            dual_optimizer.step()
 
-                # Update multipliers based on current constraint violations (gradients)
-                dual_optimizer.step()
-
-                # Select the indices of multipliers corresponding to feasible constraints
-                if _multiplier.implicit_constraint_type == "ineq":
-                    # TODO(juan43ramirez): could alternatively access the state of the
-                    # constraint, which would be more transparent.
+        for multiplier in self.multipliers:
+            if isinstance(multiplier, ExplicitMultiplier):
+                # Select the indices of multipliers corresponding to feasible inequality constraints
+                if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
 
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.
-                    feasible_indices = _multiplier.weight.grad > 0.0
-                else:
-                    # TODO(juan43ramirez): add comment
-                    feasible_indices = None
+                    feasible_indices = multiplier.weight.grad > 0.0
 
-                _multiplier.post_step_(feasible_indices, restart_value=0.0)
+                    # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+                    # about the pitfalls of using dual_restars with stateful optimizers.
+
+                    multiplier.post_step_(feasible_indices)
