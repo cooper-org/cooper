@@ -71,10 +71,10 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         return loss_grad, cg0_grad, cg1_grad
 
-    def compute_violations(
-        self, param_x, param_y, existing_cmp_state: Optional[cooper.CMPState] = None
-    ) -> cooper.CMPState:
+    def compute_violations(self, params, existing_cmp_state: Optional[cooper.CMPState] = None) -> cooper.CMPState:
         """Evaluates the constraint violations for this CMP."""
+
+        param_x, param_y = params() if callable(params) else params
 
         cg0_violation = -param_x - param_y + 1.0
         cg1_violation = param_x**2 + param_y - 1.0
@@ -113,7 +113,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         cmp_state = cooper.CMPState(loss=loss)
 
         if self.use_ineq_constraints:
-            cmp_state = self.compute_violations(param_x, param_y, existing_cmp_state=cmp_state)
+            cmp_state = self.compute_violations(params=(param_x, param_y), existing_cmp_state=cmp_state)
 
         return cmp_state
 
@@ -141,14 +141,17 @@ def use_multiple_primal_optimizers(request):
 
 def build_params_and_primal_optimizers(use_multiple_primal_optimizers, params_init):
     if use_multiple_primal_optimizers:
+        optimizer_names = ["SGD", "Adam"]
+        optimizer_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
+
         params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
-        primal_optimizers = [
-            torch.optim.SGD([params[0]], lr=1e-2, momentum=0.3),
-            torch.optim.Adam([params[1]], lr=1e-2),
-        ]
+        primal_optimizers = []
+        for param, optimizer_name, kwargs in zip(params, optimizer_names, optimizer_kwargs):
+            optimizer = getattr(torch.optim, optimizer_name)([param], **kwargs)
+            primal_optimizers.append(optimizer)
     else:
         params = torch.nn.Parameter(params_init)
-        primal_optimizers = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
+        primal_optimizers = torch.optim.SGD([params], lr=1e-2)
 
     return params, primal_optimizers
 
