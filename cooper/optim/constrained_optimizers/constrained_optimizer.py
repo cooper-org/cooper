@@ -9,7 +9,7 @@ from typing import Optional, Union
 import torch
 
 from cooper.constraints import ConstraintGroup
-from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import ensure_sequence
 
@@ -97,6 +97,44 @@ class ConstrainedOptimizer:
 
         for dual_optimizer in self.dual_optimizers:
             dual_optimizer.zero_grad()
+
+    def dual_step(self):
+        """
+        Perform a gradient step on the parameters associated with the dual variables.
+        Since the dual problem involves *maximizing* over the dual variables, we flip
+        the sign of the gradient to perform ascent.
+
+        After being updated by the dual optimizer steps, the multipliers are
+        post-processed (e.g. to ensure feasibility for equality constraints, or to
+        apply dual restarts).
+        """
+        for multiplier in self.multipliers:
+            for param in multiplier.parameters():
+                if param.grad is not None:
+                    # Flip gradients for multipliers to perform ascent.
+                    # We only do the flipping *right before* applying the optimizer
+                    # step to avoid accidental double sign flips.
+                    param.grad.mul_(-1.0)
+
+        for dual_optimizer in self.dual_optimizers:
+            # Update multipliers based on current constraint violations (gradients)
+            # For unobserved constraints the gradient is None, so this is a no-op.
+            dual_optimizer.step()
+
+        for multiplier in self.multipliers:
+            if isinstance(multiplier, ExplicitMultiplier):
+                # Select the indices of multipliers corresponding to feasible inequality constraints
+                if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
+
+                    # Feasibility is attained when the violation is negative. Given that
+                    # the gradient sign is flipped, a negative violation corresponds to
+                    # a positive gradient.
+                    feasible_indices = multiplier.weight.grad > 0.0
+
+                    # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+                    # about the pitfalls of using dual_restars with stateful optimizers.
+
+                    multiplier.post_step_(feasible_indices)
 
     def state_dict(self) -> CooperOptimizerState:
         """
