@@ -1,14 +1,16 @@
 """Cooper-related utilities for writing tests."""
 
+from typing import Union
+
 import pytest
 import torch
 
 import cooper
 
 
-class Toy2dCMP:
+class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     """
-    Simple test on a 2D quadratically-constrained quadratic programming problem
+    Simple test on a 2D quadratic programming problem with quadratic constraints
         min x**2 + 2*y**2
         st.
             x + y >= 1
@@ -118,8 +120,29 @@ def Toy2dCMP_params_init(device, request):
 def Toy2dCMP_problem_properties(request, device):
     use_ineq_constraints = request.param
     if use_ineq_constraints:
-        solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
+        exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
     else:
-        solution = torch.tensor([0.0, 0.0], device=device)
+        exact_solution = torch.tensor([0.0, 0.0], device=device)
 
-    return dict(use_ineq_constraints=use_ineq_constraints, solution=solution)
+    return dict(use_ineq_constraints=use_ineq_constraints, exact_solution=exact_solution)
+
+
+def build_optimizer_for_Toy2dCMP(
+    params, constraint_groups, use_ineq_constraints
+) -> Union[cooper.optim.SimultaneousConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+
+    primal_optimizer = torch.optim.SGD([params], lr=1e-2)
+
+    if use_ineq_constraints:
+        dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
+        dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
+
+        constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=constraint_groups
+        )
+
+        return constrained_optimizer
+    else:
+        unconstrained_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
+
+        return unconstrained_optimizer
