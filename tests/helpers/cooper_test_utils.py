@@ -127,22 +127,41 @@ def Toy2dCMP_problem_properties(request, device):
     return dict(use_ineq_constraints=use_ineq_constraints, exact_solution=exact_solution)
 
 
-def build_optimizer_for_Toy2dCMP(
-    params, constraint_groups, use_ineq_constraints
+@pytest.fixture(params=[True, False])
+def use_multiple_primal_optimizers(request):
+    return request.param
+
+
+def build_params_and_primal_optimizers(use_multiple_primal_optimizers, params_init):
+    if use_multiple_primal_optimizers:
+        params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
+        primal_optimizers = [
+            torch.optim.SGD([params[0]], lr=1e-2, momentum=0.3),
+            torch.optim.Adam([params[1]], lr=1e-2),
+        ]
+    else:
+        params = torch.nn.Parameter(params_init)
+        primal_optimizers = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
+
+    return params, primal_optimizers
+
+
+def build_cooper_optimizer_for_Toy2dCMP(
+    primal_optimizers, constraint_groups
 ) -> Union[cooper.optim.SimultaneousConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
 
-    primal_optimizer = torch.optim.SGD([params], lr=1e-2)
+    is_constrained = len(constraint_groups) > 0
 
-    if use_ineq_constraints:
+    if is_constrained:
         dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
         dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
 
         constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
-            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=constraint_groups
+            primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizer, constraint_groups=constraint_groups
         )
 
         return constrained_optimizer
     else:
-        unconstrained_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
+        unconstrained_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
 
         return unconstrained_optimizer
