@@ -6,8 +6,11 @@ import torch
 
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
-from cooper.optim import CooperOptimizerState, UnconstrainedOptimizer, constrained_optimizers
 from cooper.utils import OneOrSequence, ensure_sequence
+
+from . import constrained_optimizers
+from .optimizer_state import CooperOptimizerState
+from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def sanity_check_constraints_and_optimizer(

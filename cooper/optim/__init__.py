@@ -1,3 +1,4 @@
+from . import utils
 from .constrained_optimizers import (
     AlternatingConstrainedOptimizer,
     ConstrainedOptimizer,
