@@ -4,83 +4,115 @@
 
 import cooper_test_utils
 import pytest
+import testing_utils
 import torch
 
 
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_manual_alternating_proxy(aim_device):
-    """ """
+def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+    """Test first two iterations of alternating GDA updates on a toy 2D problem with
+    surrogate constraints."""
 
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=torch.optim.SGD,
-        primal_init=[0.0, -1.0],
-        dual_optim_cls=torch.optim.SGD,
-        use_ineq=True,
-        use_proxy_ineq=True,
-        dual_restarts=False,
-        alternating=True,
-        primal_optim_kwargs={"lr": 5e-2, "momentum": 0.0},
-        dual_optim_kwargs={"lr": 1e-2},
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    if not use_ineq_constraints:
+        pytest.skip("Alternating updates requires a problem with constraints.")
+
+    if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
+        pytest.skip("Manual alternating test only considers the case of initialization at [0, -1]")
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False,
+        params_init=Toy2dCMP_params_init,
+        optimizer_names="SGD",
+        optimizer_kwargs={"lr": 5e-2},
     )
 
-    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
+    # Only perfoming this test for the case of a single primal optimizer
+    assert isinstance(params, torch.nn.Parameter)
+
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, use_constraint_surrogate=True, device=device)
+
+    mktensor = testing_utils.mktensor(device=device)
+
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=False,
+        alternating=True,
+        dual_optimizer_name="SGD",
+        dual_optimizer_kwargs={"lr": 1e-2},
+    )
 
     # ----------------------- First iteration -----------------------
-    coop.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+    cooper_optimizer.zero_grad()
+    cmp_state = cmp.compute_cmp_state(params)
+    lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
-    assert torch.allclose(cmp.state.loss, mktensor(2.0))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([2.0, -2.0]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([2.0, -1.9]))
-    assert cmp.state.eq_defect is None
-    assert cmp.state.proxy_eq_defect is None
+    assert torch.allclose(cmp_state.loss, mktensor(2.0))
+
+    for (constraint_group, constraint_state), target_value in zip(cmp_state.observed_constraints, [2.0, -1.9]):
+        assert torch.allclose(constraint_state.violation, mktensor([target_value]))
+        assert constraint_state.violation.requires_grad
+
+    for (constraint_group, constraint_state), target_value in zip(cmp_state.observed_constraints, [2.0, -2.0]):
+        assert torch.allclose(constraint_state.strict_violation, mktensor([target_value]))
 
     # Multiplier initialization
-    assert torch.allclose(formulation.state()[0], mktensor([0.0, 0.0]))
-    assert formulation.state()[1] is None
+    for multiplier, target_value in zip(observed_multipliers, [0.0, 0.0]):
+        assert torch.allclose(multiplier, mktensor([target_value]))
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
-    formulation.backward(lagrangian)
+    # Check primal and dual gradients after backward. Dual gradient must match the
+    # constraint (strict!) violations.
+    cmp_state.backward()
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    for multiplier, (constraint_group, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
+        assert torch.allclose(multiplier.grad, constraint_state.strict_violation)
 
-    # Must pass closrue again to compute constraints for alternating update
-    coop.step(cmp.closure, params)
+    # Perform alternating update
+    cmp_state_after_primal_update, multipliers_after_alternating_update = cooper_optimizer.step(
+        compute_cmp_state_fn=lambda: cmp.compute_cmp_state(params),
+        return_multipliers=True,
+    )
 
     assert torch.allclose(params, mktensor([0.0, -0.8]))
     # Loss and constraints are evaluated at updated primal variables
-    assert torch.allclose(cmp.state.loss, mktensor([2 * (-0.8) ** 2]))
-    # Constraint defects [1.8, -1.8] --> this is used to update multipliers
-    # "Proxy defects" [1.8, -1.72] --> used to compute primal gradient
-    assert torch.allclose(formulation.state()[0], mktensor([1.8 * 1e-2, 0.0]))
+    assert torch.allclose(cmp_state_after_primal_update.loss, mktensor([2 * (-0.8) ** 2]))
+    # Constraint violations [1.8, -1.8] --> this is used to update multipliers
+    # Surrogate violations defects [1.8, -1.72] --> used to compute primal gradient
+    for multiplier, target_value in zip(multipliers_after_alternating_update, [1.8 * 1e-2, 0.0]):
+        assert torch.allclose(multiplier, mktensor([target_value]))
 
     # ----------------------- Second iteration -----------------------
-    coop.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+    cooper_optimizer.zero_grad()
+    cmp_state = cmp.compute_cmp_state(params)
+    lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.3124))
-    assert torch.allclose(cmp.state.loss, mktensor(1.28))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([1.8, -1.8]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([1.8, -1.72]))
+    assert torch.allclose(cmp_state.loss, mktensor(1.28))
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
-    formulation.backward(lagrangian)
+    for (constraint_group, constraint_state), target_value in zip(cmp_state.observed_constraints, [1.8, -1.72]):
+        assert torch.allclose(constraint_state.violation, mktensor([target_value]))
+        assert constraint_state.violation.requires_grad
+
+    for (constraint_group, constraint_state), target_value in zip(cmp_state.observed_constraints, [1.8, -1.8]):
+        assert torch.allclose(constraint_state.strict_violation, mktensor([target_value]))
+
+    # Check primal and dual gradients after backward. Dual gradient must match the
+    # constraint (strict!) violations.
+    cmp_state.backward()
     assert torch.allclose(params.grad, mktensor([-0.0162, -3.218]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    for multiplier, (constraint_group, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
+        assert torch.allclose(multiplier.grad, constraint_state.strict_violation)
 
-    # Must pass closrue again to compute constraints for alternating update
-    coop.step(cmp.closure, params)
+    # Perform alternating update
+    cmp_state_after_primal_update, multipliers_after_alternating_update = cooper_optimizer.step(
+        compute_cmp_state_fn=lambda: cmp.compute_cmp_state(params),
+        return_multipliers=True,
+    )
 
     assert torch.allclose(params, mktensor([8.1e-4, -0.6391]))
     # Constraint violation at this point [1.6383, -1.63909936]
-    assert torch.allclose(formulation.state()[0], mktensor([0.034383, 0.0]))
-
-    if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.ineq_defect.is_cuda
+    for multiplier, target_value in zip(multipliers_after_alternating_update, [0.034383, 0.0]):
+        assert torch.allclose(multiplier, mktensor([target_value]))
