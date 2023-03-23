@@ -154,21 +154,28 @@ def build_params_and_primal_optimizers(use_multiple_primal_optimizers, params_in
 
 
 def build_cooper_optimizer_for_Toy2dCMP(
-    primal_optimizers, constraint_groups
-) -> Union[cooper.optim.SimultaneousConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+    primal_optimizers,
+    constraint_groups,
+    extrapolation=False,
+    alternating=False,
+    dual_optimizer_name="SGD",
+    dual_optimizer_kwargs={"lr": 1e-2},
+) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
 
     is_constrained = len(constraint_groups) > 0
 
     if is_constrained:
         dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
-        dual_optimizer = torch.optim.SGD(dual_params, lr=1e-2)
-
-        constrained_optimizer = cooper.optim.SimultaneousConstrainedOptimizer(
-            primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizer, constraint_groups=constraint_groups
-        )
-
-        return constrained_optimizer
+        dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
     else:
-        unconstrained_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+        dual_optimizers = None
 
-        return unconstrained_optimizer
+    cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
+        primal_optimizers=primal_optimizers,
+        extrapolation=extrapolation,
+        alternating=alternating,
+        dual_optimizers=dual_optimizers,
+        constraint_groups=constraint_groups,
+    )
+
+    return cooper_optimizer
