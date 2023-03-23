@@ -1,6 +1,6 @@
 """Cooper-related utilities for writing tests."""
 
-from typing import Union
+from typing import Optional, Union
 
 import pytest
 import torch
@@ -71,44 +71,51 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         return loss_grad, cg0_grad, cg1_grad
 
+    def compute_violations(
+        self, param_x, param_y, existing_cmp_state: Optional[cooper.CMPState] = None
+    ) -> cooper.CMPState:
+        """Evaluates the constraint violations for this CMP."""
+
+        cg0_violation = -param_x - param_y + 1.0
+        cg1_violation = param_x**2 + param_y - 1.0
+
+        if self.use_constraint_surrogate:
+            # The constraint surrogates take precedence over the `strict_violation`
+            # when computing the gradient of the Lagrangian wrt the primal variables
+
+            # Orig constraint: x + y \ge 1
+            cg0_surrogate = -0.9 * param_x - param_y + 1.0
+            cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
+
+            # Orig constraint: x**2 + y \le 1.0
+            cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
+            cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
+        else:
+            cg0_state = cooper.ConstraintState(violation=cg0_violation)
+            cg1_state = cooper.ConstraintState(violation=cg1_violation)
+
+        observed_constraints = [(self.constraint_groups[0], cg0_state), (self.constraint_groups[1], cg1_state)]
+
+        if existing_cmp_state:
+            existing_cmp_state.observed_constraints = observed_constraints
+            return existing_cmp_state
+        else:
+            return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
+
     def compute_cmp_state(self, params):
-        """
-        Computes the state of the CMP at the current value of the primal parameters by
-        evaluating the loss and constraints.
+        """Computes the state of the CMP at the current value of the primal parameters
+        by evaluating the loss and constraints.
         """
 
         param_x, param_y = params() if callable(params) else params
 
         loss = param_x**2 + 2 * param_y**2
+        cmp_state = cooper.CMPState(loss=loss)
 
         if self.use_ineq_constraints:
+            cmp_state = self.compute_violations(param_x, param_y, existing_cmp_state=cmp_state)
 
-            cg0_violation = -param_x - param_y + 1.0
-            cg1_violation = param_x**2 + param_y - 1.0
-
-            if self.use_constraint_surrogate:
-                # The constraint surrogates take precedence over the `strict_violation`
-                # when computing the gradient of the Lagrangian wrt the primal variables
-
-                # Orig constraint: x + y \ge 1
-                cg0_surrogate = -0.9 * param_x - param_y + 1.0
-                cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
-
-                # Orig constraint: x**2 + y \le 1.0
-                cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
-                cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
-            else:
-                cg0_state = cooper.ConstraintState(violation=cg0_violation)
-                cg1_state = cooper.ConstraintState(violation=cg1_violation)
-
-            self.constraint_groups[0].state = cg0_state
-            self.constraint_groups[1].state = cg1_state
-
-            observed_constraints = [self.constraint_groups[0], self.constraint_groups[1]]
-        else:
-            observed_constraints = []
-
-        return cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
+        return cmp_state
 
 
 @pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
