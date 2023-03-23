@@ -139,19 +139,30 @@ def use_multiple_primal_optimizers(request):
     return request.param
 
 
-def build_params_and_primal_optimizers(use_multiple_primal_optimizers, params_init):
+def build_params_and_primal_optimizers(
+    use_multiple_primal_optimizers, params_init, optimizer_names=None, optimizer_kwargs=None
+):
     if use_multiple_primal_optimizers:
-        optimizer_names = ["SGD", "Adam"]
-        optimizer_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
-
         params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
+
+        if optimizer_names is None:
+            optimizer_names = ["SGD", "Adam"]
+        if optimizer_kwargs is None:
+            optimizer_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
+
         primal_optimizers = []
         for param, optimizer_name, kwargs in zip(params, optimizer_names, optimizer_kwargs):
             optimizer = getattr(torch.optim, optimizer_name)([param], **kwargs)
             primal_optimizers.append(optimizer)
     else:
         params = torch.nn.Parameter(params_init)
-        primal_optimizers = torch.optim.SGD([params], lr=1e-2)
+
+        if optimizer_names is None:
+            optimizer_names = "SGD"
+        if optimizer_kwargs is None:
+            optimizer_kwargs = {"lr": 1e-2}
+
+        primal_optimizers = getattr(torch.optim, optimizer_names)([params], **optimizer_kwargs)
 
     return params, primal_optimizers
 
