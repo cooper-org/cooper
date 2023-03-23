@@ -8,7 +8,7 @@ import torch
 import cooper
 
 
-def test_pipeline_with_cmp(device, Toy2dCMP_params_init, Toy2dCMP_problem_properties):
+def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device):
     """Tests the correct instantiation of a simple CMP class for a 2-dimensional
     convex (quadratic) constrained problem.
 
@@ -18,13 +18,14 @@ def test_pipeline_with_cmp(device, Toy2dCMP_params_init, Toy2dCMP_problem_proper
     different.
     """
 
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers, Toy2dCMP_params_init
+    )
+
     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
-    params = torch.nn.Parameter(Toy2dCMP_params_init)
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
-    cooper_optimizer = cooper_test_utils.build_optimizer_for_Toy2dCMP(
-        params, cmp.constraint_groups, use_ineq_constraints
-    )
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp.constraint_groups)
 
     for step_id in range(1500):
         cooper_optimizer.zero_grad()
@@ -33,10 +34,13 @@ def test_pipeline_with_cmp(device, Toy2dCMP_params_init, Toy2dCMP_problem_proper
         cmp_state.backward()
         cooper_optimizer.step()
 
-    assert torch.allclose(params, Toy2dCMP_problem_properties["exact_solution"])
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        assert torch.allclose(param, exact_solution)
 
 
-def test_pipeline_without_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+def test_pipeline_without_cmp(
+    Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device
+):
     """Test correct behavior of simultaneous updates on a 2-dimensional constrained
     problem without requiring the user to implement a CMP class explicitly. The only
     required methods are a function to evaluate the loss, and a function to evaluate
@@ -54,8 +58,10 @@ def test_pipeline_without_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
         return [cg0_state, cg1_state]
 
     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
-    params = torch.nn.Parameter(Toy2dCMP_params_init)
-    primal_optimizer = torch.optim.SGD([params], lr=1e-2, momentum=0.3)
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers, Toy2dCMP_params_init
+    )
 
     if use_ineq_constraints:
         cg0 = cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device)
@@ -64,7 +70,7 @@ def test_pipeline_without_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     else:
         constraint_groups = []
 
-    cooper_optimizer = cooper_test_utils.build_optimizer_for_Toy2dCMP(params, constraint_groups, use_ineq_constraints)
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, constraint_groups)
 
     for step_id in range(1500):
         cooper_optimizer.zero_grad()
@@ -88,4 +94,5 @@ def test_pipeline_without_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
         cmp_state.backward()
         cooper_optimizer.step()
 
-    assert torch.allclose(params, Toy2dCMP_problem_properties["exact_solution"])
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        assert torch.allclose(param, exact_solution)
