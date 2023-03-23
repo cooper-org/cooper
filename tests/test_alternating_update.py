@@ -20,6 +20,9 @@ def test_manual_alternating(alternating, use_defect_fn, Toy2dCMP_problem_propert
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
+    # Only perfoming this test for the case of a single primal optimizer
+    assert isinstance(params, torch.nn.Parameter)
+
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     mktensor = testing_utils.mktensor(device=device)
@@ -51,15 +54,10 @@ def test_manual_alternating(alternating, use_defect_fn, Toy2dCMP_problem_propert
     for multiplier, target_value in zip(observed_multipliers, [0.0, 0.0]):
         assert torch.allclose(multiplier, mktensor([target_value]))
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
     cmp_state.backward()
-    if isinstance(params, torch.nn.Parameter):
-        assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
-    else:
-        for param, target_value in zip(params, [0.0, -4.0]):
-            assert torch.allclose(param.grad, mktensor([target_value]))
-
+    # Check primal and dual gradients after backward. Dual gradient must match the
+    # constraint violations.
+    assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     for multiplier, (constraint_group, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
         assert torch.allclose(multiplier.grad, constraint_state.violation)
 
@@ -73,11 +71,8 @@ def test_manual_alternating(alternating, use_defect_fn, Toy2dCMP_problem_propert
     else:
         cooper_optimizer.step()
 
-    if isinstance(params, torch.nn.Parameter):
-        assert torch.allclose(params, mktensor([0.0, -0.96]))
-    else:
-        for param, target_value in zip(params, [0.0, -0.96]):
-            assert torch.allclose(param, mktensor([target_value]))
+    # After performing the update to the primal variables, their value is [0, -0.96].
+    assert torch.allclose(params, mktensor([0.0, -0.96]))
 
     if alternating:
 
