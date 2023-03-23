@@ -109,11 +109,17 @@ class CMPState:
         if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
             self._primal_lagrangian.backward()
 
+        # After completing the backward call, we purge the accumulated _primal_lagrangian
+        self._primal_lagrangian = None
+
     def dual_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the dual variables."""
         if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
             self._dual_lagrangian.backward()
+
+        # After completing the backward call, we purge the accumulated _dual_lagrangian
+        self._dual_lagrangian = None
 
     def backward(self) -> None:
         """Computes the gradient of the Lagrangian with respect to both the primal and
