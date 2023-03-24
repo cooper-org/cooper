@@ -6,8 +6,7 @@ import torch
 
 
 class ConstantMultiplier:
-    """
-    Constant (non-trainable) multiplier class used for penalized formulations.
+    """Constant (non-trainable) multiplier class used for penalized formulations.
 
     Args:
         init: Value of the multiplier.
@@ -64,26 +63,44 @@ class ExplicitMultiplier(torch.nn.Module):
             inequality constraints (i.e. enforce_positive=True)
     """
 
-    def __init__(self, init: torch.Tensor, *, enforce_positive: bool = False, restart_on_feasible: bool = False):
+    def __init__(
+        self,
+        init: torch.Tensor,
+        *,
+        enforce_positive: bool = False,
+        restart_on_feasible: bool = False,
+        default_restart_value: float = 0.0,
+    ):
         super().__init__()
 
         self.enforce_positive = enforce_positive
         self.restart_on_feasible = restart_on_feasible
 
-        if self.enforce_positive and any(init < 0):
-            raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
-
-        if not self.enforce_positive and restart_on_feasible:
-            raise ValueError("Restart on feasible is not supported for equality constraints.")
-
         self.weight = torch.nn.Parameter(init)
         self.device = self.weight.device
+        self.default_restart_value = default_restart_value
+
+        self.base_sanity_checks()
+
+    def base_sanity_checks(self):
+
+        if self.enforce_positive and any(self.weight.data < 0):
+            raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
+
+        if not self.enforce_positive and self.restart_on_feasible:
+            raise ValueError("Restart on feasible is not supported for equality constraints.")
+
+        if (self.default_restart_value < 0) and self.restart_on_feasible:
+            raise ValueError("Default restart value must be positive.")
+
+        if (self.default_restart_value > 0) and not self.restart_on_feasible:
+            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
 
     @property
     def implicit_constraint_type(self):
         return "ineq" if self.enforce_positive else "eq"
 
-    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None, restart_value: float = 0.0):
+    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
@@ -92,8 +109,6 @@ class ExplicitMultiplier(torch.nn.Module):
 
         Args:
             feasible_indices: Indices or binary masks denoting the feasible constraints.
-            restart_value: Default value of the multiplier after applying the restart
-                on feasibility.
         """
 
         if self.enforce_positive:
@@ -103,7 +118,7 @@ class ExplicitMultiplier(torch.nn.Module):
             # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
             # about the pitfalls of using dual_restars with stateful optimizers.
             if self.restart_on_feasible and feasible_indices is not None:
-                self.weight.data[feasible_indices, ...] = restart_value
+                self.weight.data[feasible_indices, ...] = self.default_restart_value
                 if self.weight.grad is not None:
                     self.weight.grad[feasible_indices, ...] = 0.0
 
@@ -111,18 +126,20 @@ class ExplicitMultiplier(torch.nn.Module):
         _state_dict = super().state_dict()
         _state_dict["enforce_positive"] = self.enforce_positive
         _state_dict["restart_on_feasible"] = self.restart_on_feasible
+        _state_dict["default_restart_value"] = self.default_restart_value
         return _state_dict
 
     def load_state_dict(self, state_dict):
         self.enforce_positive = state_dict.pop("enforce_positive")
         self.restart_on_feasible = state_dict.pop("restart_on_feasible")
+        self.default_restart_value = state_dict.pop("default_restart_value")
         super().load_state_dict(state_dict)
         self.device = self.weight.device
 
 
 class DenseMultiplier(ExplicitMultiplier):
-    """
-    This is the simplest kind of trainable Lagrange multiplier.
+    """Simplest kind of trainable Lagrange multiplier.
+
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
     :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
     in the group are measured constantly.
@@ -141,8 +158,7 @@ class DenseMultiplier(ExplicitMultiplier):
 
 
 class SparseMultiplier(ExplicitMultiplier):
-    """
-    Sparse multipliers extend the functionality of
+    """Sparse multipliers extend the functionality of
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
     constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
@@ -170,8 +186,7 @@ class SparseMultiplier(ExplicitMultiplier):
 
 
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
-    """
-    An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
+    """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
     :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
     constraint. The multiplier is _implicitly_  represented by the features of its

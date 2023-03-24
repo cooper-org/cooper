@@ -1,5 +1,6 @@
 import abc
-from typing import Iterable, List, Optional, Tuple
+from collections.abc import Sequence
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -11,8 +12,8 @@ from cooper.constraints import ConstraintGroup, ConstraintState
 
 
 class CMPState:
-    """Represents the "state" of a Constrained Minimization Problem in terms of the
-    value of its loss and constraint violations/defects.
+    """Represents the state of a Constrained Minimization Problem in terms of the value
+    of its loss and constraint violations/defects.
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
@@ -31,7 +32,7 @@ class CMPState:
     def __init__(
         self,
         loss: Optional[torch.Tensor] = None,
-        observed_constraints: Iterable[Tuple[ConstraintGroup, Optional[ConstraintState]]] = (),
+        observed_constraints: Union[Sequence[ConstraintGroup], Sequence[Tuple[ConstraintGroup, ConstraintState]]] = (),
         misc: Optional[dict] = None,
     ):
         self.loss = loss
@@ -44,10 +45,10 @@ class CMPState:
     def populate_lagrangian(
         self, return_multipliers: bool = False
     ) -> Tuple[torch.Tensor, Optional[List[torch.Tensor]]]:
-        """
-        Computes and accumulates the Lagrangian based on the loss and the contributions
-        to the "primal" and "dual" Lagrangians resulting from each of the observed
-        constraints.
+        """Computes and accumulates the Lagrangian based on the loss and the
+        contributions to the "primal" and "dual" Lagrangians resulting from each of the
+        observed constraints.
+
         The Lagrangian contributions correspond to disjoint computational graphs from
         the point of view of gradient propagation: there is no gradient connection
         between the primal (resp. dual) Lagrangian contribution and the dual (resp.
@@ -64,7 +65,7 @@ class CMPState:
                 of the multiplier for each of the observed_constraints.
         """
 
-        primal_lagrangian = 0.0 + self.loss
+        primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
         dual_lagrangian = 0.0
 
         if return_multipliers:
@@ -108,11 +109,17 @@ class CMPState:
         if self._primal_lagrangian is not None and isinstance(self._primal_lagrangian, torch.Tensor):
             self._primal_lagrangian.backward()
 
+        # After completing the backward call, we purge the accumulated _primal_lagrangian
+        self._primal_lagrangian = None
+
     def dual_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the dual variables."""
         if self._dual_lagrangian is not None and isinstance(self._dual_lagrangian, torch.Tensor):
             self._dual_lagrangian.backward()
+
+        # After completing the backward call, we purge the accumulated _dual_lagrangian
+        self._dual_lagrangian = None
 
     def backward(self) -> None:
         """Computes the gradient of the Lagrangian with respect to both the primal and
@@ -122,7 +129,7 @@ class CMPState:
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
-    """Base class for constrained minimization problems."""
+    """Template for constrained minimization problems."""
 
     def __init__(self):
         self._state = CMPState()
@@ -137,8 +144,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     @abc.abstractmethod
     def compute_cmp_state(self, *args, **kwargs) -> CMPState:
-        """
-        Computes the state of the CMP based on the current value of the primal
+        """Computes the state of the CMP based on the current value of the primal
         parameters.
 
         The signature of this abstract function may be changed to accommodate situations
@@ -154,9 +160,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
     def compute_violations(self) -> CMPState:
-        """
-        Computes the violation of (a subset of) the constraints of the CMP based on the
-        current value of the primal parameters. This function returns a
+        """Computes the violation of (a subset of) the constraints of the CMP based on
+        the current value of the primal parameters. This function returns a
         :py:class:`cooper.problem.CMPState` collecting the values of the observed
         constraints. Note that the returned ``CMPState`` may have ``loss=None`` since,
         by design, the value of the loss is not necessarily computed when evaluating

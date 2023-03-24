@@ -14,6 +14,8 @@ CONSTRAINT_TYPE = Literal["eq", "ineq", "penalty"]
 class ConstraintState:
     """Constraint state."""
 
+    # TODO(gallego-posada): Add documentation
+
     violation: torch.Tensor
     strict_violation: Optional[torch.Tensor] = None
     constraint_features: Optional[torch.Tensor] = None
@@ -24,6 +26,8 @@ class ConstraintGroup:
     TODO(gallego-posada): add docstring explaining that when passing the multiplier
     directly, the other kwargs (shape, dtype, device) are ignored.
     """
+
+    # TODO(gallego-posada): Add documentation
 
     def __init__(
         self,

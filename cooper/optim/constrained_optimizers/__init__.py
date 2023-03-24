@@ -1,5 +1,4 @@
 from .alternating_optimizer import AlternatingConstrainedOptimizer
-from .constrained_optimizer import ConstrainedOptimizer, CooperOptimizerState
+from .constrained_optimizer import ConstrainedOptimizer
 from .extrapolation_optimizer import ExtrapolationConstrainedOptimizer
 from .simultaneous_optimizer import SimultaneousConstrainedOptimizer
-from .utils import *
