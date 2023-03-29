@@ -98,7 +98,7 @@ class ConstrainedOptimizer:
         for dual_optimizer in self.dual_optimizers:
             dual_optimizer.zero_grad()
 
-    def dual_step(self):
+    def dual_step(self, call_extrapolation: bool = False):
         """
         Perform a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we flip
@@ -107,6 +107,12 @@ class ConstrainedOptimizer:
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure feasibility for equality constraints, or to
         apply dual restarts).
+
+        Args:
+            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
+                opposed to ``dual_optimizer.step()``. This is only relevant for
+                :py:class:`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`
+                and should be left to ``False`` for other ``ConstrainedOptimizer``\\s.
         """
         for multiplier in self.multipliers:
             for param in multiplier.parameters():
@@ -119,13 +125,16 @@ class ConstrainedOptimizer:
         for dual_optimizer in self.dual_optimizers:
             # Update multipliers based on current constraint violations (gradients)
             # For unobserved constraints the gradient is None, so this is a no-op.
-            dual_optimizer.step()
+            if call_extrapolation:
+                assert self.extrapolation
+                dual_optimizer.extrapolation()
+            else:
+                dual_optimizer.step()
 
         for multiplier in self.multipliers:
             if isinstance(multiplier, ExplicitMultiplier):
                 # Select the indices of multipliers corresponding to feasible inequality constraints
                 if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
-
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.
