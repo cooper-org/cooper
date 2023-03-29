@@ -54,6 +54,9 @@ class Formulation:
 
         if self.formulation_type == "augmented_lagrangian":
 
+            # TODO(gallego-posada): Augmented lagrangian is currently untested. Code
+            # below may be unreliable.
+
             if constraint_type == "ineq":
                 # Compute filter based on strict constraint violation
                 const_filter = torch.logical_or(strict_violation >= 0, multiplier > 0)
