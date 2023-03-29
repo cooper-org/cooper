@@ -19,6 +19,8 @@ class ConstraintState:
     violation: torch.Tensor
     strict_violation: Optional[torch.Tensor] = None
     constraint_features: Optional[torch.Tensor] = None
+    skip_primal_contribution: bool = False
+    skip_dual_contribution: bool = False
 
 
 class ConstraintGroup:
