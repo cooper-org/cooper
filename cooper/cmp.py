@@ -71,16 +71,7 @@ class CMPState:
         if return_multipliers:
             observed_multiplier_values = []
 
-        for constraint_tuple in self.observed_constraints:
-            if isinstance(constraint_tuple, ConstraintGroup):
-                constraint_group = constraint_tuple
-                constraint_state = constraint_group.state
-            elif isinstance(constraint_tuple, tuple) and len(constraint_tuple) == 2:
-                constraint_group, constraint_state = constraint_tuple
-            else:
-                error_message = f"Received invalid format for observed constraint. Expected {ConstraintGroup} or"
-                error_message += f" {Tuple[ConstraintGroup, ConstraintState]}, but received {type(constraint_tuple)}"
-                raise ValueError(error_message)
+        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
 
             multiplier_value, primal_contribution, dual_contribution = constraint_group.compute_lagrangian_contribution(
                 constraint_state=constraint_state
