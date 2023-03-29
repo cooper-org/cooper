@@ -1,6 +1,6 @@
 import warnings
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+from typing import Iterator, Literal, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -141,3 +141,26 @@ class ConstraintGroup:
 
     def __repr__(self):
         return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier})"
+
+
+def observed_constraints_iterator(
+    observed_constraints: Sequence[Union[ConstraintGroup, Tuple[ConstraintGroup, ConstraintState]]]
+) -> Iterator[Tuple[ConstraintGroup, ConstraintState]]:
+    """Utility function to iterate over observed constraints. This allows for consistent
+    iteration over `observed_constraints` which are a sequence of `ConstraintGroup`\\s
+    (and hold the `ConstraintState` internally), or a sequence of
+    `Tuple[ConstraintGroup, ConstraintState]`\\s.
+    """
+
+    for constraint_tuple in observed_constraints:
+        if isinstance(constraint_tuple, ConstraintGroup):
+            constraint_group = constraint_tuple
+            constraint_state = constraint_group.state
+        elif isinstance(constraint_tuple, tuple) and len(constraint_tuple) == 2:
+            constraint_group, constraint_state = constraint_tuple
+        else:
+            error_message = f"Received invalid format for observed constraint. Expected {ConstraintGroup} or"
+            error_message += f" {Tuple[ConstraintGroup, ConstraintState]}, but received {type(constraint_tuple)}"
+            raise ValueError(error_message)
+
+        yield constraint_group, constraint_state
