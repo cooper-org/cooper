@@ -102,11 +102,10 @@ class ConstraintGroup:
         self, constraint_state: Optional[ConstraintState] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
-        if constraint_state is None:
-            constraint_state = self.state
-
-        if constraint_state is None:
+        if constraint_state is None and self.state is None:
             raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
+        elif constraint_state is None:
+            constraint_state = self.state
 
         if constraint_state.constraint_features is None:
             multiplier_value = self.multiplier()
