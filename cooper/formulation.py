@@ -56,6 +56,7 @@ class Formulation:
 
             # TODO(gallego-posada): Augmented lagrangian is currently untested. Code
             # below may be unreliable.
+            raise NotImplementedError("Augmented Lagrangian is currently untested.")
 
             if constraint_type == "ineq":
                 # Compute filter based on strict constraint violation
