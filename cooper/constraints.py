@@ -12,9 +12,40 @@ CONSTRAINT_TYPE = Literal["eq", "ineq", "penalty"]
 
 @dataclass
 class ConstraintState:
-    """Constraint state."""
+    """State of a constraint group describing the current constraint violation.
 
-    # TODO(gallego-posada): Add documentation
+    Args:
+        violation: Measurement of the constraint violation at some value of the primal
+            parameters. This is expected to be differentiable with respect to the
+            primal parameters.
+        strict_violation: Measurement of the constraint violation which may be
+            non-differentiable with respect to the primal parameters. When provided,
+            the (necessarily differentiable) `violation` is used to compute the gradient
+            of the Lagrangian with respect to the primal parameters, while the
+            `strict_violation` is used to compute the gradient of the Lagrangian with
+            respect to the dual parameters. For more details, see the proxy-constraint
+            proposal of :cite:t:`cotter2019JMLR`.
+        constraint_features: The features of the constraint. This is used to evaluate
+            the lagrange multiplier associated with a constraint group. For example,
+            A `SparseMultiplier` expects the indices of the constraints whose Lagrange
+            multipliers are to be retrieved; while an `ImplicitMultiplier` expects
+            general tensor-valued features for the constraints. This field is not used
+            for `DenseMultiplier`//s.
+            This can be used in conjunction with a `SparseMultiplier` to indicate the
+            measurement of the violation for only a subset of the constraints within a
+            `ConstraintGroup`.
+        skip_primal_conribution: When `True`, we ignore the contribution of the current
+            observed constraint violation towards the primal Lagrangian, but keep their
+            contribution to the dual Lagrangian. In other words, the observed violations
+            affect the update for the dual variables but not the update for the primal
+            variables.
+        skip_dual_conribution: When `True`, we ignore the contribution of the current
+            observed constraint violation towards the dual Lagrangian, but keep their
+            contribution to the primal Lagrangian. In other words, the observed
+            violations affect the update for the primal variables but not the update
+            for the dual variables. This flag is useful for performing less frequent
+            updates of the dual variables (e.g. after several primal steps).
+    """
 
     violation: torch.Tensor
     strict_violation: Optional[torch.Tensor] = None
@@ -103,6 +134,8 @@ class ConstraintGroup:
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute the contribution of the current constraint to the primal and dual
+        Lagrangians, and evaluates the associated Lagrange multiplier."""
 
         if constraint_state is None and self.state is None:
             raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
@@ -124,7 +157,12 @@ class ConstraintGroup:
             strict_violation = constraint_state.violation
 
         primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
-            self.constraint_type, multiplier_value, constraint_state.violation, strict_violation
+            constraint_type=self.constraint_type,
+            multiplier_value=multiplier_value,
+            violation=constraint_state.violation,
+            strict_violation=strict_violation,
+            skip_primal_contribution=constraint_state.skip_primal_contribution,
+            skip_dual_contribution=constraint_state.skip_dual_contribution,
         )
 
         return multiplier_value, primal_contribution, dual_contribution
