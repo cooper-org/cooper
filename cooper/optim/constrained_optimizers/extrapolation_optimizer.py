@@ -3,7 +3,7 @@
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional
 
 import torch
 
@@ -34,7 +34,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     def custom_sanity_checks(self):
         """
-        Perform sanity checks on the initialization of ``ExtrapolationConstrainedOptimizer``.
+        Perform sanity checks on the initialization of
+        ``ExtrapolationConstrainedOptimizer``.
 
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
