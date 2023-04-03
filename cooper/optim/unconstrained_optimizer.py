@@ -51,7 +51,7 @@ class UnconstrainedOptimizer:
         )
 
 
-class UnconstrainedExtrapolationOptimizer:
+class ExtrapolationUnconstrainedOptimizer:
     """Wraps a (sequence of) ``cooper.optim.ExtragradientOptimizer``\\s to enable
     handling unconstrained problems in a way that is consistent with the
     :py:class:`~cooper.optim.ConstrainedOptimizer`\\s.
@@ -76,7 +76,7 @@ class UnconstrainedExtrapolationOptimizer:
     def sanity_checks(self):
         """
         Perform sanity checks on the initialization of
-        ``UnconstrainedExtrapolationOptimizer``.
+        ``ExtrapolationUnconstrainedOptimizer``.
 
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
