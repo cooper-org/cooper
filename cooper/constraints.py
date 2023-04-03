@@ -77,7 +77,9 @@ class ConstraintGroup:
         self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
         if multiplier is None:
-            multiplier = self.build_multiplier(shape=shape, dtype=dtype, device=device, is_sparse=is_sparse)
+            multiplier = multipliers.build_explicit_multiplier(
+                constraint_type, shape=shape, dtype=dtype, device=device, is_sparse=is_sparse
+            )
         self.sanity_check_multiplier(multiplier)
         self.multiplier = multiplier
 
@@ -121,15 +123,6 @@ class ConstraintGroup:
                 raise ValueError(f"Multipliers of type {type(self.multiplier)} expect constraint features.")
 
         self._state = value
-
-    def build_multiplier(self, shape: int, dtype: torch.dtype, device: torch.device, is_sparse: bool) -> None:
-
-        multiplier_class = multipliers.SparseMultiplier if is_sparse else multipliers.DenseMultiplier
-
-        tensor_factory = dict(dtype=dtype, device=device)
-        tensor_factory["size"] = (shape, 1) if is_sparse else (shape,)
-
-        return multiplier_class(init=torch.zeros(**tensor_factory), enforce_positive=(self.constraint_type == "ineq"))
 
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None
