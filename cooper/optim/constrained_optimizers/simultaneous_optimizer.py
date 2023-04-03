@@ -9,6 +9,7 @@ import torch
 
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
+from cooper.utils import OneOrSequence
 
 from .constrained_optimizer import ConstrainedOptimizer
 
@@ -42,10 +43,10 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
 
     def __init__(
         self,
-        primal_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
-        dual_optimizers: Union[torch.optim.Optimizer, List[torch.optim.Optimizer]],
-        multipliers: Optional[Union[MULTIPLIER_TYPE, List[MULTIPLIER_TYPE]]] = None,
-        constraint_groups: Optional[Union[List[ConstraintGroup], ConstraintGroup]] = None,
+        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
+        multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
 

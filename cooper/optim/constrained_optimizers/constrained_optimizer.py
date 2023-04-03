@@ -11,7 +11,7 @@ import torch
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
-from cooper.utils import ensure_sequence
+from cooper.utils import OneOrSequence, ensure_sequence
 
 
 class ConstrainedOptimizer:
@@ -61,10 +61,10 @@ class ConstrainedOptimizer:
 
     def __init__(
         self,
-        primal_optimizers: Union[torch.optim.Optimizer, Sequence[torch.optim.Optimizer]],
-        dual_optimizers: Union[torch.optim.Optimizer, Sequence[torch.optim.Optimizer]],
-        multipliers: Optional[Union[MULTIPLIER_TYPE, Sequence[MULTIPLIER_TYPE]]] = None,
-        constraint_groups: Optional[Union[ConstraintGroup, Sequence[ConstraintGroup]]] = None,
+        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
+        multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)
         self.dual_optimizers = ensure_sequence(dual_optimizers)
