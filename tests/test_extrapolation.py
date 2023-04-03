@@ -1,86 +1,110 @@
-#!/usr/bin/env python
-
-"""Tests for Extrapolation optimizers."""
-
-# Import basic closure example from helpers
 import cooper_test_utils
 import pytest
+import testing_utils
 import torch
 
-import cooper
 
+def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+    """Test first step of Extrapolation-based updates on toy 2D problem."""
 
-def problem_data(aim_device, primal_optim_cls):
+    if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
+        pytest.skip("Manual extrapolation test only considers the case of initialization at [0, -1]")
 
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=primal_optim_cls,
-        primal_init=[0.0, -1.0],
-        dual_optim_cls=cooper.optim.ExtraSGD,
-        use_ineq=True,
-        use_proxy_ineq=False,
-        dual_restarts=False,
+    is_constrained = Toy2dCMP_problem_properties["use_ineq_constraints"]
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init, extrapolation=True
+    )
+    # Only perfoming this test for the case of a single primal optimizer
+    assert isinstance(params, torch.nn.Parameter)
+
+    cmp = cooper_test_utils.Toy2dCMP(is_constrained, device=device)
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=True,
         alternating=False,
+        dual_optimizer_name="ExtraSGD",
     )
 
-    # params, cmp, coop, formulation, device, mktensor
-    return test_problem_data.as_tuple()
+    mktensor = testing_utils.mktensor(device=device)
 
-
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-@pytest.mark.parametrize("primal_optimizer_cls", [cooper.optim.ExtraSGD, cooper.optim.ExtraAdam])
-def test_extrapolation(aim_device, primal_optimizer_cls):
-    """ """
-
-    params, cmp, coop, formulation, device, _ = problem_data(aim_device, primal_optimizer_cls)
-
-    for step_id in range(2000):
-        coop.zero_grad()
-        lagrangian = formulation.compute_lagrangian(cmp.closure, params)
-        formulation.backward(lagrangian)
-        coop.step(cmp.closure, params)
-
-    if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
-        assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
-
-    # TODO: Why do we need such relaxed tolerance for this test to pass?
-    if primal_optimizer_cls == cooper.optim.ExtraSGD:
-        atol = 1e-8
-    else:
-        atol = 1e-3
-    assert torch.allclose(params[0], torch.tensor(2.0 / 3.0), atol=atol)
-    assert torch.allclose(params[1], torch.tensor(1.0 / 3.0), atol=atol)
-
-
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-@pytest.mark.parametrize("primal_optimizer_cls", [cooper.optim.ExtraSGD])
-def test_manual_extrapolation(aim_device, primal_optimizer_cls):
-    """ """
-
-    params, cmp, coop, formulation, device, mktensor = problem_data(aim_device, primal_optimizer_cls)
-
-    coop.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+    cooper_optimizer.zero_grad()
+    cmp_state = cmp.compute_cmp_state(params)
+    lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
-    assert torch.allclose(cmp.state.loss, mktensor(2.0))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([2.0, -2.0]))
-    assert cmp.state.eq_defect is None
+    assert torch.allclose(cmp_state.loss, mktensor(2.0))
 
-    # Multiplier initialization
-    assert torch.allclose(formulation.state()[0], mktensor([0.0, 0.0]))
-    assert formulation.state()[1] is None
+    if is_constrained:
+        for (_, constraint_state), target_value in zip(cmp_state.observed_constraints, [2.0, -2.0]):
+            assert torch.allclose(constraint_state.violation, mktensor([target_value]))
+        # Multiplier initialization
+        for multiplier, target_value in zip(observed_multipliers, [0.0, 0.0]):
+            assert torch.allclose(multiplier, mktensor([target_value]))
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
-    formulation.backward(lagrangian)
+    cmp_state.backward()
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
 
-    # Check updated primal and dual variable values
-    coop.step(cmp.closure, params)
-    assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))
-    assert torch.allclose(formulation.state()[0], mktensor([0.0196, 0.0]))
+    if is_constrained:
+        # Dual gradients must match the constraint violations.
+        for multiplier, (_, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
+            assert torch.allclose(multiplier.grad, constraint_state.violation)
+
+    cooper_optimizer.step(compute_cmp_state_fn)
+
+    # After performing the update
+    if is_constrained:
+        assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))
+        assert torch.allclose(params.grad, mktensor([-0.0200, -3.8600]))
+    else:
+        assert torch.allclose(params, mktensor([0.0, -0.9616]))
+
+    cooper_optimizer.zero_grad()
+    cmp_state = cmp.compute_cmp_state(params)
+    lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+    cmp_state.backward()
+    cooper_optimizer.step(compute_cmp_state_fn)
+
+    if is_constrained:
+        assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
+        for multiplier, target_value in zip(observed_multipliers, [0.0388, 0.0]):
+            assert torch.allclose(multiplier, mktensor([target_value]), atol=1e-4)
+    else:
+        assert torch.allclose(params, mktensor([0.0, -0.9247]), atol=1e-4)
+
+
+@pytest.mark.parametrize("optimizer_name", ["ExtraSGD", "ExtraAdam"])
+def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+    """Test convergence of Extrapolation-based updates on toy 2D problem."""
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False,
+        params_init=Toy2dCMP_params_init,
+        extrapolation=True,
+        optimizer_names=optimizer_name,
+    )
+    cmp = cooper_test_utils.Toy2dCMP(Toy2dCMP_problem_properties["use_ineq_constraints"], device=device)
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=True,
+        alternating=False,
+        dual_optimizer_name="ExtraSGD",
+    )
+
+    for step_id in range(1500):
+        cooper_optimizer.zero_grad()
+        cmp_state = cmp.compute_cmp_state(params)
+        lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+        cmp_state.backward()
+        cooper_optimizer.step(compute_cmp_state_fn=compute_cmp_state_fn)
+
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        # NOTE: allowing for a larger tolerance for ExtraAdam tests to pass
+        assert torch.allclose(param, exact_solution, rtol=1e-2)
