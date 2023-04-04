@@ -11,7 +11,8 @@ def frozen_rand_generator(seed=2147483647):
     reproducible tests.
     """
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # TODO(juan43ramirez): Random number generator producing error when using cuda.
+    device = "cpu"
     generator = torch.Generator(device)
     generator.manual_seed(seed)
     return generator
