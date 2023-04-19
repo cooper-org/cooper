@@ -69,6 +69,9 @@ rand_init = torch.rand(6, device=DEVICE)  # Use a 6-sided die
 probs = torch.nn.Parameter(rand_init / sum(rand_init))
 primal_optimizer = torch.optim.SGD([probs], lr=3e-2, momentum=0.7)
 
+# TODO(gallego-posada): The tutorial is originally implemented with ExtraSGD, but it is not
+# implemented yet
+
 # Define the dual optimizer
 dual_optimizer = torch.optim.SGD(
     [ineq_group.multiplier.parameters(), eq_group.multiplier.parameters()], lr=1e-3, momentum=0.4
