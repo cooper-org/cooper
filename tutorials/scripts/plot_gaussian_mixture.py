@@ -38,6 +38,8 @@ from style_utils import *
 from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
+from cooper import CMPState, ConstraintGroup, ConstraintState
+from cooper.optim import SimultaneousConstrainedOptimizer, UnconstrainedOptimizer
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -97,22 +99,25 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
             to ``0.7``.
     """
 
-    def __init__(self, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7):
+    def __init__(
+        self, ineq_group: ConstraintGroup, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7
+    ):
 
         super().__init__()
 
+        self.ineq_group = ineq_group
         self.is_constrained = is_constrained
         self.const_level = const_level
         self.use_proxy = use_proxy
 
-    def closure(self, model, inputs, targets):
+    def compute_cmp_state(self, model, inputs, targets):
 
         logits = model(inputs)
         loss = bce_loss(logits.flatten(), targets)
 
         if not self.is_constrained:
             # Unconstrained problem of separating two classes
-            state = cooper.CMPState(
+            state = CMPState(
                 loss=loss,
             )
         else:
@@ -126,7 +131,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
             hinge_defect = self.const_level - hinge
 
             if not self.use_proxy:
-                ineq_defect = hinge_defect
+                self.ineq_group.state = ConstraintState(violation=hinge_defect)
                 proxy_ineq_defect = None
             else:
                 # Use non-proxy defects to update the Lagrange multipliers
@@ -136,12 +141,9 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
                 prop_0 = torch.sum(classes == 0) / targets.numel()
                 ineq_defect = self.const_level - prop_0
                 proxy_ineq_defect = hinge_defect
+                self.ineq_group.state = ConstraintState(violation=proxy_ineq_defect, strict_violation=ineq_defect)
 
-            state = cooper.CMPState(
-                loss=loss,
-                ineq_defect=ineq_defect,
-                proxy_ineq_defect=proxy_ineq_defect,
-            )
+            state = CMPState(loss=loss, observed_constraints=[self.ineq_group])
 
         return state
 
@@ -157,36 +159,36 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     model = torch.nn.Linear(2, 1)
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
-    cmp = MixtureSeparation(is_constrained, use_proxy, const_level)
+    ineq_group = ConstraintGroup(
+        constraint_type="ineq", shape=1, dtype=torch.float32
+    )
+
+    cmp = MixtureSeparation(ineq_group, is_constrained, use_proxy, const_level)
 
     if is_constrained:
 
-        formulation = cooper.LagrangianFormulation(cmp)
+        dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7)
 
-        dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=lr, momentum=0.7)
-
-        constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
-            formulation=formulation,
+        constrained_optimizer = SimultaneousConstrainedOptimizer(
+            constraint_groups=ineq_group,
             primal_optimizers=primal_optimizer,
-            dual_optimizer=dual_optimizer,
+            dual_optimizers=dual_optimizer,
         )
     else:
 
-        formulation = cooper.UnconstrainedFormulation(cmp)
-        dual_optimizer = None
-
-        constrained_optimizer = cooper.UnconstrainedOptimizer(
-            formulation=formulation, primal_optimizers=primal_optimizer
+        constrained_optimizer = UnconstrainedOptimizer(
+            primal_optimizers=primal_optimizer
         )
 
     for i in range(num_iters):
         constrained_optimizer.zero_grad()
+        cmp_state = cmp.compute_cmp_state(model, inputs, targets)
         if is_constrained:
-            lagrangian = formulation.compute_lagrangian(cmp.closure, model, inputs, targets)
-            formulation.backward(lagrangian)
+            _ = cmp_state.populate_lagrangian()
+            cmp_state.backward()
         else:
             # No Lagrangian in the unconstrained case
-            loss = cmp.closure(model, inputs, targets).loss
+            loss = cmp_state.loss
             loss.backward()
 
         constrained_optimizer.step()
