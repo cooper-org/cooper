@@ -1,6 +1,5 @@
 import warnings
-from collections.abc import Sequence
-from typing import List, Optional, TypeVar, Union
+from typing import Optional, Union
 
 import torch
 
@@ -10,20 +9,19 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
-from .unconstrained_optimizer import UnconstrainedOptimizer
+from .unconstrained_optimizer import ExtrapolationUnconstrainedOptimizer, UnconstrainedOptimizer
 
 
 def sanity_check_constraints_and_optimizer(
     constrained_optimizer: constrained_optimizers.ConstrainedOptimizer,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
 ):
-    """Execute sanity checks on the properties of the provided constraints and optimizer to
-    raise appropriate exceptions or warnings when detecting invalid or untested
+    """Execute sanity checks on the properties of the provided constraints and optimizer
+    to raise appropriate exceptions or warnings when detecting invalid or untested
     configurations.
     """
 
     if constraint_groups is not None:
-
         constraint_groups = ensure_sequence(constraint_groups)
 
         fn_restart_on_feasible = lambda constraint: getattr(constraint.multiplier, "restart_on_feasible", False)
@@ -58,7 +56,10 @@ def create_optimizer_from_kwargs(
     """
 
     if dual_optimizers is None:
-        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+        if not extrapolation:
+            return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+        else:
+            return ExtrapolationUnconstrainedOptimizer(primal_optimizers=primal_optimizers)
 
     optimizer_kwargs = dict(
         primal_optimizers=primal_optimizers,

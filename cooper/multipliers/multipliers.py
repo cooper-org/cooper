@@ -83,8 +83,7 @@ class ExplicitMultiplier(torch.nn.Module):
         self.base_sanity_checks()
 
     def base_sanity_checks(self):
-
-        if self.enforce_positive and any(self.weight.data < 0):
+        if self.enforce_positive and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
         if not self.enforce_positive and self.restart_on_feasible:

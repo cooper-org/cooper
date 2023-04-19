@@ -3,60 +3,30 @@
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional
 
 import torch
 
 from cooper.cmp import CMPState
 from cooper.constraints import ConstraintGroup
+from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
+from cooper.utils import OneOrSequence
 
 from .constrained_optimizer import ConstrainedOptimizer
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
-
-    """
-    Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    given a provided :py:class:`~cooper.formulation.Formulation` using
-    optimizers primal and dual optimizers capable of performing extrapolation.
-
-    Args:
-        formulation: ``Formulation`` of the ``ConstrainedMinimizationProblem``
-            to be optimized.
-
-        primal_optimizers: Fully instantiated
-            :py:class:`~cooper.optim.extra_optimizers.ExtragradientOptimizer`\\s
-            used to optimize the primal parameters (e.g. model parameters). The
-            primal parameters can be partitioned into multiple optimizers, in
-            which case ``primal_optimizers`` accepts a list of
-            ``ExtragradientOptimizer``\\s.
-
-        dual_optimizer: Partially instantiated
-            :py:class:`~cooper.optim.extra_optimizers.ExtragradientOptimizer`
-            used to optimize the dual variables (e.g. Lagrange multipliers).
-
-        dual_scheduler: Partially instantiated
-            ``torch.optim.lr_scheduler._LRScheduler`` used to schedule the
-            learning rate of the dual variables. Defaults to None.
-
-        dual_restarts: If True, perform "restarts" on the Lagrange
-            multipliers associated with inequality constraints: whenever the
-            constraint is satisfied, directly set the multiplier to zero.
-            Defaults to False.
-
-    """
-
     extrapolation = True
     alternating = False
 
     def __init__(
         self,
-        constraint_groups: Union[List[ConstraintGroup], ConstraintGroup],
-        primal_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
-        dual_optimizers: Union[List[torch.optim.Optimizer], torch.optim.Optimizer],
+        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
+        multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
-
-        super().__init__(constraint_groups, primal_optimizers, dual_optimizers)
+        super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
 
         self.base_sanity_checks()
 
@@ -64,22 +34,12 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     def custom_sanity_checks(self):
         """
-        Perform sanity checks on the initialization of ``ConstrainedOptimizer``.
+        Perform sanity checks on the initialization of
+        ``ExtrapolationConstrainedOptimizer``.
 
         Raises:
-            RuntimeError: Tried to construct an
-                ExtrapolationConstrainedOptimizer but none of the primal
-                optimizers has an extrapolation function.
-            RuntimeError: One of the ``primal_optimizers`` has an
-                ``extrapolation`` function while another does not. Please ensure
-                that all primal optimizers agree on whether to perform
-                extrapolation.
-            RuntimeError: The ``primal_optimizers`` have extrapolation
-                functions while the ``dual_optimizer`` does not. Extrapolation
-                on only one player is not supported.
-            NotImplementedError: It is currently not supported to use
-                extrapolation and an augmented Lagrangian formulation. This
-                feature is untested.
+            RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
+                some of the provided optimizers do not have an extrapolation method.
         """
 
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
@@ -91,103 +51,86 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 Please ensure that all optimizers are extrapolation capable."""
             )
 
-        are_augmented_lagrangian = [
-            c.formulation.formulation_type == "augmented_lagrangian" for c in self.constraint_groups
-        ]
-
-        if any(are_augmented_lagrangian):
-            raise NotImplementedError(
-                """It is currently not supported to use extrapolation and an
-                Augmented Lagrangian formulation. This feature is untested."""
-            )
-
-    def step(
-        self,
-        closure: Optional[Callable[..., CMPState]] = None,
-        *closure_args,
-        defect_fn: Optional[Callable[..., CMPState]] = None,
-        **closure_kwargs,
-    ):
-        """
-        Performs a single optimization step on both the primal and dual
-        variables. If ``dual_scheduler`` is provided, a scheduler step is
-        performed on the learning rate of the ``dual_optimizer``.
+    def step(self, compute_cmp_state_fn: Callable[..., CMPState]):
+        """Performs an extrapolation step on both the primal and dual variables,
+        followed by an update step. ``compute_cmp_state_fn`` is used to populate
+        gradients after the extrapolation step.
 
         Args:
-            closure: Closure ``Callable`` required for re-evaluating the
-                objective and constraints when performing extrapolating updates.
-                Defaults to None.
-
-            *closure_args: Arguments to be passed to the closure function
-                when re-evaluating.
-
-            **closure_kwargs: Keyword arguments to be passed to the closure
-                function when re-evaluating.
+            compute_cmp_state_fn: ``Callable`` for re-evaluating the objective and
+                constraints when performing alternating updates. Defaults to None.
         """
 
-        if closure is None:
-            raise RuntimeError("Closure must be provided to step when using extrapolation.")
+        if compute_cmp_state_fn is None:
+            raise RuntimeError("`compute_cmp_state_fn` must be provided to step when using extrapolation.")
 
         # Store parameter copy and compute t+1/2 iterates
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()  # type: ignore
 
         # Call to dual_step flips sign of gradients, then triggers call to
-        # dual_optimizer.extrapolation and applies post_step_
+        # dual_optimizer.extrapolation and applies post_step_.
         self.dual_step(call_extrapolation=True)
 
-        # Zero gradients and recompute loss at extrapolated point
         self.zero_grad()
 
-        # The closure is re-evaluated here as the closure arguments may have changed
-        # during the extrapolation step.
-        extrapolated_cmp_state = closure(*closure_args, **closure_kwargs)
-        _ = extrapolated_cmp_state.populate_lagrangian()
+        # `compute_cmp_state_fn` is re-evaluated at the extrapolated point since the
+        # state of the primal parameters has been updated.
+        cmp_state_after_extrapolation = compute_cmp_state_fn()
+        _ = cmp_state_after_extrapolation.populate_lagrangian()
 
         # Populate gradients at extrapolation point
-        extrapolated_cmp_state.backward()
+        cmp_state_after_extrapolation.backward()
 
-        # After this, the calls to `step` will update the stored copies with
-        # the newly computed gradients
+        # After this, the calls to `step` will update the stored copies of the
+        # parameters with the newly computed gradients.
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
         self.dual_step(call_extrapolation=False)
 
-    def dual_step(self, call_extrapolation=False):
+    def dual_step(self, call_extrapolation: bool = False):
+        """
+        Perform a gradient step on the parameters associated with the dual variables.
+        Since the dual problem involves *maximizing* over the dual variables, we flip
+        the sign of the gradient to perform ascent.
 
-        # TODO(juan43ramirez): except for call_extrapolation, this function is the same
-        # as the one in SimultaneousConstrainedOptimizer.
+        After being updated by the dual optimizer steps, the multipliers are
+        post-processed (e.g. to ensure feasibility for equality constraints, or to
+        apply dual restarts).
 
-        for constraint, dual_optimizer in zip(self.constraint_groups, self.dual_optimizers):
+        Args:
+            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
+                opposed to ``dual_optimizer.step()``. This is only relevant for
+                :py:class:`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`
+                and should be left to ``False`` for other ``ConstrainedOptimizer``\\s.
+        """
+        for multiplier in self.multipliers:
+            for param in multiplier.parameters():
+                if param.grad is not None:
+                    # Flip gradients for multipliers to perform ascent.
+                    # We only do the flipping *right before* applying the optimizer
+                    # step to avoid accidental double sign flips.
+                    param.grad.mul_(-1.0)
 
-            # TODO(juan43ramirez): which convention will we use to access the gradient
-            # of the multipliers?
-            _multiplier = constraint.multiplier
+        for dual_optimizer in self.dual_optimizers:
+            # Update multipliers based on current constraint violations (gradients)
+            # For unobserved constraints the gradient is None, so this is a no-op.
+            if call_extrapolation:
+                dual_optimizer.extrapolation()
+            else:
+                dual_optimizer.step()
 
-            if _multiplier.weight.grad is not None:
-
-                # Flip gradients for multipliers to perform ascent.
-                # We only do the flipping *right before* applying the optimizer step to
-                # avoid accidental double sign flips.
-                _multiplier.weight.grad.mul_(-1.0)
-
-                if call_extrapolation:
-                    dual_optimizer.extrapolation()  # type: ignore
-                else:
-                    dual_optimizer.step()
-
-                # Select the indices of multipliers corresponding to feasible constraints
-                if _multiplier.implicit_constraint_type == "ineq":
-                    # TODO(juan43ramirez): could alternatively access the state of the
-                    # constraint, which would be more transparent.
-
+        for multiplier in self.multipliers:
+            if isinstance(multiplier, ExplicitMultiplier):
+                # Select the indices of multipliers corresponding to feasible inequality constraints
+                if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.
-                    feasible_indices = _multiplier.weight.grad > 0.0
-                else:
-                    # TODO(juan43ramirez): add comment
-                    feasible_indices = None
+                    feasible_indices = multiplier.weight.grad > 0.0
 
-                _multiplier.post_step_(feasible_indices, restart_value=0.0)
+                    # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+                    # about the pitfalls of using dual_restars with stateful optimizers.
+
+                    multiplier.post_step_(feasible_indices)

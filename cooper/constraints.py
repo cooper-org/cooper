@@ -1,6 +1,6 @@
 import warnings
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+from typing import Iterator, Literal, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -12,13 +12,46 @@ CONSTRAINT_TYPE = Literal["eq", "ineq", "penalty"]
 
 @dataclass
 class ConstraintState:
-    """Constraint state."""
+    """State of a constraint group describing the current constraint violation.
 
-    # TODO(gallego-posada): Add documentation
+    Args:
+        violation: Measurement of the constraint violation at some value of the primal
+            parameters. This is expected to be differentiable with respect to the
+            primal parameters.
+        strict_violation: Measurement of the constraint violation which may be
+            non-differentiable with respect to the primal parameters. When provided,
+            the (necessarily differentiable) `violation` is used to compute the gradient
+            of the Lagrangian with respect to the primal parameters, while the
+            `strict_violation` is used to compute the gradient of the Lagrangian with
+            respect to the dual parameters. For more details, see the proxy-constraint
+            proposal of :cite:t:`cotter2019JMLR`.
+        constraint_features: The features of the constraint. This is used to evaluate
+            the lagrange multiplier associated with a constraint group. For example,
+            A `SparseMultiplier` expects the indices of the constraints whose Lagrange
+            multipliers are to be retrieved; while an `ImplicitMultiplier` expects
+            general tensor-valued features for the constraints. This field is not used
+            for `DenseMultiplier`//s.
+            This can be used in conjunction with a `SparseMultiplier` to indicate the
+            measurement of the violation for only a subset of the constraints within a
+            `ConstraintGroup`.
+        skip_primal_conribution: When `True`, we ignore the contribution of the current
+            observed constraint violation towards the primal Lagrangian, but keep their
+            contribution to the dual Lagrangian. In other words, the observed violations
+            affect the update for the dual variables but not the update for the primal
+            variables.
+        skip_dual_conribution: When `True`, we ignore the contribution of the current
+            observed constraint violation towards the dual Lagrangian, but keep their
+            contribution to the primal Lagrangian. In other words, the observed
+            violations affect the update for the primal variables but not the update
+            for the dual variables. This flag is useful for performing less frequent
+            updates of the dual variables (e.g. after several primal steps).
+    """
 
     violation: torch.Tensor
     strict_violation: Optional[torch.Tensor] = None
     constraint_features: Optional[torch.Tensor] = None
+    skip_primal_contribution: bool = False
+    skip_dual_contribution: bool = False
 
 
 class ConstraintGroup:
@@ -47,7 +80,9 @@ class ConstraintGroup:
         self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
         if multiplier is None:
-            multiplier = self.build_multiplier(shape=shape, dtype=dtype, device=device, is_sparse=is_sparse)
+            multiplier = multipliers.build_explicit_multiplier(
+                constraint_type, shape=shape, dtype=dtype, device=device, is_sparse=is_sparse
+            )
         self.sanity_check_multiplier(multiplier)
         self.multiplier = multiplier
 
@@ -92,24 +127,16 @@ class ConstraintGroup:
 
         self._state = value
 
-    def build_multiplier(self, shape: int, dtype: torch.dtype, device: torch.device, is_sparse: bool) -> None:
-
-        multiplier_class = multipliers.SparseMultiplier if is_sparse else multipliers.DenseMultiplier
-
-        tensor_factory = dict(dtype=dtype, device=device)
-        tensor_factory["size"] = (shape, 1) if is_sparse else (shape,)
-
-        return multiplier_class(init=torch.zeros(**tensor_factory), enforce_positive=(self.constraint_type == "ineq"))
-
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute the contribution of the current constraint to the primal and dual
+        Lagrangians, and evaluates the associated Lagrange multiplier."""
 
-        if constraint_state is None:
-            constraint_state = self._state
-
-        if constraint_state is None:
+        if constraint_state is None and self.state is None:
             raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
+        elif constraint_state is None:
+            constraint_state = self.state
 
         if constraint_state.constraint_features is None:
             multiplier_value = self.multiplier()
@@ -126,7 +153,12 @@ class ConstraintGroup:
             strict_violation = constraint_state.violation
 
         primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
-            self.constraint_type, multiplier_value, constraint_state.violation, strict_violation
+            constraint_type=self.constraint_type,
+            multiplier_value=multiplier_value,
+            violation=constraint_state.violation,
+            strict_violation=strict_violation,
+            skip_primal_contribution=constraint_state.skip_primal_contribution,
+            skip_dual_contribution=constraint_state.skip_dual_contribution,
         )
 
         return multiplier_value, primal_contribution, dual_contribution
@@ -145,3 +177,26 @@ class ConstraintGroup:
 
     def __repr__(self):
         return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier})"
+
+
+def observed_constraints_iterator(
+    observed_constraints: Sequence[Union[ConstraintGroup, Tuple[ConstraintGroup, ConstraintState]]]
+) -> Iterator[Tuple[ConstraintGroup, ConstraintState]]:
+    """Utility function to iterate over observed constraints. This allows for consistent
+    iteration over `observed_constraints` which are a sequence of `ConstraintGroup`\\s
+    (and hold the `ConstraintState` internally), or a sequence of
+    `Tuple[ConstraintGroup, ConstraintState]`\\s.
+    """
+
+    for constraint_tuple in observed_constraints:
+        if isinstance(constraint_tuple, ConstraintGroup):
+            constraint_group = constraint_tuple
+            constraint_state = constraint_group.state
+        elif isinstance(constraint_tuple, tuple) and len(constraint_tuple) == 2:
+            constraint_group, constraint_state = constraint_tuple
+        else:
+            error_message = f"Received invalid format for observed constraint. Expected {ConstraintGroup} or"
+            error_message += f" {Tuple[ConstraintGroup, ConstraintState]}, but received {type(constraint_tuple)}"
+            raise ValueError(error_message)
+
+        yield constraint_group, constraint_state

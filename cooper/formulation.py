@@ -28,16 +28,31 @@ class Formulation:
         self.augmented_lagrangian_scheduler = augmented_lagrangian_scheduler
 
     def compute_lagrangian_contribution(
-        self, constraint_type, multiplier, violation, strict_violation
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        self,
+        constraint_type: Literal["eq", "ineq", "penalty"],
+        multiplier_value: torch.Tensor,
+        violation: Optional[torch.Tensor] = None,
+        strict_violation: Optional[torch.Tensor] = None,
+        skip_primal_contribution: bool = False,
+        skip_dual_contribution: bool = False,
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
 
-        # When computing the gradient of the Lagrangian with respect to the
-        # primal variables, we do not need to differentiate the multiplier.
-        weighted_violation_for_primal = torch.sum(multiplier.detach() * violation)
+        if skip_primal_contribution:
+            # Ignore the primal contribution if the constraint is marked as non-contributing
+            # to the primal Lagrangian.
+            weighted_violation_for_primal = None
+        else:
+            # When computing the gradient of the Lagrangian with respect to the
+            # primal variables, we do not need to differentiate the multiplier.
+            weighted_violation_for_primal = torch.sum(multiplier_value.detach() * violation)
 
         if self.formulation_type == "penalized":
             # Penalized formulations have no _trainable_ dual variables, so we adopt
             # the convention of setting this variable to None.
+            weighted_violation_for_dual = None
+        elif skip_dual_contribution:
+            # Also ignore the dual contribution if the constraint is marked as
+            # non-contributing to the dual Lagrangian.
             weighted_violation_for_dual = None
         else:
             # When computing the gradient of the Lagrangian with respect to the dual
@@ -50,13 +65,17 @@ class Formulation:
             # "Optimization with Non-Differentiable Constraints with Applications to
             # Fairness, Recall, Churn, and Other Goals" under the name of "proxy"
             # constraints. (https://jmlr.org/papers/v20/18-616.html, Sec. 4.2)
-            weighted_violation_for_dual = torch.sum(multiplier * strict_violation.detach())
+            weighted_violation_for_dual = torch.sum(multiplier_value * strict_violation.detach())
 
         if self.formulation_type == "augmented_lagrangian":
 
+            # TODO(gallego-posada): Augmented lagrangian is currently untested. Code
+            # below may be unreliable.
+            raise NotImplementedError("Augmented Lagrangian is currently untested.")
+
             if constraint_type == "ineq":
                 # Compute filter based on strict constraint violation
-                const_filter = torch.logical_or(strict_violation >= 0, multiplier > 0)
+                const_filter = torch.logical_or(strict_violation >= 0, multiplier_value > 0)
                 sq_violation = torch.sum(const_filter.detach() * (violation**2))
             elif constraint_type == "eq":
                 # Equality constraints do not need to be filtered

@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintState
+from cooper.constraints import ConstraintGroup, ConstraintState, observed_constraints_iterator
 
 # Formulation, and some other classes below, are heavily inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -44,7 +44,7 @@ class CMPState:
 
     def populate_lagrangian(
         self, return_multipliers: bool = False
-    ) -> Tuple[torch.Tensor, Optional[List[torch.Tensor]]]:
+    ) -> Tuple[Optional[torch.Tensor], Optional[List[torch.Tensor]]]:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -65,38 +65,52 @@ class CMPState:
                 of the multiplier for each of the observed_constraints.
         """
 
-        primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
-        dual_lagrangian = 0.0
+        # Check if any of the observed constraints will contribute to the primal and
+        # dual Lagrangians
+        any_primal_contribution = False
+        any_dual_contribution = False
+        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
+            if not constraint_state.skip_dual_contribution:
+                any_dual_contribution = True
+            if not constraint_state.skip_primal_contribution:
+                any_primal_contribution = True
 
-        if return_multipliers:
-            observed_multiplier_values = []
+        if self.loss is None and not any_primal_contribution:
+            # No loss provided, and no observed constraints will contribute to the
+            # primal Lagrangian.
+            primal_lagrangian = None
+        else:
+            # Either a loss was provided, or at least one observed constraint will
+            # contribute to the primal Lagrangian.
+            primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
 
-        for constraint_tuple in self.observed_constraints:
-            if isinstance(constraint_tuple, ConstraintGroup):
-                constraint_group = constraint_tuple
-                constraint_state = constraint_group.state
-            elif isinstance(constraint_tuple, tuple) and len(constraint_tuple) == 2:
-                constraint_group, constraint_state = constraint_tuple
-            else:
-                error_message = f"Received invalid format for observed constraint. Expected {ConstraintGroup} or"
-                error_message += f" {Tuple[ConstraintGroup, ConstraintState]}, but received {type(constraint_tuple)}"
-                raise ValueError(error_message)
+        dual_lagrangian = 0.0 if any_dual_contribution else None
 
+        observed_multiplier_values = []
+
+        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
             multiplier_value, primal_contribution, dual_contribution = constraint_group.compute_lagrangian_contribution(
                 constraint_state=constraint_state
             )
 
-            primal_lagrangian += primal_contribution
-            dual_lagrangian += dual_contribution
+            if not constraint_state.skip_primal_contribution:
+                primal_lagrangian += primal_contribution
+            if not constraint_state.skip_dual_contribution:
+                dual_lagrangian += dual_contribution
 
             if return_multipliers:
                 observed_multiplier_values.append(multiplier_value)
 
-        previous_primal_lagrangian = 0.0 if self._primal_lagrangian is None else self._primal_lagrangian
-        self._primal_lagrangian = primal_lagrangian + previous_primal_lagrangian
+        if primal_lagrangian is not None:
+            # Either a loss was provided, or at least one observed constraint
+            # contributed to the primal Lagrangian.
+            previous_primal_lagrangian = 0.0 if self._primal_lagrangian is None else self._primal_lagrangian
+            self._primal_lagrangian = primal_lagrangian + previous_primal_lagrangian
 
-        previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
-        self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
+        if dual_lagrangian is not None:
+            # Some observed constraints contributed to the dual Lagrangian
+            previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
+            self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
 
         if return_multipliers:
             return self._primal_lagrangian, observed_multiplier_values
