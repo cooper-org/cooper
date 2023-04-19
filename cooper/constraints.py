@@ -58,6 +58,8 @@ class ConstraintGroup:
     """Constraint Group."""
 
     # TODO(gallego-posada): Add documentation
+    # TODO(gallego-posada): add docstring explaining that when passing the multiplier
+    # directly, the other kwargs (shape, dtype, device) are ignored
 
     def __init__(
         self,
