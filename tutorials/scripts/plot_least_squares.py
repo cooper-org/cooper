@@ -1,18 +1,15 @@
-from typing import Tuple, Dict, Any, Union, List
-
 import random
-
-import cooper
-import numpy as np
-import torch
-
-from cooper import CMPState, ConstraintGroup, ConstraintState
-from cooper.optim import SimultaneousConstrainedOptimizer
-
-from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.sampler import RandomSampler, BatchSampler
+from typing import Any, Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, Dataset
+from torch.utils.data.sampler import BatchSampler, RandomSampler
+
+import cooper
+from cooper import CMPState, ConstraintGroup, ConstraintState
+from cooper.optim import SimultaneousConstrainedOptimizer
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -25,7 +22,7 @@ class LinearConstraintSystem(Dataset):
     def __len__(self):
         return self.A.shape[0]
 
-    def __getitem__(self, index: list) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         index = torch.tensor(index, device=DEVICE)
         return self.A[index], self.b[index], index
 
@@ -36,7 +33,6 @@ class LeastSquares(cooper.ConstrainedMinimizationProblem):
         super().__init__()
 
     def compute_cmp_state(self, x: torch.Tensor, A: torch.Tensor, b: torch.Tensor, indices: torch.Tensor) -> CMPState:
-
         # FIX: consitency between functions
         loss = torch.linalg.vector_norm(x) ** 2
         violations = A @ x - b
@@ -46,7 +42,6 @@ class LeastSquares(cooper.ConstrainedMinimizationProblem):
 
 
 def create_linear_system(n_eqs: int, n_vars: int):
-
     # Set seed for reproducibility
     torch.manual_seed(0)
 
@@ -83,7 +78,6 @@ def seed_worker(worker_id):
 
 
 def instantiate_dataloader(A: torch.Tensor, b: torch.Tensor, batch_size: int) -> DataLoader:
-
     # Instantiate Dataset
     linear_system = LinearConstraintSystem(A, b)
 
@@ -109,7 +103,6 @@ def instantiate_dataloader(A: torch.Tensor, b: torch.Tensor, batch_size: int) ->
 
 
 def instantiate_cooper_variables(n_eqs: int, n_vars: int, primal_lr: float, dual_lr: float):
-
     # Create a constraint group for the equality constraints. We use a sparse constraint
     # to be able to update the multipliers only with the observed constraints (i.e. the
     # ones that are active in the current batch)
@@ -136,7 +129,6 @@ def instantiate_cooper_variables(n_eqs: int, n_vars: int, primal_lr: float, dual
 def _to_cpu_numpy(
     x: Union[torch.Tensor, list, dict[str, torch.Tensor]]
 ) -> Union[np.ndarray, list, dict[str, np.ndarray]]:
-
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
     elif isinstance(x, list):
@@ -157,14 +149,12 @@ def solve_least_squares(
     n_eqs: int,
     n_epochs: int,
 ) -> Dict[int, Dict[str, Union[float, np.ndarray]]]:
-
     # Optimal norm
     optimal_norm = x_optim.norm().item() ** 2
 
     # Run the optimization process
     state_history = {}
     for i in range(n_epochs):
-
         # Create empty tensor to accumulate the violation of the observed constraints
         acumulated_violation = torch.zeros(n_eqs, 1, device=DEVICE)
 
@@ -190,7 +180,6 @@ def solve_least_squares(
 
 
 def pipeline(config: Dict[str, Any]):
-
     # Create a random linear system
     A, b, x_optim = create_linear_system(
         n_eqs=config["n_eqs"],
@@ -234,11 +223,9 @@ def _stack_squeeze(x: np.ndarray) -> np.ndarray:
 def plot_results(
     state_history_list: List[Dict[int, Dict[str, Union[float, np.ndarray]]]], experiment_ids: List[str]
 ) -> None:
-
     _, ax = plt.subplots(1, 4, figsize=(20, 4))
 
     for state_history, experiment_id in zip(state_history_list, experiment_ids):
-
         # Plot the results
         iters, loss_hist, multipliers_hist, x_dif_hist, violation_hist = zip(
             *[(k, v["loss"], v["multipliers"], v["x_dif"], v["violation"]) for k, v in state_history.items()]

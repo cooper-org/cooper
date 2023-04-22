@@ -12,7 +12,6 @@ This example illustrates how **Cooper** integrates with:
     - CUDA acceleration,
     - typical machine learning training loops,
     - extracting the value of the Lagrange multipliers from a ``cooper.LagrangianFormulation``.
-
 """
 
 import matplotlib.pyplot as plt
@@ -22,7 +21,6 @@ from style_utils import *
 from torchvision import datasets, transforms
 
 import cooper
-
 from cooper import CMPState, ConstraintGroup, ConstraintState
 from cooper.optim import SimultaneousConstrainedOptimizer
 
@@ -76,7 +74,6 @@ all_metrics = {
 batch_ix = 0
 
 for epoch_num in range(7):
-
     for inputs, targets in train_loader:
         batch_ix += 1
 
@@ -96,7 +93,7 @@ for epoch_num in range(7):
         cmp_state = CMPState(loss=loss, observed_constraints=[ineq_group])
 
         cooper_optimizer.zero_grad()
-        lagrangian = cmp_state.populate_lagrangian()
+        lagrangian_struct = cmp_state.populate_lagrangian()
         cmp_state.backward()
         cooper_optimizer.step()
 

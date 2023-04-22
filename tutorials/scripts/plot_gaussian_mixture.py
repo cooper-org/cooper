@@ -159,9 +159,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     model = torch.nn.Linear(2, 1)
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
-    ineq_group = ConstraintGroup(
-        constraint_type="ineq", shape=1, dtype=torch.float32
-    )
+    ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32)
 
     cmp = MixtureSeparation(ineq_group, is_constrained, use_proxy, const_level)
 
@@ -176,9 +174,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
         )
     else:
 
-        constrained_optimizer = UnconstrainedOptimizer(
-            primal_optimizers=primal_optimizer
-        )
+        constrained_optimizer = UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
 
     for i in range(num_iters):
         constrained_optimizer.zero_grad()
