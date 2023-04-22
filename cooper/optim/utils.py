@@ -9,7 +9,7 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
-from .unconstrained_optimizer import ExtrapolationUnconstrainedOptimizer, UnconstrainedOptimizer
+from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def sanity_check_constraints_and_optimizer(
@@ -56,10 +56,7 @@ def create_optimizer_from_kwargs(
     """
 
     if dual_optimizers is None:
-        if not extrapolation:
-            return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
-        else:
-            return ExtrapolationUnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
 
     optimizer_kwargs = dict(
         primal_optimizers=primal_optimizers,
