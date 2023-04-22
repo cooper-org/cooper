@@ -45,8 +45,8 @@ def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_para
     # ----------------------- First iteration -----------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_struct = cmp_state.populate_lagrangian(return_multipliers=True)
-    lagrangian, observed_multipliers = lagrangian_struct.lagrangian, lagrangian_struct.observed_multipliers
+    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian, observed_multipliers = lagrangian_store.lagrangian, lagrangian_store.observed_multipliers
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -87,8 +87,8 @@ def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_para
     # ----------------------- Second iteration -----------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_struct = cmp_state.populate_lagrangian(return_multipliers=True)
-    lagrangian, observed_multipliers = lagrangian_struct.lagrangian, lagrangian_struct.observed_multipliers
+    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian, observed_multipliers = lagrangian_store.lagrangian, lagrangian_store.observed_multipliers
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(1.3124))

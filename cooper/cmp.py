@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Sequence
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import List, Optional, Tuple, Union
 
@@ -10,6 +11,16 @@ from cooper.constraints import ConstraintGroup, ConstraintState, observed_constr
 # Formulation, and some other classes below, are heavily inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
 # https://github.com/google-research/tensorflow_constrained_optimization
+
+
+@dataclass
+class LagrangianStore:
+    """Stores the value of the (primal) Lagrangian, the dual Lagrangian, as well as the
+    values of the observed multipliers."""
+
+    lagrangian: torch.Tensor
+    dual_lagrangian: Optional[torch.Tensor] = None
+    observed_multipliers: Optional[list[torch.Tensor]] = None
 
 
 class CMPState:
@@ -43,7 +54,7 @@ class CMPState:
         self._primal_lagrangian = None
         self._dual_lagrangian = None
 
-    def populate_lagrangian(self, return_multipliers: bool = False) -> SimpleNamespace:
+    def populate_lagrangian(self, return_multipliers: bool = False) -> LagrangianStore:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -111,11 +122,11 @@ class CMPState:
             previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
             self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
 
-        lagrangian_struct = SimpleNamespace(lagrangian=self._primal_lagrangian, dual_lagrangian=self._dual_lagrangian)
+        lagrangian_store = LagrangianStore(lagrangian=self._primal_lagrangian, dual_lagrangian=self._dual_lagrangian)
         if return_multipliers:
-            lagrangian_struct.observed_multipliers = observed_multiplier_values
+            lagrangian_store.observed_multipliers = observed_multiplier_values
 
-        return lagrangian_struct
+        return lagrangian_store
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with

@@ -93,7 +93,7 @@ for epoch_num in range(7):
         cmp_state = CMPState(loss=loss, observed_constraints=[ineq_group])
 
         cooper_optimizer.zero_grad()
-        lagrangian_struct = cmp_state.populate_lagrangian()
+        lagrangian_store = cmp_state.populate_lagrangian()
         cmp_state.backward()
         cooper_optimizer.step()
 
