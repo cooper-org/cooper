@@ -36,6 +36,19 @@ class UnconstrainedOptimizer:
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
+    def roll(self, cmp_state: CMPState) -> torch.Tensor:
+        # TODO(gallego-posada): Document this
+        """Perform a single optimization step on all primal optimizers."""
+
+        self.zero_grad()
+        lagrangian_store = cmp_state.populate_lagrangian()
+        # For unconstrained problems, the Lagrangian simply corresponds to the loss
+        loss = lagrangian_store.lagrangian
+        loss.backward()
+        self.step()
+
+        return loss
+
     def state_dict(self) -> CooperOptimizerState:
         """Collects the state dicts of the primal optimizers and wraps them in a
         :py:class:`~cooper.optim.CooperOptimizerState` object.

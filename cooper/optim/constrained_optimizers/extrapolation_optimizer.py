@@ -51,86 +51,38 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 Please ensure that all optimizers are extrapolation capable."""
             )
 
-    def step(self, compute_cmp_state_fn: Callable[..., CMPState]):
-        """Performs an extrapolation step on both the primal and dual variables,
-        followed by an update step. ``compute_cmp_state_fn`` is used to populate
-        gradients after the extrapolation step.
+    def step(self, call_extrapolation: bool = False):
+        """Performs an extrapolation step or update step on both the primal and dual
+        variables.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for re-evaluating the objective and
-                constraints when performing alternating updates. Defaults to None.
+            call_extrapolation: Whether to call ``primal_optimizer.extrapolation()`` as
+                opposed to ``primal_optimizer.step()``. Defaults to False.
         """
 
-        if compute_cmp_state_fn is None:
-            raise RuntimeError("`compute_cmp_state_fn` must be provided to step when using extrapolation.")
+        call_method = "extrapolation" if call_extrapolation else "step"
 
-        # Store parameter copy and compute t+1/2 iterates
         for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.extrapolation()  # type: ignore
+            getattr(primal_optimizer, call_method)()  # type: ignore
+            self.dual_step(call_extrapolation=call_extrapolation)
 
-        # Call to dual_step flips sign of gradients, then triggers call to
-        # dual_optimizer.extrapolation and applies post_step_.
-        self.dual_step(call_extrapolation=True)
+    def roll(self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False) -> torch.Tensor:
+        # TODO(gallego-posada): Document this
+        """Perform a single optimization step on all primal optimizers."""
 
         self.zero_grad()
+        cmp_state_pre_extrapolation = compute_cmp_state_fn()
+        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian(return_multipliers=False)
+        cmp_state_pre_extrapolation.backward()
+        self.step(call_extrapolation=True)
 
-        # `compute_cmp_state_fn` is re-evaluated at the extrapolated point since the
-        # state of the primal parameters has been updated.
-        cmp_state_after_extrapolation = compute_cmp_state_fn()
-        _ = cmp_state_after_extrapolation.populate_lagrangian()
+        # Perform an update step
+        self.zero_grad()
+        cmp_state_post_extrapolation = compute_cmp_state_fn()
+        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian(
+            return_multipliers=return_multipliers
+        )
+        cmp_state_post_extrapolation.backward()
+        self.step(call_extrapolation=False)
 
-        # Populate gradients at extrapolation point
-        cmp_state_after_extrapolation.backward()
-
-        # After this, the calls to `step` will update the stored copies of the
-        # parameters with the newly computed gradients.
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
-
-        self.dual_step(call_extrapolation=False)
-
-    def dual_step(self, call_extrapolation: bool = False):
-        """
-        Perform a gradient step on the parameters associated with the dual variables.
-        Since the dual problem involves *maximizing* over the dual variables, we flip
-        the sign of the gradient to perform ascent.
-
-        After being updated by the dual optimizer steps, the multipliers are
-        post-processed (e.g. to ensure feasibility for equality constraints, or to
-        apply dual restarts).
-
-        Args:
-            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
-                opposed to ``dual_optimizer.step()``. This is only relevant for
-                :py:class:`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`
-                and should be left to ``False`` for other ``ConstrainedOptimizer``\\s.
-        """
-        for multiplier in self.multipliers:
-            for param in multiplier.parameters():
-                if param.grad is not None:
-                    # Flip gradients for multipliers to perform ascent.
-                    # We only do the flipping *right before* applying the optimizer
-                    # step to avoid accidental double sign flips.
-                    param.grad.mul_(-1.0)
-
-        for dual_optimizer in self.dual_optimizers:
-            # Update multipliers based on current constraint violations (gradients)
-            # For unobserved constraints the gradient is None, so this is a no-op.
-            if call_extrapolation:
-                dual_optimizer.extrapolation()
-            else:
-                dual_optimizer.step()
-
-        for multiplier in self.multipliers:
-            if isinstance(multiplier, ExplicitMultiplier):
-                # Select the indices of multipliers corresponding to feasible inequality constraints
-                if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
-                    # Feasibility is attained when the violation is negative. Given that
-                    # the gradient sign is flipped, a negative violation corresponds to
-                    # a positive gradient.
-                    feasible_indices = multiplier.weight.grad > 0.0
-
-                    # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
-                    # about the pitfalls of using dual_restars with stateful optimizers.
-
-                    multiplier.post_step_(feasible_indices)
+        return lagrangian_store_post_extrapolation

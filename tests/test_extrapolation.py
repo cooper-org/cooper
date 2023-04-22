@@ -34,6 +34,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
 
     mktensor = testing_utils.mktensor(device=device)
 
+    # -------------------- First full extra-gradient step  --------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
     lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
@@ -56,18 +57,21 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     for multiplier, (_, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
         assert torch.allclose(multiplier.grad, constraint_state.violation)
 
-    cooper_optimizer.step(compute_cmp_state_fn)
+    cooper_optimizer.step(call_extrapolation=True)
+
+    # Perform the actual update step
+    cooper_optimizer.zero_grad()
+    cmp_state = cmp.compute_cmp_state(params)
+    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    cmp_state.backward()
+    cooper_optimizer.step(call_extrapolation=False)
 
     # After performing the update
     assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))
     assert torch.allclose(params.grad, mktensor([-0.0200, -3.8600]))
 
-    cooper_optimizer.zero_grad()
-    cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
-    lagrangian, observed_multipliers = lagrangian_store.lagrangian, lagrangian_store.observed_multipliers
-    cmp_state.backward()
-    cooper_optimizer.step(compute_cmp_state_fn)
+    # -------------------- Second full extra-gradient step  --------------------
+    cooper_optimizer.roll(compute_cmp_state_fn, return_multipliers=True)
 
     assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
     for multiplier, target_value in zip(observed_multipliers, [0.0388, 0.0]):
@@ -99,11 +103,7 @@ def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, 
     )
 
     for step_id in range(1500):
-        cooper_optimizer.zero_grad()
-        cmp_state = cmp.compute_cmp_state(params)
-        _ = cmp_state.populate_lagrangian(return_multipliers=True)
-        cmp_state.backward()
-        cooper_optimizer.step(compute_cmp_state_fn=compute_cmp_state_fn)
+        cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
 
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         # NOTE: allowing for a larger tolerance for ExtraAdam tests to pass

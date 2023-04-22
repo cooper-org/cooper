@@ -3,12 +3,14 @@
 Implementation of the :py:class:`SimultaneousConstrainedOptimizer` class.
 """
 
-from typing import List, Optional, Union
+from types import SimpleNamespace
+from typing import Optional
 
 import torch
 
+from cooper.cmp import CMPState
 from cooper.constraints import ConstraintGroup
-from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
+from cooper.multipliers import MULTIPLIER_TYPE
 from cooper.utils import OneOrSequence
 
 from .constrained_optimizer import ConstrainedOptimizer
@@ -58,4 +60,15 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        self.dual_step()
+        self.dual_step(call_extrapolation=False)
+
+    def roll(self, cmp_state: CMPState, return_multipliers: bool = False) -> SimpleNamespace:
+        # TODO(gallego-posada): Document this
+        """Perform a single optimization step on all primal optimizers."""
+
+        self.zero_grad()
+        lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=return_multipliers)
+        cmp_state.backward()
+        self.step()
+
+        return lagrangian_store
