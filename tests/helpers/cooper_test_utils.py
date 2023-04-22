@@ -71,7 +71,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         return loss_grad, cg0_grad, cg1_grad
 
-    def compute_violations(self, params, existing_cmp_state: Optional[cooper.CMPState] = None) -> cooper.CMPState:
+    def compute_violations(self, params) -> cooper.CMPState:
         """Evaluates the constraint violations for this CMP."""
 
         param_x, param_y = params() if callable(params) else params
@@ -96,11 +96,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         observed_constraints = [(self.constraint_groups[0], cg0_state), (self.constraint_groups[1], cg1_state)]
 
-        if existing_cmp_state:
-            existing_cmp_state.observed_constraints = observed_constraints
-            return existing_cmp_state
-        else:
-            return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
+        return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 
     def compute_cmp_state(self, params):
         """Computes the state of the CMP at the current value of the primal parameters
@@ -113,7 +109,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         cmp_state = cooper.CMPState(loss=loss)
 
         if self.use_ineq_constraints:
-            cmp_state = self.compute_violations(params=(param_x, param_y), existing_cmp_state=cmp_state)
+            violation_cmp_state = self.compute_violations(params=(param_x, param_y))
+            cmp_state.observed_constraints = violation_cmp_state.observed_constraints
 
         return cmp_state
 
