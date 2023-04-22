@@ -30,7 +30,7 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     for step_id in range(1500):
         cooper_optimizer.zero_grad()
         cmp_state = cmp.compute_cmp_state(params)
-        lagrangian = cmp_state.populate_lagrangian()
+        lagrangian_struct = cmp_state.populate_lagrangian()
         cmp_state.backward()
         cooper_optimizer.step()
 
@@ -90,7 +90,7 @@ def test_pipeline_without_cmp(
             observed_constraints = []
 
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
-        lagrangian, multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+        lagrangian_struct = cmp_state.populate_lagrangian(return_multipliers=True)
         cmp_state.backward()
         cooper_optimizer.step()
 

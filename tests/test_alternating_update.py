@@ -43,7 +43,8 @@ def test_manual_alternating(alternating, use_defect_fn, Toy2dCMP_problem_propert
 
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian_struct = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian, observed_multipliers = lagrangian_struct.lagrangian, lagrangian_struct.observed_multipliers
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -75,7 +76,6 @@ def test_manual_alternating(alternating, use_defect_fn, Toy2dCMP_problem_propert
     assert torch.allclose(params, mktensor([0.0, -0.96]))
 
     if alternating:
-
         if use_defect_fn:
             # If we use defect_fn, the loss at this point may not have been recomputed
             pass
@@ -141,7 +141,7 @@ def test_convergence_alternating(
     for step_id in range(1500):
         cooper_optimizer.zero_grad()
         cmp_state = cmp.compute_cmp_state(params)
-        lagrangian, observed_multipliers = cmp_state.populate_lagrangian(return_multipliers=True)
+        _ = cmp_state.populate_lagrangian(return_multipliers=True)
         cmp_state.backward()
         _ = cooper_optimizer.step(
             compute_cmp_state_fn=compute_cmp_state_fn, compute_violations_fn=compute_violations_fn

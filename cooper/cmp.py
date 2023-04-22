@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Sequence
+from types import SimpleNamespace
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -42,9 +43,7 @@ class CMPState:
         self._primal_lagrangian = None
         self._dual_lagrangian = None
 
-    def populate_lagrangian(
-        self, return_multipliers: bool = False
-    ) -> Tuple[Optional[torch.Tensor], Optional[List[torch.Tensor]]]:
+    def populate_lagrangian(self, return_multipliers: bool = False) -> SimpleNamespace:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -112,10 +111,11 @@ class CMPState:
             previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
             self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
 
+        lagrangian_struct = SimpleNamespace(lagrangian=self._primal_lagrangian, dual_lagrangian=self._dual_lagrangian)
         if return_multipliers:
-            return self._primal_lagrangian, observed_multiplier_values
-        else:
-            return self._primal_lagrangian
+            lagrangian_struct.observed_multipliers = observed_multiplier_values
+
+        return lagrangian_struct
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
