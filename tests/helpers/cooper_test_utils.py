@@ -136,11 +136,19 @@ def use_multiple_primal_optimizers(request):
     return request.param
 
 
-def build_params_and_primal_optimizers(
-    use_multiple_primal_optimizers, params_init, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
-):
+def build_params(use_multiple_primal_optimizers, params_init):
     if use_multiple_primal_optimizers:
         params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
+    else:
+        params = torch.nn.Parameter(params_init)
+
+    return params
+
+
+def build_primal_optimizers(
+    params, use_multiple_primal_optimizers, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
+):
+    if use_multiple_primal_optimizers:
 
         if optimizer_names is None:
             optimizer_names = ["SGD", "Adam"] if not extrapolation else ["ExtraSGD", "ExtraAdam"]
@@ -157,7 +165,6 @@ def build_params_and_primal_optimizers(
 
             primal_optimizers.append(optimizer)
     else:
-        params = torch.nn.Parameter(params_init)
 
         if optimizer_names is None:
             optimizer_names = "SGD" if not extrapolation else "ExtraSGD"
@@ -169,7 +176,36 @@ def build_params_and_primal_optimizers(
         else:
             primal_optimizers = getattr(cooper.optim, optimizer_names)([params], **optimizer_kwargs)
 
+    return primal_optimizers
+
+
+def build_params_and_primal_optimizers(
+    use_multiple_primal_optimizers, params_init, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
+):
+    params = build_params(use_multiple_primal_optimizers, params_init)
+    primal_optimizers = build_primal_optimizers(
+        params, use_multiple_primal_optimizers, extrapolation, optimizer_names, optimizer_kwargs
+    )
     return params, primal_optimizers
+
+
+def build_dual_optimizers(
+    is_constrained,
+    constraint_groups,
+    extrapolation=False,
+    dual_optimizer_name="SGD",
+    dual_optimizer_kwargs={"lr": 1e-2},
+):
+    if is_constrained:
+        dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
+        if not extrapolation:
+            dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
+        else:
+            dual_optimizers = getattr(cooper.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
+    else:
+        dual_optimizers = None
+
+    return dual_optimizers
 
 
 def build_cooper_optimizer_for_Toy2dCMP(
@@ -180,16 +216,11 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
-    is_constrained = len(constraint_groups) > 0
 
-    if is_constrained:
-        dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
-        if not extrapolation:
-            dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
-        else:
-            dual_optimizers = getattr(cooper.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
-    else:
-        dual_optimizers = None
+    is_constrained = len(constraint_groups) > 0
+    dual_optimizers = build_dual_optimizers(
+        is_constrained, constraint_groups, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
+    )
 
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
