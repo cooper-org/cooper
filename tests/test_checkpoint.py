@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-"""Tests for checkpointing. This test already verifies that checkpointing works
-for the unconstrained setting."""
+"""Tests for checkpointing of constrained and unconstrained experiments."""
 
 import os
 import tempfile
@@ -12,137 +11,94 @@ import pytest
 import torch
 
 import cooper
-from cooper.utils import validate_state_dicts
-
-
-def train_for_n_steps(coop, cmp, params, n_step=100):
-
-    for _ in range(n_step):
-        coop.zero_grad()
-
-        # When using the unconstrained formulation, lagrangian = loss
-        lagrangian = coop.formulation.compute_lagrangian(cmp.closure, params)
-        coop.formulation.backward(lagrangian)
-
-        coop.step()
 
 
 class Model(torch.nn.Module):
-    def __init__(self, params=None):
+    def __init__(self, params: list):
         super(Model, self).__init__()
 
-        if params is not None:
-            self.register_parameter(name="params", param=torch.nn.Parameter(params))
-        else:
-            self.params = torch.nn.Parameter(torch.tensor([0.0, 0.0]))
+        self.num_params = len(params)
+
+        for i, param in enumerate(params):
+            if not isinstance(param, torch.nn.Parameter):
+                param = torch.nn.Parameter(param)
+            self.register_parameter(name=f"params_{i}", param=param)
 
     def forward(self):
-        return self.params
+        return torch.stack([getattr(self, f"params_{i}") for i in range(self.num_params)])
 
 
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-@pytest.mark.parametrize("use_ineq", [True, False])
-@pytest.mark.parametrize("multiple_optimizers", [True, False])
-def test_checkpoint(aim_device, use_ineq, multiple_optimizers):
-    """
-    Test that checkpointing and loading works for the constrained and
-    unconstrained cases.
-    """
+def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device):
+    """Test checkpointing and loading for constrained and unconstrained cases."""
 
-    model = Model(torch.tensor([0.0, -1.0]))
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
 
-    if multiple_optimizers:
-        primal_optim_cls = [torch.optim.SGD, torch.optim.Adam]
-        primal_optim_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
-    else:
-        primal_optim_cls = torch.optim.SGD
-        primal_optim_kwargs = {"lr": 1e-2, "momentum": 0.3}
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers, Toy2dCMP_params_init
+    )
+    model = Model(params)
 
-    if use_ineq:
-        # Constrained case
-        partial_dual_optim = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-2)
-        partial_dual_sch = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.StepLR, gamma=0.99, step_size=1)
-    else:
-        # Unconstrained case
-        partial_dual_optim = None
-        partial_dual_sch = None
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=primal_optim_cls,
-        primal_init=None,
-        dual_optim_cls=torch.optim.SGD,
-        use_ineq=use_ineq,
-        use_proxy_ineq=False,
-        dual_restarts=True,
-        alternating=False,
-        primal_optim_kwargs=primal_optim_kwargs,
-        dual_optim_kwargs={"lr": 1e-2},
-        primal_model=model,
-        dual_scheduler=partial_dual_sch,
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers, cmp.constraint_groups, dual_optimizer_name="SGD", dual_optimizer_kwargs={"lr": 1e-2}
     )
 
-    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model)
 
-    # Train for 100 steps
-    train_for_n_steps(coop, cmp, model, n_step=100)
+    # ------------ Train the model for 100 steps ------------
+    for _ in range(100):
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
-    form_state_dict_100 = coop.formulation.state_dict()
-    coop_state_dict_100 = coop.state_dict()
+    constrained_optimizer_state_dict_100 = cooper_optimizer.state_dict()
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        torch.save(model_state_dict_100, os.path.join(tmpdirname, "model.pth"))
-        torch.save(form_state_dict_100, os.path.join(tmpdirname, "formulation.pth"))
-        torch.save(coop_state_dict_100, os.path.join(tmpdirname, "coop.pth"))
+        torch.save(model_state_dict_100, os.path.join(tmpdirname, "model.pt"))
+        torch.save(constrained_optimizer_state_dict_100, os.path.join(tmpdirname, "constrained_optimizer.pt"))
 
         del model_state_dict_100
-        del form_state_dict_100
-        del coop_state_dict_100
+        del constrained_optimizer_state_dict_100
 
-        model_state_dict_100 = torch.load(os.path.join(tmpdirname, "model.pth"))
-        form_state_dict_100 = torch.load(os.path.join(tmpdirname, "formulation.pth"))
-        coop_state_dict_100 = torch.load(os.path.join(tmpdirname, "coop.pth"))
+        model_state_dict_100 = torch.load(os.path.join(tmpdirname, "model.pt"))
+        constrained_optimizer_state_dict_100 = torch.load(os.path.join(tmpdirname, "constrained_optimizer.pt"))
 
-    # Train for another 100 steps
-    train_for_n_steps(coop, cmp, model, n_step=100)
+    # ------------ Train for *another* 100 steps ------------
+    for _ in range(100):
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
 
     model_state_dict_200 = model.state_dict()
-    form_state_dict_200 = coop.formulation.state_dict()
-    coop_state_dict_200 = coop.state_dict()
+    constrained_optimizer_state_dict_200 = cooper_optimizer.state_dict()
 
-    # Reload from 100-step checkpoint
-    loaded_model = Model(None)
+    # ------------ Reload from 100-step checkpoint ------------
+    new_cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
+
+    loaded_params, loaded_primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers, Toy2dCMP_params_init
+    )
+    loaded_model = Model(params=loaded_params)
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device)
 
-    if multiple_optimizers:
-        loaded_primal_optimizers = []
-        for p, cls, kwargs in zip(params, primal_optim_cls, primal_optim_kwargs):
-            loaded_primal_optimizers.append(cls([p], **kwargs))
-    else:
-        loaded_primal_optimizers = [primal_optim_cls(loaded_model.parameters(), **primal_optim_kwargs)]
+    loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(
+        is_constrained=use_ineq_constraints, constraint_groups=new_cmp.constraint_groups
+    )
 
-    if use_ineq:
-        loaded_formulation = cooper.LagrangianFormulation(cmp)
-    else:
-        loaded_formulation = cooper.UnconstrainedFormulation(cmp)
-    loaded_formulation.load_state_dict(form_state_dict_100)
-
-    loaded_coop = cooper.optim.load_cooper_optimizer_from_state_dict(
-        cooper_optimizer_state=coop_state_dict_100,
-        formulation=loaded_formulation,
+    loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
+        cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
-        dual_optimizer_class=partial_dual_optim,
-        dual_scheduler_class=partial_dual_sch,
+        dual_optimizers=loaded_dual_optimizers,
+        constraint_groups=new_cmp.constraint_groups,
     )
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
-    train_for_n_steps(loaded_coop, cmp, loaded_model, n_step=100)
+    compute_cmp_state_fn = lambda: new_cmp.compute_cmp_state(loaded_model)
+    for _ in range(100):
+        cmp_state, lagrangian_store = loaded_constrained_optimizer.roll(compute_cmp_state_fn)
 
+    # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
-    assert validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
-    assert validate_state_dicts(loaded_formulation.state_dict(), form_state_dict_200)
+    assert cooper.utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
     # These are ConstrainedOptimizerState objects and not dicts
-    assert loaded_coop.state_dict() == coop_state_dict_200
+    assert loaded_constrained_optimizer.state_dict() == constrained_optimizer_state_dict_200
