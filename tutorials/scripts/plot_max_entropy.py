@@ -63,19 +63,17 @@ dual_parameters = []
 dual_optimizer = cooper.optim.ExtraSGD(dual_parameters, lr=5e-2)
 
 # Wrap the formulation and both optimizers inside a ExtrapolationConstrainedOptimizer
-optimizer = cooper.optim.ExtrapolationConstrainedOptimizer(
+cooper_optimizer = cooper.optim.ExtrapolationConstrainedOptimizer(
     constraint_groups=cmp.all_constraints,
     primal_optimizers=primal_optimizer,
     dual_optimizers=dual_optimizer,
 )
 
 state_history = {}
-for i in range(5000):
-    optimizer.zero_grad()
-    cmp_state = cmp.compute_cmp_state(log_probs)
-    _ = cmp_state.populate_lagrangian()
-    cmp_state.backward()
-    optimizer.step(compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs))
+for i in range(3500):
+    cmp_state, lagrangian_store = cooper_optimizer.roll(
+        compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs), return_multipliers=True
+    )
 
     state_history[i] = {
         "loss": cmp_state.loss.item(),

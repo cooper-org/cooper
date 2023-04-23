@@ -27,12 +27,13 @@ from cooper.optim import SimultaneousConstrainedOptimizer
 np.random.seed(0)
 torch.manual_seed(0)
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST("data", train=True, download=True, transform=data_transforms),
     batch_size=256,
-    num_workers=4,
+    num_workers=0,
     pin_memory=torch.cuda.is_available(),
 )
 
@@ -40,36 +41,21 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 # Create a Logistic Regression model
 model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
-if torch.cuda.is_available():
-    model = model.cuda()
-primal_optimizer = torch.optim.Adagrad(model.parameters(), lr=5e-3)
+model = model.to(DEVICE)
+
+primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
 # Define the constraint group for the norm constraint
-ineq_group = ConstraintGroup(
-    constraint_type="ineq",
-    shape=1,
-    dtype=torch.float32,
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-)
+ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, device=DEVICE)
 
 # Instantiate Pytorch optimizer class for the dual variables
 dual_optimizer = torch.optim.SGD([ineq_group.multiplier.weight], lr=1e-3)
 
-# Create a ConstrainedOptimizer for performing simultaneous updates based on the
-# selected primal and dual optimizers.
 cooper_optimizer = SimultaneousConstrainedOptimizer(
-    constraint_groups=ineq_group,
-    primal_optimizers=primal_optimizer,
-    dual_optimizers=dual_optimizer,
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
 )
 
-all_metrics = {
-    "batch_ix": [],
-    "train_loss": [],
-    "train_acc": [],
-    "ineq_multiplier": [],
-    "ineq_defect": [],
-}
+all_metrics = {"batch_ix": [], "train_loss": [], "train_acc": [], "ineq_multiplier": [], "ineq_defect": []}
 
 batch_ix = 0
 

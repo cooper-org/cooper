@@ -85,28 +85,32 @@ def plot_pane(ax, inputs, x1, x2, achieved_const, titles, colors):
     ax.set_title(titles[idx] + " - Pred. Blue Prop.: " + const_str)
 
 
+class UnconstrainedMixtureSeparation(cooper.ConstrainedMinimizationProblem):
+    def __init__(self):
+        super().__init__()
+
+    def compute_cmp_state(self, model, inputs, targets):
+        logits = model(inputs)
+        loss = bce_loss(logits.flatten(), targets)
+        return CMPState(loss=loss)
+
+
 class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
     """
     Implements CMP for separating the MoG dataset with a linear predictor.
 
     Args:
-        is_constrained: Flag to apply or not the constraint on the percentage of
-            points predicted as belonging to the blue class
         use_proxy: Flag to use proxy-constraints. If ``True``, we use a hinge
             relaxation. Defaults to ``False``.
-        const_level: Minimum proportion of points to be predicted as belonging
-            to the blue class. Ignored when ``is_constrained==False``. Defaults
-            to ``0.7``.
+        const_level: Minimum proportion of points to be predicted as belonging to the
+            blue class. Ignored when ``is_constrained==False``. Defaults to ``0.7``.
     """
 
-    def __init__(
-        self, ineq_group: ConstraintGroup, is_constrained: bool, use_proxy: bool = False, const_level: float = 0.7
-    ):
+    def __init__(self, ineq_group: ConstraintGroup, use_proxy: bool = False, const_level: float = 0.7):
 
         super().__init__()
 
         self.ineq_group = ineq_group
-        self.is_constrained = is_constrained
         self.const_level = const_level
         self.use_proxy = use_proxy
 
@@ -115,35 +119,28 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         logits = model(inputs)
         loss = bce_loss(logits.flatten(), targets)
 
-        if not self.is_constrained:
-            # Unconstrained problem of separating two classes
-            state = CMPState(
-                loss=loss,
-            )
+        # Separating classes s.t. predicting at least const_level as class 0
+
+        # Hinge approximation of the rate
+        probs = torch.sigmoid(logits)
+        hinge = torch.mean(torch.max(torch.zeros_like(probs), 1 - probs))
+
+        # level - proxy_ineq_defect <= 0
+        hinge_defect = self.const_level - hinge
+
+        if not self.use_proxy:
+            self.ineq_group.state = ConstraintState(violation=hinge_defect)
+            proxy_ineq_defect = None
         else:
-            # Separating classes s.t. predicting at least const_level as class 0
+            # Use non-proxy defects to update the Lagrange multipliers
+            # Proportion of elements in class 0 is the non-proxy defect
+            classes = logits >= 0.0
+            prop_0 = torch.sum(classes == 0) / targets.numel()
+            ineq_defect = self.const_level - prop_0
+            proxy_ineq_defect = hinge_defect
+            self.ineq_group.state = ConstraintState(violation=proxy_ineq_defect, strict_violation=ineq_defect)
 
-            # Hinge approximation of the rate
-            probs = torch.sigmoid(logits)
-            hinge = torch.mean(torch.max(torch.zeros_like(probs), 1 - probs))
-
-            # level - proxy_ineq_defect <= 0
-            hinge_defect = self.const_level - hinge
-
-            if not self.use_proxy:
-                self.ineq_group.state = ConstraintState(violation=hinge_defect)
-                proxy_ineq_defect = None
-            else:
-                # Use non-proxy defects to update the Lagrange multipliers
-
-                # Proportion of elements in class 0 is the non-proxy defect
-                classes = logits >= 0.0
-                prop_0 = torch.sum(classes == 0) / targets.numel()
-                ineq_defect = self.const_level - prop_0
-                proxy_ineq_defect = hinge_defect
-                self.ineq_group.state = ConstraintState(violation=proxy_ineq_defect, strict_violation=ineq_defect)
-
-            state = CMPState(loss=loss, observed_constraints=[self.ineq_group])
+        state = CMPState(loss=loss, observed_constraints=[self.ineq_group])
 
         return state
 
@@ -159,35 +156,21 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     model = torch.nn.Linear(2, 1)
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
-    ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32)
-
-    cmp = MixtureSeparation(ineq_group, is_constrained, use_proxy, const_level)
-
     if is_constrained:
-
+        ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32)
+        cmp = MixtureSeparation(ineq_group, use_proxy, const_level)
         dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7)
 
-        constrained_optimizer = SimultaneousConstrainedOptimizer(
-            constraint_groups=ineq_group,
-            primal_optimizers=primal_optimizer,
-            dual_optimizers=dual_optimizer,
+        cooper_optimizer = SimultaneousConstrainedOptimizer(
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
         )
     else:
+        cmp = UnconstrainedMixtureSeparation()
+        cooper_optimizer = UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
 
-        constrained_optimizer = UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
-
-    for i in range(num_iters):
-        constrained_optimizer.zero_grad()
-        cmp_state = cmp.compute_cmp_state(model, inputs, targets)
-        if is_constrained:
-            _ = cmp_state.populate_lagrangian()
-            cmp_state.backward()
-        else:
-            # No Lagrangian in the unconstrained case
-            loss = cmp_state.loss
-            loss.backward()
-
-        constrained_optimizer.step()
+    for _ in range(num_iters):
+        compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model, inputs, targets)
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
 
     # Number of elements predicted as class 0 in the train set after training
     logits = model(inputs)
@@ -208,7 +191,6 @@ lr = 2e-2
 num_iters = 5000
 
 for idx, name in enumerate(titles):
-
     model, achieved_const = train(name, inputs, labels, lr=lr, num_iters=num_iters, const_level=const_level)
 
     # Compute decision boundary
