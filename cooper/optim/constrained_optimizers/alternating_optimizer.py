@@ -83,6 +83,16 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
             # populated the loss.
             if compute_violations_fn is not None:
                 new_cmp_state = compute_violations_fn()
+
+                if new_cmp_state.loss is None:
+                    raise RuntimeError("Expected `compute_violations_fn` to not populate the loss.")
+
+                # We copy the loss evaluated during the primal update so users can
+                # access it for logging purposes.
+                if new_cmp_state.misc is None:
+                    new_cmp_state.misc = {}
+                new_cmp_state.misc["previous_loss"] = cmp_state.loss.item()
+
             else:
                 new_cmp_state = compute_cmp_state_fn()
 
