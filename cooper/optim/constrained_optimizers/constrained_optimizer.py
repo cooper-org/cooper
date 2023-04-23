@@ -143,7 +143,7 @@ class ConstrainedOptimizer:
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.
-                    feasible_indices = multiplier.weight.grad > 0.0
+                    feasible_indices = multiplier.weight.grad >= 0.0
 
                     # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
                     # about the pitfalls of using dual_restars with stateful optimizers.
