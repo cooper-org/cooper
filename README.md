@@ -38,7 +38,7 @@ training a Logistic Regression clasifier on the MNIST dataset. The model is
 constrained so that the squared L2 norm of its parameters is less than 1.
 
 This example illustrates how **Cooper** integrates with:
-- constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousConstrainedOptimizer``
+- constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousOptimizer``
 - models defined using a ``torch.nn.Module``,
 - CUDA acceleration,
 - typical machine learning training loops,
@@ -65,7 +65,7 @@ dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
 
 # Create a ConstrainedOptimizer for performing simultaneous updates based on the
 # formulation, and the selected primal and dual optimizers.
-cooper_optimizer = cooper.SimultaneousConstrainedOptimizer(
+cooper_optimizer = cooper.SimultaneousOptimizer(
     formulation, primal_optimizer, dual_optimizer
 )
 

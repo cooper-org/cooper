@@ -9,7 +9,7 @@ from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
 from cooper import CMPState, ConstraintGroup, ConstraintState
-from cooper.optim import SimultaneousConstrainedOptimizer
+from cooper.optim import SimultaneousOptimizer
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -117,7 +117,7 @@ def instantiate_cooper_variables(n_eqs: int, n_vars: int, primal_lr: float, dual
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr)  # , momentum=0.7)
     dual_optimizer = torch.optim.SGD(eq_group.multiplier.parameters(), lr=dual_lr)  # , momentum=0.7)
 
-    optimizer = SimultaneousConstrainedOptimizer(
+    optimizer = SimultaneousOptimizer(
         constraint_groups=eq_group,
         primal_optimizers=primal_optimizer,
         dual_optimizers=dual_optimizer,
@@ -144,7 +144,7 @@ def solve_least_squares(
     eq_group: ConstraintGroup,
     cmp: cooper.ConstrainedMinimizationProblem,
     x: torch.Tensor,
-    optimizer: SimultaneousConstrainedOptimizer,
+    optimizer: SimultaneousOptimizer,
     x_optim: torch.Tensor,
     n_eqs: int,
     n_epochs: int,

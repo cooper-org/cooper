@@ -39,7 +39,7 @@ from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
 from cooper import CMPState, ConstraintGroup, ConstraintState
-from cooper.optim import SimultaneousConstrainedOptimizer, UnconstrainedOptimizer
+from cooper.optim import SimultaneousOptimizer, UnconstrainedOptimizer
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -161,7 +161,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
         cmp = MixtureSeparation(ineq_group, use_proxy, const_level)
         dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7)
 
-        cooper_optimizer = SimultaneousConstrainedOptimizer(
+        cooper_optimizer = SimultaneousOptimizer(
             primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
         )
     else:

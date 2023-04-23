@@ -12,7 +12,7 @@ from matplotlib.gridspec import GridSpec
 
 import cooper
 from cooper import ConstraintGroup
-from cooper.optim import SimultaneousConstrainedOptimizer
+from cooper.optim import SimultaneousOptimizer
 
 
 class Toy2DWidget:
@@ -267,7 +267,7 @@ class Toy2DWidget:
         dual_opt_class = getattr(cooper.optim, dual_optim) if extrapolation else getattr(torch.optim, dual_optim)
         dual_optimizer = dual_opt_class([self.ineq_group.multiplier.weight], **dual_kwargs)
 
-        constrained_optimizer = SimultaneousConstrainedOptimizer(
+        constrained_optimizer = SimultaneousOptimizer(
             constraint_groups=self.ineq_group,
             primal_optimizers=primal_optimizer,
             dual_optimizers=dual_optimizer,

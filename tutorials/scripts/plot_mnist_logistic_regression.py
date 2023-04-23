@@ -7,7 +7,7 @@ training a Logistic Regression clasifier on the MNIST dataset. The model is
 constrained so that the squared L2 norm of its parameters is less than 1.
 
 This example illustrates how **Cooper** integrates with:
-    -  constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousConstrainedOptimizer``
+    -  constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousOptimizer``
     -  models defined using a ``torch.nn.Module``,
     - CUDA acceleration,
     - typical machine learning training loops,
@@ -22,7 +22,7 @@ from torchvision import datasets, transforms
 
 import cooper
 from cooper import CMPState, ConstraintGroup, ConstraintState
-from cooper.optim import SimultaneousConstrainedOptimizer
+from cooper.optim import SimultaneousOptimizer
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -51,7 +51,7 @@ ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, device=DEVICE)
 # Instantiate Pytorch optimizer class for the dual variables
 dual_optimizer = torch.optim.SGD([ineq_group.multiplier.weight], lr=1e-3)
 
-cooper_optimizer = SimultaneousConstrainedOptimizer(
+cooper_optimizer = SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
 )
 

@@ -73,7 +73,7 @@ def create_optimizer_from_kwargs(
     elif alternating == "DualPrimal":
         return constrained_optimizers.AlternatingDualPrimalOptimizer(**optimizer_kwargs)
     else:
-        return constrained_optimizers.SimultaneousConstrainedOptimizer(**optimizer_kwargs)
+        return constrained_optimizers.SimultaneousOptimizer(**optimizer_kwargs)
 
 
 def load_cooper_optimizer_from_state_dict(

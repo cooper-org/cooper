@@ -86,7 +86,7 @@ the definition of a CMP can be found under the entry for :ref:`cmp`.
         # Note that dual_optimizer is "partly instantiated", *without* parameters
         dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3, momentum=0.9)
 
-        constrained_optimizer = cooper.SimultaneousConstrainedOptimizer(
+        constrained_optimizer = cooper.SimultaneousOptimizer(
             formulation=formulation,
             primal_optimizers=primal_optimizer,
             dual_optimizer=dual_optimizer,

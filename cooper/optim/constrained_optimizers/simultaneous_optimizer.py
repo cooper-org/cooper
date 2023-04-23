@@ -1,6 +1,6 @@
 # coding: utf8
 """
-Implementation of the :py:class:`SimultaneousConstrainedOptimizer` class.
+Implementation of the :py:class:`SimultaneousOptimizer` class.
 """
 
 from typing import Callable, Optional
@@ -15,7 +15,7 @@ from cooper.utils import OneOrSequence
 from .constrained_optimizer import ConstrainedOptimizer
 
 
-class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
+class SimultaneousOptimizer(ConstrainedOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing simultaneous gradient updates to the primal and dual variables.
     """
