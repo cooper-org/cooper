@@ -39,9 +39,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         self.constraint_groups = []
         if self.use_ineq_constraints:
+            multiplier_kwargs = {"shape": 1, "device": device}
+            constraint_kwargs = {"constraint_type": "ineq", "formulation_type": "lagrangian"}
             self.constraint_groups = [
-                cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device),
-                cooper.ConstraintGroup(constraint_type="ineq", formulation_type="lagrangian", shape=1, device=device),
+                cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
+                cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
             ]
 
     def analytical_gradients(self, params):

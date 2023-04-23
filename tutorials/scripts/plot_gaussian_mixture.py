@@ -157,7 +157,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
     if is_constrained:
-        ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32)
+        ineq_group = ConstraintGroup(constraint_type="ineq", multiplier_kwargs={"shape": 1})
         cmp = MixtureSeparation(ineq_group, use_proxy, const_level)
         dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7)
 

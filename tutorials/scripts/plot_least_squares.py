@@ -106,7 +106,8 @@ def instantiate_cooper_variables(n_eqs: int, n_vars: int, primal_lr: float, dual
     # Create a constraint group for the equality constraints. We use a sparse constraint
     # to be able to update the multipliers only with the observed constraints (i.e. the
     # ones that are active in the current batch)
-    eq_group = ConstraintGroup(constraint_type="eq", shape=n_eqs, dtype=torch.float32, device=DEVICE, is_sparse=True)
+    multiplier_kwargs = {"shape": n_eqs, "device": DEVICE, "is_indexed": True}
+    eq_group = ConstraintGroup(constraint_type="eq", multiplier_kwargs=multiplier_kwargs)
 
     # Define the problem with the constraint group
     cmp = LeastSquares(eq_group=eq_group)

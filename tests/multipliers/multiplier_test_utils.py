@@ -12,13 +12,13 @@ def random_seed():
     return 1516516984916
 
 
-@pytest.fixture(params=[(100, 1), (200, 4)])
+@pytest.fixture(params=[(100,), (1000,)])
 def multiplier_shape(request):
     return request.param
 
 
 @pytest.fixture
-def init_tensor(multiplier_shape, random_seed):
+def _init_tensor(multiplier_shape, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
     return torch.randn(*multiplier_shape, generator=generator)
 
@@ -36,7 +36,11 @@ def feasible_indices(multiplier_shape, random_seed):
 
 def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier_shape, all_indices, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
-    new_multiplier = explicit_multiplier_class(init=torch.randn(*multiplier_shape, generator=generator))
+
+    init = torch.randn(*multiplier_shape, generator=generator)
+    if explicit_multiplier_class == multipliers.IndexedMultiplier:
+        init = init.unsqueeze(1)
+    new_multiplier = explicit_multiplier_class(init=init)
 
     # Save to file to force reading from file so we can ensure correct loading
     tmp = tempfile.NamedTemporaryFile()
@@ -49,8 +53,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
     assert multiplier.implicit_constraint_type == new_multiplier.implicit_constraint_type
     assert multiplier.restart_on_feasible == new_multiplier.restart_on_feasible
 
-    is_sparse = isinstance(multiplier, multipliers.SparseMultiplier)
-    if is_sparse:
+    if isinstance(multiplier, multipliers.IndexedMultiplier):
         assert torch.allclose(multiplier(all_indices), new_multiplier(all_indices))
     else:
         assert torch.allclose(multiplier(), new_multiplier())

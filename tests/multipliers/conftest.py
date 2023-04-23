@@ -1,1 +1,1 @@
-from multiplier_test_utils import all_indices, feasible_indices, init_tensor, multiplier_shape, random_seed
+from multiplier_test_utils import _init_tensor, all_indices, feasible_indices, multiplier_shape, random_seed

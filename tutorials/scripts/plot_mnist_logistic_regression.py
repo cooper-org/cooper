@@ -46,10 +46,10 @@ model = model.to(DEVICE)
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
 # Define the constraint group for the norm constraint
-ineq_group = ConstraintGroup(constraint_type="ineq", shape=1, device=DEVICE)
+ineq_group = ConstraintGroup(constraint_type="ineq", multiplier_kwargs={"shape": 1, "device": DEVICE})
 
 # Instantiate Pytorch optimizer class for the dual variables
-dual_optimizer = torch.optim.SGD([ineq_group.multiplier.weight], lr=1e-3)
+dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=1e-3)
 
 cooper_optimizer = SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
@@ -84,14 +84,13 @@ for epoch_num in range(7):
         cooper_optimizer.step()
 
         # Extract the value of the Lagrange multiplier associated with the constraint
-        # The dual variables are stored and updated internally by Cooper
-        lag_multiplier = ineq_group.multiplier
+        multiplier_value = ineq_group.multiplier()
 
         if batch_ix % 3 == 0:
             all_metrics["batch_ix"].append(batch_ix)
             all_metrics["train_loss"].append(loss.item())
             all_metrics["train_acc"].append(accuracy.item())
-            all_metrics["ineq_multiplier"].append(lag_multiplier.weight.item())
+            all_metrics["ineq_multiplier"].append(multiplier_value.item())
             all_metrics["ineq_defect"].append(constraint_defect.item())
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))

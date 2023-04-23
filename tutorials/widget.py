@@ -20,7 +20,7 @@ class Toy2DWidget:
         self,
         cmp_class,
         cmp_kwargs={
-            "ineq_group": ConstraintGroup(constraint_type="ineq", shape=1, dtype=torch.float32, device="cpu"),
+            "ineq_group": ConstraintGroup(constraint_type="ineq", multiplier_kwargs={"shape": 1, "device": "cpu"}),
         },
         problem_type=None,
         epsilon=None,

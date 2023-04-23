@@ -30,8 +30,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
         self.target_mean = target_mean
-        self.mean_constraint = ConstraintGroup(constraint_type="eq", shape=1, device=DEVICE)
-        self.sum_constraint = ConstraintGroup(constraint_type="eq", shape=1, device=DEVICE)
+
+        multiplier_kwargs = {"shape": 1, "device": DEVICE}
+        self.mean_constraint = ConstraintGroup(constraint_type="eq", multiplier_kwargs=multiplier_kwargs)
+        self.sum_constraint = ConstraintGroup(constraint_type="eq", multiplier_kwargs=multiplier_kwargs)
+
         self.all_constraints = [self.sum_constraint, self.mean_constraint]
 
         super().__init__()
