@@ -88,6 +88,7 @@ def load_cooper_optimizer_from_state_dict(
     optimizers and constraint groups or multipliers.
     """
 
+    # Load primal optimizers
     primal_optimizers = ensure_sequence(primal_optimizers)
     primal_optimizer_states = cooper_optimizer_state.primal_optimizer_states
 
@@ -97,6 +98,7 @@ def load_cooper_optimizer_from_state_dict(
     for primal_optimizer, primal_state in zip(primal_optimizers, primal_optimizer_states):
         primal_optimizer.load_state_dict(primal_state)
 
+    # Load dual optimizers
     dual_optimizer_states = cooper_optimizer_state.dual_optimizer_states
     if dual_optimizers is None:
         if dual_optimizer_states is not None:
@@ -113,19 +115,21 @@ def load_cooper_optimizer_from_state_dict(
         for dual_optimizer, dual_state in zip(dual_optimizers, dual_optimizer_states):
             dual_optimizer.load_state_dict(dual_state)
 
-    if multipliers is not None:
-        multipliers = ensure_sequence(multipliers)
-    else:
+    # Load multipliers
+    multiplier_states = cooper_optimizer_state.multiplier_states
+
+    if multipliers is None:
         multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
+    else:
+        multipliers = ensure_sequence(multipliers)
 
-    if len(primal_optimizer_states) != len(multipliers):
-        raise ValueError("The number of multipliers does not match the number of multiplier states.")
-
-    if len(multipliers) > 0:
-        if cooper_optimizer_state.multiplier_states is None:
+    if multiplier_states is None:
+        if len(multipliers) > 0:
             raise ValueError("Unable to load multiplier states since state dict does not contain `multiplier_states`.")
-
-        for multiplier, multiplier_state in zip(multipliers, cooper_optimizer_state.multiplier_states):
+    else:
+        if len(multiplier_states) != len(multipliers):
+            raise ValueError("The number of multipliers does not match the number of multiplier states.")
+        for multiplier, multiplier_state in zip(multipliers, multiplier_states):
             multiplier.load_state_dict(multiplier_state)
 
     # Since we have extracted the multiplier information above, we discard the constraint_groups below
