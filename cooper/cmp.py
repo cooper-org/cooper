@@ -128,6 +128,13 @@ class CMPState:
 
         return lagrangian_store
 
+    def purge_lagrangian(self, purge_primal: bool, purge_dual: bool) -> None:
+        """Purge the accumulated Lagrangian contributions."""
+        if purge_primal:
+            self._primal_lagrangian = None
+        if purge_dual:
+            self._dual_lagrangian = None
+
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the primal variables."""
@@ -135,7 +142,7 @@ class CMPState:
             self._primal_lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated _primal_lagrangian
-        self._primal_lagrangian = None
+        self.purge_lagrangian(purge_primal=True, purge_dual=False)
 
     def dual_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -144,7 +151,7 @@ class CMPState:
             self._dual_lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated _dual_lagrangian
-        self._dual_lagrangian = None
+        self.purge_lagrangian(purge_primal=False, purge_dual=True)
 
     def backward(self) -> None:
         """Computes the gradient of the Lagrangian with respect to both the primal and
