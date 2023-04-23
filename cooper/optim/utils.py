@@ -5,6 +5,7 @@ import torch
 
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.optim.constrained_optimizers.constrained_optimizer import ALTERNATING_TYPE
 from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
@@ -40,7 +41,7 @@ def sanity_check_constraints_and_optimizer(
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     extrapolation: bool,
-    alternating: bool,
+    alternating: ALTERNATING_TYPE,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
