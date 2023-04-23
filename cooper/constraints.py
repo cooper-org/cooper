@@ -27,11 +27,11 @@ class ConstraintState:
             proposal of :cite:t:`cotter2019JMLR`.
         constraint_features: The features of the constraint. This is used to evaluate
             the lagrange multiplier associated with a constraint group. For example,
-            A `SparseMultiplier` expects the indices of the constraints whose Lagrange
+            An `IndexedMultiplier` expects the indices of the constraints whose Lagrange
             multipliers are to be retrieved; while an `ImplicitMultiplier` expects
             general tensor-valued features for the constraints. This field is not used
             for `DenseMultiplier`//s.
-            This can be used in conjunction with a `SparseMultiplier` to indicate the
+            This can be used in conjunction with an `IndexedMultiplier` to indicate the
             measurement of the violation for only a subset of the constraints within a
             `ConstraintGroup`.
         skip_primal_conribution: When `True`, we ignore the contribution of the current
@@ -67,10 +67,7 @@ class ConstraintGroup:
         formulation_type: Optional[FORMULATION_TYPE] = "lagrangian",
         formulation_kwargs: Optional[dict] = {},
         multiplier: Optional[multipliers.MULTIPLIER_TYPE] = None,
-        shape: Optional[int] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
-        is_sparse: Optional[bool] = False,
+        multiplier_kwargs: Optional[dict] = {},
     ):
 
         self._state: ConstraintState = None
@@ -79,9 +76,7 @@ class ConstraintGroup:
         self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
         if multiplier is None:
-            multiplier = multipliers.build_explicit_multiplier(
-                constraint_type, shape=shape, dtype=dtype, device=device, is_sparse=is_sparse
-            )
+            multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
         self.sanity_check_multiplier(multiplier)
         self.multiplier = multiplier
 
@@ -120,7 +115,7 @@ class ConstraintGroup:
 
     @state.setter
     def state(self, value: ConstraintState) -> None:
-        if isinstance(self.multiplier, (multipliers.SparseMultiplier, multipliers.ImplicitMultiplier)):
+        if isinstance(self.multiplier, (multipliers.IndexedMultiplier, multipliers.ImplicitMultiplier)):
             if value.constraint_features is None:
                 raise ValueError(f"Multipliers of type {type(self.multiplier)} expect constraint features.")
 

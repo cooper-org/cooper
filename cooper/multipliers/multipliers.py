@@ -144,8 +144,8 @@ class DenseMultiplier(ExplicitMultiplier):
     in the group are measured constantly.
 
     For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
-    one constraint per training example) you may consider using a
-    :py:class:`~cooper.multipliers.SparseMultiplier`.
+    one constraint per training example) you may consider using an
+    :py:class:`~cooper.multipliers.IndexedMultiplier`.
     """
 
     def forward(self):
@@ -156,8 +156,8 @@ class DenseMultiplier(ExplicitMultiplier):
         return f"DenseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
 
-class SparseMultiplier(ExplicitMultiplier):
-    """Sparse multipliers extend the functionality of
+class IndexedMultiplier(ExplicitMultiplier):
+    """Indexed multipliers extend the functionality of
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
     constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
@@ -165,10 +165,17 @@ class SparseMultiplier(ExplicitMultiplier):
 
     In such cases, it might be computationally prohibitive to measure the value for all
     the constraints in the :py:class:`~cooper.constraints.ConstraintGroup` and one may
-    typically resort to sampling. :py:class:`~cooper.multipliers.SparseMultiplier`\\s
+    typically resort to sampling. :py:class:`~cooper.multipliers.IndexedMultiplier`\\s
     enable time-efficient retrieval of the multipliers for the sampled constraints only,
-    and memory-efficient sparse gradients.
+    and memory-efficient sparse gradients (on GPU).
     """
+
+    def __init__(self, init: torch.Tensor, *args, **kwargs):
+        super(IndexedMultiplier, self).__init__(init=init, *args, **kwargs)
+        self.last_seen_mask = torch.zeros_like(init, dtype=torch.bool)
+
+        # Backend for sparse gradients only supported on GPU.
+        self.use_sparse_gradient = torch.cuda.is_available()
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
@@ -178,10 +185,31 @@ class SparseMultiplier(ExplicitMultiplier):
             # torch.nn.functional.embedding and *not* as masks.
             raise ValueError("Indices must be of type torch.long.")
 
-        return torch.nn.functional.embedding(indices, self.weight, sparse=True)
+        # Mark the corresponding constraints as "seen" since the last multiplier update.
+        self.last_seen_mask[indices] = True
+
+        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=self.use_sparse_gradient)
+
+        # Flatten multiplier values to 1D since Embedding works with 2D tensors.
+        return torch.flatten(multiplier_values)
 
     def __repr__(self):
-        return f"SparseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
+        return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
+
+    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
+
+        if feasible_indices is None:
+            feasible_filter = None
+        else:
+            # Only consider a constraint feasible if it was seen since the last step.
+            feasible_mask = torch.zeros_like(self.last_seen_mask)
+            feasible_mask[feasible_indices] = True
+            feasible_filter = feasible_mask & self.last_seen_mask
+
+        super().post_step_(feasible_indices=feasible_filter)
+
+        # Clear the contents of the seen mask.
+        self.last_seen_mask *= False
 
 
 class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
