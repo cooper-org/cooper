@@ -8,7 +8,7 @@ from typing import Callable, Optional
 
 import torch
 
-from cooper.cmp import CMPState
+from cooper.cmp import CMPState, LagrangianStore
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
 from cooper.utils import OneOrSequence
@@ -39,7 +39,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         compute_cmp_state_fn: Callable[..., CMPState],
         compute_violations_fn: Optional[Callable[..., CMPState]] = None,
         return_multipliers: bool = False,
-    ):
+    ) -> tuple[CMPState, LagrangianStore]:
         """Performs a primal-dual alternating step where the primal variables are
         updated first, and the dual variables are updated based on the constraint
         violations at the updated primal point.
@@ -84,7 +84,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
             if compute_violations_fn is not None:
                 new_cmp_state = compute_violations_fn()
 
-                if new_cmp_state.loss is None:
+                if new_cmp_state.loss is not None:
                     raise RuntimeError("Expected `compute_violations_fn` to not populate the loss.")
 
                 # We copy the loss evaluated during the primal update so users can
@@ -110,7 +110,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         # Purge the primal lagrangian to avoid reusing it in the next primal update
         new_cmp_state.purge_lagrangian(purge_primal=True, purge_dual=False)
 
-        return lagrangian_store_post_primal_update
+        return new_cmp_state, lagrangian_store_post_primal_update
 
 
 class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
@@ -131,7 +131,9 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
     def step(self):
         pass
 
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False):
+    def roll(
+        self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
+    ) -> tuple[CMPState, LagrangianStore]:
         """Performs a dual-primal alternating step where the dual variables are
         updated first, and the primal variables are updated based on the Lagrangian
         computed at the updated dual point. Note that the objective function and
@@ -167,4 +169,4 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         # Purge the dual lagrangian to avoid reusing it in the next dual update
         cmp_state.purge_lagrangian(purge_primal=False, purge_dual=True)
 
-        return lagrangian_store_post_dual_step
+        return cmp_state, lagrangian_store_post_dual_step

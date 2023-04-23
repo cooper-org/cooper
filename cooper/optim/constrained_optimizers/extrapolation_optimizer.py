@@ -7,9 +7,9 @@ from typing import Callable, Optional
 
 import torch
 
-from cooper.cmp import CMPState
+from cooper.cmp import CMPState, LagrangianStore
 from cooper.constraints import ConstraintGroup
-from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
+from cooper.multipliers import MULTIPLIER_TYPE
 from cooper.utils import OneOrSequence
 
 from .constrained_optimizer import ConstrainedOptimizer
@@ -66,7 +66,9 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             getattr(primal_optimizer, call_method)()  # type: ignore
             self.dual_step(call_extrapolation=call_extrapolation)
 
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False) -> torch.Tensor:
+    def roll(
+        self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
+    ) -> tuple[CMPState, LagrangianStore]:
         # TODO(gallego-posada): Document this
         """Perform a single optimization step on all primal optimizers."""
 
@@ -85,4 +87,4 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         cmp_state_post_extrapolation.backward()
         self.step(call_extrapolation=False)
 
-        return lagrangian_store_post_extrapolation
+        return cmp_state_post_extrapolation, lagrangian_store_post_extrapolation

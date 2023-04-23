@@ -1,8 +1,10 @@
 # coding: utf8
 
+from typing import Callable
+
 import torch
 
-from cooper.cmp import CMPState
+from cooper.cmp import CMPState, LagrangianStore
 from cooper.utils import OneOrSequence, ensure_sequence
 
 from .constrained_optimizers.constrained_optimizer import CooperOptimizerState
@@ -36,18 +38,19 @@ class UnconstrainedOptimizer:
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-    def roll(self, cmp_state: CMPState) -> torch.Tensor:
+    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
         # TODO(gallego-posada): Document this
         """Perform a single optimization step on all primal optimizers."""
 
         self.zero_grad()
+        cmp_state = compute_cmp_state_fn()
         lagrangian_store = cmp_state.populate_lagrangian()
         # For unconstrained problems, the Lagrangian simply corresponds to the loss
         loss = lagrangian_store.lagrangian
         loss.backward()
         self.step()
 
-        return loss
+        return cmp_state, lagrangian_store
 
     def state_dict(self) -> CooperOptimizerState:
         """Collects the state dicts of the primal optimizers and wraps them in a

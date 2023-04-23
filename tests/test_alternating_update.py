@@ -47,7 +47,7 @@ def test_manual_alternating(
     lmbda0 = mktensor([0.0, 0.0])
 
     # ------------ First step of alternating updates ------------
-    lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
 
     if alternating_type == "PrimalDual":
 
@@ -96,7 +96,7 @@ def test_manual_alternating(
         assert torch.allclose(lagrangian_store.lagrangian, lag1)
 
     # ------------ Second step of alternating updates ------------
-    lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
 
     if alternating_type == "PrimalDual":
 
