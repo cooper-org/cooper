@@ -41,7 +41,7 @@ class UnconstrainedOptimizer:
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_fn: Callable[..., CMPState], **kwargs) -> tuple[CMPState, LagrangianStore]:
         """Evaluates the objective function and performs a gradient update on the
         parameters.
 
