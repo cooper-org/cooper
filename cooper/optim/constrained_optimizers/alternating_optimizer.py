@@ -17,6 +17,12 @@ from .constrained_optimizer import ConstrainedOptimizer
 
 
 class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing primal-dual alternating updates to the primal and dual variables.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the alternating update
+
     extrapolation = False
     alternating = "PrimalDual"
 
@@ -51,8 +57,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         violations through the `compute_violations_fn` argument.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the objective and
-                constraints when performing alternating updates.
+            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
 
             compute_violations_fn: ``Callable`` for re-evaluating the constraint
                 violations when performing alternating updates. When this argument
@@ -114,6 +119,12 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
 
 
 class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing dual-primal alternating updates to the primal and dual variables.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the alternating update
+
     extrapolation = False
     alternating = "DualPrimal"
 
@@ -141,8 +152,7 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         change during the dual update.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the objective and
-                constraints when performing alternating updates.
+            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
 
             return_multipliers: When `True`, we return the updated value of the
                 multipliers for the observed constraints.

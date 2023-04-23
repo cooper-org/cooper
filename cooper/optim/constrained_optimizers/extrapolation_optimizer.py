@@ -16,6 +16,12 @@ from .constrained_optimizer import ConstrainedOptimizer
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing extrapolation updates to the primal and dual variables.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
+
     extrapolation = True
     alternating = False
 
@@ -69,8 +75,17 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     def roll(
         self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
     ) -> tuple[CMPState, LagrangianStore]:
-        # TODO(gallego-posada): Document this
-        """Perform a single optimization step on all primal optimizers."""
+        """Performs a full extrapolation step on the primal and dual variables.
+
+        Note that the forward and backward computations associated with the CMPState
+        and Lagrangian are carried out twice, since we compute an "extra" gradient.
+
+        Args:
+            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+
+            return_multipliers: When `True`, we return the updated value of the
+                multipliers for the observed constraints.
+        """
 
         self.zero_grad()
         cmp_state_pre_extrapolation = compute_cmp_state_fn()

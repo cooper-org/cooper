@@ -1,4 +1,7 @@
 # coding: utf8
+"""
+Implementation of the :py:class:`UnconstrainedOptimizer` class.
+"""
 
 from typing import Callable
 
@@ -39,8 +42,13 @@ class UnconstrainedOptimizer:
             primal_optimizer.step()
 
     def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
-        # TODO(gallego-posada): Document this
-        """Perform a single optimization step on all primal optimizers."""
+        """Evaluates the objective function and performs a gradient update on the
+        parameters.
+
+        Args:
+            compute_cmp_state_fn: ``Callable`` for evaluating the ``CMPState``. Since
+                this is an unconstrained optimizer, the CMPState just contains the loss.
+        """
 
         self.zero_grad()
         cmp_state = compute_cmp_state_fn()

@@ -16,27 +16,8 @@ from .constrained_optimizer import ConstrainedOptimizer
 
 
 class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
-    """
-    Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing simultaneous gradient updates to the primal and dual variables.
-
-    A ``SimultaneousConstrainedOptimizer`` includes one or more
-    :class:`torch.optim.Optimizer`\\s for the primal variables. It also includes
-    one or more :class:`torch.optim.Optimizer`\\s for the dual variables.
-
-    Args:
-        primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
-            a model). The primal parameters can be partitioned into multiple optimizers,
-            in this case ``primal_optimizers`` accepts a list of
-            ``torch.optim.Optimizer``\\s.
-
-        dual_optimizer: Optimizer(s) for the dual variables (e.g. the Lagrange
-            multipliers associated with the constraints). An iterable of
-            ``torch.optim.Optimizer``\\s can be passed to handle the case of several
-            ``~cooper.constraints.ConstraintGroup``\\s. If dealing with an unconstrained
-            problem, please use a
-            :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
-
     """
 
     extrapolation = False
@@ -64,8 +45,15 @@ class SimultaneousConstrainedOptimizer(ConstrainedOptimizer):
     def roll(
         self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
     ) -> tuple[CMPState, LagrangianStore]:
-        # TODO(gallego-posada): Document this
-        """Perform a single optimization step on all primal optimizers."""
+        """Evaluates the CMPState and performs a simultaneous step on the primal and
+        dual variables.
+
+        Args:
+            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+
+            return_multipliers: When `True`, we return the updated value of the
+                multipliers for the observed constraints.
+        """
 
         self.zero_grad()
         cmp_state = compute_cmp_state_fn()
