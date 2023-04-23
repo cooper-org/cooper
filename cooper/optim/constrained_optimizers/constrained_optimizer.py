@@ -3,7 +3,7 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
-from typing import Optional
+from typing import Literal, Optional, Union
 
 import torch
 
@@ -11,6 +11,8 @@ from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
+
+ALTERNATING_TYPE = Union[bool, Literal["PrimalDual", "DualPrimal"]]
 
 
 class ConstrainedOptimizer:
@@ -55,8 +57,8 @@ class ConstrainedOptimizer:
 
     """
 
-    extrapolation = None
-    alternating = None
+    extrapolation: bool
+    alternating: ALTERNATING_TYPE
 
     def __init__(
         self,

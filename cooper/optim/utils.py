@@ -67,8 +67,10 @@ def create_optimizer_from_kwargs(
 
     if extrapolation:
         return constrained_optimizers.ExtrapolationConstrainedOptimizer(**optimizer_kwargs)
-    elif alternating:
-        return constrained_optimizers.AlternatingConstrainedOptimizer(**optimizer_kwargs)
+    elif alternating == "PrimalDual":
+        return constrained_optimizers.AlternatingPrimalDualOptimizer(**optimizer_kwargs)
+    elif alternating == "DualPrimal":
+        return constrained_optimizers.AlternatingDualPrimalOptimizer(**optimizer_kwargs)
     else:
         return constrained_optimizers.SimultaneousConstrainedOptimizer(**optimizer_kwargs)
 
