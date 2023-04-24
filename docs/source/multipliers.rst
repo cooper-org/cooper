@@ -40,8 +40,8 @@ not specified during the initialization of the ``BaseLagrangianFormulation``,
 they are initialized to zero.
 
 After having performed a step on the dual variables inside the
-:py:meth:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer.step` method of
-:py:class:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer`, a call to
+:py:meth:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.step` method of
+:py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, a call to
 :py:meth:`~DenseMultiplier.project_` ensures that the multiplier values are
 admissible. It is possible to override the :py:meth:`~DenseMultiplier.project_`
 method in order to apply a custom projection to the multipliers.
