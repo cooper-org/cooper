@@ -28,9 +28,7 @@ stochastic diagonal matrix with :math:`1` on the indices corresponding to the ob
 equations and :math:`0` everywhere else.
 
 The results below illustrate the influence of the number of observed equations on the
-convergence of the algorithm. We observe that the algorithm converges to the min-norm
-solution even when only a small fraction of the equations are observed at each iteration.
-
+convergence of the algorithm.
 """
 
 import matplotlib.pyplot as plt
