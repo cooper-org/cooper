@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from .multipliers import DenseMultiplier, ExplicitMultiplier, IndexedMultiplier
@@ -6,7 +8,7 @@ from .multipliers import DenseMultiplier, ExplicitMultiplier, IndexedMultiplier
 def build_explicit_multiplier(
     constraint_type: str,
     shape: int,
-    device: torch.device,
+    device: Optional[torch.device] = None,
     restart_on_feasible: bool = False,
     is_indexed: bool = False,
     dtype: torch.dtype = torch.float32,
