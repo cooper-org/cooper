@@ -1,5 +1,5 @@
 """
-Finding the min-L2-norm solution to linear system of equations
+Finding the min-norm solution to a linear system of equations
 ==============================================================
 
 This example considers the problem of finding the min-L2-norm solution to a system of
