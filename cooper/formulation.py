@@ -44,7 +44,7 @@ class Formulation:
         else:
             # When computing the gradient of the Lagrangian with respect to the
             # primal variables, we do not need to differentiate the multiplier.
-            weighted_violation_for_primal = torch.sum(multiplier_value.detach() * violation)
+            weighted_violation_for_primal = torch.einsum("i...,i...->", multiplier_value.detach(), violation)
 
         if self.formulation_type == "penalized":
             # Penalized formulations have no _trainable_ dual variables, so we adopt
@@ -65,7 +65,8 @@ class Formulation:
             # "Optimization with Non-Differentiable Constraints with Applications to
             # Fairness, Recall, Churn, and Other Goals" under the name of "proxy"
             # constraints. (https://jmlr.org/papers/v20/18-616.html, Sec. 4.2)
-            weighted_violation_for_dual = torch.sum(multiplier_value * strict_violation.detach())
+
+            weighted_violation_for_dual = torch.einsum("i...,i...->", multiplier_value, strict_violation.detach())
 
         if self.formulation_type == "augmented_lagrangian":
 

@@ -137,6 +137,13 @@ class ConstraintGroup:
         else:
             multiplier_value = self.multiplier(constraint_state.constraint_features)
 
+        if len(multiplier_value.shape) == 0:
+            multiplier_value = multiplier_value.unsqueeze(0)
+
+        violation = constraint_state.violation
+        if len(violation.shape) == 0:
+            violation = violation.unsqueeze(0)
+
         # Strict violation represents the "actual" violation of the constraint.
         # We use it to update the value of the multiplier.
         if constraint_state.strict_violation is not None:
@@ -146,10 +153,13 @@ class ConstraintGroup:
             # violation (which always exists).
             strict_violation = constraint_state.violation
 
+        if len(strict_violation.shape) == 0:
+            strict_violation = strict_violation.unsqueeze(0)
+
         primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
             constraint_type=self.constraint_type,
             multiplier_value=multiplier_value,
-            violation=constraint_state.violation,
+            violation=violation,
             strict_violation=strict_violation,
             skip_primal_contribution=constraint_state.skip_primal_contribution,
             skip_dual_contribution=constraint_state.skip_dual_contribution,
