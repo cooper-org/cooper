@@ -1,5 +1,6 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 import abc
+import warnings
 from typing import Optional
 
 import torch
@@ -170,12 +171,15 @@ class IndexedMultiplier(ExplicitMultiplier):
     and memory-efficient sparse gradients (on GPU).
     """
 
-    def __init__(self, init: torch.Tensor, *args, **kwargs):
+    def __init__(self, init: torch.Tensor, *args, use_sparse_gradient: bool = True, **kwargs):
         super(IndexedMultiplier, self).__init__(init=init, *args, **kwargs)
         self.last_seen_mask = torch.zeros_like(init, dtype=torch.bool)
 
+        if use_sparse_gradient and not torch.cuda.is_available():
+            warnings.warn("Backend for sparse gradients is only supported on GPU.")
+
         # Backend for sparse gradients only supported on GPU.
-        self.use_sparse_gradient = torch.cuda.is_available()
+        self.use_sparse_gradient = use_sparse_gradient and torch.cuda.is_available()
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
