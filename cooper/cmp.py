@@ -1,8 +1,7 @@
 import abc
 from collections.abc import Sequence
 from dataclasses import dataclass
-from types import SimpleNamespace
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 
