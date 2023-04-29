@@ -7,6 +7,8 @@ import pytest
 import testing_utils
 import torch
 
+import cooper
+
 
 def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
     """Test first two iterations of alternating GDA updates on a toy 2D problem with
@@ -37,7 +39,7 @@ def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_para
         primal_optimizers=primal_optimizers,
         constraint_groups=cmp.constraint_groups,
         extrapolation=False,
-        alternating=True,
+        alternating=cooper.optim.AlternatingType.DUAL_PRIMAL,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )

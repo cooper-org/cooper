@@ -5,6 +5,8 @@ from typing import Optional
 
 import torch
 
+from cooper.constraints.constraint_state import ConstraintType
+
 
 class ConstantMultiplier:
     """Constant (non-trainable) multiplier class used for penalized formulations.
@@ -98,7 +100,7 @@ class ExplicitMultiplier(torch.nn.Module):
 
     @property
     def implicit_constraint_type(self):
-        return "ineq" if self.enforce_positive else "eq"
+        return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
 
     def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
         """

@@ -6,6 +6,8 @@ from typing import Dict, Literal, Optional, Union
 
 from cooper.utils import validate_state_dicts
 
+from .types import AlternatingType
+
 
 @dataclasses.dataclass
 class CooperOptimizerState:
@@ -26,7 +28,7 @@ class CooperOptimizerState:
     dual_optimizer_states: Optional[Sequence[Dict]] = None
     multiplier_states: Optional[Sequence[Dict]] = None
     extrapolation: bool = False
-    alternating: Union[bool, Literal["PrimalDual", "DualPrimal"]] = False
+    alternating: AlternatingType = AlternatingType.FALSE
 
     def asdict(self):
         return dataclasses.asdict(self)

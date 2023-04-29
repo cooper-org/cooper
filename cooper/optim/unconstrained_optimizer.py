@@ -11,6 +11,7 @@ from cooper.cmp import CMPState, LagrangianStore
 from cooper.utils import OneOrSequence, ensure_sequence
 
 from .constrained_optimizers.constrained_optimizer import CooperOptimizerState
+from .types import AlternatingType
 
 
 class UnconstrainedOptimizer:
@@ -26,7 +27,7 @@ class UnconstrainedOptimizer:
     """
 
     extrapolation = False
-    alternating = False
+    alternating = AlternatingType.FALSE
 
     def __init__(self, primal_optimizers: OneOrSequence[torch.optim.Optimizer]):
         self.primal_optimizers = ensure_sequence(primal_optimizers)

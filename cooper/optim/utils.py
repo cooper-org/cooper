@@ -1,15 +1,16 @@
 import warnings
+from enum import Enum
 from typing import Optional, Union
 
 import torch
 
 from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
-from cooper.optim.constrained_optimizers.constrained_optimizer import ALTERNATING_TYPE
 from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
+from .types import AlternatingType
 from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
@@ -41,7 +42,7 @@ def sanity_check_constraints_and_optimizer(
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     extrapolation: bool,
-    alternating: ALTERNATING_TYPE,
+    alternating: AlternatingType,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
@@ -51,9 +52,9 @@ def create_optimizer_from_kwargs(
 
     Args:
         primal_optimizers: Optimizer(s) for the primal variables.
-        dual_optimizer: Optional optimizer(s) for the dual variables.
         extrapolation: Whether the optimizer uses extrapolation.
         alternating: Whether the optimizer performs alternating updates.
+        dual_optimizer: Optional optimizer(s) for the dual variables.
     """
 
     if dual_optimizers is None:
@@ -68,9 +69,9 @@ def create_optimizer_from_kwargs(
 
     if extrapolation:
         return constrained_optimizers.ExtrapolationConstrainedOptimizer(**optimizer_kwargs)
-    elif alternating == "PrimalDual":
+    elif alternating == AlternatingType.PRIMAL_DUAL:
         return constrained_optimizers.AlternatingPrimalDualOptimizer(**optimizer_kwargs)
-    elif alternating == "DualPrimal":
+    elif alternating == AlternatingType.DUAL_PRIMAL:
         return constrained_optimizers.AlternatingDualPrimalOptimizer(**optimizer_kwargs)
     else:
         return constrained_optimizers.SimultaneousOptimizer(**optimizer_kwargs)

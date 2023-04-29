@@ -19,7 +19,7 @@ import torch
 from style_utils import *
 
 import cooper
-from cooper import CMPState, ConstraintGroup, ConstraintState
+from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType, FormulationType
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -32,8 +32,9 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         self.target_mean = target_mean
 
         multiplier_kwargs = {"shape": 1, "device": DEVICE}
-        self.mean_constraint = ConstraintGroup(constraint_type="eq", multiplier_kwargs=multiplier_kwargs)
-        self.sum_constraint = ConstraintGroup(constraint_type="eq", multiplier_kwargs=multiplier_kwargs)
+        constraint_kwargs = {"constraint_type": ConstraintType.EQUALITY, "formulation_type": FormulationType.LAGRANGIAN}
+        self.mean_constraint = ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
+        self.sum_constraint = ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
 
         self.all_constraints = [self.sum_constraint, self.mean_constraint]
 

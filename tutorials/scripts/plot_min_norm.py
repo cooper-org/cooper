@@ -39,7 +39,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
-from cooper import CMPState, ConstraintGroup, ConstraintState
+from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType, FormulationType
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -114,7 +114,7 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
         multiplier_kwargs = {"shape": num_equations, "device": DEVICE, "is_indexed": True}
-        constraint_kwargs = {"constraint_type": "eq", "formulation_type": "lagrangian"}
+        constraint_kwargs = {"constraint_type": ConstraintType.EQUALITY, "formulation_type": FormulationType.LAGRANGIAN}
         self.eq_constraint = ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
         super().__init__()
 

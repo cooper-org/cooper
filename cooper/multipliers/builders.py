@@ -2,11 +2,13 @@ from typing import Optional
 
 import torch
 
+from cooper.constraints.constraint_state import ConstraintType
+
 from .multipliers import DenseMultiplier, ExplicitMultiplier, IndexedMultiplier
 
 
 def build_explicit_multiplier(
-    constraint_type: str,
+    constraint_type: ConstraintType,
     shape: int,
     device: Optional[torch.device] = None,
     restart_on_feasible: bool = False,
@@ -17,12 +19,12 @@ def build_explicit_multiplier(
     destination device."""
 
     multiplier_class = IndexedMultiplier if is_indexed else DenseMultiplier
-    enforce_positive = constraint_type == "ineq"
+    enforce_positive = constraint_type == ConstraintType.INEQUALITY
 
     tensor_factory = dict(dtype=dtype, device=device)
     # Indexed multipliers require the weight to be 2D
     tensor_factory["size"] = (shape, 1) if is_indexed else (shape,)
 
-    return multiplier_class(
-        init=torch.zeros(**tensor_factory), enforce_positive=enforce_positive, restart_on_feasible=restart_on_feasible
-    )
+    multiplier_kwargs = dict(enforce_positive=enforce_positive, restart_on_feasible=restart_on_feasible)
+
+    return multiplier_class(init=torch.zeros(**tensor_factory), **multiplier_kwargs)

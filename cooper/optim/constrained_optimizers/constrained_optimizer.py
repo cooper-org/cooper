@@ -3,16 +3,16 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
-from typing import Literal, Optional, Union
+from typing import Optional
 
 import torch
 
-from cooper.constraints import ConstraintGroup
+from cooper.constraints import ConstraintGroup, ConstraintType
 from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
-ALTERNATING_TYPE = Union[bool, Literal["PrimalDual", "DualPrimal"]]
+from ..types import AlternatingType
 
 
 class ConstrainedOptimizer:
@@ -58,7 +58,7 @@ class ConstrainedOptimizer:
     """
 
     extrapolation: bool
-    alternating: ALTERNATING_TYPE
+    alternating: AlternatingType
 
     def __init__(
         self,
@@ -139,7 +139,10 @@ class ConstrainedOptimizer:
         for multiplier in self.multipliers:
             if isinstance(multiplier, ExplicitMultiplier):
                 # Select the indices of multipliers corresponding to feasible inequality constraints
-                if multiplier.implicit_constraint_type == "ineq" and multiplier.weight.grad is not None:
+                if (
+                    multiplier.implicit_constraint_type == ConstraintType.INEQUALITY
+                    and multiplier.weight.grad is not None
+                ):
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.

@@ -21,7 +21,7 @@ from style_utils import *
 from torchvision import datasets, transforms
 
 import cooper
-from cooper import CMPState, ConstraintGroup, ConstraintState
+from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType
 from cooper.optim import SimultaneousOptimizer
 
 np.random.seed(0)
@@ -46,7 +46,9 @@ model = model.to(DEVICE)
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
 # Define the constraint group for the norm constraint
-ineq_group = ConstraintGroup(constraint_type="ineq", multiplier_kwargs={"shape": 1, "device": DEVICE})
+ineq_group = ConstraintGroup(
+    constraint_type=ConstraintType.INEQUALITY, multiplier_kwargs={"shape": 1, "device": DEVICE}
+)
 
 # Instantiate Pytorch optimizer class for the dual variables
 dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=1e-3)

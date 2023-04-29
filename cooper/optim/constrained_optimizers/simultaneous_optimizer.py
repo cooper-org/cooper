@@ -12,6 +12,7 @@ from cooper.constraints import ConstraintGroup
 from cooper.multipliers import MULTIPLIER_TYPE
 from cooper.utils import OneOrSequence
 
+from ..types import AlternatingType
 from .constrained_optimizer import ConstrainedOptimizer
 
 
@@ -21,7 +22,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
     """
 
     extrapolation = False
-    alternating = False
+    alternating = AlternatingType.FALSE
 
     def __init__(
         self,

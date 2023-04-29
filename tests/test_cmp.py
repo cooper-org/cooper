@@ -62,7 +62,10 @@ def test_pipeline_without_cmp(
 
     if use_ineq_constraints:
         multiplier_kwargs = {"shape": 1, "device": device}
-        constraint_kwargs = {"constraint_type": "ineq", "formulation_type": "lagrangian"}
+        constraint_kwargs = {
+            "constraint_type": cooper.ConstraintType.INEQUALITY,
+            "formulation_type": cooper.FormulationType.LAGRANGIAN,
+        }
         cg0 = cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
         cg1 = cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
         constraint_groups = [cg0, cg1]

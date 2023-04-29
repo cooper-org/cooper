@@ -40,7 +40,10 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.constraint_groups = []
         if self.use_ineq_constraints:
             multiplier_kwargs = {"shape": 1, "device": device}
-            constraint_kwargs = {"constraint_type": "ineq", "formulation_type": "lagrangian"}
+            constraint_kwargs = {
+                "constraint_type": cooper.ConstraintType.INEQUALITY,
+                "formulation_type": cooper.FormulationType.LAGRANGIAN,
+            }
             self.constraint_groups = [
                 cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
                 cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
@@ -214,7 +217,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
     primal_optimizers,
     constraint_groups,
     extrapolation=False,
-    alternating=False,
+    alternating=cooper.optim.AlternatingType.FALSE,
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:

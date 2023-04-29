@@ -13,9 +13,10 @@ except PackageNotFoundError:
     # package is not installed
     import warnings
 
-    warnings.warn("Could not retrieve cooper version!")
+    warnings.warn("Could not retrieve Cooper version!")
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem
-from cooper.constraints import ConstraintGroup, ConstraintState
+from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
+from cooper.formulation import FormulationType
 
 from . import multipliers, optim, utils

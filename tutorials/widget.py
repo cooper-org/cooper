@@ -11,7 +11,7 @@ from ipywidgets import HBox, Layout, VBox, fixed, interactive
 from matplotlib.gridspec import GridSpec
 
 import cooper
-from cooper import ConstraintGroup
+from cooper import ConstraintGroup, ConstraintType
 from cooper.optim import SimultaneousOptimizer
 
 
@@ -19,9 +19,7 @@ class Toy2DWidget:
     def __init__(
         self,
         cmp_class,
-        cmp_kwargs={
-            "ineq_group": ConstraintGroup(constraint_type="ineq", multiplier_kwargs={"shape": 1, "device": "cpu"}),
-        },
+        cmp_kwargs=None,
         problem_type=None,
         epsilon=None,
         primal_lr=None,
@@ -34,6 +32,12 @@ class Toy2DWidget:
         extrapolation=None,
         dual_restarts=None,
     ):
+
+        if cmp_kwargs is None:
+            constraint_group = ConstraintGroup(
+                constraint_type=ConstraintType.INEQUALITY, multiplier_kwargs={"shape": 1, "device": "cpu"}
+            )
+            cmp_kwargs = {"ineq_group": constraint_group}
 
         # --------------------------------------- Create some control elements
         if problem_type is None:

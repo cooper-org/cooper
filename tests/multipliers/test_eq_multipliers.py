@@ -2,7 +2,7 @@ import multiplier_test_utils
 import pytest
 import torch
 
-from cooper import multipliers
+from cooper import ConstraintType, multipliers
 
 
 @pytest.fixture(params=[multipliers.DenseMultiplier, multipliers.IndexedMultiplier])
@@ -19,7 +19,7 @@ def init_tensor(_init_tensor, mult_class):
 
 def test_eq_multiplier_init_and_forward(mult_class, init_tensor, all_indices):
     eq_multiplier = mult_class(init_tensor, restart_on_feasible=False)
-    assert eq_multiplier.implicit_constraint_type == "eq"
+    assert eq_multiplier.implicit_constraint_type == ConstraintType.EQUALITY
 
     is_indexed = isinstance(eq_multiplier, multipliers.IndexedMultiplier)
     multiplier_values = eq_multiplier(all_indices) if is_indexed else eq_multiplier()

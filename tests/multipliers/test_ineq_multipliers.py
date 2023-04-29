@@ -2,7 +2,7 @@ import multiplier_test_utils
 import pytest
 import torch
 
-from cooper import multipliers
+from cooper import ConstraintType, multipliers
 
 
 @pytest.fixture(params=[multipliers.DenseMultiplier, multipliers.IndexedMultiplier])
@@ -24,7 +24,7 @@ def init_tensor(_init_tensor, mult_class):
 
 def test_ineq_multiplier_init_and_forward(mult_class, restart_on_feasible, init_tensor, all_indices):
     ineq_multiplier = mult_class(init_tensor.relu(), enforce_positive=True, restart_on_feasible=restart_on_feasible)
-    assert ineq_multiplier.implicit_constraint_type == "ineq"
+    assert ineq_multiplier.implicit_constraint_type == ConstraintType.INEQUALITY
 
     is_indexed = isinstance(ineq_multiplier, multipliers.IndexedMultiplier)
     multiplier_values = ineq_multiplier(all_indices) if is_indexed else ineq_multiplier()
