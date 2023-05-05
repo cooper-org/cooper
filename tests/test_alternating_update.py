@@ -153,9 +153,9 @@ def test_manual_alternating(
         assert torch.allclose(params, x2_y2)
 
 
-
-@pytest.mark.parametrize("alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, 
-                                              cooper.optim.AlternatingType.DUAL_PRIMAL])
+@pytest.mark.parametrize(
+    "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL]
+)
 @pytest.mark.parametrize("use_defect_fn", [True, False])
 def test_convergence_alternating(
     alternating_type,
@@ -176,7 +176,7 @@ def test_convergence_alternating(
     )
 
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
-    
+
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         constraint_groups=cmp.constraint_groups,
