@@ -153,7 +153,7 @@ class DenseMultiplier(ExplicitMultiplier):
 
     def forward(self):
         """Return the current value of the multiplier."""
-        return self.weight
+        return torch.clone(self.weight)
 
     def __repr__(self):
         return f"DenseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
