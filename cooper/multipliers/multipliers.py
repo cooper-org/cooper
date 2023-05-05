@@ -23,7 +23,7 @@ class ConstantMultiplier:
 
     def __call__(self):
         """Return the current value of the multiplier."""
-        return self.weight
+        return torch.clone(self.weight)
 
     def parameters(self):
         """Return an empty iterator for consistency with multipliers which are
