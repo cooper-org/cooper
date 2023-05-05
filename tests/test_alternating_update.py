@@ -153,44 +153,46 @@ def test_manual_alternating(
         assert torch.allclose(params, x2_y2)
 
 
-# @pytest.mark.parametrize("alternating_type", ["PrimalDual", "DualPrimal"])
-# @pytest.mark.parametrize("use_defect_fn", [True, False])
-# def test_convergence_alternating(
-#     alternating_type,
-#     use_defect_fn,
-#     Toy2dCMP_problem_properties,
-#     Toy2dCMP_params_init,
-#     use_multiple_primal_optimizers,
-#     device,
-# ):
-#     """Test convergence of alternating GDA updates on toy 2D problem."""
 
-#     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
-#     if not use_ineq_constraints:
-#         pytest.skip("Alternating updates requires a problem with constraints.")
+@pytest.mark.parametrize("alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, 
+                                              cooper.optim.AlternatingType.DUAL_PRIMAL])
+@pytest.mark.parametrize("use_defect_fn", [True, False])
+def test_convergence_alternating(
+    alternating_type,
+    use_defect_fn,
+    Toy2dCMP_problem_properties,
+    Toy2dCMP_params_init,
+    use_multiple_primal_optimizers,
+    device,
+):
+    """Test convergence of alternating GDA updates on toy 2D problem."""
 
-#     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
-#         use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
-#     )
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    if not use_ineq_constraints:
+        pytest.skip("Alternating updates requires a problem with constraints.")
 
-#     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
+    )
 
-#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-#         primal_optimizers=primal_optimizers,
-#         constraint_groups=cmp.constraint_groups,
-#         extrapolation=False,
-#         alternating=alternating_type,
-#     )
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
+    
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=False,
+        alternating=alternating_type,
+    )
 
-#     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-#     compute_violations_fn = (lambda: cmp.compute_violations(params)) if use_defect_fn else None
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+    compute_violations_fn = (lambda: cmp.compute_violations(params)) if use_defect_fn else None
 
-#     roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
-#     if alternating_type == "PrimalDual":
-#         roll_kwargs["compute_violations_fn"] = compute_violations_fn
+    roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
+    if alternating_type == cooper.optim.AlternatingType.PRIMAL_DUAL:
+        roll_kwargs["compute_violations_fn"] = compute_violations_fn
 
-#     for step_id in range(1500):
-#         cooper_optimizer.roll(**roll_kwargs)
+    for step_id in range(1500):
+        cooper_optimizer.roll(**roll_kwargs)
 
-#     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
-#         assert torch.allclose(param, exact_solution)
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        assert torch.allclose(param, exact_solution)
