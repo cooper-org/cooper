@@ -63,8 +63,9 @@ def test_manual_alternating(
         violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
         lmbda1 = torch.relu(lmbda0 + 1e-2 * violations)
 
-        for multiplier, target_value in zip(lagrangian_store.observed_multipliers, lmbda1):
-            assert torch.allclose(multiplier, mktensor([target_value]))
+        multiplier_values = [constraint.multiplier() for constraint, _ in cmp_state.observed_constraints]
+        for multiplier_value, target_value in zip(multiplier_values, lmbda1):
+            assert torch.allclose(multiplier_value, mktensor([target_value]))
 
         if use_violation_fn:
             # We don't see the value of the loss at the updated point since we only
@@ -85,7 +86,9 @@ def test_manual_alternating(
 
         violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
         lmbda1 = torch.relu(lmbda0 + 1e-2 * violations)
-        for multiplier, target_value in zip(lagrangian_store.observed_multipliers, lmbda1):
+
+        multiplier_values = [constraint.multiplier() for constraint, _ in cmp_state.observed_constraints]
+        for multiplier, target_value in zip(multiplier_values, lmbda1):
             assert torch.allclose(multiplier, mktensor([target_value]))
 
         x1_y1 = mktensor([0.0002, -0.9598])
@@ -112,7 +115,8 @@ def test_manual_alternating(
         violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
         lmbda2 = torch.relu(lmbda1 + 1e-2 * violations)
 
-        for multiplier, target_value in zip(lagrangian_store.observed_multipliers, lmbda2):
+        multiplier_values = [constraint.multiplier() for constraint, _ in cmp_state.observed_constraints]
+        for multiplier, target_value in zip(multiplier_values, lmbda2):
             assert torch.allclose(multiplier, mktensor([target_value]))
 
         if use_violation_fn:
@@ -139,7 +143,8 @@ def test_manual_alternating(
 
         # Updated multipliers = [0.02 + 0.01 * 1.9596 = 0.039596, 0.0]
         lmbda2 = torch.relu(lmbda1 + 1e-2 * violations)
-        for multiplier, target_value in zip(lagrangian_store.observed_multipliers, lmbda2):
+        multiplier_values = [constraint.multiplier() for constraint, _ in cmp_state.observed_constraints]
+        for multiplier, target_value in zip(multiplier_values, lmbda2):
             assert torch.allclose(multiplier, mktensor([target_value]))
 
         # Lagrangian value = 1.84243212 + 0.039596 * 1.9596 + 0.0 * (-1.95979996) = 1.9216

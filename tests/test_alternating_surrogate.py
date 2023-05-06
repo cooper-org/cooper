@@ -70,7 +70,7 @@ def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_para
     cmp_state.backward()
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
     for multiplier, (constraint_group, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
-        assert torch.allclose(multiplier.grad, constraint_state.strict_violation)
+        assert torch.allclose(multiplier.weight.grad, constraint_state.strict_violation)
 
     # Perform alternating update
     cmp_state_after_primal_update, multipliers_after_alternating_update = cooper_optimizer.step(
@@ -108,7 +108,7 @@ def test_manual_alternating_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_para
     cmp_state.backward()
     assert torch.allclose(params.grad, mktensor([-0.0162, -3.218]))
     for multiplier, (constraint_group, constraint_state) in zip(observed_multipliers, cmp_state.observed_constraints):
-        assert torch.allclose(multiplier.grad, constraint_state.strict_violation)
+        assert torch.allclose(multiplier.weight.grad, constraint_state.strict_violation)
 
     # Perform alternating update
     cmp_state_after_primal_update, multipliers_after_alternating_update = cooper_optimizer.step(
