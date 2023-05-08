@@ -158,6 +158,13 @@ class CMPState:
         self.primal_backward()
         self.dual_backward()
 
+    def __repr__(self) -> str:
+        _string = f"CMPState(loss={self.loss}, \n"
+        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
+            _string += f"  {constraint_group}: {constraint_state}, \n"
+        _string += f"misc={self.misc})"
+        return _string
+
 
 class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems."""
