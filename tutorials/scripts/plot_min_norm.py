@@ -109,7 +109,6 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
     """Min-norm problem with linear equality constraints."""
 
     def __init__(self, num_equations: int) -> None:
-
         # Create a constraint group for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
@@ -130,7 +129,6 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
 def run_experiment(
     num_equations, num_variables, batch_size, num_steps, primal_lr, dual_lr, data_seed=135, exp_seed=246
 ):
-
     # Create a random linear system
     A, b, x_optim = create_linear_system(num_equations, num_variables, seed=data_seed)
     optimal_sq_norm = torch.linalg.vector_norm(x_optim).item() ** 2
@@ -147,7 +145,7 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_optimizer = torch.optim.SGD(cmp.eq_constraint.multiplier.parameters(), lr=dual_lr)
+    dual_optimizer = torch.optim.SGD(cmp.eq_constraint.multiplier.parameters(), lr=dual_lr, maximize=True)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
         primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.eq_constraint
     )
@@ -157,7 +155,6 @@ def run_experiment(
 
     while step_ix < num_steps:
         for sampled_equations, sampled_RHS, indices in constraint_loader:
-
             step_ix += 1
             compute_cmp_state_fn = lambda: cmp.compute_cmp_state(x, sampled_equations, sampled_RHS, indices)
             cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
@@ -176,7 +173,6 @@ def run_experiment(
 
 
 def plot_results(state_histories) -> None:
-
     _, ax = plt.subplots(len(state_histories), 4, figsize=(20, len(state_histories) * 4))
 
     for exp_id, (exp_label, state_history) in enumerate(state_histories):

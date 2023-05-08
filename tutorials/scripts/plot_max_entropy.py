@@ -64,7 +64,7 @@ primal_optimizer = cooper.optim.ExtraSGD([log_probs], lr=3e-2)
 # Define the dual optimizer
 dual_parameters = []
 [dual_parameters.extend(_.multiplier.parameters()) for _ in cmp.all_constraints]
-dual_optimizer = cooper.optim.ExtraSGD(dual_parameters, lr=5e-2)
+dual_optimizer = cooper.optim.ExtraSGD(dual_parameters, lr=5e-2, maximize=True)
 
 # Wrap the formulation and both optimizers inside a ExtrapolationConstrainedOptimizer
 cooper_optimizer = cooper.optim.ExtrapolationConstrainedOptimizer(

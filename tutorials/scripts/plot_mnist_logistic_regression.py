@@ -51,7 +51,7 @@ ineq_group = ConstraintGroup(
 )
 
 # Instantiate Pytorch optimizer class for the dual variables
-dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=1e-3)
+dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=1e-3, maximize=True)
 
 cooper_optimizer = SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group

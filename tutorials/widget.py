@@ -32,7 +32,6 @@ class Toy2DWidget:
         extrapolation=None,
         dual_restarts=None,
     ):
-
         if cmp_kwargs is None:
             constraint_group = ConstraintGroup(
                 constraint_type=ConstraintType.INEQUALITY, multiplier_kwargs={"shape": 1, "device": "cpu"}
@@ -195,7 +194,6 @@ class Toy2DWidget:
         extrapolation,
         dual_restarts,
     ):
-
         # Initialize the figure
         self.fig = plt.figure(figsize=(15, 5))
 
@@ -249,13 +247,12 @@ class Toy2DWidget:
         dual_restarts,
         extrapolation,
     ):
-
         # Check if any optimizer has momentum and add to kwargs it if necessary
         primal_kwargs = {"lr": primal_lr}
         if primal_optim == "SGDM_0.9":
             primal_optim = "SGD"
             primal_kwargs["momentum"] = 0.9
-        dual_kwargs = {"lr": dual_lr}
+        dual_kwargs = {"lr": dual_lr, "maximize": True}
         if dual_optim == "SGDM_0.9":
             dual_optim = "SGD"
             dual_kwargs["momentum"] = 0.9
@@ -287,7 +284,6 @@ class Toy2DWidget:
         state_history = {}
 
         for iter_num in range(num_iters):
-
             self.constrained_optimizer.zero_grad()
             cmp_state = self.cmp.compute_cmp_state(params)
             _ = cmp_state.populate_lagrangian()
@@ -351,7 +347,6 @@ class Toy2DWidget:
         self.loss_defect_axis.set_ylabel(r"Constraint $g$")
 
     def update_trajectory_plots(self, state_history):
-
         blue = style_utils.COLOR_DICT["blue"]
         red = style_utils.COLOR_DICT["red"]
         green = style_utils.COLOR_DICT["green"]

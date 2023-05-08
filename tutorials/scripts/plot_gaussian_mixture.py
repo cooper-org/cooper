@@ -107,7 +107,6 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
     """
 
     def __init__(self, ineq_group: ConstraintGroup, use_proxy: bool = False, const_level: float = 0.7):
-
         super().__init__()
 
         self.ineq_group = ineq_group
@@ -115,7 +114,6 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         self.use_proxy = use_proxy
 
     def compute_cmp_state(self, model, inputs, targets):
-
         logits = model(inputs)
         loss = bce_loss(logits.flatten(), targets)
 
@@ -159,7 +157,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
     if is_constrained:
         ineq_group = ConstraintGroup(constraint_type=ConstraintType.INEQUALITY, multiplier_kwargs={"shape": 1})
         cmp = MixtureSeparation(ineq_group, use_proxy, const_level)
-        dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7)
+        dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7, maximize=True)
 
         cooper_optimizer = SimultaneousOptimizer(
             primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
