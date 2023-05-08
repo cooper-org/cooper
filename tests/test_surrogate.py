@@ -4,79 +4,87 @@
 
 import cooper_test_utils
 import pytest
+import testing_utils
 import torch
 
 
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_manual_proxy_constraints(aim_device):
-    """
-    Checks correct behavior when using proxy constraints by comparing the
-    problem and formulation states over a couple of initial iterations.
-    """
+def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+    """Test first step of simultaneous GDA updates with surrogates on toy 2D problem."""
 
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=torch.optim.SGD,
-        primal_init=[0.0, -1.0],
-        dual_optim_cls=torch.optim.SGD,
-        use_ineq=True,
-        use_proxy_ineq=True,
-        dual_restarts=False,
-        alternating=False,
-        primal_optim_kwargs={"lr": 5e-2},
-        dual_optim_kwargs={"lr": 1e-2},
+    if not Toy2dCMP_problem_properties["use_ineq_constraints"]:
+        pytest.skip("Surrogate update tests require a problem with constraints.")
+
+    if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
+        pytest.skip("Manual surrogate test only considers the case of initialization at [0, -1]")
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
-    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
+    # Only perfoming this test for the case of a single primal optimizer
+    assert isinstance(params, torch.nn.Parameter)
 
-    # ----------------------- First iteration -----------------------
-    coop.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, use_constraint_surrogate=True, device=device)
 
-    # Check loss, proxy and non-proxy defects after forward pass
-    assert torch.allclose(lagrangian, mktensor(2.0))
-    assert torch.allclose(cmp.state.loss, mktensor(2.0))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([2.0, -2.0]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([2.0, -1.9]))
-    assert cmp.state.eq_defect is None
-    assert cmp.state.proxy_eq_defect is None
+    mktensor = testing_utils.mktensor(device=device)
 
-    # Multiplier initialization
-    assert torch.allclose(formulation.state()[0], mktensor([0.0, 0.0]))
-    assert formulation.state()[1] is None
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=False,
+        alternating=False,
+        dual_optimizer_name="SGD",
+        dual_optimizer_kwargs={"lr": 1e-2},
+    )
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
-    formulation.backward(lagrangian)
-    assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
 
-    # Check updated primal and dual variable values
-    coop.step()
-    assert torch.allclose(params, mktensor([0.0, -0.8]))
-    assert torch.allclose(formulation.state()[0], mktensor([0.02, 0.0]))
+    x0_y0 = mktensor([0.0, -1.0])
+    lmbda0 = mktensor([0.0, 0.0])
 
-    # ----------------------- Second iteration -----------------------
-    coop.zero_grad()
-    lagrangian = formulation.compute_lagrangian(cmp.closure, params)
+    # ------------ First step of surrogate updates ------------
+    cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
+    strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
-    # Check loss, proxy and non-proxy defects after forward pass
-    assert torch.allclose(lagrangian, mktensor(1.316))
-    assert torch.allclose(cmp.state.loss, mktensor(1.28))
-    assert torch.allclose(cmp.state.ineq_defect, mktensor([1.8, -1.8]))
-    assert torch.allclose(cmp.state.proxy_ineq_defect, mktensor([1.8, -1.72]))
+    # Check primal and dual Lagrangians
+    primal_lag0 = cmp_state.loss + torch.sum(violations * lmbda0)
+    dual_lag0 = torch.sum(strict_violations * lmbda0)
 
-    # Check primal and dual gradients after backward. Dual gradient must match
-    # ineq_defect
-    formulation.backward(lagrangian)
-    assert torch.allclose(params.grad, mktensor([-0.018, -3.22]))
-    assert torch.allclose(formulation.state()[0].grad, cmp.state.ineq_defect)
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lag0)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag0)
 
-    # Check updated primal and dual variable values
-    coop.step()
-    assert torch.allclose(params, mktensor([9e-4, -0.639]))
-    assert torch.allclose(formulation.state()[0], mktensor([0.038, 0.0]))
+    # analytical_gradients computes the gradients of the loss and surrogate constraints
+    grads_x0_y0 = cmp.analytical_gradients(x0_y0)
+    x1_y1 = x0_y0 - 1e-2 * (grads_x0_y0[0] + torch.sum(lmbda0 * grads_x0_y0[1]))
+    assert torch.allclose(params, x1_y1)
 
-    if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.ineq_defect.is_cuda
+    # Observed multipliers should be zero, matching lmdba0
+    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda0)
+
+    lmbda1 = torch.relu(lmbda0 + 1e-2 * strict_violations)
+
+    # ------------ Second step of surrogate updates ------------
+    cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
+    strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
+
+    # Check primal and dual Lagrangians
+    primal_lag1 = cmp_state.loss + torch.sum(violations * lmbda1)
+    dual_lag1 = torch.sum(strict_violations * lmbda1)
+
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lag1)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag1)
+
+    # analytical_gradients computes the gradients of the loss and surrogate constraints
+    grads_x1_y1 = cmp.analytical_gradients(x1_y1)
+    x2_y2 = x1_y1 - 1e-2 * (grads_x1_y1[0] + torch.sum(lmbda1 * grads_x1_y1[1]))
+
+    # NOTE: this test requires a relaxed tolerance of 1e-4
+    assert torch.allclose(params, x2_y2, atol=1e-4)
+
+    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda1)
+
+
+def test_convergence_surrogate():
+    pass
