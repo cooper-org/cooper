@@ -102,7 +102,7 @@ class ExplicitMultiplier(torch.nn.Module):
     def implicit_constraint_type(self):
         return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
 
-    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
+    def post_step_(self, strictly_feasible_indices: Optional[torch.Tensor] = None):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
@@ -110,7 +110,8 @@ class ExplicitMultiplier(torch.nn.Module):
         are feasible.
 
         Args:
-            feasible_indices: Indices or binary masks denoting the feasible constraints.
+            strictly_feasible_indices: Indices or binary masks denoting the strictly
+                feasible inequality constraints.
         """
 
         if self.enforce_positive:
@@ -119,10 +120,10 @@ class ExplicitMultiplier(torch.nn.Module):
 
             # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
             # about the pitfalls of using dual_restars with stateful optimizers.
-            if self.restart_on_feasible and feasible_indices is not None:
-                self.weight.data[feasible_indices, ...] = self.default_restart_value
+            if self.restart_on_feasible and strictly_feasible_indices is not None:
+                self.weight.data[strictly_feasible_indices, ...] = self.default_restart_value
                 if self.weight.grad is not None:
-                    self.weight.grad[feasible_indices, ...] = 0.0
+                    self.weight.grad[strictly_feasible_indices, ...] = 0.0
 
     def state_dict(self):
         _state_dict = super().state_dict()
@@ -202,17 +203,16 @@ class IndexedMultiplier(ExplicitMultiplier):
     def __repr__(self):
         return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
-    def post_step_(self, feasible_indices: Optional[torch.Tensor] = None):
-
-        if feasible_indices is None:
+    def post_step_(self, strictly_feasible_indices: Optional[torch.Tensor] = None):
+        if strictly_feasible_indices is None:
             feasible_filter = None
         else:
             # Only consider a constraint feasible if it was seen since the last step.
             feasible_mask = torch.zeros_like(self.last_seen_mask)
-            feasible_mask[feasible_indices] = True
+            feasible_mask[strictly_feasible_indices] = True
             feasible_filter = feasible_mask & self.last_seen_mask
 
-        super().post_step_(feasible_indices=feasible_filter)
+        super().post_step_(strictly_feasible_indices=feasible_filter)
 
         # Clear the contents of the seen mask.
         self.last_seen_mask *= False

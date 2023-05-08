@@ -146,12 +146,17 @@ class ConstrainedOptimizer:
                     # Feasibility is attained when the violation is negative. Given that
                     # the gradient sign is flipped, a negative violation corresponds to
                     # a positive gradient.
-                    feasible_indices = multiplier.weight.grad >= 0.0
+                    #
+                    # We reset multipliers to zero when their corresponding constraint
+                    # is *strictly* feasible. Resetting multipliers associated with
+                    # active constraints could disrupt the equilibrium between objective
+                    # and constraints and lead to instability.
+                    strictly_feasible_indices = multiplier.weight.grad > 0.0
 
                     # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
                     # about the pitfalls of using dual_restars with stateful optimizers.
 
-                    multiplier.post_step_(feasible_indices)
+                    multiplier.post_step_(strictly_feasible_indices)
 
     def state_dict(self) -> CooperOptimizerState:
         """
