@@ -151,6 +151,7 @@ class ExtraSGD(ExtragradientOptimizer):
         dampening: float = 0,
         weight_decay: float = 0,
         nesterov: bool = False,
+        maximize: bool = False,
     ):
         if lr is None or lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -165,6 +166,7 @@ class ExtraSGD(ExtragradientOptimizer):
             dampening=dampening,
             weight_decay=weight_decay,
             nesterov=nesterov,
+            maximize=maximize,
         )
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
@@ -180,10 +182,13 @@ class ExtraSGD(ExtragradientOptimizer):
         momentum = group["momentum"]
         dampening = group["dampening"]
         nesterov = group["nesterov"]
+        maximize = group["maximize"]
 
         if p.grad is None:
             return None
         d_p = p.grad.data
+        if maximize:
+            d_p = -d_p
         if weight_decay != 0:
             d_p.add_(weight_decay, p.data)
         if momentum != 0:
@@ -225,6 +230,7 @@ class ExtraAdam(ExtragradientOptimizer):
         eps: float = 1e-8,
         weight_decay: float = 0,
         amsgrad: bool = False,
+        maximize: bool = False,
     ):
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -234,7 +240,14 @@ class ExtraAdam(ExtragradientOptimizer):
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad)
+        defaults = dict(
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay,
+            amsgrad=amsgrad,
+            maximize=maximize,
+        )
         super(ExtraAdam, self).__init__(params, defaults)
 
     def __setstate__(self, state):
@@ -246,6 +259,8 @@ class ExtraAdam(ExtragradientOptimizer):
         if p.grad is None:
             return None
         grad = p.grad.data
+        if group["maximize"]:
+            grad = -grad
         if grad.is_sparse:
             raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
         amsgrad = group["amsgrad"]
