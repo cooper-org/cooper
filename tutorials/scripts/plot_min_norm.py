@@ -9,13 +9,13 @@ linear equations. The problem is formulated as a constrained minimization proble
     \min_{x}  \,\, \Vert x \Vert_2^2  \,\, s.t. \,\, Ax = b
 
 where :math:`A` is a matrix of size :math:`(m, n)` and :math:`b` is a vector of size
-:math:`(m, 1)`. 
+:math:`(m, 1)`.
 
 This is a well-known convex problem in numerical linear algebra, whose solution is given
-by the vector :math:`x^*` satisfying :math:`A^{\dagger}b = x^*`, where 
+by the vector :math:`x^*` satisfying :math:`A^{\dagger}b = x^*`, where
 :math:`A^{\dagger}` is the Moore-Penrose pseudo-inverse of :math:`A`.
 
-Here we analyze this traditional problem under the framework of gradient-based 
+Here we analyze this traditional problem under the framework of gradient-based
 Lagrangian optimization. We allow for the possibility that the system of equations
 is partially observed at each iterations. That is, we assume that the matrix :math:`A`
 and the vector :math:`b` may be sub-sampled at each iteration.
@@ -23,8 +23,8 @@ and the vector :math:`b` may be sub-sampled at each iteration.
 .. math::
     \mathcal{L}(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
 
-where :math:`\lambda` is the vector of Lagrange multipliers, and :math:`D` is a 
-stochastic diagonal matrix with :math:`1` on the indices corresponding to the observed 
+where :math:`\lambda` is the vector of Lagrange multipliers, and :math:`D` is a
+stochastic diagonal matrix with :math:`1` on the indices corresponding to the observed
 equations and :math:`0` everywhere else.
 
 The results below illustrate the influence of the number of observed equations on the
