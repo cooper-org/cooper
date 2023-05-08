@@ -154,7 +154,6 @@ def build_primal_optimizers(
     params, use_multiple_primal_optimizers, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
 ):
     if use_multiple_primal_optimizers:
-
         if optimizer_names is None:
             optimizer_names = ["SGD", "Adam"] if not extrapolation else ["ExtraSGD", "ExtraAdam"]
 
@@ -170,7 +169,6 @@ def build_primal_optimizers(
 
             primal_optimizers.append(optimizer)
     else:
-
         if optimizer_names is None:
             optimizer_names = "SGD" if not extrapolation else "ExtraSGD"
         if optimizer_kwargs is None:
@@ -201,6 +199,8 @@ def build_dual_optimizers(
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
+    dual_optimizer_kwargs["maximize"] = True
+
     if is_constrained:
         dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
         if not extrapolation:
@@ -221,7 +221,6 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
-
     is_constrained = len(constraint_groups) > 0
     dual_optimizers = build_dual_optimizers(
         is_constrained, constraint_groups, extrapolation, dual_optimizer_name, dual_optimizer_kwargs

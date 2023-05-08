@@ -87,6 +87,10 @@ class ConstrainedOptimizer:
             raise RuntimeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
         if self.dual_optimizers is None:
             raise RuntimeError("No dual optimizer(s) was provided for building a ConstrainedOptimizer.")
+        for dual_optimizer in self.dual_optimizers:
+            for param_group in dual_optimizer.param_groups:
+                if not param_group["maximize"]:
+                    raise ValueError("Dual optimizers must be set to carry out maximization steps.")
 
     def zero_grad(self):
         """
@@ -102,8 +106,8 @@ class ConstrainedOptimizer:
     def dual_step(self, call_extrapolation: bool = False):
         """
         Perform a gradient step on the parameters associated with the dual variables.
-        Since the dual problem involves *maximizing* over the dual variables, we flip
-        the sign of the gradient to perform ascent.
+        Since the dual problem involves *maximizing* over the dual variables, we require
+        dual optimizers which satisfy `maximize=True`.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure feasibility for equality constraints, or to
@@ -123,14 +127,6 @@ class ConstrainedOptimizer:
         else:
             call_method = "step"
 
-        for multiplier in self.multipliers:
-            for param in multiplier.parameters():
-                if param.grad is not None:
-                    # Flip gradients for multipliers to perform ascent.
-                    # We only do the flipping *right before* applying the optimizer
-                    # step to avoid accidental double sign flips.
-                    param.grad.mul_(-1.0)
-
         # Update multipliers based on current constraint violations (gradients)
         # For unobserved constraints the gradient is None, so this is a no-op.
         for dual_optimizer in self.dual_optimizers:
@@ -143,15 +139,13 @@ class ConstrainedOptimizer:
                     multiplier.implicit_constraint_type == ConstraintType.INEQUALITY
                     and multiplier.weight.grad is not None
                 ):
-                    # Feasibility is attained when the violation is negative. Given that
-                    # the gradient sign is flipped, a negative violation corresponds to
-                    # a positive gradient.
-                    #
                     # We reset multipliers to zero when their corresponding constraint
                     # is *strictly* feasible. Resetting multipliers associated with
                     # active constraints could disrupt the equilibrium between objective
                     # and constraints and lead to instability.
-                    strictly_feasible_indices = multiplier.weight.grad > 0.0
+                    #
+                    # Strict feasibility is attained when the violation is negative.
+                    strictly_feasible_indices = multiplier.weight.grad < 0.0
 
                     # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
                     # about the pitfalls of using dual_restars with stateful optimizers.
