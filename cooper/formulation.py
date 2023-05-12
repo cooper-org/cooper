@@ -95,7 +95,6 @@ class Formulation:
     def compute_lagrangian_contribution(
         self, multiplier_value: torch.Tensor, constraint_state: ConstraintState
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
 
         if self.formulation_type == "penalized":
@@ -181,7 +180,6 @@ class AugmentedLagrangianFormulation:
     def compute_lagrangian_contribution(
         self, multiplier_value: torch.Tensor, constraint_state: ConstraintState
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-
         raise NotImplementedError("This formulation is not yet tested.")
 
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
