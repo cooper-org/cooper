@@ -5,7 +5,8 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintState, observed_constraints_iterator
+from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType, observed_constraints_iterator
+from cooper.multipliers import ExplicitMultiplier
 
 # Formulation, and some other classes below, are heavily inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -105,6 +106,17 @@ class CMPState:
             if not constraint_state.skip_primal_contribution:
                 primal_lagrangian += primal_contribution
             if not constraint_state.skip_dual_contribution:
+                # Determine which of the constraints are strictly feasible and update
+                # the `strictly_feasible_indices` attribute of the multiplier.
+                if (
+                    isinstance(constraint_group.multiplier, ExplicitMultiplier)
+                    and (constraint_group.constraint_type == ConstraintType.INEQUALITY)
+                    and constraint_group.multiplier.restart_on_feasible
+                ):
+                    # `strict_violation` has already been patched to contain `violation`
+                    # whenever `strict_violation` is not provided.
+                    constraint_group.multiplier.strictly_feasible_indices = constraint_state.strict_violation < 0.0
+
                 dual_lagrangian += dual_contribution
 
             if return_multipliers:

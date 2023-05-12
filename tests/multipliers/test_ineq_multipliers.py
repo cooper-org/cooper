@@ -49,7 +49,8 @@ def test_ineq_post_step_(mult_class, restart_on_feasible, init_tensor, feasible_
     assert torch.allclose(ineq_multiplier.weight.grad, init_tensor.reshape(ineq_multiplier.weight.grad.shape))
 
     # Perform post-step again, this time with feasible indices
-    ineq_multiplier.post_step_(strictly_feasible_indices=feasible_indices)
+    ineq_multiplier.strictly_feasible_indices = feasible_indices
+    ineq_multiplier.post_step_()
 
     multiplier_values = ineq_multiplier(all_indices) if is_indexed else ineq_multiplier()
 

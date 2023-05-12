@@ -29,7 +29,8 @@ def test_eq_multiplier_init_and_forward(mult_class, init_tensor, all_indices):
 
 def test_eq_post_step_(mult_class, init_tensor, all_indices, feasible_indices):
     eq_multiplier = mult_class(init_tensor, restart_on_feasible=False)
-    eq_multiplier.post_step_(strictly_feasible_indices=feasible_indices)
+    eq_multiplier.strictly_feasible_indices = feasible_indices
+    eq_multiplier.post_step_()
 
     is_indexed = isinstance(eq_multiplier, multipliers.IndexedMultiplier)
     multiplier_values = eq_multiplier(all_indices) if is_indexed else eq_multiplier()

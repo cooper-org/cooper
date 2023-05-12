@@ -134,23 +134,8 @@ class ConstrainedOptimizer:
 
         for multiplier in self.multipliers:
             if isinstance(multiplier, ExplicitMultiplier):
-                # Select the indices of multipliers corresponding to feasible inequality constraints
-                if (
-                    multiplier.implicit_constraint_type == ConstraintType.INEQUALITY
-                    and multiplier.weight.grad is not None
-                ):
-                    # We reset multipliers to zero when their corresponding constraint
-                    # is *strictly* feasible. Resetting multipliers associated with
-                    # active constraints could disrupt the equilibrium between objective
-                    # and constraints and lead to instability.
-                    #
-                    # Strict feasibility is attained when the violation is negative.
-                    strictly_feasible_indices = multiplier.weight.grad < 0.0
-
-                    # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
-                    # about the pitfalls of using dual_restars with stateful optimizers.
-
-                    multiplier.post_step_(strictly_feasible_indices)
+                # `post_step_` is a no-op for multiplier with `enforce_positive=False`
+                multiplier.post_step_()
 
     def state_dict(self) -> CooperOptimizerState:
         """

@@ -83,6 +83,8 @@ class ExplicitMultiplier(torch.nn.Module):
         self.device = self.weight.device
         self.default_restart_value = default_restart_value
 
+        self.strictly_feasible_indices = None
+
         self.base_sanity_checks()
 
     def base_sanity_checks(self):
@@ -102,28 +104,33 @@ class ExplicitMultiplier(torch.nn.Module):
     def implicit_constraint_type(self):
         return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
 
-    def post_step_(self, strictly_feasible_indices: Optional[torch.Tensor] = None):
+    def post_step_(self):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
-        non-negative. It also restarts the value of the multipliers for constraints that
-        are feasible.
-
-        Args:
-            strictly_feasible_indices: Indices or binary masks denoting the strictly
-                feasible inequality constraints.
+        non-negative. It also restarts the value of the multipliers for inequality
+        constraints that are strictly feasible.
         """
 
         if self.enforce_positive:
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
-            # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
-            # about the pitfalls of using dual_restars with stateful optimizers.
-            if self.restart_on_feasible and strictly_feasible_indices is not None:
-                self.weight.data[strictly_feasible_indices, ...] = self.default_restart_value
+            if self.restart_on_feasible and self.strictly_feasible_indices is not None:
+                # We reset multipliers to zero when their corresponding constraint
+                # is *strictly* feasible.
+                # We do not reset multipliers for active constraints (satisfied with
+                # equality) to avoid changing the value of a multiplier whose
+                # optimal value is potentially strictly positive.
+
+                # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+                # about the pitfalls of using dual_restars with stateful optimizers.
+
+                self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
                 if self.weight.grad is not None:
-                    self.weight.grad[strictly_feasible_indices, ...] = 0.0
+                    self.weight.grad[self.strictly_feasible_indices, ...] = 0.0
+
+            self.strictly_feasible_indices = None
 
     def state_dict(self):
         _state_dict = super().state_dict()
@@ -203,16 +210,16 @@ class IndexedMultiplier(ExplicitMultiplier):
     def __repr__(self):
         return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
-    def post_step_(self, strictly_feasible_indices: Optional[torch.Tensor] = None):
-        if strictly_feasible_indices is None:
-            feasible_filter = None
-        else:
+    def post_step_(self):
+        if self.strictly_feasible_indices is not None:
             # Only consider a constraint feasible if it was seen since the last step.
             feasible_mask = torch.zeros_like(self.last_seen_mask)
-            feasible_mask[strictly_feasible_indices] = True
+            feasible_mask[self.strictly_feasible_indices] = True
             feasible_filter = feasible_mask & self.last_seen_mask
 
-        super().post_step_(strictly_feasible_indices=feasible_filter)
+            self.strictly_feasible_indices = feasible_filter
+
+        super().post_step_()
 
         # Clear the contents of the seen mask.
         self.last_seen_mask *= False
