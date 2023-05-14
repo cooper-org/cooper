@@ -108,17 +108,23 @@ def compute_quadratic_penalty(
             # with a non-zero multiplier. This seems confusing to me.
             # const_filter = torch.logical_or(strict_violation >= 0, multiplier_value.detach() > 0)
 
-            sq_violation = torch.sum(const_filter * (violation**2))
+            sq_violation = const_filter * (violation**2)
 
         elif constraint_type == ConstraintType.EQUALITY:
             # Equality constraints do not need to be filtered
-            sq_violation = torch.sum(violation**2)
+            sq_violation = violation**2
         else:
             raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
 
-        # TODO(juan43ramirez): allow for one coefficient shared across all constraints?
-        # Would require broadcasting the coefficient to the shape of the violation.
-        return torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation) / 2
+        if penalty_coefficient_value.numel() == 1:
+            # One penalty coefficient shared across all constraints.
+            return torch.sum(sq_violation) * penalty_coefficient_value / 2
+        else:
+            # One penalty coefficient per constraint.
+            if violation.shape != penalty_coefficient_value.shape:
+                raise ValueError("The violation tensor must have the same shape as the penalty coefficient tensor.")
+
+            return torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation) / 2
 
 
 class Formulation(abc.ABC):
@@ -144,11 +150,10 @@ class Formulation(abc.ABC):
 
 class PenalizedFormulation(Formulation):
     def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
-
         if constraint_type == ConstraintType.EQUALITY:
             raise ValueError("PenalizedFormulation expects inequality constraints.")
 
-        if torch.any(penalty_coefficient < 0):
+        if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
 
         self.penalty_coefficient = penalty_coefficient
@@ -165,7 +170,7 @@ class PenalizedFormulation(Formulation):
 
 class QuadraticPenaltyFormulation(Formulation):
     def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
-        if torch.any(penalty_coefficient < 0):
+        if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
 
         # TODO(juan43ramirez): Add documentation
@@ -176,7 +181,11 @@ class QuadraticPenaltyFormulation(Formulation):
         self, constraint_state: ConstraintState, **kwargs
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
         # Compute quadratic penalty term
-        weighted_violation_for_primal = compute_quadratic_penalty(self.penalty_coefficient(), constraint_state)
+        weighted_violation_for_primal = compute_quadratic_penalty(
+            penalty_coefficient_value=self.penalty_coefficient(),
+            constraint_state=constraint_state,
+            constraint_type=self.constraint_type,
+        )
 
         # Penalized formulations have no _trainable_ dual variables, so we adopt the
         # convention of setting this variable to None.
@@ -225,7 +234,7 @@ class LagrangianFormulation(Formulation):
 
 class AugmentedLagrangianFormulation(Formulation):
     def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
-        if torch.any(penalty_coefficient < 0):
+        if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
 
         # TODO(juan43ramirez): Add documentation
@@ -237,7 +246,12 @@ class AugmentedLagrangianFormulation(Formulation):
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
         if weighted_violation_for_primal is not None:
-            weighted_violation_for_primal += compute_quadratic_penalty(self.penalty_coefficient(), constraint_state)
+            penalty = compute_quadratic_penalty(
+                penalty_coefficient_value=self.penalty_coefficient(),
+                constraint_state=constraint_state,
+                constraint_type=self.constraint_type,
+            )
+            weighted_violation_for_primal += penalty
 
         # TODO: document
         multiplier_value_for_dual = multiplier_value * self.penalty_coefficient()
