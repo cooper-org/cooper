@@ -1,10 +1,11 @@
-import functools
+import abc
 from enum import Enum
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
+from cooper.multipliers import PenaltyCoefficient
 
 
 def extract_and_patch_violations(constraint_state: ConstraintState):
@@ -86,130 +87,177 @@ def compute_dual_weighted_violation(multiplier_value: torch.Tensor, constraint_s
         return torch.einsum("i...,i...->", multiplier_value, strict_violation.detach())
 
 
-class Formulation:
-    def __init__(self, formulation_type: Literal["penalized", "lagrangian"], constraint_type: ConstraintType):
-        # TODO(gallego-posada): Add documentation
-        self.formulation_type = formulation_type
-        self.constraint_type = constraint_type
-
-    def compute_lagrangian_contribution(
-        self, multiplier_value: torch.Tensor, constraint_state: ConstraintState
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-        weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
-
-        if self.formulation_type == "penalized":
-            # Penalized formulations have no _trainable_ dual variables, so we adopt the
-            # convention of setting this variable to None.
-            weighted_violation_for_dual = None
-        else:
-            weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value, constraint_state)
-
-        return weighted_violation_for_primal, weighted_violation_for_dual
-
-    def state_dict(self):
-        return {"formulation_type": self.formulation_type}
-
-    def load_state_dict(self, state_dict):
-        self.formulation_type = state_dict["formulation_type"]
-
-    def __repr__(self):
-        return f"{self.formulation_type.capitalize()}Formulation"
-
-
-def compute_primal_augmented_lagrangian_penalty(
-    constraint_type: ConstraintType,
-    multiplier_value: torch.Tensor,
-    constraint_state: ConstraintState,
-    augmented_lagrangian_scheduler: torch.optim.lr_scheduler._LRScheduler,
-) -> Optional[float | torch.Tensor]:
-    """Computes the augmented Lagrangian penalty, while preserving the gradient for the
-    primal variables.
-
-    Args:
-        constraint_type: The type of constraint. Used to determine whether the
-            constraint should be filtered based on it feasibility.
-        multiplier_value: The value of the multiplier for the constraint group.
-        constraint_state: The current state of the constraint.
-    """
+def compute_quadratic_penalty(
+    penalty_coefficient_value: torch.Tensor, constraint_state: ConstraintState, constraint_type: ConstraintType
+):
+    # TODO(juan43ramirez): Add documentation
 
     if constraint_state.skip_primal_contribution:
         return None
-
-    augmented_lagrangian_penalty = 0.0
-
-    violation, strict_violation = extract_and_patch_violations(constraint_state)
-
-    if constraint_type == ConstraintType.INEQUALITY:
-        # Compute filter based on strict constraint violation
-        const_filter = torch.logical_or(strict_violation >= 0, multiplier_value > 0)
-        sq_violation = torch.sum(const_filter.detach() * (violation**2))
-    elif constraint_type == ConstraintType.EQUALITY:
-        # Equality constraints do not need to be filtered
-        sq_violation = torch.sum(violation**2)
     else:
-        raise ValueError(f"{constraint_type} is incompatible with formulation_type=augmented_lagrangian")
+        violation, strict_violation = extract_and_patch_violations(constraint_state)
 
-    # TODO(gallego-posada): Why were we doing this check before?
-    # # Gather all the learning rates for the "parameter groups" of the dual
-    # # variables, and check that all the learning rates are the same.
-    dual_lrs = augmented_lagrangian_scheduler.get_last_lr()
-    # is_all_dual_lr_equal = all(x == dual_lrs[0] for x in dual_lrs)
-    # assert is_all_dual_lr_equal, "All the dual LRs must be the same."
+        if violation is None:
+            raise ValueError("The violation tensor must be provided if the primal contribution is not skipped.")
 
-    # Use the dual learning as the Augmented Lagrangian coefficient to
-    # ensure that gradient-based update will coincide with the update
-    # scheme of the Augmented Lagrangian method.
-    augmented_lagrangian_coefficient = dual_lrs[0]
-    if augmented_lagrangian_coefficient > 0:
-        # If using augmented Lagrangian, add squared sum of constraints
-        # Following the formulation on Marc Toussaint slides (p 17-20)
-        # https://ipvs.informatik.uni-stuttgart.de/mlr/marc/teaching/13-Optimization/03-constrainedOpt.pdf
-        augmented_lagrangian_penalty += 0.5 * augmented_lagrangian_coefficient * sq_violation
+        if constraint_type == ConstraintType.INEQUALITY:
+            # Compute filter based on strict constraint violation
+            const_filter = strict_violation >= 0
 
-    return augmented_lagrangian_penalty
+            # TODO(juan43ramirez): We used to also penalize inequality constraints
+            # with a non-zero multiplier. This seems confusing to me.
+            # const_filter = torch.logical_or(strict_violation >= 0, multiplier_value.detach() > 0)
+
+            sq_violation = torch.sum(const_filter * (violation**2))
+
+        elif constraint_type == ConstraintType.EQUALITY:
+            # Equality constraints do not need to be filtered
+            sq_violation = torch.sum(violation**2)
+        else:
+            raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
+
+        # TODO(juan43ramirez): allow for one coefficient shared across all constraints?
+        # Would require broadcasting the coefficient to the shape of the violation.
+        return torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation) / 2
 
 
-class AugmentedLagrangianFormulation:
-    def __init__(
-        self, constraint_type: ConstraintType, augmented_lagrangian_scheduler: torch.optim.lr_scheduler._LRScheduler
-    ):
-        self.formulation_type = "augmented_lagrangian"
-        self.constraint_type = constraint_type
-        self.augmented_lagrangian_scheduler = augmented_lagrangian_scheduler
+class Formulation(abc.ABC):
+    def __init__(self, *args, **kwargs):
+        # TODO(gallego-posada): Add documentation
+        pass
 
-    def compute_lagrangian_contribution(
-        self, multiplier_value: torch.Tensor, constraint_state: ConstraintState
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-        raise NotImplementedError("This formulation is not yet tested.")
-
-        weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
-        weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value, constraint_state)
-
-        augmented_lagrangian_penalty_for_primal = compute_primal_augmented_lagrangian_penalty(
-            self.constraint_type, multiplier_value, constraint_state, self.augmented_lagrangian_scheduler
-        )
-        assert (weighted_violation_for_primal is None) == (augmented_lagrangian_penalty_for_primal is None)
-
-        if (weighted_violation_for_primal is not None) and (augmented_lagrangian_penalty_for_primal is None):
-            weighted_violation_for_primal += augmented_lagrangian_penalty_for_primal
+    def compute_lagrangian_contribution(self, *args, **kwargs) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        weighted_violation_for_primal = None
+        weighted_violation_for_dual = None
 
         return weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
-        return {
-            "formulation_type": self.formulation_type,
-            "augmented_lagrangian_scheduler_state_dict": self.augmented_lagrangian_scheduler.state_dict(),
-        }
+        pass
 
-    def load_state_dict(self, state_dict):
-        self.formulation_type = state_dict["formulation_type"]
-        self.augmented_lagrangian_scheduler.load_state_dict(state_dict["augmented_lagrangian_scheduler_state_dict"])
+    def load_state_dict(self, state_dict: dict):
+        pass
 
     def __repr__(self):
-        return f"AugmentedLagrangianFormulation"
+        pass
+
+
+class PenalizedFormulation(Formulation):
+    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
+
+        if constraint_type == ConstraintType.EQUALITY:
+            raise ValueError("PenalizedFormulation expects inequality constraints.")
+
+        if torch.any(penalty_coefficient < 0):
+            raise ValueError("The penalty coefficients must all be non-negative.")
+
+        self.penalty_coefficient = penalty_coefficient
+        self.constraint_type = constraint_type
+
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState, **kwargs
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        weighted_violation_for_primal = compute_primal_weighted_violation(self.penalty_coefficient(), constraint_state)
+        weighted_violation_for_dual = None
+
+        return weighted_violation_for_primal, weighted_violation_for_dual
+
+
+class QuadraticPenaltyFormulation(Formulation):
+    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
+        if torch.any(penalty_coefficient < 0):
+            raise ValueError("The penalty coefficients must all be non-negative.")
+
+        # TODO(juan43ramirez): Add documentation
+        self.penalty_coefficient = penalty_coefficient
+        self.constraint_type = constraint_type
+
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState, **kwargs
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        # Compute quadratic penalty term
+        weighted_violation_for_primal = compute_quadratic_penalty(self.penalty_coefficient(), constraint_state)
+
+        # Penalized formulations have no _trainable_ dual variables, so we adopt the
+        # convention of setting this variable to None.
+        weighted_violation_for_dual = None
+
+        return weighted_violation_for_primal, weighted_violation_for_dual
+
+    def update_state_(self, *args, **kwargs):
+        # TODO(juan43ramirez): Could implement a helper function for increasing the
+        # penalty coefficient.
+        pass
+
+    def state_dict(self):
+        return {"penalty_coefficient": self.penalty_coefficient, "constraint_type": self.constraint_type}
+
+    def load_state_dict(self, state_dict):
+        self.penalty_coefficient = state_dict["penalty_coefficient"]
+        self.constraint_type = state_dict["constraint_type"]
+
+    def __repr__(self):
+        return f"QuadraticPenaltyFormulation for {self.constraint_type} constraints. Penalty coefficient: {self.penalty_coefficient}"
+
+
+class LagrangianFormulation(Formulation):
+    def __init__(self, constraint_type: ConstraintType):
+        # TODO(juan43ramirez): Add documentation
+        self.constraint_type = constraint_type
+
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState, multiplier_value: torch.Tensor, **kwargs
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
+        weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value, constraint_state)
+
+        return weighted_violation_for_primal, weighted_violation_for_dual
+
+    def state_dict(self):
+        return {"constraint_type": self.constraint_type}
+
+    def load_state_dict(self, state_dict):
+        self.constraint_type = state_dict["constraint_type"]
+
+    def __repr__(self):
+        return "LagrangianFormulation for {self.constraint_type} constraints."
+
+
+class AugmentedLagrangianFormulation(Formulation):
+    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
+        if torch.any(penalty_coefficient < 0):
+            raise ValueError("The penalty coefficients must all be non-negative.")
+
+        # TODO(juan43ramirez): Add documentation
+        self.penalty_coefficient = penalty_coefficient
+        self.constraint_type = constraint_type
+
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState, multiplier_value: torch.Tensor, **kwargs
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
+        if weighted_violation_for_primal is not None:
+            weighted_violation_for_primal += compute_quadratic_penalty(self.penalty_coefficient(), constraint_state)
+
+        # TODO: document
+        multiplier_value_for_dual = multiplier_value * self.penalty_coefficient()
+        weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value_for_dual, constraint_state)
+
+        return weighted_violation_for_primal, weighted_violation_for_dual
+
+    def state_dict(self):
+        return {"penalty_coefficient": self.penalty_coefficient, "constraint_type": self.constraint_type}
+
+    def load_state_dict(self, state_dict):
+        self.penalty_coefficient = state_dict["penalty_coefficient"]
+        self.constraint_type = state_dict["constraint_type"]
+
+    def __repr__(self):
+        return f"AugmentedLagrangianFormulation for {self.constraint_type} constraints. Penalty coefficient: {self.penalty_coefficient}"
 
 
 class FormulationType(Enum):
-    PENALIZED = functools.partial(Formulation, formulation_type="penalized")
-    LAGRANGIAN = functools.partial(Formulation, formulation_type="lagrangian")
+    PENALTY = PenalizedFormulation
+    QUADRATIC_PENALTY = QuadraticPenaltyFormulation
+    LAGRANGIAN = LagrangianFormulation
     AUGMENTED_LAGRANGIAN = AugmentedLagrangianFormulation
