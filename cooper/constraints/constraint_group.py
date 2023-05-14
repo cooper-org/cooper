@@ -35,22 +35,20 @@ class ConstraintGroup:
         self.multiplier = multiplier
 
     def build_formulation(self, formulation_type, formulation_kwargs):
-        if self.constraint_type == ConstraintType.PENALTY and formulation_type != FormulationType.PENALIZED:
-            raise ValueError("Constraint of type `penalty` requires a `penalized` formulation.")
 
         return formulation_type.value(constraint_type=self.constraint_type, **formulation_kwargs)
 
     def sanity_check_multiplier(self, multiplier: MULTIPLIER_TYPE) -> None:
 
-        if (self.constraint_type == ConstraintType.PENALTY) and not isinstance(
-            multiplier, multipliers.ConstantMultiplier
-        ):
-            # If a penalty "constraint" is used, then we must have been provided a ConstantMultiplier.
-            raise ValueError("A ConstantMultiplier must be provided along with a `penalty` constraint.")
+        # if (self.constraint_type == ConstraintType.PENALTY) and not isinstance(
+        #     multiplier, multipliers.ConstantMultiplier
+        # ):
+        #     # If a penalty "constraint" is used, then we must have been provided a ConstantMultiplier.
+        #     raise ValueError("A ConstantMultiplier must be provided along with a `penalty` constraint.")
 
-        if isinstance(multiplier, multipliers.ConstantMultiplier):
-            if any(multiplier() < 0) and (self.constraint_type == ConstraintType.INEQUALITY):
-                raise ValueError("All entries of ConstantMultiplier must be non-negative for inequality constraints.")
+        # if isinstance(multiplier, multipliers.ConstantMultiplier):
+        #     if any(multiplier() < 0) and (self.constraint_type == ConstraintType.INEQUALITY):
+        #         raise ValueError("All entries of ConstantMultiplier must be non-negative for inequality constraints.")
 
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
             if multiplier.implicit_constraint_type != self.constraint_type:

@@ -8,7 +8,6 @@ import torch
 class ConstraintType(Enum):
     EQUALITY = "equality"
     INEQUALITY = "inequality"
-    PENALTY = "penalty"
 
 
 @dataclass
