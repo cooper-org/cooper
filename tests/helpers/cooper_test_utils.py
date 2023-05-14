@@ -1,6 +1,6 @@
 """Cooper-related utilities for writing tests."""
 
-from typing import Optional, Union
+from typing import Union
 
 import pytest
 import torch
@@ -32,7 +32,15 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
     """
 
-    def __init__(self, use_ineq_constraints=False, use_constraint_surrogate=False, device=None):
+    def __init__(
+        self,
+        use_ineq_constraints=False,
+        use_constraint_surrogate=False,
+        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
+        const1_formulation_kwargs: dict = {},
+        const2_formulation_kwargs: dict = {},
+        device=None,
+    ):
         self.use_ineq_constraints = use_ineq_constraints
         self.use_constraint_surrogate = use_constraint_surrogate
         super().__init__()
@@ -42,11 +50,19 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             multiplier_kwargs = {"shape": 1, "device": device}
             constraint_kwargs = {
                 "constraint_type": cooper.ConstraintType.INEQUALITY,
-                "formulation_type": cooper.FormulationType.LAGRANGIAN,
+                "formulation_type": formulation_type,
             }
             self.constraint_groups = [
-                cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
-                cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs),
+                cooper.ConstraintGroup(
+                    **constraint_kwargs,
+                    multiplier_kwargs=multiplier_kwargs,
+                    formulation_kwargs=const1_formulation_kwargs,
+                ),
+                cooper.ConstraintGroup(
+                    **constraint_kwargs,
+                    multiplier_kwargs=multiplier_kwargs,
+                    formulation_kwargs=const2_formulation_kwargs,
+                ),
             ]
 
     def analytical_gradients(self, params):

@@ -1,162 +1,148 @@
-#!/usr/bin/env python
-
-"""Tests for Augmented Lagrangian Formulation class."""
-
 import cooper_test_utils
 import pytest
+import testing_utils
 import torch
 
 import cooper
 
 
-def test_augmented_lagrangian_formulation():
-    class DummyCMP(cooper.ConstrainedMinimizationProblem):
-        def __init__(self):
-            super().__init__()
+def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
+    const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
 
-        def closure(self):
-            pass
-
-    cmp = DummyCMP()
-
-    formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
-    cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]))
-    formulation.create_state(cmp.state)
-
-    assert (formulation.ineq_multipliers is None) and (formulation.eq_multipliers is not None)
-
-    formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
-    cmp.state = cooper.CMPState(eq_defect=torch.tensor([1.0]), ineq_defect=torch.tensor([1.0, 1.2]))
-    formulation.create_state(cmp.state)
-    assert (formulation.ineq_multipliers is not None) and (formulation.eq_multipliers is not None)
-
-
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_convergence_augmented_lagrangian(aim_device):
-    """ """
-
-    # Increasing Augmented Lagrangian coefficient schedule
-    lr_lambda = lambda epoch: torch.sqrt(torch.tensor(epoch / 100))
-    dual_scheduler = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda)
-
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=torch.optim.SGD,
-        primal_init=[0.0, -1.0],
-        dual_optim_cls=torch.optim.SGD,
-        use_ineq=True,
-        use_proxy_ineq=False,
-        dual_restarts=False,
-        alternating=True,
-        primal_optim_kwargs={"lr": 1e-2},
-        dual_optim_kwargs={"lr": 1.0},
-        dual_scheduler=dual_scheduler,
-        formulation_cls=cooper.formulation.AugmentedLagrangianFormulation,
+    cmp = cooper_test_utils.Toy2dCMP(
+        use_ineq_constraints=True,
+        formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+        const1_formulation_kwargs={"penalty_coefficient": const1_penalty_coefficient},
+        const2_formulation_kwargs={"penalty_coefficient": const2_penalty_coefficient},
+        device=device,
     )
 
-    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=cmp.constraint_groups,
+        extrapolation=False,
+        alternating=alternating,
+    )
 
-    formulation.create_state_from_metadata(dtype=params.dtype, device=device, ineq_size=torch.Size([2]))
-    coop.instantiate_dual_optimizer_and_scheduler()
+    return cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient
+
+
+def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
+    """Test first two iterations of PrimalDual alternating GDA updates on toy 2D problem."""
+
+    if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
+        pytest.skip("Manual alternating test only considers the case of initialization at [0, -1]")
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
+    )
+
+    alternating = cooper.optim.AlternatingType.FALSE
+
+    mktensor = testing_utils.mktensor(device=device)
+
+    cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient = setup_augmented_lagrangian_objects(
+        primal_optimizers, alternating, device
+    )
+
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+
+    x0_y0 = mktensor([0.0, -1.0])
+    lmbda0 = mktensor([0.0, 0.0])
+
+    # ------------ First step of simultaneous updates ------------
+    _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    violations = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
+
+    # Observed multipliers from the lagrangian_store should be before the update, thus
+    # matching lmbda0
+    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda0)
+
+    grad_x0_y0 = cmp.analytical_gradients(x0_y0)
+    # The gradient of the Augmented Lagrangian wrt the primal variables is:
+    # ...
+    # Both constraints in the Toy2dCMP problem are inequality constraints, so relu
+    const_contrib0 = (lmbda0[0] + const1_penalty_coefficient() * violations[0].relu()) * grad_x0_y0[1][0]
+    const_contrib1 = (lmbda0[1] + const2_penalty_coefficient() * violations[1].relu()) * grad_x0_y0[1][1]
+    x1_y1 = x0_y0 - 1e-2 * (grad_x0_y0[0] + const_contrib0 + const_contrib1)
+
+    assert torch.allclose(params, x1_y1)
+
+    # The update to the multipliers has the learning rate and the penalty coefficient
+    lmbda_update = torch.stack(
+        [violations[0] * const1_penalty_coefficient(), violations[1] * const2_penalty_coefficient()]
+    )
+    lmbda1 = torch.relu(lmbda0 + 1e-2 * lmbda_update)
+
+    # Increase the penalty coefficients
+    # TODO(juan43ramirez): how to do this in a more elegant way? Maybe a method in the
+    # ConstraintGroup class?
+    # breakpoint()
+    # cmp.constraint_groups[0].formulation.penalty_coefficient.weight.data *= 2
+    # cmp.constraint_groups[1].formulation.penalty_coefficient.weight.data *= 2
+    const1_penalty_coefficient.update_value_(const1_penalty_coefficient() * 2)
+    const2_penalty_coefficient.update_value_(const2_penalty_coefficient() * 2)
+
+    # ------------ Second step of simultaneous updates ------------
+    _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    violations = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
+
+    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda1)
+
+    grad_x1_y1 = cmp.analytical_gradients(x1_y1)
+    const_contrib0 = (lmbda1[0] + const1_penalty_coefficient() * violations[0].relu()) * grad_x1_y1[1][0]
+    const_contrib1 = (lmbda1[1] + const2_penalty_coefficient() * violations[1].relu()) * grad_x1_y1[1][1]
+    x2_y2 = x1_y1 - 1e-2 * (grad_x1_y1[0] + const_contrib0 + const_contrib1)
+
+    assert torch.allclose(params, x2_y2)
+
+
+def test_manual_augmented_lagrangian_primal_dual():
+    pass
+
+
+def test_manual_augmented_lagrangian_dual_primal():
+    pass
+
+
+@pytest.mark.parametrize(
+    "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL, False]
+)
+def test_convergence_augmented_lagrangian(
+    alternating_type,
+    Toy2dCMP_params_init,
+    Toy2dCMP_problem_properties,
+    use_multiple_primal_optimizers,
+    device,
+):
+    """Test convergence of Augmented Lagrangian updates on toy 2D problem."""
+
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    if not use_ineq_constraints:
+        pytest.skip("Alternating updates requires a problem with constraints.")
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
+    )
+
+    cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient = setup_augmented_lagrangian_objects(
+        primal_optimizers, alternating_type, device
+    )
+
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+    roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
+
+    if alternating_type == cooper.optim.AlternatingType.PRIMAL_DUAL:
+        roll_kwargs["compute_violations_fn"] = lambda: cmp.compute_violations(params)
 
     for step_id in range(1500):
-        coop.zero_grad()
+        cooper_optimizer.roll(**roll_kwargs)
+        if step_id % 100 == 0:
+            # Increase the penalty coefficients
+            const1_penalty_coefficient.update_value_(const1_penalty_coefficient() * 1.1)
+            const2_penalty_coefficient.update_value_(const2_penalty_coefficient() * 1.1)
 
-        lagrangian = formulation.compute_lagrangian(
-            aug_lag_coeff_scheduler=coop.dual_scheduler,
-            closure=cmp.closure,
-            params=params,
-        )
-        formulation.backward(lagrangian)
-
-        coop.step(defect_fn=cmp.defect_fn, params=params)
-        coop.dual_scheduler.step()
-
-    if device == "cuda":
-        assert cmp.state.loss.is_cuda
-        assert cmp.state.eq_defect is None or cmp.state.eq_defect.is_cuda
-        assert cmp.state.ineq_defect is None or cmp.state.ineq_defect.is_cuda
-
-    assert torch.allclose(params[0], mktensor(2.0 / 3.0))
-    assert torch.allclose(params[1], mktensor(1.0 / 3.0))
-
-
-@pytest.mark.parametrize("aim_device", ["cpu", "cuda"])
-def test_manual_augmented_lagrangian(aim_device):
-    """ """
-
-    # No change <-> constant dual learning rate
-    lr_lambda = lambda epoch: 1.0
-    dual_scheduler = cooper.optim.partial_scheduler(torch.optim.lr_scheduler.LambdaLR, lr_lambda=lr_lambda)
-
-    test_problem_data = cooper_test_utils.build_test_problem(
-        aim_device=aim_device,
-        primal_optim_cls=torch.optim.SGD,
-        primal_init=[0.0, -1.0],
-        dual_optim_cls=torch.optim.SGD,
-        use_ineq=True,
-        use_proxy_ineq=False,
-        dual_restarts=False,
-        alternating=True,
-        primal_optim_kwargs={"lr": 1e-2},
-        dual_optim_kwargs={"lr": 1.0},
-        dual_scheduler=dual_scheduler,
-        formulation_cls=cooper.formulation.AugmentedLagrangianFormulation,
-    )
-
-    params, cmp, coop, formulation, device, mktensor = test_problem_data.as_tuple()
-
-    formulation.create_state_from_metadata(dtype=params.dtype, device=device, ineq_size=torch.Size([2]))
-    coop.instantiate_dual_optimizer_and_scheduler()
-
-    # ---------- First iteration ----------
-
-    coop.zero_grad()
-
-    lagrangian = formulation.compute_lagrangian(
-        aug_lag_coeff_scheduler=coop.dual_scheduler,
-        closure=cmp.closure,
-        params=params,
-    )
-
-    assert torch.allclose(cmp.state.loss, mktensor(2.0))
-    assert torch.allclose(lagrangian, mktensor(4.0))
-
-    formulation.backward(lagrangian)
-
-    assert torch.allclose(params.grad, mktensor([-2.0, -6.0]))
-
-    coop.step(closure=cmp.closure, params=params)
-    assert torch.allclose(params, mktensor([0.02, -0.94]))
-
-    # Check inequality multipliers
-    assert torch.allclose(formulation.state()[0], mktensor([1.92, 0.0]))
-
-    coop.dual_scheduler.step()
-
-    # ---------- Second iteration ----------
-
-    coop.zero_grad()
-
-    lagrangian = formulation.compute_lagrangian(
-        aug_lag_coeff_scheduler=coop.dual_scheduler,
-        closure=cmp.closure,
-        params=params,
-    )
-
-    assert torch.allclose(cmp.state.loss, mktensor(1.7676))
-    assert torch.allclose(lagrangian, mktensor(7.2972))
-
-    formulation.backward(lagrangian)
-
-    assert torch.allclose(params.grad, mktensor([-3.8, -7.6]))
-
-    coop.step(closure=cmp.closure, params=params)
-    assert torch.allclose(params, mktensor([0.058, -0.864]))
-
-    # Check inequality multipliers
-    # Multiplier gradient signed is flipped inside step
-    assert torch.allclose(-formulation.state()[0].grad, mktensor([1.8060, -1.860636]))
-    assert torch.allclose(formulation.state()[0], mktensor([3.726, 0.0]))
-
-    coop.dual_scheduler.step()
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        # NOTE: this test requires a relaxed tolerance of 1e-4
+        assert torch.allclose(param, exact_solution, atol=1e-4)
