@@ -14,6 +14,10 @@ class PenaltyCoefficient:
         self.weight = init
         self.device = init.device
 
+    def update_value_(self, value: torch.Tensor):
+        """Update the value of the penalty."""
+        self.weight.data = value
+
     def __call__(self):
         """Return the current value of the multiplier."""
         return torch.clone(self.weight)
@@ -28,3 +32,6 @@ class PenaltyCoefficient:
 
     def load_state_dict(self, state_dict):
         self.weight = state_dict["weight"]
+
+    def __repr__(self):
+        return f"PenaltyCoefficient({self.weight})"
