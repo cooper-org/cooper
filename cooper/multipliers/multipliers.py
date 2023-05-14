@@ -1,40 +1,10 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 import abc
 import warnings
-from typing import Optional
 
 import torch
 
 from cooper.constraints.constraint_state import ConstraintType
-
-
-class ConstantMultiplier:
-    """Constant (non-trainable) multiplier class used for penalized formulations.
-
-    Args:
-        init: Value of the multiplier.
-    """
-
-    def __init__(self, init: torch.Tensor):
-        if init.requires_grad:
-            raise ValueError("Constant multiplier should not be trainable.")
-        self.weight = init
-        self.device = init.device
-
-    def __call__(self):
-        """Return the current value of the multiplier."""
-        return torch.clone(self.weight)
-
-    def parameters(self):
-        """Return an empty iterator for consistency with multipliers which are
-        :py:class:`~torch.nn.Module`."""
-        return iter(())
-
-    def state_dict(self):
-        return {"weight": self.weight}
-
-    def load_state_dict(self, state_dict):
-        self.weight = state_dict["weight"]
 
 
 class ExplicitMultiplier(torch.nn.Module):
