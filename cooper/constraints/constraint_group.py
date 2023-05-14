@@ -29,10 +29,14 @@ class ConstraintGroup:
         self.constraint_type = constraint_type
         self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
-        if multiplier is None:
-            multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
-        self.sanity_check_multiplier(multiplier)
-        self.multiplier = multiplier
+        if formulation_type in [FormulationType.LAGRANGIAN, FormulationType.AUGMENTED_LAGRANGIAN]:
+            if multiplier is None:
+                multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
+            self.sanity_check_multiplier(multiplier)
+            self.multiplier = multiplier
+        else:
+            # Penalized formulations do not admit multipliers
+            self.multiplier = None
 
     def build_formulation(self, formulation_type, formulation_kwargs):
 
@@ -77,16 +81,19 @@ class ConstraintGroup:
         elif constraint_state is None:
             constraint_state = self.state
 
-        if constraint_state.constraint_features is None:
-            multiplier_value = self.multiplier()
+        if self.multiplier is None:
+            multiplier_value = None
         else:
-            multiplier_value = self.multiplier(constraint_state.constraint_features)
+            if constraint_state.constraint_features is None:
+                multiplier_value = self.multiplier()
+            else:
+                multiplier_value = self.multiplier(constraint_state.constraint_features)
 
-        if len(multiplier_value.shape) == 0:
-            multiplier_value = multiplier_value.unsqueeze(0)
+            if len(multiplier_value.shape) == 0:
+                multiplier_value = multiplier_value.unsqueeze(0)
 
         primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
-            multiplier_value=multiplier_value, constraint_state=constraint_state
+            constraint_state=constraint_state, multiplier_value=multiplier_value
         )
 
         return multiplier_value, primal_contribution, dual_contribution
