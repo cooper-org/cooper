@@ -121,7 +121,7 @@ def compute_primal_augmented_lagrangian_penalty(
     multiplier_value: torch.Tensor,
     constraint_state: ConstraintState,
     augmented_lagrangian_scheduler: torch.optim.lr_scheduler._LRScheduler,
-) -> Optional[float | torch.Tensor]:
+) -> Optional[Union[float, torch.Tensor]]:
     """Computes the augmented Lagrangian penalty, while preserving the gradient for the
     primal variables.
 
