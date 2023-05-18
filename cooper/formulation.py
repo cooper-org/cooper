@@ -1,6 +1,6 @@
 import functools
 from enum import Enum
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, Union
 
 import torch
 
