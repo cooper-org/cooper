@@ -174,8 +174,8 @@ class SparsePID(PIDBase):
         for p in group["params"]:
             if p.grad is None:
                 continue
-            if p.grad.is_sparse:
-                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
+            if not p.grad.is_sparse:
+                raise RuntimeError("SparsePID optimizer only supports sparse gradients. Consider PID instead.")
 
             grad = p.grad
             state = self.state[p]
@@ -217,8 +217,8 @@ class SparsePID(PIDBase):
 
             # Update state. We only modify the parts of the state associated with
             # observed gradients.
-            with torch.no_grad():
-                state["previous_direction"].sparse_mask(grad)._values().copy_(grad_values)
-                state["previous_change"].sparse_mask(grad)._values().copy_(change_values)
+            # TODO(juan43ramirez): is this an efficient way to do this?
+            state["previous_direction"][grad_indices] = grad_values.clone().detach()
+            state["previous_change"][grad_indices] = change_values.clone().detach()
 
         return loss

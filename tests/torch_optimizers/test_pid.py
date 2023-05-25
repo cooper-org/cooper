@@ -3,6 +3,7 @@ import pytest
 import torch
 
 import cooper
+from cooper.multipliers import IndexedMultiplier
 from cooper.optim import PID, SparsePID
 
 
@@ -64,6 +65,93 @@ def test_manual_pid(proportional, integral, derivative):
     # The state contain p2 in `previous_direction` and p2 - p1 in `previous_change`.
     assert torch.allclose(optimizer.state[param]["previous_direction"], p2)
     assert torch.allclose(optimizer.state[param]["previous_change"], p2 - p1)
+
+
+@pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
+def test_manual_sparse_pid(proportional, integral, derivative):
+    if not torch.cuda.is_available():
+        pytest.skip("Sparse gradients are only supported on GPU.")
+
+    device = "cuda"
+
+    param = IndexedMultiplier(torch.ones(10, 1, device=device), use_sparse_gradient=True)
+    all_indices = torch.arange(10, device=device)
+
+    def loss_fn(param, index):
+        return param(index).pow(2).sum() / 2
+
+    lr = 0.1
+
+    def PID_direction(grad, prev_grad, prev_change):
+        change = grad - prev_grad
+        curvature = change - prev_change
+
+        return integral * grad + proportional * change + derivative * curvature
+
+    optimizer = SparsePID(
+        param.parameters(), lr=lr, proportional=proportional, integral=integral, derivative=derivative
+    )
+
+    # -------------------------------------------- First step of optimization
+    indices = torch.tensor([0, 1, 4, 7], device=device)
+
+    # Manual first step of optimization. The gradient is simply the current value of p.
+    p0 = param(all_indices).clone().detach()
+    p1 = p0.clone()
+    p1[indices] -= lr * PID_direction(p0, 0.0, 0.0)[indices]  # only update the current indices
+
+    # Manually calculate the state of the optimizer
+    previous_direction = torch.zeros_like(p0)
+    previous_direction[indices] = p0.clone()[indices]
+    previous_change = torch.zeros_like(p0)
+    previous_change[indices] = p0.clone()[indices]
+
+    optimizer.zero_grad()
+    loss = loss_fn(param, indices)
+    loss.backward()
+    optimizer.step()
+
+    assert torch.allclose(param(all_indices), p1)
+
+    # Check the state of the optimizer. For observer indices, should contain the first
+    # gradient in `previous_direction` and also in `previous_change`. 0 otherwise.
+    state = optimizer.state[list(param.parameters())[0]]
+
+    assert torch.allclose(state["previous_direction"].flatten(), previous_direction)
+    assert torch.allclose(state["previous_change"].flatten(), previous_change)
+
+    # -------------------------------------------- Second step of optimization
+    old_indices = indices.clone()
+
+    indices = torch.tensor([0, 3, 5, 7, 9], device=device)
+
+    # Manual second step
+    p2 = p1.clone()
+    p2[indices] = p1[indices] - lr * PID_direction(p1, previous_direction, previous_change)[indices]
+
+    previous_direction[indices] = p1.clone()[indices]
+
+    # We modify previous_change only for the indices that were updated.
+    # For indices that were only observed now, the previous_change is p1 - 0
+    previous_change[indices] = p1[indices] - 0.0
+
+    # For indices that were observed before *and* now, the previous_change is p1 - p0.
+    # Note that the following line overwites the previous line for the indices that
+    # belong to both old_indices and indices.
+    twice_observed_indices = [idx for idx in range(10) if idx in old_indices and idx in indices]
+    previous_change[twice_observed_indices] = p1[twice_observed_indices] - p0[twice_observed_indices]
+
+    optimizer.zero_grad()
+    loss = loss_fn(param, indices)
+    loss.backward()
+    optimizer.step()
+
+    assert torch.allclose(param(all_indices), p2)
+
+    state = optimizer.state[list(param.parameters())[0]]
+
+    assert torch.allclose(state["previous_direction"].flatten(), previous_direction)
+    assert torch.allclose(state["previous_change"].flatten(), previous_change)
 
 
 @pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
