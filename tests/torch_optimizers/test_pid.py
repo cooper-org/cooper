@@ -2,17 +2,15 @@ import cooper_test_utils
 import pytest
 import torch
 
+import cooper
 from cooper.optim import PID, SparsePID
-
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 @pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
 def test_manual_pid(proportional, integral, derivative):
     param = torch.tensor([1.0], requires_grad=True)
 
-    def loss_fn(param):
-        return param**2 / 2
+    loss_fn = lambda param: param**2 / 2
 
     lr = 0.1
 
@@ -66,3 +64,44 @@ def test_manual_pid(proportional, integral, derivative):
     # The state contain p2 in `previous_direction` and p2 - p1 in `previous_change`.
     assert torch.allclose(optimizer.state[param]["previous_direction"], p2)
     assert torch.allclose(optimizer.state[param]["previous_change"], p2 - p1)
+
+
+@pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
+def test_pid_convergence(
+    proportional,
+    integral,
+    derivative,
+    Toy2dCMP_problem_properties,
+    Toy2dCMP_params_init,
+    use_multiple_primal_optimizers,
+    device,
+):
+    """Test convergence of PID updates on toy 2D problem. The PID updates are only
+    applied to the dual variables."""
+
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    if not use_ineq_constraints:
+        pytest.skip("Test requires a problem with constraints.")
+
+    cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
+
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
+    )
+
+    dual_params = [{"params": constraint.multiplier.parameters()} for constraint in cmp.constraint_groups]
+    dual_optimizer = PID(
+        dual_params, lr=0.01, proportional=proportional, integral=integral, derivative=derivative, maximize=True
+    )
+
+    cooper_optimizer = cooper.optim.SimultaneousOptimizer(
+        primal_optimizers, dual_optimizer, constraint_groups=cmp.constraint_groups
+    )
+
+    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+
+    for step_id in range(1500):
+        cooper_optimizer.roll(compute_cmp_state_fn)
+
+    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+        assert torch.allclose(param, exact_solution)
