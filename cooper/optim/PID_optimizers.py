@@ -52,8 +52,6 @@ class PIDBase(Optimizer):
         if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
             raise ValueError("Invalid PID parameters: all are zero")
 
-        self.assert_grads(params)
-
         defaults = dict(
             lr=lr,
             weight_decay=weight_decay,
@@ -80,18 +78,13 @@ class PIDBase(Optimizer):
 
                     # Previous update difference. That is the difference between the
                     # previous update and the update before that. Initialized to zero.
-                    state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state["previous_change"] = torch.zeros_like(p, memory_format=torch.preserve_format)
 
 
 class PID(PIDBase):
     # TODO(juan43ramirez): ema_beta
 
-    def assert_grads(self, params):
-        for p in params:
-            if p.grad.is_sparse:
-                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
-
-    # @_use_grad_for_differentiable
+    @torch.no_grad()
     def step(self, closure=None):
         """Performs a single optimization step.
 
@@ -116,18 +109,20 @@ class PID(PIDBase):
             for p in group["params"]:
                 if p.grad is None:
                     continue
+                if p.grad.is_sparse:
+                    raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
 
                 grad = p.grad
                 state = self.state[p]
+
+                if weight_decay != 0:
+                    grad = grad.add(p, alpha=weight_decay)
 
                 previous_direction = state["previous_direction"]
                 change = grad.sub(previous_direction)
 
                 previous_change = state["previous_change"]
                 curvature = change.sub(previous_change)
-
-                if weight_decay != 0:
-                    grad = grad.add(p, alpha=weight_decay)
 
                 d_p = grad.mul(integral)
 
@@ -148,18 +143,13 @@ class PID(PIDBase):
         return loss
 
 
-class SparsePID(Optimizer):
+class SparsePID(PIDBase):
     r"""
     Supports sparse gradient updates. Inspired by SparseAdam from PyTorch.
     https://github.com/pytorch/pytorch/blob/0bb2b015414214e8874d4c31188eb2fd883da402/torch/optim/_functional.py#L22
     """
 
-    def assert_grads(self, params):
-        for p in params:
-            if p.grad.is_sparse:
-                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
-
-    # @_use_grad_for_differentiable
+    @torch.no_grad()
     def step(self, closure=None):
         """Performs a single optimization step.
 
@@ -184,6 +174,8 @@ class SparsePID(Optimizer):
         for p in group["params"]:
             if p.grad is None:
                 continue
+            if p.grad.is_sparse:
+                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
 
             grad = p.grad
             state = self.state[p]
@@ -202,14 +194,14 @@ class SparsePID(Optimizer):
                     return constructor().resize_as_(grad)
                 return constructor(grad_indices, values, size)
 
+            if weight_decay != 0:
+                grad_values.add_(make_sparse(p.data), alpha=weight_decay)
+
             previous_direction = state["previous_direction"].sparse_mask(grad)._values()
             change_values = grad_values.sub(previous_direction)
 
             previous_change = state["previous_change"].sparse_mask(grad)._values()
             curvature_values = change_values.sub(previous_change)
-
-            if weight_decay != 0:
-                grad_values.add_(make_sparse(p.data), alpha=weight_decay)
 
             d_p_values = grad_values.mul(integral)
 
