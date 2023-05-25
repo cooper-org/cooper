@@ -52,6 +52,10 @@ class PID(Optimizer):
         if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
             raise ValueError("Invalid PID parameters: all are zero")
 
+        for p in params:
+            if p.grad.is_sparse:
+                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
+
         defaults = dict(
             lr=lr,
             weight_decay=weight_decay,
@@ -63,33 +67,12 @@ class PID(Optimizer):
 
         super().__init__(params, defaults)
 
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        for group in self.param_groups:
-            group.setdefault("maximize", False)
-
     def _init_group(self, group):
         has_sparse_grad = False
 
         for p in group["params"]:
             if p.grad is not None:
                 state = self.state[p]
-
-                if p.grad.is_sparse:
-                    has_sparse_grad = True
-
-                # Lazy state initialization
-
-                if len(state) == 0:
-                    # Previous update direction.
-                    # TODO(juan43ramirez): for EMAs, initializing to zero makes the
-                    # estimate of the EMA biased. This would require a correction term
-                    # like with Adam or initializing to the first gradient.
-                    state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
-                    # Previous update difference. That is the difference between the
-                    # previous update and the update before that. Initialized to zero.
-                    state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
 
         return has_sparse_grad
 
@@ -112,14 +95,24 @@ class PID(Optimizer):
             integral = group["integral"]
             derivative = group["derivative"]
 
-            has_sparse_grad = self._init_group(group)
-
             for p in group["params"]:
                 if p.grad is None:
                     continue
 
                 grad = p.grad.data
                 state = self.state[p]
+
+                # Lazy state initialization
+                if len(state) == 0:
+                    # Previous update direction.
+                    # TODO(juan43ramirez): for EMAs, initializing to zero makes the
+                    # estimate of the EMA biased. This would require a correction term
+                    # like with Adam or initializing to the first gradient.
+                    state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                    # Previous update difference. That is the difference between the
+                    # previous update and the update before that. Initialized to zero.
+                    state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
 
                 previous_direction = state["previous_direction"]
                 change = grad - previous_direction
