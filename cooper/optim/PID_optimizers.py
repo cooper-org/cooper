@@ -13,11 +13,6 @@ from torch.optim.optimizer import Optimizer
 
 
 class PIDBase(Optimizer):
-    # TODO
-    pass
-
-
-class PID(Optimizer):
     r"""
 
     PID is x_t = x_0 + ...
@@ -32,7 +27,6 @@ class PID(Optimizer):
         params (iterable): iterable of parameters to optimize or dicts defining
         ...
     """
-    # TODO(juan43ramirez): ema_beta
 
     def __init__(
         self,
@@ -58,9 +52,7 @@ class PID(Optimizer):
         if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
             raise ValueError("Invalid PID parameters: all are zero")
 
-        for p in params:
-            if p.grad.is_sparse:
-                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
+        self.assert_grads(params)
 
         defaults = dict(
             lr=lr,
@@ -72,6 +64,32 @@ class PID(Optimizer):
         )
 
         super().__init__(params, defaults)
+
+    def _init_group(self, group):
+        for p in group["params"]:
+            if p.grad is not None:
+                state = self.state[p]
+
+                # Lazy state initialization
+                if len(state) == 0:
+                    # Previous update direction.
+                    # TODO(juan43ramirez): for EMAs, initializing to zero makes the
+                    # estimate of the EMA biased. This would require a correction term
+                    # like with Adam or initializing to the first gradient.
+                    state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                    # Previous update difference. That is the difference between the
+                    # previous update and the update before that. Initialized to zero.
+                    state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+
+class PID(PIDBase):
+    # TODO(juan43ramirez): ema_beta
+
+    def assert_grads(self, params):
+        for p in params:
+            if p.grad.is_sparse:
+                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
 
     # @_use_grad_for_differentiable
     def step(self, closure=None):
@@ -91,6 +109,9 @@ class PID(Optimizer):
             proportional = group["proportional"]
             integral = group["integral"]
             derivative = group["derivative"]
+            maximize = group["maximize"]
+
+            self._init_group(group)
 
             for p in group["params"]:
                 if p.grad is None:
@@ -98,18 +119,6 @@ class PID(Optimizer):
 
                 grad = p.grad
                 state = self.state[p]
-
-                # Lazy state initialization
-                if len(state) == 0:
-                    # Previous update direction.
-                    # TODO(juan43ramirez): for EMAs, initializing to zero makes the
-                    # estimate of the EMA biased. This would require a correction term
-                    # like with Adam or initializing to the first gradient.
-                    state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
-                    # Previous update difference. That is the difference between the
-                    # previous update and the update before that. Initialized to zero.
-                    state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
 
                 previous_direction = state["previous_direction"]
                 change = grad.sub(previous_direction)
@@ -127,7 +136,7 @@ class PID(Optimizer):
                 if derivative != 0:
                     d_p.add_(curvature, alpha=derivative)
 
-                if group["maximize"]:
+                if maximize:
                     d_p.mul_(-1)
 
                 p.add_(d_p, alpha=-group["lr"])
@@ -141,56 +150,14 @@ class PID(Optimizer):
 
 class SparsePID(Optimizer):
     r"""
-
-    Shorter description of SparsePID.
-
     Supports sparse gradient updates. Inspired by SparseAdam from PyTorch.
     https://github.com/pytorch/pytorch/blob/0bb2b015414214e8874d4c31188eb2fd883da402/torch/optim/_functional.py#L22
-
-    Arguments:
-        params (iterable): iterable of parameters to optimize or dicts defining
-        ...
     """
-    # TODO(juan43ramirez): ema_beta
 
-    def __init__(
-        self,
-        params,
-        lr: float,
-        weight_decay: float = 0.0,
-        proportional: float = 0.0,
-        integral: float = 1.0,
-        derivative: float = 0.0,
-        maximize: bool = False,
-    ):
-        if not 0.0 <= lr:
-            raise ValueError("Invalid learning rate: {}".format(lr))
-        if weight_decay < 0.0:
-            raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
-
-        if proportional < 0.0:
-            raise ValueError("Invalid PID proportional value: {}".format(proportional))
-        if integral < 0.0:
-            raise ValueError("Invalid PID integral value: {}".format(integral))
-        if derivative < 0.0:
-            raise ValueError("Invalid PID derivative value: {}".format(derivative))
-        if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
-            raise ValueError("Invalid PID parameters: all are zero")
-
+    def assert_grads(self, params):
         for p in params:
-            if not p.grad.is_sparse:
-                raise RuntimeError("SparsePID optimizer does not support dense gradients. Consider PID instead.")
-
-        defaults = dict(
-            lr=lr,
-            weight_decay=weight_decay,
-            proportional=proportional,
-            integral=integral,
-            derivative=derivative,
-            maximize=maximize,
-        )
-
-        super().__init__(params, defaults)
+            if p.grad.is_sparse:
+                raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
 
     # @_use_grad_for_differentiable
     def step(self, closure=None):
@@ -210,6 +177,9 @@ class SparsePID(Optimizer):
             proportional = group["proportional"]
             integral = group["integral"]
             derivative = group["derivative"]
+            maximize = group["maximize"]
+
+        self._init_group(group)
 
         for p in group["params"]:
             if p.grad is None:
@@ -217,20 +187,6 @@ class SparsePID(Optimizer):
 
             grad = p.grad
             state = self.state[p]
-
-            # Lazy state initialization
-            if len(state) == 0:
-                # Previous update direction.
-                # TODO(juan43ramirez): for EMAs, initializing to zero makes the
-                # estimate of the EMA biased. This would require a correction term
-                # like with Adam or initializing to the first gradient.
-                state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
-                # Previous update difference. That is the difference between the
-                # previous update and the update before that. Initialized to zero.
-                state["previous_direction_difference"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
-            #  grad = grad if not maximize else -grad
 
             grad = grad.coalesce()  # the update is non-linear so indices must be unique
             grad_indices = grad._indices()
@@ -262,7 +218,7 @@ class SparsePID(Optimizer):
             if derivative != 0:
                 d_p_values.add_(curvature_values, alpha=derivative)
 
-            if group["maximize"]:
+            if maximize:
                 d_p_values.mul_(-1)
 
             p.add_(make_sparse(d_p_values), alpha=-group["lr"])
