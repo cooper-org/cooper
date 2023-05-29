@@ -2,6 +2,7 @@ import abc
 from enum import Enum
 from typing import Optional, Tuple
 
+
 import torch
 
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
