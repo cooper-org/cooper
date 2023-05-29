@@ -1,13 +1,15 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 from typing import Optional
 
 import torch
 
 
 class ConstraintType(Enum):
-    EQUALITY = "equality"
-    INEQUALITY = "inequality"
+    # TODO(juan43ramirez): Do the same for MultiplierType
+    EQUALITY = auto()
+    INEQUALITY = auto()
+    PENALTY = auto()
 
 
 @dataclass

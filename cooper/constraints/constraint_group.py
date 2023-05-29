@@ -5,7 +5,7 @@ import torch
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
 from cooper.formulation import FormulationType
-from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.multipliers import MULTIPLIER_TYPE, PenaltyCoefficient
 
 
 class ConstraintGroup:
@@ -19,41 +19,27 @@ class ConstraintGroup:
         self,
         constraint_type: ConstraintType,
         formulation_type: Optional[FormulationType] = FormulationType.LAGRANGIAN,
-        formulation_kwargs: Optional[dict] = {},
         multiplier: Optional[MULTIPLIER_TYPE] = None,
         multiplier_kwargs: Optional[dict] = {},
+        penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
-
         self._state: ConstraintState = None
 
         self.constraint_type = constraint_type
-        self.formulation = self.build_formulation(formulation_type, formulation_kwargs)
 
         if formulation_type in [FormulationType.LAGRANGIAN, FormulationType.AUGMENTED_LAGRANGIAN]:
             if multiplier is None:
                 multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
             self.sanity_check_multiplier(multiplier)
-            self.multiplier = multiplier
         else:
             # Penalized formulations do not admit multipliers
-            self.multiplier = None
+            multiplier = None
 
-    def build_formulation(self, formulation_type, formulation_kwargs):
-
-        return formulation_type.value(constraint_type=self.constraint_type, **formulation_kwargs)
+        self.formulation = formulation_type.value(
+            constraint_type=self.constraint_type, multiplier=multiplier, penalty_coefficient=penalty_coefficient
+        )
 
     def sanity_check_multiplier(self, multiplier: MULTIPLIER_TYPE) -> None:
-
-        # if (self.constraint_type == ConstraintType.PENALTY) and not isinstance(
-        #     multiplier, multipliers.ConstantMultiplier
-        # ):
-        #     # If a penalty "constraint" is used, then we must have been provided a ConstantMultiplier.
-        #     raise ValueError("A ConstantMultiplier must be provided along with a `penalty` constraint.")
-
-        # if isinstance(multiplier, multipliers.ConstantMultiplier):
-        #     if any(multiplier() < 0) and (self.constraint_type == ConstraintType.INEQUALITY):
-        #         raise ValueError("All entries of ConstantMultiplier must be non-negative for inequality constraints.")
-
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
             if multiplier.implicit_constraint_type != self.constraint_type:
                 raise ValueError(f"Provided multiplier is inconsistent with {self.constraint_type} constraint.")
@@ -70,48 +56,36 @@ class ConstraintGroup:
 
         self._state = value
 
+    @property
+    def multiplier(self) -> MULTIPLIER_TYPE:
+        return self.formulation.multiplier
+
+    def update_penalty_coefficient(self, value: torch.Tensor) -> None:
+        """Update the penalty coefficient of the constraint group."""
+        self.formulation.penalty_coefficient.value = value
+
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
         """Compute the contribution of the current constraint to the primal and dual
-        Lagrangians, and evaluates the associated Lagrange multiplier."""
+        Lagrangians."""
 
         if constraint_state is None and self.state is None:
             raise ValueError("A `ConstraintState` (provided or internal) is needed to compute Lagrangian contribution")
         elif constraint_state is None:
             constraint_state = self.state
 
-        if self.multiplier is None:
-            multiplier_value = None
-        else:
-            if constraint_state.constraint_features is None:
-                multiplier_value = self.multiplier()
-            else:
-                multiplier_value = self.multiplier(constraint_state.constraint_features)
-
-            if len(multiplier_value.shape) == 0:
-                multiplier_value = multiplier_value.unsqueeze(0)
-
-        primal_contribution, dual_contribution = self.formulation.compute_lagrangian_contribution(
-            constraint_state=constraint_state, multiplier_value=multiplier_value
-        )
-
-        return multiplier_value, primal_contribution, dual_contribution
+        return self.formulation.compute_lagrangian_contribution(constraint_state=constraint_state)
 
     def state_dict(self):
-        return {
-            "constraint_type": self.constraint_type,
-            "formulation": self.formulation.state_dict(),
-            "multiplier_state_dict": self.multiplier.state_dict(),
-        }
+        return {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}
 
     def load_state_dict(self, state_dict):
         self.constraint_type = state_dict["constraint_type"]
         self.formulation.load_state_dict(state_dict["formulation"])
-        self.multiplier.load_state_dict(state_dict["multiplier_state_dict"])
 
     def __repr__(self):
-        return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier})"
+        return f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation})"
 
 
 def observed_constraints_iterator(

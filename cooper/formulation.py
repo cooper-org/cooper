@@ -5,7 +5,31 @@ from typing import Optional, Tuple
 import torch
 
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
-from cooper.multipliers import PenaltyCoefficient
+from cooper.multipliers import MULTIPLIER_TYPE, PenaltyCoefficient
+
+
+def evaluate_multiplier(multiplier: MULTIPLIER_TYPE, constraint_state: ConstraintState) -> Optional[torch.Tensor]:
+    """Evaluate the Lagrange multiplier associated with the constraint group.
+
+    Args:
+        constraint_state: The current state of the constraint.
+    """
+
+    # TODO: need to do the same with penalty coefficients
+
+    if multiplier is None:
+        multiplier_value = None
+
+    else:
+        if constraint_state.constraint_features is None:
+            multiplier_value = multiplier()
+        else:
+            multiplier_value = multiplier(constraint_state.constraint_features)
+
+        if len(multiplier_value.shape) == 0:
+            multiplier_value = multiplier_value.unsqueeze(0)
+
+    return multiplier_value
 
 
 def extract_and_patch_violations(constraint_state: ConstraintState):
@@ -128,15 +152,23 @@ def compute_quadratic_penalty(
 
 
 class Formulation(abc.ABC):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, constraint_type: ConstraintType, multiplier: MULTIPLIER_TYPE, penalty_coefficient: PenaltyCoefficient
+    ):
         # TODO(gallego-posada): Add documentation
         pass
 
-    def compute_lagrangian_contribution(self, *args, **kwargs) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """Compute the contribution of the current constraint to the primal and dual
+        Lagrangians, and evaluates the associated Lagrange multiplier."""
+
+        multiplier_value = None
         weighted_violation_for_primal = None
         weighted_violation_for_dual = None
 
-        return weighted_violation_for_primal, weighted_violation_for_dual
+        return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
         pass
@@ -149,37 +181,72 @@ class Formulation(abc.ABC):
 
 
 class PenalizedFormulation(Formulation):
-    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
-        if constraint_type == ConstraintType.EQUALITY:
-            raise ValueError("PenalizedFormulation expects inequality constraints.")
-
+    def __init__(
+        self, constraint_type: ConstraintType, multiplier: MULTIPLIER_TYPE, penalty_coefficient: PenaltyCoefficient
+    ):
+        if constraint_type != ConstraintType.PENALTY:
+            raise ValueError("PenalizedFormulation expects `constraint_type=ConstraintType.PENALTY`.")
+        if multiplier is not None:
+            raise ValueError("PenalizedFormulation does not admit multipliers.")
+        if penalty_coefficient is None:
+            raise ValueError("PenalizedFormulation requires penalty coefficients.")
         if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
 
-        self.penalty_coefficient = penalty_coefficient
         self.constraint_type = constraint_type
+        self.multiplier = None
+        self.penalty_coefficient = penalty_coefficient
 
     def compute_lagrangian_contribution(
-        self, constraint_state: ConstraintState, **kwargs
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        self, constraint_state: ConstraintState
+    ) -> Tuple[None, Optional[torch.Tensor], None]:
         weighted_violation_for_primal = compute_primal_weighted_violation(self.penalty_coefficient(), constraint_state)
+
+        # Penalized formulations have no _trainable_ dual variables, so we adopt the
+        # convention of setting these variables to None.
+        multiplier_value = None
         weighted_violation_for_dual = None
 
-        return weighted_violation_for_primal, weighted_violation_for_dual
+        return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
+
+    def state_dict(self):
+        return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient}
+
+    def load_state_dict(self, state_dict):
+        if "multiplier" in state_dict:
+            Warning("Unexpected key `multiplier` when loading a PenalizedFormulation.")
+
+        self.constraint_type = state_dict["constraint_type"]
+        self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
+
+    def __repr__(self):
+        return (
+            f"PenalizedFormulation for {self.constraint_type} constraints. With {self.penalty_coefficient.state_dict()}"
+        )
 
 
 class QuadraticPenaltyFormulation(Formulation):
-    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
+    # TODO(juan43ramirez): document the difference with the PenalizedFormulation
+    def __init__(
+        self, constraint_type: ConstraintType, multiplier: MULTIPLIER_TYPE, penalty_coefficient: PenaltyCoefficient
+    ):
+        if constraint_type == ConstraintType.PENALTY:
+            raise ValueError("QuadraticPenaltyFormulation requires either an equality or inequality constraint.")
+        if multiplier is not None:
+            raise ValueError("PenalizedFormulation does not admit multipliers.")
+        if penalty_coefficient is None:
+            raise ValueError("QuadraticPenaltyFormulation requires penalty coefficients.")
         if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
 
         # TODO(juan43ramirez): Add documentation
-        self.penalty_coefficient = penalty_coefficient
         self.constraint_type = constraint_type
+        self.multiplier = None
+        self.penalty_coefficient = penalty_coefficient
 
     def compute_lagrangian_contribution(
-        self, constraint_state: ConstraintState, **kwargs
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        self, constraint_state: ConstraintState
+    ) -> Tuple[None, Optional[torch.Tensor], None]:
         # Compute quadratic penalty term
         weighted_violation_for_primal = compute_quadratic_penalty(
             penalty_coefficient_value=self.penalty_coefficient(),
@@ -188,64 +255,91 @@ class QuadraticPenaltyFormulation(Formulation):
         )
 
         # Penalized formulations have no _trainable_ dual variables, so we adopt the
-        # convention of setting this variable to None.
+        # convention of setting these variables to None.
+        multiplier_value = None
         weighted_violation_for_dual = None
 
-        return weighted_violation_for_primal, weighted_violation_for_dual
-
-    def update_state_(self, *args, **kwargs):
-        # TODO(juan43ramirez): Could implement a helper function for increasing the
-        # penalty coefficient.
-        pass
+        return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
-        return {"penalty_coefficient": self.penalty_coefficient, "constraint_type": self.constraint_type}
+        return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient.state_dict()}
 
     def load_state_dict(self, state_dict):
-        self.penalty_coefficient = state_dict["penalty_coefficient"]
+        if "multiplier" in state_dict:
+            Warning("Unexpected key `multiplier` when loading a QuadraticPenaltyFormulation.")
+
         self.constraint_type = state_dict["constraint_type"]
+        self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
 
     def __repr__(self):
-        return f"QuadraticPenaltyFormulation for {self.constraint_type} constraints. Penalty coefficient: {self.penalty_coefficient}"
+        return f"QuadraticPenaltyFormulation for {self.constraint_type} constraints. With {self.penalty_coefficient}"
 
 
 class LagrangianFormulation(Formulation):
-    def __init__(self, constraint_type: ConstraintType):
-        # TODO(juan43ramirez): Add documentation
+    def __init__(
+        self, constraint_type: ConstraintType, multiplier: MULTIPLIER_TYPE, penalty_coefficient: PenaltyCoefficient
+    ):
+        if constraint_type == ConstraintType.PENALTY:
+            raise ValueError("LagrangianFormulation requires either an equality or inequality constraint.")
+        if penalty_coefficient is not None:
+            raise ValueError("LagrangianFormulation does not admit penalty coefficients.")
+        if multiplier is None:
+            raise ValueError("LagrangianFormulation requires a multiplier.")
+
         self.constraint_type = constraint_type
+        self.multiplier = multiplier
+        self.penalty_coefficient = None
 
     def compute_lagrangian_contribution(
-        self, constraint_state: ConstraintState, multiplier_value: torch.Tensor, **kwargs
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        self, constraint_state: ConstraintState
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        multiplier_value = evaluate_multiplier(self.multiplier, constraint_state)
+
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
         weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value, constraint_state)
 
-        return weighted_violation_for_primal, weighted_violation_for_dual
+        return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
-        return {"constraint_type": self.constraint_type}
+        return {"constraint_type": self.constraint_type, "multiplier": self.multiplier.state_dict()}
 
     def load_state_dict(self, state_dict):
+        if "penalty_coefficient" in state_dict:
+            Warning("Unexpected key `penalty_coefficient` when loading a LagrangianFormulation.")
+
         self.constraint_type = state_dict["constraint_type"]
+        self.multiplier.load_state_dict(state_dict["multiplier"])
 
     def __repr__(self):
         return "LagrangianFormulation for {self.constraint_type} constraints."
 
 
 class AugmentedLagrangianFormulation(Formulation):
-    def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
+    def __init__(
+        self, constraint_type: ConstraintType, multiplier: MULTIPLIER_TYPE, penalty_coefficient: PenaltyCoefficient
+    ):
+        if constraint_type == ConstraintType.PENALTY:
+            raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
+        if penalty_coefficient is None:
+            raise ValueError("AugmentedLagrangianFormulation requires penalty coefficients.")
         if torch.any(penalty_coefficient() < 0):
             raise ValueError("The penalty coefficients must all be non-negative.")
+        if multiplier is None:
+            raise ValueError("AugmentedLagrangianFormulation requires a multiplier.")
 
         # TODO(juan43ramirez): Add documentation
-        self.penalty_coefficient = penalty_coefficient
         self.constraint_type = constraint_type
+        self.multiplier = multiplier
+        self.penalty_coefficient = penalty_coefficient
 
     def compute_lagrangian_contribution(
-        self, constraint_state: ConstraintState, multiplier_value: torch.Tensor, **kwargs
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        self, constraint_state: ConstraintState
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        multiplier_value = evaluate_multiplier(self.multiplier, constraint_state)
+
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
-        if weighted_violation_for_primal is not None:
+        if weighted_violation_for_primal is not None and not torch.all(self.penalty_coefficient() == 0):
+            # Compute quadratic penalty term
             penalty = compute_quadratic_penalty(
                 penalty_coefficient_value=self.penalty_coefficient(),
                 constraint_state=constraint_state,
@@ -253,18 +347,24 @@ class AugmentedLagrangianFormulation(Formulation):
             )
             weighted_violation_for_primal += penalty
 
-        # TODO: document
+        # TODO: document. Point is to automatically multiply the learning rate of the
+        # penalty coefficient by the penalty coefficient.
         multiplier_value_for_dual = multiplier_value * self.penalty_coefficient()
         weighted_violation_for_dual = compute_dual_weighted_violation(multiplier_value_for_dual, constraint_state)
 
-        return weighted_violation_for_primal, weighted_violation_for_dual
+        return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
-        return {"penalty_coefficient": self.penalty_coefficient, "constraint_type": self.constraint_type}
+        return {
+            "constraint_type": self.constraint_type,
+            "multiplier": self.multiplier.state_dict(),
+            "penalty_coefficient": self.penalty_coefficient.state_dict(),
+        }
 
     def load_state_dict(self, state_dict):
-        self.penalty_coefficient = state_dict["penalty_coefficient"]
         self.constraint_type = state_dict["constraint_type"]
+        self.multiplier.load_state_dict(state_dict["multiplier"])
+        self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
 
     def __repr__(self):
         return f"AugmentedLagrangianFormulation for {self.constraint_type} constraints. Penalty coefficient: {self.penalty_coefficient}"

@@ -1,11 +1,12 @@
 """Cooper-related utilities for writing tests."""
 
-from typing import Union
+from typing import Optional, Union
 
 import pytest
 import torch
 
 import cooper
+from cooper.multipliers import PenaltyCoefficient
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -37,8 +38,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
         formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        const1_formulation_kwargs: dict = {},
-        const2_formulation_kwargs: dict = {},
+        penalty_coefficients: Optional[list[PenaltyCoefficient]] = [None, None],
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
@@ -56,12 +56,12 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                 cooper.ConstraintGroup(
                     **constraint_kwargs,
                     multiplier_kwargs=multiplier_kwargs,
-                    formulation_kwargs=const1_formulation_kwargs,
+                    penalty_coefficient=penalty_coefficients[0],
                 ),
                 cooper.ConstraintGroup(
                     **constraint_kwargs,
                     multiplier_kwargs=multiplier_kwargs,
-                    formulation_kwargs=const2_formulation_kwargs,
+                    penalty_coefficient=penalty_coefficients[1],
                 ),
             ]
 

@@ -13,8 +13,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
         formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
-        const1_formulation_kwargs={"penalty_coefficient": const1_penalty_coefficient},
-        const2_formulation_kwargs={"penalty_coefficient": const2_penalty_coefficient},
+        penalty_coefficients=[const1_penalty_coefficient, const2_penalty_coefficient],
         device=device,
     )
 
@@ -81,8 +80,8 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
     # breakpoint()
     # cmp.constraint_groups[0].formulation.penalty_coefficient.weight.data *= 2
     # cmp.constraint_groups[1].formulation.penalty_coefficient.weight.data *= 2
-    const1_penalty_coefficient.update_value_(const1_penalty_coefficient() * 2)
-    const2_penalty_coefficient.update_value_(const2_penalty_coefficient() * 2)
+    const1_penalty_coefficient.value = const1_penalty_coefficient() * 2
+    const2_penalty_coefficient.value = const2_penalty_coefficient() * 2
 
     # ------------ Second step of simultaneous updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
@@ -140,8 +139,8 @@ def test_convergence_augmented_lagrangian(
         cooper_optimizer.roll(**roll_kwargs)
         if step_id % 100 == 0:
             # Increase the penalty coefficients
-            const1_penalty_coefficient.update_value_(const1_penalty_coefficient() * 1.1)
-            const2_penalty_coefficient.update_value_(const2_penalty_coefficient() * 1.1)
+            const1_penalty_coefficient.value = const1_penalty_coefficient() * 1.1
+            const2_penalty_coefficient.value = const2_penalty_coefficient() * 1.1
 
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         # NOTE: this test requires a relaxed tolerance of 1e-4

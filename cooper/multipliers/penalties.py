@@ -23,6 +23,10 @@ class PenaltyCoefficient:
         """Update the value of the penalty."""
         if value.requires_grad:
             raise ValueError("New value of PenaltyCoefficient should not require gradients.")
+        if value.shape != self._value.shape:
+            Warning(
+                f"New value of PenaltyCoefficient with shape {value.shape} does not match current shape of shape {self._value.shape}."
+            )
         self._value = value.clone()
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None):
