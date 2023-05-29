@@ -14,9 +14,6 @@ def evaluate_multiplier(multiplier: MULTIPLIER_TYPE, constraint_state: Constrain
     Args:
         constraint_state: The current state of the constraint.
     """
-
-    # TODO: need to do the same with penalty coefficients
-
     if multiplier is None:
         multiplier_value = None
 
@@ -30,6 +27,20 @@ def evaluate_multiplier(multiplier: MULTIPLIER_TYPE, constraint_state: Constrain
             multiplier_value = multiplier_value.unsqueeze(0)
 
     return multiplier_value
+
+
+def evaluate_penalty(penalty_coefficient: PenaltyCoefficient, constraint_state: ConstraintState) -> torch.Tensor:
+    """Evaluate the penalty coefficient associated with the constraint group.
+
+    Args:
+        constraint_state: The current state of the constraint.
+    """
+    if constraint_state.constraint_features is None:
+        penalty_coefficient_value = penalty_coefficient()
+    else:
+        penalty_coefficient_value = penalty_coefficient(constraint_state.constraint_features)
+
+    return penalty_coefficient_value
 
 
 def extract_and_patch_violations(constraint_state: ConstraintState):
@@ -200,7 +211,8 @@ class PenalizedFormulation(Formulation):
     def compute_lagrangian_contribution(
         self, constraint_state: ConstraintState
     ) -> Tuple[None, Optional[torch.Tensor], None]:
-        weighted_violation_for_primal = compute_primal_weighted_violation(self.penalty_coefficient(), constraint_state)
+        penalty_coefficient_value = evaluate_penalty(self.penalty_coefficient, constraint_state)
+        weighted_violation_for_primal = compute_primal_weighted_violation(penalty_coefficient_value, constraint_state)
 
         # Penalized formulations have no _trainable_ dual variables, so we adopt the
         # convention of setting these variables to None.
@@ -248,8 +260,9 @@ class QuadraticPenaltyFormulation(Formulation):
         self, constraint_state: ConstraintState
     ) -> Tuple[None, Optional[torch.Tensor], None]:
         # Compute quadratic penalty term
+        penalty_coefficient_value = evaluate_penalty(self.penalty_coefficient, constraint_state)
         weighted_violation_for_primal = compute_quadratic_penalty(
-            penalty_coefficient_value=self.penalty_coefficient(),
+            penalty_coefficient_value=penalty_coefficient_value,
             constraint_state=constraint_state,
             constraint_type=self.constraint_type,
         )
@@ -336,9 +349,10 @@ class AugmentedLagrangianFormulation(Formulation):
         self, constraint_state: ConstraintState
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
         multiplier_value = evaluate_multiplier(self.multiplier, constraint_state)
+        penalty_coefficient_value = evaluate_penalty(self.penalty_coefficient, constraint_state)
 
         weighted_violation_for_primal = compute_primal_weighted_violation(multiplier_value, constraint_state)
-        if weighted_violation_for_primal is not None and not torch.all(self.penalty_coefficient() == 0):
+        if weighted_violation_for_primal is not None and not torch.all(penalty_coefficient_value == 0):
             # Compute quadratic penalty term
             penalty = compute_quadratic_penalty(
                 penalty_coefficient_value=self.penalty_coefficient(),
