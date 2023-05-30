@@ -76,6 +76,11 @@ class PIDBase(Optimizer):
                     # like with Adam or initializing to the first gradient.
                     state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
 
+                    # TODO(juan43ramirez): for first update, should just do a KI step
+                    # For second update, PI step and for third update, PID step.
+                    # The point is that we should only use the I and D terms when they
+                    # are estimated reliably. This is not the case for the first update.
+
                     # Previous update difference. That is the difference between the
                     # previous update and the update before that. Initialized to zero.
                     state["previous_change"] = torch.zeros_like(p, memory_format=torch.preserve_format)
