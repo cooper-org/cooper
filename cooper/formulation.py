@@ -2,7 +2,6 @@ import abc
 from enum import Enum
 from typing import Optional, Tuple
 
-
 import torch
 
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
@@ -113,7 +112,7 @@ def compute_dual_weighted_violation(multiplier_value: torch.Tensor, constraint_s
         return None
     else:
         if multiplier_value is None:
-            raise ValueError("The multiplier tensor must be provided if the primal contribution is not skipped.")
+            raise ValueError("The multiplier tensor must be provided if the dual contribution is not skipped.")
 
         # Strict violation represents the "actual" violation of the constraint. When
         # provided, we use the strict violation to update the value of the multiplier.

@@ -103,9 +103,9 @@ class CMPState:
                 constraint_state=constraint_state
             )
 
-            if not constraint_state.skip_primal_contribution:
+            if not constraint_state.skip_primal_contribution and primal_contribution is not None:
                 primal_lagrangian += primal_contribution
-            if not constraint_state.skip_dual_contribution:
+            if not constraint_state.skip_dual_contribution and dual_contribution is not None:
                 # Determine which of the constraints are strictly feasible and update
                 # the `strictly_feasible_indices` attribute of the multiplier.
                 if (

@@ -31,7 +31,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
 
 
 def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
-    """Test first two iterations of PrimalDual alternating GDA updates on toy 2D problem."""
+    """Test first two iterations of simultaneous GDA updates on toy 2D problem."""
 
     if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
         pytest.skip("Manual alternating test only considers the case of initialization at [0, -1]")
@@ -63,7 +63,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
 
     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
     # The gradient of the Augmented Lagrangian wrt the primal variables is:
-    # ...
+    # grad_obj + (lambda + penalty * const_violation) * grad_const
     # Both constraints in the Toy2dCMP problem are inequality constraints, so relu
     const_contrib0 = (lmbda0[0] + const1_penalty_coefficient() * violations[0].relu()) * grad_x0_y0[1][0]
     const_contrib1 = (lmbda0[1] + const2_penalty_coefficient() * violations[1].relu()) * grad_x0_y0[1][1]
@@ -78,13 +78,8 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
     lmbda1 = torch.relu(lmbda0 + 1e-2 * lmbda_update)
 
     # Increase the penalty coefficients
-    # TODO(juan43ramirez): how to do this in a more elegant way? Maybe a method in the
-    # ConstraintGroup class?
-    # breakpoint()
-    # cmp.constraint_groups[0].formulation.penalty_coefficient.weight.data *= 2
-    # cmp.constraint_groups[1].formulation.penalty_coefficient.weight.data *= 2
-    const1_penalty_coefficient.value = const1_penalty_coefficient() * 2
-    const2_penalty_coefficient.value = const2_penalty_coefficient() * 2
+    const1_penalty_coefficient.value = const1_penalty_coefficient.value * 2
+    const2_penalty_coefficient.value = const2_penalty_coefficient.value * 2
 
     # ------------ Second step of simultaneous updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
