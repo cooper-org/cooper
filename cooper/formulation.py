@@ -212,6 +212,13 @@ class PenalizedFormulation(Formulation):
         self, constraint_state: ConstraintState
     ) -> Tuple[None, Optional[torch.Tensor], None]:
         penalty_coefficient_value = evaluate_penalty(self.penalty_coefficient, constraint_state)
+
+        if penalty_coefficient_value.numel() == 1:
+            # Broadcast the penalty coefficient to all constraints.
+            penalty_coefficient_value = penalty_coefficient_value.expand(constraint_state.violation.shape)
+            if len(penalty_coefficient_value.shape) == 0:
+                penalty_coefficient_value = penalty_coefficient_value.unsqueeze(0)
+
         weighted_violation_for_primal = compute_primal_weighted_violation(penalty_coefficient_value, constraint_state)
 
         # Penalized formulations have no _trainable_ dual variables, so we adopt the
@@ -222,7 +229,7 @@ class PenalizedFormulation(Formulation):
         return multiplier_value, weighted_violation_for_primal, weighted_violation_for_dual
 
     def state_dict(self):
-        return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient}
+        return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient.state_dict()}
 
     def load_state_dict(self, state_dict):
         if "multiplier" in state_dict:

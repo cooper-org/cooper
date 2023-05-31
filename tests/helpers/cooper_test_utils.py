@@ -39,6 +39,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_constraint_surrogate=False,
         formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
         penalty_coefficients: Optional[list[PenaltyCoefficient]] = [None, None],
+        constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
@@ -49,7 +50,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         if self.use_ineq_constraints:
             multiplier_kwargs = {"shape": 1, "device": device}
             constraint_kwargs = {
-                "constraint_type": cooper.ConstraintType.INEQUALITY,
+                "constraint_type": constraint_type,
                 "formulation_type": formulation_type,
             }
             self.constraint_groups = [
