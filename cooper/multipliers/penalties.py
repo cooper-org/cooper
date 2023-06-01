@@ -1,3 +1,5 @@
+import warnings
+
 import torch
 
 
@@ -24,8 +26,8 @@ class PenaltyCoefficient:
         if value.requires_grad:
             raise ValueError("New value of PenaltyCoefficient should not require gradients.")
         if value.shape != self._value.shape:
-            Warning(
-                f"New value of PenaltyCoefficient with shape {value.shape} does not match current shape of shape {self._value.shape}."
+            warnings.warn(
+                f"New shape {value.shape} of PenaltyCoefficient does not match existing shape {self._value.shape}."
             )
         self._value = value.clone()
 
