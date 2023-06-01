@@ -1,4 +1,5 @@
 import warnings
+from typing import Optional
 
 import torch
 
@@ -31,7 +32,7 @@ class PenaltyCoefficient:
             )
         self._value = value.clone()
 
-    def to(self, device: torch.device = None, dtype: torch.dtype = None):
+    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
         """Move the penalty to a new device and/or change its dtype."""
         self.value = self.value.to(device=device, dtype=dtype)
 
@@ -47,9 +48,9 @@ class PenaltyCoefficient:
 
     def __repr__(self):
         if self.value.numel() <= 10:
-            return f"PenaltyCoefficient({self.value})"
+            return f"{type(self).__name__}({self.value})"
         else:
-            return f"PenaltyCoefficient(shape={self.value.shape})"
+            return f"{type(self).__name__}(shape={self.value.shape})"
 
 
 class IndexedPenaltyCoefficient(PenaltyCoefficient):
@@ -58,7 +59,7 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
     Can be indexed by a tensor of indices when some constraints are not penalized.
 
     Args:
-        init: Value of the penalty.
+        init: Value of the penalty coefficient.
     """
 
     def __init__(self, init: torch.Tensor):
@@ -76,9 +77,3 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
 
         # Flatten coefficient values to 1D since Embedding works with 2D tensors.
         return torch.flatten(coefficient_values)
-
-    def __repr__(self):
-        if self.value.numel() <= 10:
-            return f"IndexedPenaltyCoefficient({self.value})"
-        else:
-            return f"IndexedPenaltyCoefficient(shape={self.value.shape})"
