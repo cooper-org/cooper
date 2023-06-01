@@ -63,28 +63,6 @@ class PIDBase(Optimizer):
 
         super().__init__(params, defaults)
 
-    def _init_group(self, group):
-        for p in group["params"]:
-            if p.grad is not None:
-                state = self.state[p]
-
-                # Lazy state initialization
-                if len(state) == 0:
-                    # Previous update direction.
-                    # TODO(juan43ramirez): for EMAs, initializing to zero makes the
-                    # estimate of the EMA biased. This would require a correction term
-                    # like with Adam or initializing to the first gradient.
-                    state["previous_direction"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
-                    # TODO(juan43ramirez): for first update, should just do a KI step
-                    # For second update, PI step and for third update, PID step.
-                    # The point is that we should only use the I and D terms when they
-                    # are estimated reliably. This is not the case for the first update.
-
-                    # Previous update difference. That is the difference between the
-                    # previous update and the update before that. Initialized to zero.
-                    state["previous_change"] = torch.zeros_like(p, memory_format=torch.preserve_format)
-
 
 class PID(PIDBase):
     # TODO(juan43ramirez): ema_beta
@@ -109,8 +87,6 @@ class PID(PIDBase):
             derivative = group["derivative"]
             maximize = group["maximize"]
 
-            self._init_group(group)
-
             for p in group["params"]:
                 if p.grad is None:
                     continue
@@ -123,11 +99,22 @@ class PID(PIDBase):
                 if weight_decay != 0:
                     grad = grad.add(p, alpha=weight_decay)
 
-                previous_direction = state["previous_direction"]
-                change = grad.sub(previous_direction)
-
-                previous_change = state["previous_change"]
-                curvature = change.sub(previous_change)
+                if len(state) == 0:
+                    # At this stage, there is not enough information to compute the
+                    # change in direction for the P term nor the curvature for the D
+                    # term. Therefore, only the I term is used for the first update.
+                    change = 0
+                    curvature = 0
+                elif "previous_change" not in state:
+                    assert "previous_direction" in state
+                    # Using the previous update direction to compute the P term, but
+                    # there is not enough information to compute the D term.
+                    previous_direction = state["previous_direction"]
+                    change = grad.sub(previous_direction)
+                    curvature = 0
+                else:
+                    change = grad.sub(state["previous_direction"])
+                    curvature = change.sub(state["previous_change"])
 
                 d_p = grad.mul(integral)
 
@@ -141,9 +128,15 @@ class PID(PIDBase):
 
                 p.add_(d_p, alpha=-group["lr"])
 
-                # Update state
-                state["previous_direction"] = grad.clone().detach()
-                state["previous_change"] = change.clone().detach()
+                if len(state) == 0:
+                    # Only the I term was used for the first update. For the next step,
+                    # the current update direction will be used to compute the P term.
+                    # We do not initialize `previous_change` as a convention to indicate
+                    # that the D term should not be used in the following update.
+                    state["previous_direction"] = grad.clone().detach()
+                else:
+                    state["previous_direction"] = grad.clone().detach()
+                    state["previous_change"] = change.clone().detach()
 
         return loss
 
@@ -173,8 +166,6 @@ class SparsePID(PIDBase):
             integral = group["integral"]
             derivative = group["derivative"]
             maximize = group["maximize"]
-
-        self._init_group(group)
 
         for p in group["params"]:
             if p.grad is None:

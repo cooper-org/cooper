@@ -15,10 +15,7 @@ def test_manual_pid(proportional, integral, derivative):
 
     lr = 0.1
 
-    def PID_direction(grad, prev_grad, prev_change):
-        change = grad - prev_grad
-        curvature = change - prev_change
-
+    def PID_direction(grad, change, curvature):
         return integral * grad + proportional * change + derivative * curvature
 
     optimizer = PID([param], lr=lr, proportional=proportional, integral=integral, derivative=derivative)
@@ -42,10 +39,10 @@ def test_manual_pid(proportional, integral, derivative):
     # Check the state of the optimizer. Should contain the first gradient in
     # `previous_direction` and also in `previous_change`.
     assert torch.allclose(optimizer.state[param]["previous_direction"], p0)
-    assert torch.allclose(optimizer.state[param]["previous_change"], p0)
+    assert "previous_change" not in optimizer.state[param]
 
     # -------------------------------------------- Second step of optimization
-    p2 = p1 - lr * PID_direction(p1, p0, p0)
+    p2 = p1 - lr * PID_direction(p1, p1 - p0, 0.0)
 
     do_step()
 
@@ -56,7 +53,7 @@ def test_manual_pid(proportional, integral, derivative):
     assert torch.allclose(optimizer.state[param]["previous_change"], p1 - p0)
 
     # -------------------------------------------- Third step of optimization
-    p3 = p2 - lr * PID_direction(p2, p1, p1 - p0)
+    p3 = p2 - lr * PID_direction(p2, p2 - p1, p2 - 2 * p1 + p0)
 
     do_step()
 
@@ -82,10 +79,7 @@ def test_manual_sparse_pid(proportional, integral, derivative):
 
     lr = 0.1
 
-    def PID_direction(grad, prev_grad, prev_change):
-        change = grad - prev_grad
-        curvature = change - prev_change
-
+    def PID_direction(grad, change, curvature):
         return integral * grad + proportional * change + derivative * curvature
 
     optimizer = SparsePID(
@@ -127,7 +121,7 @@ def test_manual_sparse_pid(proportional, integral, derivative):
 
     # Manual second step
     p2 = p1.clone()
-    p2[indices] = p1[indices] - lr * PID_direction(p1, previous_direction, previous_change)[indices]
+    p2[indices] = p1[indices] - lr * PID_direction(p1, p1 - previous_direction, 0.0)[indices]
 
     previous_direction[indices] = p1.clone()[indices]
 
