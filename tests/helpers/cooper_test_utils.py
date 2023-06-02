@@ -66,8 +66,10 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         if self.use_ineq_constraints:
             multiplier_kwargs = {"shape": 1, "device": device}
             constraint_kwargs = {"constraint_type": constraint_type, "formulation_type": formulation_type}
+
             self.constraint_groups = []
-            for penalty_coefficient in penalty_coefficients:
+            for ix in range(2):
+                penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
                 constraint_group = cooper.ConstraintGroup(
                     **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
                 )
