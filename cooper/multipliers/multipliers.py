@@ -7,7 +7,23 @@ import torch
 from cooper.constraints.constraint_state import ConstraintType
 
 
-class ExplicitMultiplier(torch.nn.Module):
+class Multiplier(torch.nn.Module, abc.ABC):
+    @abc.abstractmethod
+    def forward(self):
+        """Return the current value of the multiplier."""
+        pass
+
+    @abc.abstractmethod
+    def post_step_(self):
+        """
+        Post-step function for multipliers. This function is called after each step of
+        the dual optimizer, and allows for additional post-processing of the implicit
+        multiplier module or its parameters.
+        """
+        pass
+
+
+class ExplicitMultiplier(Multiplier):
     """
     An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
     contains (explicitly) the value of the Lagrange multipliers associated with a
@@ -195,7 +211,7 @@ class IndexedMultiplier(ExplicitMultiplier):
         self.last_seen_mask *= False
 
 
-class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
+class ImplicitMultiplier(Multiplier):
     """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
     :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
