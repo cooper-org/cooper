@@ -1,25 +1,10 @@
 import abc
-from dataclasses import dataclass
-from enum import Enum
-from typing import Literal, Optional, Tuple, Union
 
 import torch
 
 import cooper.formulations.utils as formulation_utils
-from cooper.constraints.constraint_state import ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintContribution, ConstraintState, ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
-
-
-@dataclass
-class ConstraintContribution:
-    """Stores the value of the factor (multiplier or penalty coefficient), the
-    contribution of the constraint to the primal-differentiable Lagrian, and the
-    contribution of the constraint to the dual-differentiable Lagrangian."""
-
-    multiplier_value: Optional[torch.Tensor] = None
-    penalty_coefficient_value: Optional[torch.Tensor] = None
-    primal_contribution: Optional[torch.Tensor] = None
-    dual_contribution: Optional[torch.Tensor] = None
 
 
 class Formulation(abc.ABC):
@@ -42,6 +27,10 @@ class Formulation(abc.ABC):
 
 
 class PenaltyFormulation(Formulation):
+
+    expects_multiplier = False
+    expects_penalty_coefficient = True
+
     def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
         if constraint_type != ConstraintType.PENALTY:
             raise ValueError("PenaltyFormulation expects `constraint_type=ConstraintType.PENALTY`.")
@@ -79,6 +68,9 @@ class PenaltyFormulation(Formulation):
 
 class QuadraticPenaltyFormulation(Formulation):
     # TODO(juan43ramirez): emphasize the difference with respect to the PenaltyFormulation
+
+    expects_multiplier = False
+    expects_penalty_coefficient = True
 
     def __init__(self, constraint_type: ConstraintType, penalty_coefficient: PenaltyCoefficient):
         # TODO(juan43ramirez): Add documentation
@@ -120,6 +112,10 @@ class QuadraticPenaltyFormulation(Formulation):
 
 
 class LagrangianFormulation(Formulation):
+
+    expects_multiplier = True
+    expects_penalty_coefficient = False
+
     def __init__(self, constraint_type: ConstraintType, multiplier: Multiplier):
         if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
             raise ValueError("LagrangianFormulation requires an equality or inequality constraint.")
@@ -157,6 +153,10 @@ class LagrangianFormulation(Formulation):
 
 
 class AugmentedLagrangianFormulation(Formulation):
+
+    expects_multiplier = True
+    expects_penalty_coefficient = True
+
     def __init__(
         self, constraint_type: ConstraintType, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ):
@@ -191,11 +191,12 @@ class AugmentedLagrangianFormulation(Formulation):
             # problem in the case of IndexedPenaltyCoefficients.
             # The offending line below was:
             #   penalty_coefficient_value=self.penalty_coefficient(),
-            weighted_violation_for_primal += formulation_utils.compute_quadratic_penalty(
+            quadratic_penalty = formulation_utils.compute_quadratic_penalty(
                 penalty_coefficient_value=penalty_coefficient_value,
                 constraint_state=constraint_state,
                 constraint_type=self.constraint_type,
             )
+            weighted_violation_for_primal = weighted_violation_for_primal + quadratic_penalty
 
         # TODO: document. Point is to automatically multiply the learning rate of the
         # penalty coefficient by the penalty coefficient.
