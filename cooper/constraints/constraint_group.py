@@ -3,7 +3,7 @@ from typing import Iterator, Optional, Sequence, Tuple, Union
 import torch
 
 from cooper import multipliers
-from cooper.constraints.constraint_state import ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintContribution, ConstraintState, ConstraintType
 from cooper.formulations import FormulationType
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
@@ -27,17 +27,24 @@ class ConstraintGroup:
 
         self.constraint_type = constraint_type
 
-        if formulation_type in [FormulationType.LAGRANGIAN, FormulationType.AUGMENTED_LAGRANGIAN]:
+        formulation_class = formulation_type.value
+        formulation_kwargs = {"constraint_type": self.constraint_type}
+
+        if formulation_class.expects_multiplier:
             if multiplier is None:
                 multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
             self.sanity_check_multiplier(multiplier)
+            formulation_kwargs["multiplier"] = multiplier
         else:
             if multiplier is not None:
                 raise ValueError(f"Formulation {formulation_type} does not admit multipliers.")
 
-        self.formulation = formulation_type.value(
-            constraint_type=self.constraint_type, multiplier=multiplier, penalty_coefficient=penalty_coefficient
-        )
+        if formulation_class.expects_penalty_coefficient:
+            if penalty_coefficient is None:
+                raise ValueError(f"Formulation {formulation_type} expects a penalty coefficient but none was provided.")
+            formulation_kwargs["penalty_coefficient"] = penalty_coefficient
+
+        self.formulation = formulation_class(**formulation_kwargs)
 
     def sanity_check_multiplier(self, multiplier: Multiplier) -> None:
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
@@ -75,11 +82,11 @@ class ConstraintGroup:
         if not hasattr(self.formulation, "penalty_coefficient"):
             raise ValueError(f"Constraint group {self.constraint_type} does not have a penalty coefficient.")
         else:
-            self.formulation.penalty_coefficient.value = value
+            self.penalty_coefficient.value = value
 
-    def compute_lagrangian_contribution(
+    def compute_constraint_contribution(
         self, constraint_state: Optional[ConstraintState] = None
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    ) -> ConstraintContribution:
         """Compute the contribution of the current constraint to the primal and dual
         Lagrangians."""
 
