@@ -43,6 +43,9 @@ class ConstraintGroup:
             if penalty_coefficient is None:
                 raise ValueError(f"Formulation {formulation_type} expects a penalty coefficient but none was provided.")
             formulation_kwargs["penalty_coefficient"] = penalty_coefficient
+        else:
+            if penalty_coefficient is not None:
+                raise ValueError(f"Formulation {formulation_type} does not admit penalty coefficients.")
 
         self.formulation = formulation_class(**formulation_kwargs)
 
