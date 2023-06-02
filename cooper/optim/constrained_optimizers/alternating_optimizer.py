@@ -127,7 +127,7 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
     extrapolation = False
-    alternating = AlternatingType.PRIMAL_DUAL
+    alternating = AlternatingType.DUAL_PRIMAL
 
     def __init__(
         self,
