@@ -56,7 +56,9 @@ def compute_primal_weighted_violation(
 
 
 def compute_dual_weighted_violation(
-    constraint_factor: torch.Tensor, constraint_state: ConstraintState
+    constraint_factor: torch.Tensor,
+    constraint_state: ConstraintState,
+    penalty_coefficient_value: Optional[torch.Tensor] = None,
 ) -> Optional[torch.Tensor]:
     """Computes the sum of constraint violations weighted by the associated constraint
     factors (multipliers or penalty coefficients), while preserving the gradient for the
@@ -75,6 +77,8 @@ def compute_dual_weighted_violation(
     Args:
         multiplier_value: The value of the multiplier for the constraint group.
         constraint_state: The current state of the constraint.
+        penalty_coefficient_value: The value of the penalty coefficient for the 
+            constraint group.
     """
 
     if constraint_state.skip_dual_contribution:
@@ -95,8 +99,12 @@ def compute_dual_weighted_violation(
         # provided, we use the strict violation to update the value of the multiplier.
         # Otherwise, we default to using the differentiable violation.
         _, strict_violation = extract_and_patch_violations(constraint_state)
+        detached_violation = strict_violation.detach()
 
-        return torch.einsum("i...,i...->", multiplier_value, strict_violation.detach())
+        if penalty_coefficient_value is None:
+            return torch.einsum("i...,i...->", multiplier_value, detached_violation)
+        else:
+            return torch.einsum("i...,i...,i...->", multiplier_value, penalty_coefficient_value, detached_violation)
 
 
 def compute_quadratic_penalty(
@@ -114,26 +122,18 @@ def compute_quadratic_penalty(
 
         if constraint_type == ConstraintType.INEQUALITY:
             # Compute filter based on strict constraint violation
-            const_filter = strict_violation >= 0
+            constraint_filter = strict_violation >= 0
 
             # TODO(juan43ramirez): We used to also penalize inequality constraints
             # with a non-zero multiplier. This seems confusing to me.
             # const_filter = torch.logical_or(strict_violation >= 0, multiplier_value.detach() > 0)
 
-            sq_violation = const_filter * (violation**2)
-
+            sq_violation = constraint_filter * (violation**2)
         elif constraint_type == ConstraintType.EQUALITY:
             # Equality constraints do not need to be filtered
             sq_violation = violation**2
-        else:
+        else: 
+            # constraint_type not in [ConstraintType.INEQUALITY, ConstraintType.EQUALITY]:
             raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
 
-        if penalty_coefficient_value.numel() == 1:
-            # One penalty coefficient shared across all constraints.
-            return torch.sum(sq_violation) * penalty_coefficient_value / 2
-        else:
-            # One penalty coefficient per constraint.
-            if violation.shape != penalty_coefficient_value.shape:
-                raise ValueError("The violation tensor must have the same shape as the penalty coefficient tensor.")
-
-            return torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation) / 2
+        return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation)
