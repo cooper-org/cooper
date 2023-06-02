@@ -1,5 +1,6 @@
 """Cooper-related utilities for writing tests."""
 
+import itertools
 from typing import Optional, Union
 
 import pytest
@@ -30,41 +31,47 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
     Verified solution of the original constrained problem:
         (x=2/3, y=1/3)
-    Link to WolframAlpha query: https://tinyurl.com/ye8dw6t3
+
+    When slack variables are enabled, the problem is reformulated as:
+        min x**2 + 2*y**2 + C * (s0**2 + s1**2)
+        st.
+            x + y >= 1 - s0
+            x**2 + y <= 1 + s1
+            s0, s1 >= 0
+
+    For a value of C=1, the solution is:
+        (x=1/2, y=1/4, s0=0, s1=1/4)
+
+    Link to WolframAlpha queries:
+        Standard CMP: https://tinyurl.com/ye8dw6t3
+        CMP with slack variables: https://tinyurl.com/bds5b3yj
     """
 
     def __init__(
         self,
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
+        use_slack_variables=False,
         formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        penalty_coefficients: Optional[list[PenaltyCoefficient]] = [None, None],
+        penalty_coefficients: list[Optional[PenaltyCoefficient]] = [None, None],
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
         self.use_constraint_surrogate = use_constraint_surrogate
+        self.use_slack_variables = use_slack_variables
         super().__init__()
 
         self.constraint_groups = []
         if self.use_ineq_constraints:
             multiplier_kwargs = {"shape": 1, "device": device}
-            constraint_kwargs = {
-                "constraint_type": constraint_type,
-                "formulation_type": formulation_type,
-            }
-            self.constraint_groups = [
-                cooper.ConstraintGroup(
-                    **constraint_kwargs,
-                    multiplier_kwargs=multiplier_kwargs,
-                    penalty_coefficient=penalty_coefficients[0],
-                ),
-                cooper.ConstraintGroup(
-                    **constraint_kwargs,
-                    multiplier_kwargs=multiplier_kwargs,
-                    penalty_coefficient=penalty_coefficients[1],
-                ),
-            ]
+            constraint_kwargs = {"constraint_type": constraint_type, "formulation_type": formulation_type}
+            self.constraint_groups = []
+            for penalty_coefficient in penalty_coefficients:
+                constraint_group = cooper.ConstraintGroup(
+                    **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
+                )
+                self.constraint_groups.append(constraint_group)
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -142,15 +149,24 @@ def Toy2dCMP_params_init(device, request):
     return torch.tensor(request.param, device=device)
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
 def Toy2dCMP_problem_properties(request, device):
-    use_ineq_constraints = request.param
+    use_ineq_constraints, use_slack_variables = request.param
+
+    use_slack_variables = False
+    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints, use_slack_variables=use_slack_variables)
     if use_ineq_constraints:
-        exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
+        if use_slack_variables:
+            exact_solution = torch.tensor([1.0 / 2.0, 1.0 / 4.0], device=device)
+            cmp_properties["slack_variables"] = torch.tensor([0.0, 1.0 / 4.0])
+        else:
+            exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
     else:
         exact_solution = torch.tensor([0.0, 0.0], device=device)
 
-    return dict(use_ineq_constraints=use_ineq_constraints, exact_solution=exact_solution)
+    cmp_properties["exact_solution"] = exact_solution
+
+    return cmp_properties
 
 
 @pytest.fixture(params=[True, False])
