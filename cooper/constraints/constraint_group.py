@@ -4,8 +4,8 @@ import torch
 
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintState, ConstraintType
-from cooper.formulation import FormulationType
-from cooper.multipliers import MULTIPLIER_TYPE, PenaltyCoefficient
+from cooper.formulations import FormulationType
+from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 class ConstraintGroup:
@@ -19,7 +19,7 @@ class ConstraintGroup:
         self,
         constraint_type: ConstraintType,
         formulation_type: Optional[FormulationType] = FormulationType.LAGRANGIAN,
-        multiplier: Optional[MULTIPLIER_TYPE] = None,
+        multiplier: Optional[Multiplier] = None,
         multiplier_kwargs: Optional[dict] = {},
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
@@ -32,14 +32,14 @@ class ConstraintGroup:
                 multiplier = multipliers.build_explicit_multiplier(constraint_type, **multiplier_kwargs)
             self.sanity_check_multiplier(multiplier)
         else:
-            # Penalized formulations do not admit multipliers
-            multiplier = None
+            if multiplier is not None:
+                raise ValueError(f"Formulation {formulation_type} does not admit multipliers.")
 
         self.formulation = formulation_type.value(
             constraint_type=self.constraint_type, multiplier=multiplier, penalty_coefficient=penalty_coefficient
         )
 
-    def sanity_check_multiplier(self, multiplier: MULTIPLIER_TYPE) -> None:
+    def sanity_check_multiplier(self, multiplier: Multiplier) -> None:
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
             if multiplier.implicit_constraint_type != self.constraint_type:
                 raise ValueError(f"Provided multiplier is inconsistent with {self.constraint_type} constraint.")
@@ -57,12 +57,25 @@ class ConstraintGroup:
         self._state = value
 
     @property
-    def multiplier(self) -> MULTIPLIER_TYPE:
-        return self.formulation.multiplier
+    def multiplier(self) -> Optional[Multiplier]:
+        if hasattr(self.formulation, "multiplier"):
+            return self.formulation.multiplier
+        else:
+            return None
+    
+    @property
+    def penalty_coefficient(self) -> Optional[PenaltyCoefficient]:
+        if hasattr(self.formulation, "penalty_coefficient"):
+            return self.formulation.penalty_coefficient
+        else:
+            return None
 
     def update_penalty_coefficient(self, value: torch.Tensor) -> None:
         """Update the penalty coefficient of the constraint group."""
-        self.formulation.penalty_coefficient.value = value
+        if not hasattr(self.formulation, "penalty_coefficient"):
+            raise ValueError(f"Constraint group {self.constraint_type} does not have a penalty coefficient.")
+        else:
+            self.formulation.penalty_coefficient.value = value
 
     def compute_lagrangian_contribution(
         self, constraint_state: Optional[ConstraintState] = None

@@ -9,7 +9,7 @@ import torch
 
 from cooper.cmp import CMPState, LagrangianStore
 from cooper.constraints import ConstraintGroup
-from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
 from ..types import AlternatingType
@@ -30,7 +30,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+        multipliers: Optional[OneOrSequence[Multiplier]] = None,
         constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
