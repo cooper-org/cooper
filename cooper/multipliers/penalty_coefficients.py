@@ -1,12 +1,13 @@
 import warnings
 from typing import Optional
 
+import abc
 import torch
 
-
-class PenaltyCoefficient:
-    """Constant (non-trainable) coefficient class used for penalized formulations.
-
+class PenaltyCoefficient(torch.nn.Module, abc.ABC):
+    """Abstract class for constant (non-trainable) coefficients used in penalized 
+    formulations.
+    
     Args:
         init: Value of the penalty coefficient.
     """
@@ -36,10 +37,6 @@ class PenaltyCoefficient:
         """Move the penalty to a new device and/or change its dtype."""
         self.value = self.value.to(device=device, dtype=dtype)
 
-    def __call__(self):
-        """Return the current value of the penalty coefficient."""
-        return self.value
-
     def state_dict(self):
         return {"value": self._value}
 
@@ -52,21 +49,31 @@ class PenaltyCoefficient:
         else:
             return f"{type(self).__name__}(shape={self.value.shape})"
 
+    @abc.abstractmethod
+    def __call__(self):
+        """Return the current value of the penalty coefficient."""
+        pass
+
+class DensePenaltyCoefficient(PenaltyCoefficient):
+    """Constant (non-trainable) coefficient class used for penalized formulations."""
+
+    def __call__(self):
+        """Return the current value of the penalty coefficient."""
+        return self.value
+
 
 class IndexedPenaltyCoefficient(PenaltyCoefficient):
+    """Constant (non-trainable) coefficient class used in penalized formulations. 
+    When called, indexed penalty coefficients accept a tensor of indices and return the
+    value of the penalty for a subset of constraints.
     """
-    Constant (non-trainable) coefficient class used for penalized formulations.
-    Can be indexed by a tensor of indices when some constraints are not penalized.
-
-    Args:
-        init: Value of the penalty coefficient.
-    """
-
-    def __init__(self, init: torch.Tensor):
-        super(IndexedPenaltyCoefficient, self).__init__(init=init)
 
     def __call__(self, indices: torch.Tensor):
-        """Return the current value of the penalty coefficient at the provided indices."""
+        """Return the current value of the penalty coefficient at the provided indices.
+        
+        Args:
+            indices: Tensor of indices for which to return the penalty coefficient.
+        """
 
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
