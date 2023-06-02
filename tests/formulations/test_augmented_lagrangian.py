@@ -10,8 +10,8 @@ import cooper
 
 
 def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
-    const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
-    const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+    const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
 
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
@@ -72,7 +72,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
     assert torch.allclose(params, x1_y1)
 
     # The update to the multipliers has the learning rate and the penalty coefficient
-    lmbda_update = torch.stack(
+    lmbda_update = torch.cat(
         [violations[0] * const1_penalty_coefficient(), violations[1] * const2_penalty_coefficient()]
     )
     lmbda1 = torch.relu(lmbda0 + 1e-2 * lmbda_update)
@@ -180,8 +180,8 @@ def test_save_and_load_state_dict(Toy2dCMP_params_init, device):
         const2_penalty_coefficient.value = const2_penalty_coefficient() * 1.01
 
     # Reload from checkpoint
-    new_const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    new_const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+    new_const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     new_cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
         formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,

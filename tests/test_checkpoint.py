@@ -131,8 +131,8 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
 
     alternating = cooper.optim.AlternatingType.FALSE
 
-    const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
-    const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+    const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     penalty_coefficients = [const1_penalty_coefficient, const2_penalty_coefficient] if has_penalties else [None, None]
 
     cmp = cooper_test_utils.Toy2dCMP(
@@ -182,8 +182,8 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
             const2_penalty_coefficient.value = const2_penalty_coefficient() * 1.01
 
     # Reload from checkpoint
-    new_const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    new_const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+    new_const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     new_penalty_coefficients = (
         [new_const1_penalty_coefficient, new_const2_penalty_coefficient] if has_penalties else [None, None]
     )

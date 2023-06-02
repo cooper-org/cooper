@@ -10,8 +10,8 @@ import cooper
 
 
 def setup_objects(primal_optimizers, alternating, device):
-    const1_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
-    const2_penalty_coefficient = cooper.multipliers.PenaltyCoefficient(torch.tensor(1.0, device=device))
+    const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+    const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
 
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
