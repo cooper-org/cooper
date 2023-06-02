@@ -6,7 +6,6 @@ import torch
 
 
 class ConstraintType(Enum):
-    # TODO(juan43ramirez): Do the same for MultiplierType
     EQUALITY = auto()
     INEQUALITY = auto()
     PENALTY = auto()
