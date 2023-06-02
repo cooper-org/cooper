@@ -62,7 +62,7 @@ class ConstraintGroup:
             return self.formulation.multiplier
         else:
             return None
-    
+
     @property
     def penalty_coefficient(self) -> Optional[PenaltyCoefficient]:
         if hasattr(self.formulation, "penalty_coefficient"):

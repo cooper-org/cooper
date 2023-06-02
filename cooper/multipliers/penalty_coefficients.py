@@ -1,13 +1,14 @@
+import abc
 import warnings
 from typing import Optional
 
-import abc
 import torch
 
+
 class PenaltyCoefficient(torch.nn.Module, abc.ABC):
-    """Abstract class for constant (non-trainable) coefficients used in penalized 
+    """Abstract class for constant (non-trainable) coefficients used in penalized
     formulations.
-    
+
     Args:
         init: Value of the penalty coefficient.
     """
@@ -54,6 +55,7 @@ class PenaltyCoefficient(torch.nn.Module, abc.ABC):
         """Return the current value of the penalty coefficient."""
         pass
 
+
 class DensePenaltyCoefficient(PenaltyCoefficient):
     """Constant (non-trainable) coefficient class used for penalized formulations."""
 
@@ -63,14 +65,14 @@ class DensePenaltyCoefficient(PenaltyCoefficient):
 
 
 class IndexedPenaltyCoefficient(PenaltyCoefficient):
-    """Constant (non-trainable) coefficient class used in penalized formulations. 
+    """Constant (non-trainable) coefficient class used in penalized formulations.
     When called, indexed penalty coefficients accept a tensor of indices and return the
     value of the penalty for a subset of constraints.
     """
 
     def __call__(self, indices: torch.Tensor):
         """Return the current value of the penalty coefficient at the provided indices.
-        
+
         Args:
             indices: Tensor of indices for which to return the penalty coefficient.
         """
