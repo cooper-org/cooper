@@ -184,13 +184,6 @@ class AugmentedLagrangianFormulation(Formulation):
             multiplier_value, constraint_state
         )
         if weighted_violation_for_primal is not None and not torch.all(penalty_coefficient_value == 0):
-            # FIXME(juan43ramirez): There is an *evaluation* of the penalty coefficient
-            # earlier in this function. Previously the code below was making a call to
-            # self.penalty_coefficient(). Why was the code not using the evaluated
-            # penalty coefficient? Is this a bug? A potential discrepancy would be a
-            # problem in the case of IndexedPenaltyCoefficients.
-            # The offending line below was:
-            #   penalty_coefficient_value=self.penalty_coefficient(),
             quadratic_penalty = formulation_utils.compute_quadratic_penalty(
                 penalty_coefficient_value=penalty_coefficient_value,
                 constraint_state=constraint_state,
@@ -201,11 +194,6 @@ class AugmentedLagrangianFormulation(Formulation):
         # TODO: document. Point is to automatically multiply the learning rate of the
         # penalty coefficient by the penalty coefficient.
 
-        # FIXME(juan43ramirez): Why does the definition of `penalty_coefficient_value`
-        # make a call to the evaluate_constraint_factor function, but here the code was
-        # using self.penalty_coefficient()? Is this a bug?
-        # The offending line below was:
-        #   multiplier_value_for_dual = multiplier_value * self.penalty_coefficient()
         multiplier_value_for_dual = multiplier_value * penalty_coefficient_value
         weighted_violation_for_dual = formulation_utils.compute_dual_weighted_violation(
             multiplier_value_for_dual, constraint_state
