@@ -57,8 +57,8 @@ class ConstraintState:
 
 @dataclass
 class ConstraintContribution:
-    """Stores the value of the factor (multiplier or penalty coefficient), the
-    contribution of the constraint to the primal-differentiable Lagrian, and the
+    """Stores the value of the constraint factor (multiplier or penalty coefficient),
+    the contribution of the constraint to the primal-differentiable Lagrian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""
 
     multiplier_value: Optional[torch.Tensor] = None
