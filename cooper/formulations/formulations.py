@@ -191,12 +191,14 @@ class AugmentedLagrangianFormulation(Formulation):
             )
             weighted_violation_for_primal = weighted_violation_for_primal + quadratic_penalty
 
-        # TODO: document. Point is to automatically multiply the learning rate of the
-        # penalty coefficient by the penalty coefficient.
-
-        multiplier_value_for_dual = multiplier_value * penalty_coefficient_value
+        # The update rule for the Augmented Lagrangian method uses the penalty
+        # coefficient as the dual learning rate (up to a constant factor). So we pass
+        # the penalty coefficient as an additional argument to effectively adjust the
+        # dual learning rate by scaling it by the penalty coefficient.
         weighted_violation_for_dual = formulation_utils.compute_dual_weighted_violation(
-            multiplier_value_for_dual, constraint_state
+            constraint_factor=multiplier_value,
+            constraint_state=constraint_state,
+            penalty_coefficient_value=penalty_coefficient_value,
         )
 
         return ConstraintContribution(
