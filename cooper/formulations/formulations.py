@@ -221,4 +221,4 @@ class AugmentedLagrangianFormulation(Formulation):
         self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
 
     def __repr__(self):
-        return f"AugmentedLagrangianFormulation({self.constraint_type}, penalty_coefficient={self.penalty_coefficient})"
+        return f"AugmentedLagrangianFormulation({self.constraint_type}, multiplier={self.multiplier}, penalty_coefficient={self.penalty_coefficient})"
