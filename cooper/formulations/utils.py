@@ -77,7 +77,7 @@ def compute_dual_weighted_violation(
     Args:
         multiplier_value: The value of the multiplier for the constraint group.
         constraint_state: The current state of the constraint.
-        penalty_coefficient_value: The value of the penalty coefficient for the 
+        penalty_coefficient_value: The value of the penalty coefficient for the
             constraint group.
     """
 
@@ -121,18 +121,18 @@ def compute_quadratic_penalty(
             raise ValueError("The violation tensor must be provided if the primal contribution is not skipped.")
 
         if constraint_type == ConstraintType.INEQUALITY:
-            # Compute filter based on strict constraint violation
-            constraint_filter = strict_violation >= 0
+            # We penalize the square violation associated with violated constraints.
+            # This follows the setup from Eq. 17.7 in Numerical Optimization by
+            # Nocedal and Wright (2006).
 
-            # TODO(juan43ramirez): We used to also penalize inequality constraints
-            # with a non-zero multiplier. This seems confusing to me.
-            # const_filter = torch.logical_or(strict_violation >= 0, multiplier_value.detach() > 0)
+            # Violated constraintd are determined using the strict violation.
+            constraint_filter = strict_violation >= 0
 
             sq_violation = constraint_filter * (violation**2)
         elif constraint_type == ConstraintType.EQUALITY:
             # Equality constraints do not need to be filtered
             sq_violation = violation**2
-        else: 
+        else:
             # constraint_type not in [ConstraintType.INEQUALITY, ConstraintType.EQUALITY]:
             raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
 
