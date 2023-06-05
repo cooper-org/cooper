@@ -193,10 +193,26 @@ class SparsePID(PIDBase):
             if weight_decay != 0:
                 grad_values.add_(make_sparse(p.data), alpha=weight_decay)
 
-            previous_direction = state["previous_direction"].sparse_mask(grad)._values()
-            change_values = grad_values.sub(previous_direction)
+            if len(state) == 0:
+                # At this stage, there is not enough information to compute the
+                # change in direction for the P term nor the curvature for the D
+                # term. Therefore, only the I term is used for the first update.
+                change_values = 0
+                curvature_values = 0
+            elif "previous_change" not in state:
+                assert "previous_direction" in state
+                # Using the previous update direction to compute the P term, but
+                # there is not enough information to compute the D term.
+                previous_direction = state["previous_direction"].sparse_mask(grad)._values()
+                change_values = grad_values.sub(previous_direction)
+                curvature_values = 0
+            else:
+                previous_direction = state["previous_direction"].sparse_mask(grad)._values()
+                change_values = grad.sub(previous_direction)
 
-            previous_change = state["previous_change"].sparse_mask(grad)._values()
+                previous_change = state["previous_change"].sparse_mask(grad)._values()
+                curvature_values = change_values.sub(previous_change)
+
             curvature_values = change_values.sub(previous_change)
 
             d_p_values = grad_values.mul(integral)
@@ -211,10 +227,20 @@ class SparsePID(PIDBase):
 
             p.add_(make_sparse(d_p_values), alpha=-group["lr"])
 
-            # Update state. We only modify the parts of the state associated with
-            # observed gradients.
-            # TODO(juan43ramirez): is this an efficient way to do this?
-            state["previous_direction"][grad_indices] = grad_values.clone().detach()
-            state["previous_change"][grad_indices] = change_values.clone().detach()
+            # TODO(juan43ramirez): To be accurate, each parameter should have its own
+            # notion of whether it has been updated or not
+
+            if len(state) == 0:
+                # We do not initialize `previous_change` as a convention to indicate
+                # that the D term should not be used in the following update.
+
+                # Only the state associated with observed gradients is updated.
+                # TODO(juan43ramirez): is this an efficient way to do this?
+                state["previous_direction"][grad_indices] = grad_values.clone().detach()
+            else:
+                # Only the state associated with observed gradients is updated.
+                # TODO(juan43ramirez): is this an efficient way to do this?
+                state["previous_direction"][grad_indices] = grad_values.clone().detach()
+                state["previous_change"][grad_indices] = change_values.clone().detach()
 
         return loss
