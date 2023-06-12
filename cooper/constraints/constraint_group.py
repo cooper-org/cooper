@@ -23,6 +23,15 @@ class ConstraintGroup:
         multiplier_kwargs: Optional[dict] = {},
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
+        if not isinstance(constraint_type, ConstraintType):
+            raise ValueError(
+                f"Expected `constraint_type` to be of type {ConstraintType}, but received {type(constraint_type)}"
+            )
+        if not isinstance(formulation_type, FormulationType):
+            raise ValueError(
+                f"Expected `formulation_type` to be of type {FormulationType}, but received {type(formulation_type)}"
+            )
+
         self._state: ConstraintState = None
 
         self.constraint_type = constraint_type

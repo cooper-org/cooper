@@ -221,7 +221,7 @@ class ImplicitMultiplier(Multiplier):
 
     Thanks to their functional nature, implicit multipliers can allow for
     (approximately) representing _infinitely_ many constraints. This feature is based on
-     the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
+    the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
     """
 
     @abc.abstractmethod
