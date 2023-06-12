@@ -6,6 +6,7 @@ from typing import Optional, Tuple, Union
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType, observed_constraints_iterator
+from cooper.formulations import extract_and_patch_violations
 from cooper.multipliers import ExplicitMultiplier
 
 # Formulation, and some other classes below, are heavily inspired by the design of the
@@ -99,7 +100,6 @@ class CMPState:
         observed_multiplier_values = []
 
         for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
-
             constraint_contribution = constraint_group.compute_constraint_contribution(constraint_state)
             primal_contribution = constraint_contribution.primal_contribution
             dual_contribution = constraint_contribution.dual_contribution
@@ -117,9 +117,8 @@ class CMPState:
                     and (constraint_group.constraint_type == ConstraintType.INEQUALITY)
                     and constraint_group.multiplier.restart_on_feasible
                 ):
-                    # `strict_violation` has already been patched to contain `violation`
-                    # whenever `strict_violation` is not provided.
-                    constraint_group.multiplier.strictly_feasible_indices = constraint_state.strict_violation < 0.0
+                    _, strict_violation = extract_and_patch_violations(constraint_state)
+                    constraint_group.multiplier.strictly_feasible_indices = strict_violation < 0.0
 
             if return_multipliers:
                 observed_multiplier_values.append(constraint_contribution.multiplier_value)
