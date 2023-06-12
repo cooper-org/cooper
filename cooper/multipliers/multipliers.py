@@ -1,6 +1,7 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 import abc
 import warnings
+from typing import Optional
 
 import torch
 
@@ -192,6 +193,11 @@ class IndexedMultiplier(ExplicitMultiplier):
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
         return torch.flatten(multiplier_values)
+
+    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
+        """Move the multipler to a new device and/or change its dtype."""
+        self.last_seen_mask = self.last_seen_mask.to(device=device)
+        return super().to(device=device, dtype=dtype)
 
     def __repr__(self):
         return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"

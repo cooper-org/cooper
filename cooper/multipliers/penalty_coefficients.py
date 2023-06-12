@@ -37,6 +37,7 @@ class PenaltyCoefficient(torch.nn.Module, abc.ABC):
     def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
         """Move the penalty to a new device and/or change its dtype."""
         self.value = self.value.to(device=device, dtype=dtype)
+        return self
 
     def state_dict(self):
         return {"value": self._value}
