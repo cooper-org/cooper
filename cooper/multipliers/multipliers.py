@@ -114,8 +114,22 @@ class ExplicitMultiplier(Multiplier):
                 # about the pitfalls of using dual_restars with stateful optimizers.
 
                 self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
-                if self.weight.grad is not None:
-                    self.weight.grad[self.strictly_feasible_indices, ...] = 0.0
+
+                grad = self.weight.grad
+                if grad is not None and torch.any(self.strictly_feasible_indices):
+                    if grad.is_sparse:
+                        indices = grad._indices()
+                        values = grad._values()
+
+                        masked_values = values * (~self.strictly_feasible_indices[indices[0]])
+                        non_zero_mask = masked_values.squeeze().nonzero().squeeze()
+                        non_zero_indices = indices[:, non_zero_mask]
+                        non_zero_values = masked_values[non_zero_mask]
+
+                        grad = torch.sparse_coo_tensor(non_zero_indices, non_zero_values, grad.shape)
+
+                    else:
+                        grad[self.strictly_feasible_indices, ...] = 0.0
 
             self.strictly_feasible_indices = None
 
