@@ -7,6 +7,7 @@ import pytest
 import torch
 
 import cooper
+from cooper.constraints import SlackVariable
 from cooper.multipliers import PenaltyCoefficient
 
 
@@ -51,16 +52,17 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self,
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
-        use_slack_variables=False,
-        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        penalty_coefficients: list[Optional[PenaltyCoefficient]] = [None, None],
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
+        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
+        slack_variables: Optional[tuple[SlackVariable]] = None,
+        penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
         self.use_constraint_surrogate = use_constraint_surrogate
-        self.use_slack_variables = use_slack_variables
         super().__init__()
+
+        self.slack_variables = slack_variables
 
         self.constraint_groups = []
         if self.use_ineq_constraints:
@@ -70,6 +72,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             self.constraint_groups = []
             for ix in range(2):
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
+
                 constraint_group = cooper.ConstraintGroup(
                     **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
                 )
@@ -110,16 +113,25 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         cg0_violation = -param_x - param_y + 1.0
         cg1_violation = param_x**2 + param_y - 1.0
 
+        if self.slack_variables is not None:
+            cg0_violation -= self.slack_variables[0]()
+            cg1_violation -= self.slack_variables[1]()
+
         if self.use_constraint_surrogate:
             # The constraint surrogates take precedence over the `strict_violation`
             # when computing the gradient of the Lagrangian wrt the primal variables
 
             # Orig constraint: x + y \ge 1
             cg0_surrogate = -0.9 * param_x - param_y + 1.0
-            cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
 
             # Orig constraint: x**2 + y \le 1.0
             cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
+
+            if self.slack_variables is not None:
+                cg0_surrogate -= self.slack_variables[0]()
+                cg1_surrogate -= self.slack_variables[1]()
+
+            cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
         else:
             cg0_state = cooper.ConstraintState(violation=cg0_violation)
@@ -137,6 +149,10 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         param_x, param_y = params() if callable(params) else params
 
         loss = param_x**2 + 2 * param_y**2
+
+        if self.slack_variables is not None:
+            loss += self.slack_variables[0]() ** 2 + self.slack_variables[1]() ** 2
+
         cmp_state = cooper.CMPState(loss=loss)
 
         if self.use_ineq_constraints:
