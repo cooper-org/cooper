@@ -11,6 +11,9 @@ common to min-max optimization problems.
 import torch
 from torch.optim.optimizer import Optimizer
 
+# TODO(juan43ramirez): implement a PID optimizer which incorporates some filtering
+# This could be by using EMAs of the error terms
+
 
 class PIDBase(Optimizer):
     r"""
@@ -65,8 +68,6 @@ class PIDBase(Optimizer):
 
 
 class PID(PIDBase):
-    # TODO(juan43ramirez): ema_beta
-
     @torch.no_grad()
     def step(self, closure=None):
         """Performs a single optimization step.
@@ -109,8 +110,7 @@ class PID(PIDBase):
                     assert "previous_direction" in state
                     # Using the previous update direction to compute the P term, but
                     # there is not enough information to compute the D term.
-                    previous_direction = state["previous_direction"]
-                    change = grad.sub(previous_direction)
+                    change = grad.sub(state["previous_direction"])
                     curvature = 0
                 else:
                     change = grad.sub(state["previous_direction"])
@@ -194,26 +194,24 @@ class SparsePID(PIDBase):
                 grad_values.add_(make_sparse(p.data), alpha=weight_decay)
 
             if len(state) == 0:
-                # At this stage, there is not enough information to compute the
-                # change in direction for the P term nor the curvature for the D
-                # term. Therefore, only the I term is used for the first update.
-                change_values = 0
-                curvature_values = 0
-            elif "previous_change" not in state:
-                assert "previous_direction" in state
-                # Using the previous update direction to compute the P term, but
-                # there is not enough information to compute the D term.
-                previous_direction = state["previous_direction"].sparse_mask(grad)._values()
-                change_values = grad_values.sub(previous_direction)
-                curvature_values = 0
-            else:
-                previous_direction = state["previous_direction"].sparse_mask(grad)._values()
-                change_values = grad.sub(previous_direction)
+                # TODO: make these tensors sparse from the beginning
+                state["steps"] = torch.zeros(p.shape, device=p.device, dtype=torch.int)
+                state["previous_direction"] = torch.zeros_like(p)
+                state["previous_change"] = torch.zeros_like(p)
 
-                previous_change = state["previous_change"].sparse_mask(grad)._values()
-                curvature_values = change_values.sub(previous_change)
+            step_counter = state["steps"].sparse_mask(grad)
+            previous_direction = state["previous_direction"].sparse_mask(grad)
+            previous_change = state["previous_change"].sparse_mask(grad)
 
-            curvature_values = change_values.sub(previous_change)
+            # For parameters which have not been updated for the first time, set the
+            # change values to zero.
+            change_mask = step_counter._values().ge(1)
+            # For parameters which have not been updated for the second time, set the
+            # curvature values to zero.
+            curvature_mask = step_counter._values().ge(2)
+
+            change_values = grad_values.sub(previous_direction._values()).mul(change_mask.float())
+            curvature_values = change_values.sub(previous_change._values()).mul(curvature_mask.float())
 
             d_p_values = grad_values.mul(integral)
 
@@ -227,20 +225,12 @@ class SparsePID(PIDBase):
 
             p.add_(make_sparse(d_p_values), alpha=-group["lr"])
 
-            # TODO(juan43ramirez): To be accurate, each parameter should have its own
-            # notion of whether it has been updated or not
+            breakpoint()
+            # Update the step counter for observed parameters.
+            state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
 
-            if len(state) == 0:
-                # We do not initialize `previous_change` as a convention to indicate
-                # that the D term should not be used in the following update.
-
-                # Only the state associated with observed gradients is updated.
-                # TODO(juan43ramirez): is this an efficient way to do this?
-                state["previous_direction"][grad_indices] = grad_values.clone().detach()
-            else:
-                # Only the state associated with observed gradients is updated.
-                # TODO(juan43ramirez): is this an efficient way to do this?
-                state["previous_direction"][grad_indices] = grad_values.clone().detach()
-                state["previous_change"][grad_indices] = change_values.clone().detach()
+            # Update the previous direction and change for observed parameters.
+            state["previous_direction"].sparse_mask(grad).copy_(grad)
+            state["previous_change"].sparse_mask(grad).copy_(change_values)
 
         return loss
