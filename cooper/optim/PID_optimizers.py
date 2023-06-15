@@ -194,10 +194,9 @@ class SparsePID(PIDBase):
                 grad_values.add_(make_sparse(p.data), alpha=weight_decay)
 
             if len(state) == 0:
-                # TODO: make these tensors sparse from the beginning
-                state["steps"] = torch.zeros(p.shape, device=p.device, dtype=torch.int)
-                state["previous_direction"] = torch.zeros_like(p)
-                state["previous_change"] = torch.zeros_like(p)
+                state["steps"] = torch.zeros_like(grad, dtype=torch.int)
+                state["previous_direction"] = torch.zeros_like(grad)
+                state["previous_change"] = torch.zeros_like(grad)
 
             step_counter = state["steps"].sparse_mask(grad)
             previous_direction = state["previous_direction"].sparse_mask(grad)
@@ -225,12 +224,11 @@ class SparsePID(PIDBase):
 
             p.add_(make_sparse(d_p_values), alpha=-group["lr"])
 
-            breakpoint()
             # Update the step counter for observed parameters.
             state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
 
             # Update the previous direction and change for observed parameters.
-            state["previous_direction"].sparse_mask(grad).copy_(grad)
-            state["previous_change"].sparse_mask(grad).copy_(change_values)
+            state["previous_direction"][grad_indices] = grad_values.mul(change_mask.float()).clone().detach()
+            state["previous_change"][grad_indices] = change_values.clone().detach()
 
         return loss
