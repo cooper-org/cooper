@@ -8,15 +8,17 @@ Intended to be used on the multipliers, as the P and D terms can reduce oscillat
 common to min-max optimization problems.
 """
 
+import warnings
+
 import torch
-from torch.optim.optimizer import Optimizer
 
 # TODO(juan43ramirez): implement a PID optimizer which incorporates some filtering
 # This could be by using EMAs of the error terms
 
 
-class PIDBase(Optimizer):
+class PIDBase(torch.optim.Optimizer):
     r"""
+    TODO(juan43ramirez): complete docstring
 
     PID is x_t = x_0 + ...
     This implementation is recursive: x_t = x_{t-1} + ...
@@ -47,13 +49,13 @@ class PIDBase(Optimizer):
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
         if proportional < 0.0:
-            raise ValueError("Invalid PID proportional value: {}".format(proportional))
+            raise ValueError("Invalid proportional coefficient: {}".format(proportional))
         if integral < 0.0:
-            raise ValueError("Invalid PID integral value: {}".format(integral))
+            raise ValueError("Invalid integral coefficient: {}".format(integral))
         if derivative < 0.0:
-            raise ValueError("Invalid PID derivative value: {}".format(derivative))
+            raise ValueError("Invalid derivative coefficient: {}".format(derivative))
         if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
-            raise ValueError("Invalid PID parameters: all are zero")
+            warnings.warn("Invalid PID coefficients: all are zero")
 
         defaults = dict(
             lr=lr,
@@ -144,7 +146,7 @@ class PID(PIDBase):
 class SparsePID(PIDBase):
     r"""
     Supports sparse gradient updates. Inspired by SparseAdam from PyTorch.
-    https://github.com/pytorch/pytorch/blob/0bb2b015414214e8874d4c31188eb2fd883da402/torch/optim/_functional.py#L22
+    https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
     """
 
     @torch.no_grad()
@@ -167,70 +169,73 @@ class SparsePID(PIDBase):
             derivative = group["derivative"]
             maximize = group["maximize"]
 
-        for p in group["params"]:
-            if p.grad is None:
-                continue
-            if not p.grad.is_sparse:
-                raise RuntimeError("SparsePID optimizer only supports sparse gradients. Consider PID instead.")
+            for p in group["params"]:
+                if p.grad is None:
+                    continue
+                if not p.grad.is_sparse:
+                    raise RuntimeError("SparsePID optimizer only supports sparse gradients. Consider PID instead.")
 
-            grad = p.grad
-            state = self.state[p]
+                grad = p.grad
+                state = self.state[p]
 
-            grad = grad.coalesce()  # the update is non-linear so indices must be unique
-            grad_indices = grad._indices()
-            grad_values = grad._values()
-            if grad_values.numel() == 0:
-                # Skip update for empty grad
-                continue
-            size = grad.size()
+                grad = grad.coalesce()  # the update is non-linear so indices must be unique
+                grad_indices = grad._indices()
+                grad_values = grad._values()
+                if grad_values.numel() == 0:
+                    # Skip update for empty grad
+                    continue
+                size = grad.size()
 
-            def make_sparse(values):
-                constructor = grad.new
-                if grad_indices.dim() == 0 or values.dim() == 0:
-                    return constructor().resize_as_(grad)
-                return constructor(grad_indices, values, size)
+                def make_sparse(values):
+                    constructor = grad.new
+                    if grad_indices.dim() == 0 or values.dim() == 0:
+                        return constructor().resize_as_(grad)
+                    return constructor(grad_indices, values, size)
 
-            if weight_decay != 0:
-                grad_values.add_(make_sparse(p.data), alpha=weight_decay)
+                if weight_decay != 0:
+                    p_values = torch.index_select(p, 0, grad_indices[0])
+                    grad_values.add_(p_values, alpha=weight_decay)
 
-            if len(state) == 0:
-                # NOTE: considering a *dense* state. Note that IndexedMultipliers are
-                # stored in a dense representation as well.
-                state["steps"] = torch.zeros_like(p, dtype=torch.int)
-                state["previous_direction"] = torch.zeros_like(p)
-                state["previous_change"] = torch.zeros_like(p)
+                if len(state) == 0:
+                    # NOTE: considering a *dense* state. Note that IndexedMultipliers are
+                    # stored in a dense representation as well.
+                    state["steps"] = torch.zeros_like(p, dtype=torch.int)
+                    state["previous_direction"] = torch.zeros_like(p)
+                    state["previous_change"] = torch.zeros_like(p)
 
-            step_counter = state["steps"].sparse_mask(grad)
-            previous_direction = state["previous_direction"].sparse_mask(grad)
-            previous_change = state["previous_change"].sparse_mask(grad)
+                step_counter = state["steps"].sparse_mask(grad)
+                previous_direction = state["previous_direction"].sparse_mask(grad)
+                previous_change = state["previous_change"].sparse_mask(grad)
 
-            # Given the available information from previous updates, the change and
-            # curvature are estimated or not.
-            is_after_first_update = step_counter._values().ge(1)
-            is_after_second_update = step_counter._values().ge(2)
+                # Given the available information from previous updates, the change and
+                # curvature are estimated or not.
+                is_after_first_update = step_counter._values().ge(1)
+                is_after_second_update = step_counter._values().ge(2)
 
-            change_values = grad_values.sub(previous_direction._values()).mul(is_after_first_update.float())
-            curvature_values = change_values.sub(previous_change._values()).mul(is_after_second_update.float())
+                change_values = grad_values.sub(previous_direction._values()).mul(is_after_first_update.float())
+                curvature_values = change_values.sub(previous_change._values()).mul(is_after_second_update.float())
 
-            d_p_values = grad_values.mul(integral)
+                d_p_values = grad_values.mul(integral)
 
-            if proportional != 0:
-                d_p_values.add_(change_values, alpha=proportional)
-            if derivative != 0:
-                d_p_values.add_(curvature_values, alpha=derivative)
+                if proportional != 0:
+                    d_p_values.add_(change_values, alpha=proportional)
+                if derivative != 0:
+                    d_p_values.add_(curvature_values, alpha=derivative)
 
-            if maximize:
-                d_p_values.mul_(-1)
+                if maximize:
+                    d_p_values.mul_(-1)
 
-            p.add_(make_sparse(d_p_values), alpha=-group["lr"])
+                p.add_(make_sparse(d_p_values), alpha=-group["lr"])
 
-            # Update the step counter for observed parameters.
-            state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
+                # Update the step counter for observed parameters.
+                state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
 
-            # Update the previous direction and change for observed parameters. We
-            # always store `previous_direction` for the next update. `previous_change`
-            # is only used for the second update, so we store it using ``
-            state["previous_direction"][grad_indices] = grad_values.clone().detach()
-            state["previous_change"][grad_indices] = change_values.mul(is_after_first_update.float()).clone().detach()
+                # Update the previous direction and change for observed parameters. We
+                # always store `previous_direction` for the next update. `previous_change`
+                # is only used for the second update, so we store it using ``
+                state["previous_direction"][grad_indices] = grad_values.clone().detach()
+                state["previous_change"][grad_indices] = (
+                    change_values.mul(is_after_first_update.float()).clone().detach()
+                )
 
         return loss
