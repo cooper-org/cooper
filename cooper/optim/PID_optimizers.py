@@ -194,23 +194,23 @@ class SparsePID(PIDBase):
                 grad_values.add_(make_sparse(p.data), alpha=weight_decay)
 
             if len(state) == 0:
-                state["steps"] = torch.zeros_like(grad, dtype=torch.int)
-                state["previous_direction"] = torch.zeros_like(grad)
-                state["previous_change"] = torch.zeros_like(grad)
+                # NOTE: considering a *dense* state. Note that IndexedMultipliers are
+                # stored in a dense representation as well.
+                state["steps"] = torch.zeros_like(p, dtype=torch.int)
+                state["previous_direction"] = torch.zeros_like(p)
+                state["previous_change"] = torch.zeros_like(p)
 
             step_counter = state["steps"].sparse_mask(grad)
             previous_direction = state["previous_direction"].sparse_mask(grad)
             previous_change = state["previous_change"].sparse_mask(grad)
 
-            # For parameters which have not been updated for the first time, set the
-            # change values to zero.
-            change_mask = step_counter._values().ge(1)
-            # For parameters which have not been updated for the second time, set the
-            # curvature values to zero.
-            curvature_mask = step_counter._values().ge(2)
+            # Given the available information from previous updates, the change and
+            # curvature are estimated or not.
+            is_after_first_update = step_counter._values().ge(1)
+            is_after_second_update = step_counter._values().ge(2)
 
-            change_values = grad_values.sub(previous_direction._values()).mul(change_mask.float())
-            curvature_values = change_values.sub(previous_change._values()).mul(curvature_mask.float())
+            change_values = grad_values.sub(previous_direction._values()).mul(is_after_first_update.float())
+            curvature_values = change_values.sub(previous_change._values()).mul(is_after_second_update.float())
 
             d_p_values = grad_values.mul(integral)
 
@@ -227,8 +227,10 @@ class SparsePID(PIDBase):
             # Update the step counter for observed parameters.
             state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
 
-            # Update the previous direction and change for observed parameters.
-            state["previous_direction"][grad_indices] = grad_values.mul(change_mask.float()).clone().detach()
-            state["previous_change"][grad_indices] = change_values.clone().detach()
+            # Update the previous direction and change for observed parameters. We
+            # always store `previous_direction` for the next update. `previous_change`
+            # is only used for the second update, so we store it using ``
+            state["previous_direction"][grad_indices] = grad_values.clone().detach()
+            state["previous_change"][grad_indices] = change_values.mul(is_after_first_update.float()).clone().detach()
 
         return loss
