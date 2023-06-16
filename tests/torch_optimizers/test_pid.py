@@ -4,7 +4,7 @@ import torch
 
 import cooper
 from cooper.multipliers import IndexedMultiplier
-from cooper.optim import PID, SparsePID
+from cooper.optim import PID
 
 
 @pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
@@ -82,9 +82,7 @@ def test_manual_sparse_pid(proportional, integral, derivative):
     def PID_direction(grad, change, curvature):
         return integral * grad + proportional * change + derivative * curvature
 
-    optimizer = SparsePID(
-        param.parameters(), lr=lr, proportional=proportional, integral=integral, derivative=derivative
-    )
+    optimizer = PID(param.parameters(), lr=lr, proportional=proportional, integral=integral, derivative=derivative)
 
     # -------------------------------------------- First step of optimization
     indices = torch.tensor([0, 1, 4, 7], device=device)
