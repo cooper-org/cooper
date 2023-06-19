@@ -7,7 +7,7 @@ import cooper
 
 
 @pytest.mark.parametrize("use_violation_fn", [True, False])
-def test_manual_PrimalDual(use_violation_fn, Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
+def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
     """Test first two iterations of PrimalDual alternating GDA updates on toy 2D problem."""
 
     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
