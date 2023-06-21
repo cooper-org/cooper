@@ -6,6 +6,8 @@ import cooper
 from cooper.multipliers import IndexedMultiplier
 from cooper.optim import PID
 
+# TODO(juan43ramirez): test with multiple parameter groups
+
 
 @pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
 def test_manual_pid(proportional, integral, derivative):

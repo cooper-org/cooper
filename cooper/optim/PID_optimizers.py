@@ -125,9 +125,6 @@ def _pid(param, state, lr, weight_decay, proportional, integral, derivative, max
 
     grad = param.grad
 
-    if weight_decay != 0:
-        grad = grad.add(param, alpha=weight_decay)
-
     change, curvature = _estimate_change_and_curvature(grad, state)
 
     d_p = grad.mul(integral)
@@ -136,6 +133,11 @@ def _pid(param, state, lr, weight_decay, proportional, integral, derivative, max
         d_p.add_(change, alpha=proportional)
     if derivative != 0:
         d_p.add_(curvature, alpha=derivative)
+
+    # Weight decay is applied after estimating the change and curvsture, similar to
+    # AdamW. See https://arxiv.org/abs/1711.05101 for details.
+    if weight_decay != 0:
+        d_p.add_(param, alpha=weight_decay)
 
     if maximize:
         d_p.mul_(-1)
@@ -174,10 +176,6 @@ def _sparse_pid(params, state, lr, weight_decay, proportional, integral, derivat
             return constructor().resize_as_(grad)
         return constructor(grad_indices, values, size)
 
-    if weight_decay != 0:
-        p_values = torch.index_select(params, 0, grad_indices[0])
-        grad_values.add_(p_values, alpha=weight_decay)
-
     if len(state) == 0:
         # NOTE: considering a *dense* state. Note that IndexedMultipliers are
         # stored in a dense representation as well.
@@ -203,6 +201,12 @@ def _sparse_pid(params, state, lr, weight_decay, proportional, integral, derivat
         d_p_values.add_(change_values, alpha=proportional)
     if derivative != 0:
         d_p_values.add_(curvature_values, alpha=derivative)
+
+    # Weight decay is applied after estimating the change and curvsture, similar to
+    # AdamW. See https://arxiv.org/abs/1711.05101 for details.
+    if weight_decay != 0:
+        p_values = torch.index_select(params, 0, grad_indices[0])
+        d_p_values.add_(p_values, alpha=weight_decay)
 
     if maximize:
         d_p_values.mul_(-1)
