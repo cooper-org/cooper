@@ -8,7 +8,7 @@ from typing import Optional
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintType
-from cooper.multipliers import MULTIPLIER_TYPE, ExplicitMultiplier
+from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
@@ -64,7 +64,7 @@ class ConstrainedOptimizer:
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+        multipliers: Optional[OneOrSequence[Multiplier]] = None,
         constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)

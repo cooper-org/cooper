@@ -5,7 +5,7 @@ from typing import Optional, Union
 import torch
 
 from cooper.constraints import ConstraintGroup
-from cooper.multipliers import MULTIPLIER_TYPE
+from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
@@ -45,7 +45,7 @@ def create_optimizer_from_kwargs(
     alternating: AlternatingType,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
-    multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+    multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
     """Creates a constrained or unconstrained optimizer from a set of keyword arguments.
     This method disambiguates the appropriate optimizer class to instantiate.
@@ -82,7 +82,7 @@ def load_cooper_optimizer_from_state_dict(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
-    multipliers: Optional[OneOrSequence[MULTIPLIER_TYPE]] = None,
+    multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ):
     """Creates a Cooper optimizer and loads the state_dicts contained in a
     :py:class:`~cooper.optim.CooperOptimizerState` onto instantiated primal and dual

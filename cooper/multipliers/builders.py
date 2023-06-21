@@ -18,6 +18,9 @@ def build_explicit_multiplier(
     """Initializes a dense or sparse multiplier at zero, with desired shape, dtype and
     destination device."""
 
+    if constraint_type == ConstraintType.PENALTY:
+        raise ValueError("`Penalty` constraints do not admit multipliers.")
+
     multiplier_class = IndexedMultiplier if is_indexed else DenseMultiplier
     enforce_positive = constraint_type == ConstraintType.INEQUALITY
 

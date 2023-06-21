@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 from typing import Optional
 
 import torch
 
 
 class ConstraintType(Enum):
-    EQUALITY = "equality"
-    INEQUALITY = "inequality"
-    PENALTY = "penalty"
+    EQUALITY = auto()
+    INEQUALITY = auto()
+    PENALTY = auto()
 
 
 @dataclass
@@ -53,3 +53,15 @@ class ConstraintState:
     constraint_features: Optional[torch.Tensor] = None
     skip_primal_contribution: bool = False
     skip_dual_contribution: bool = False
+
+
+@dataclass
+class ConstraintContribution:
+    """Stores the value of the constraint factor (multiplier or penalty coefficient),
+    the contribution of the constraint to the primal-differentiable Lagrian, and the
+    contribution of the constraint to the dual-differentiable Lagrangian."""
+
+    multiplier_value: Optional[torch.Tensor] = None
+    penalty_coefficient_value: Optional[torch.Tensor] = None
+    primal_contribution: Optional[torch.Tensor] = None
+    dual_contribution: Optional[torch.Tensor] = None

@@ -6,7 +6,8 @@ from typing import Optional, Tuple, Union
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType, observed_constraints_iterator
-from cooper.multipliers import ExplicitMultiplier
+from cooper.formulations import extract_and_patch_violations
+from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
 # Formulation, and some other classes below, are heavily inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -99,13 +100,16 @@ class CMPState:
         observed_multiplier_values = []
 
         for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
-            multiplier_value, primal_contribution, dual_contribution = constraint_group.compute_lagrangian_contribution(
-                constraint_state=constraint_state
-            )
+            constraint_contribution = constraint_group.compute_constraint_contribution(constraint_state)
+            primal_contribution = constraint_contribution.primal_contribution
+            dual_contribution = constraint_contribution.dual_contribution
 
-            if not constraint_state.skip_primal_contribution:
-                primal_lagrangian += primal_contribution
-            if not constraint_state.skip_dual_contribution:
+            if not constraint_state.skip_primal_contribution and primal_contribution is not None:
+                primal_lagrangian = primal_lagrangian + primal_contribution
+
+            if not constraint_state.skip_dual_contribution and dual_contribution is not None:
+                dual_lagrangian = dual_lagrangian + dual_contribution
+
                 # Determine which of the constraints are strictly feasible and update
                 # the `strictly_feasible_indices` attribute of the multiplier.
                 if (
@@ -113,14 +117,20 @@ class CMPState:
                     and (constraint_group.constraint_type == ConstraintType.INEQUALITY)
                     and constraint_group.multiplier.restart_on_feasible
                 ):
-                    # `strict_violation` has already been patched to contain `violation`
-                    # whenever `strict_violation` is not provided.
-                    constraint_group.multiplier.strictly_feasible_indices = constraint_state.strict_violation < 0.0
+                    _, strict_violation = extract_and_patch_violations(constraint_state)
 
-                dual_lagrangian += dual_contribution
+                    if isinstance(constraint_group.multiplier, IndexedMultiplier):
+                        # Need to expand the indices to the size of the multiplier
+                        indices = torch.zeros_like(constraint_group.multiplier.weight, dtype=torch.bool)
+
+                        # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
+                        # dimension 1 of the violations
+                        indices[constraint_state.constraint_features] = strict_violation.unsqueeze(1) < 0.0
+                    else:
+                        indices = strict_violation < 0.0
 
             if return_multipliers:
-                observed_multiplier_values.append(multiplier_value)
+                observed_multiplier_values.append(constraint_contribution.multiplier_value)
 
         if primal_lagrangian is not None:
             # Either a loss was provided, or at least one observed constraint

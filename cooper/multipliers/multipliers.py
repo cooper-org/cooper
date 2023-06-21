@@ -8,36 +8,23 @@ import torch
 from cooper.constraints.constraint_state import ConstraintType
 
 
-class ConstantMultiplier:
-    """Constant (non-trainable) multiplier class used for penalized formulations.
-
-    Args:
-        init: Value of the multiplier.
-    """
-
-    def __init__(self, init: torch.Tensor):
-        if init.requires_grad:
-            raise ValueError("Constant multiplier should not be trainable.")
-        self.weight = init
-        self.device = init.device
-
-    def __call__(self):
+class Multiplier(torch.nn.Module, abc.ABC):
+    @abc.abstractmethod
+    def forward(self):
         """Return the current value of the multiplier."""
-        return torch.clone(self.weight)
+        pass
 
-    def parameters(self):
-        """Return an empty iterator for consistency with multipliers which are
-        :py:class:`~torch.nn.Module`."""
-        return iter(())
-
-    def state_dict(self):
-        return {"weight": self.weight}
-
-    def load_state_dict(self, state_dict):
-        self.weight = state_dict["weight"]
+    @abc.abstractmethod
+    def post_step_(self):
+        """
+        Post-step function for multipliers. This function is called after each step of
+        the dual optimizer, and allows for additional post-processing of the implicit
+        multiplier module or its parameters.
+        """
+        pass
 
 
-class ExplicitMultiplier(torch.nn.Module):
+class ExplicitMultiplier(Multiplier):
     """
     An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
     contains (explicitly) the value of the Lagrange multipliers associated with a
@@ -127,8 +114,22 @@ class ExplicitMultiplier(torch.nn.Module):
                 # about the pitfalls of using dual_restars with stateful optimizers.
 
                 self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
-                if self.weight.grad is not None:
-                    self.weight.grad[self.strictly_feasible_indices, ...] = 0.0
+
+                grad = self.weight.grad
+                if grad is not None and torch.any(self.strictly_feasible_indices):
+                    if grad.is_sparse:
+                        indices = grad._indices()
+                        values = grad._values()
+
+                        masked_values = values * (~self.strictly_feasible_indices[indices[0]])
+                        non_zero_mask = masked_values.squeeze().nonzero().squeeze()
+                        non_zero_indices = indices[:, non_zero_mask]
+                        non_zero_values = masked_values[non_zero_mask]
+
+                        grad = torch.sparse_coo_tensor(non_zero_indices, non_zero_values, grad.shape)
+
+                    else:
+                        grad[self.strictly_feasible_indices, ...] = 0.0
 
             self.strictly_feasible_indices = None
 
@@ -207,6 +208,12 @@ class IndexedMultiplier(ExplicitMultiplier):
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
         return torch.flatten(multiplier_values)
 
+    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
+        """Move the multipler to a new device and/or change its dtype."""
+        self.last_seen_mask = self.last_seen_mask.to(device=device)
+        self.device = device
+        return super().to(device=device, dtype=dtype)
+
     def __repr__(self):
         return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
@@ -225,7 +232,7 @@ class IndexedMultiplier(ExplicitMultiplier):
         self.last_seen_mask *= False
 
 
-class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
+class ImplicitMultiplier(Multiplier):
     """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
     :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
@@ -235,7 +242,7 @@ class ImplicitMultiplier(torch.nn.Module, metaclass=abc.ABCMeta):
 
     Thanks to their functional nature, implicit multipliers can allow for
     (approximately) representing _infinitely_ many constraints. This feature is based on
-     the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
+    the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
     """
 
     @abc.abstractmethod

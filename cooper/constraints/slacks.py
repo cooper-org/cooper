@@ -1,9 +1,28 @@
+import abc
 import warnings
 
 import torch
 
 
-class ConstantSlack:
+class SlackVariable(torch.nn.Module, abc.ABC):
+    @abc.abstractmethod
+    def forward(self):
+        """Return the current value of the slack variable."""
+        pass
+
+    @abc.abstractmethod
+    def post_step_(self):
+        """
+        Post-step function for slack variables. This function is called after each step
+        of the primal optimizer.
+        """
+        pass
+
+    def __repr__(self):
+        return f"{type(self).__name__}(shape={self.weight.shape})"
+
+
+class ConstantSlack(SlackVariable):
     """Constant (non-trainable) slack variable.
 
     Args:
@@ -11,12 +30,14 @@ class ConstantSlack:
     """
 
     def __init__(self, init: torch.Tensor):
+        super().__init__()
+
         if init.requires_grad:
             raise ValueError("Constant slack should not be trainable.")
         self.weight = init
         self.device = init.device
 
-    def __call__(self):
+    def forward(self):
         """Return the current value of the slacks."""
         return torch.clone(self.weight)
 
@@ -25,6 +46,10 @@ class ConstantSlack:
         :py:class:`~torch.nn.Module`."""
         return iter(())
 
+    def post_step_(self):
+        # Constant slacks are not trainable and therefore do not require a post-step.
+        pass
+
     def state_dict(self):
         return {"weight": self.weight}
 
@@ -32,7 +57,7 @@ class ConstantSlack:
         self.weight = state_dict["weight"]
 
 
-class ExplicitSlack(torch.nn.Module):
+class ExplicitSlack(SlackVariable):
     """
     An explicit slack holds a :py:class:`~torch.nn.parameter.Parameter` which contains
     (explicitly) the value of the slack variable with a
@@ -93,9 +118,6 @@ class DenseSlack(ExplicitSlack):
         """Return the current value of the slack variables."""
         return torch.clone(self.weight)
 
-    def __repr__(self):
-        return f"DenseSlack(shape={self.weight.shape})"
-
 
 class IndexedSlack(ExplicitSlack):
     """Indexed slacks extend the functionality of
@@ -132,6 +154,3 @@ class IndexedSlack(ExplicitSlack):
 
         # Flatten slack values to 1D since Embedding works with 2D tensors.
         return torch.flatten(slack_values)
-
-    def __repr__(self):
-        return f"IndexedSlack(shape={self.weight.shape})"
