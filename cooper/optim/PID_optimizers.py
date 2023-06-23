@@ -33,14 +33,16 @@ class PID(torch.optim.Optimizer):
         ...
     """
 
+    # TODO: Kp -> Kp
+
     def __init__(
         self,
         params,
         lr: float,
         weight_decay: float = 0.0,
-        proportional: float = 0.0,
-        integral: float = 1.0,
-        derivative: float = 0.0,
+        Kp: float = 0.0,
+        Ki: float = 1.0,
+        Kd: float = 0.0,
         maximize: bool = False,
     ):
         if not 0.0 <= lr:
@@ -48,21 +50,21 @@ class PID(torch.optim.Optimizer):
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
-        if proportional < 0.0:
-            raise ValueError("Invalid proportional coefficient: {}".format(proportional))
-        if integral < 0.0:
-            raise ValueError("Invalid integral coefficient: {}".format(integral))
-        if derivative < 0.0:
-            raise ValueError("Invalid derivative coefficient: {}".format(derivative))
-        if all([proportional == 0.0, integral == 0.0, derivative == 0.0]):
+        if Kp < 0.0:
+            raise ValueError("Invalid Kp coefficient: {}".format(Kp))
+        if Ki < 0.0:
+            raise ValueError("Invalid Ki coefficient: {}".format(Ki))
+        if Kd < 0.0:
+            raise ValueError("Invalid Kd coefficient: {}".format(Kd))
+        if all([Kp == 0.0, Ki == 0.0, Kd == 0.0]):
             warnings.warn("Invalid PID coefficients: all are zero")
 
         defaults = dict(
             lr=lr,
             weight_decay=weight_decay,
-            proportional=proportional,
-            integral=integral,
-            derivative=derivative,
+            Kp=Kp,
+            Ki=Ki,
+            Kd=Kd,
             maximize=maximize,
         )
 
@@ -83,9 +85,9 @@ class PID(torch.optim.Optimizer):
         for group in self.param_groups:
             lr = group["lr"]
             weight_decay = group["weight_decay"]
-            proportional = group["proportional"]
-            integral = group["integral"]
-            derivative = group["derivative"]
+            Kp = group["Kp"]
+            Ki = group["Ki"]
+            Kd = group["Kd"]
             maximize = group["maximize"]
 
             for p in group["params"]:
@@ -94,7 +96,7 @@ class PID(torch.optim.Optimizer):
 
                 state = self.state[p]
                 func = _sparse_pid if p.grad.is_sparse else _pid
-                func(p, state, lr, weight_decay, proportional, integral, derivative, maximize)
+                func(p, state, lr, weight_decay, Kp, Ki, Kd, maximize)
 
         return loss
 
@@ -119,7 +121,7 @@ def _estimate_change_and_curvature(grad, state):
     return change, curvature
 
 
-def _pid(param, state, lr, weight_decay, proportional, integral, derivative, maximize):
+def _pid(param, state, lr, weight_decay, Kp, Ki, Kd, maximize):
     if param.grad.is_sparse:
         raise RuntimeError("PID optimizer does not support sparse gradients. Consider SparsePID instead.")
 
@@ -127,12 +129,12 @@ def _pid(param, state, lr, weight_decay, proportional, integral, derivative, max
 
     change, curvature = _estimate_change_and_curvature(grad, state)
 
-    d_p = grad.mul(integral)
+    d_p = grad.mul(Ki)
 
-    if proportional != 0:
-        d_p.add_(change, alpha=proportional)
-    if derivative != 0:
-        d_p.add_(curvature, alpha=derivative)
+    if Kp != 0:
+        d_p.add_(change, alpha=Kp)
+    if Kd != 0:
+        d_p.add_(curvature, alpha=Kd)
 
     # Weight decay is applied after estimating the change and curvsture, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
@@ -155,7 +157,7 @@ def _pid(param, state, lr, weight_decay, proportional, integral, derivative, max
         state["previous_change"] = change.clone().detach()
 
 
-def _sparse_pid(params, state, lr, weight_decay, proportional, integral, derivative, maximize):
+def _sparse_pid(params, state, lr, weight_decay, Kp, Ki, Kd, maximize):
     r"""
     Supports sparse gradient updates. Inspired by SparseAdam from PyTorch.
     https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
@@ -195,12 +197,12 @@ def _sparse_pid(params, state, lr, weight_decay, proportional, integral, derivat
     change_values = grad_values.sub(previous_direction._values()).mul(is_after_first_update.float())
     curvature_values = change_values.sub(previous_change._values()).mul(is_after_second_update.float())
 
-    d_p_values = grad_values.mul(integral)
+    d_p_values = grad_values.mul(Ki)
 
-    if proportional != 0:
-        d_p_values.add_(change_values, alpha=proportional)
-    if derivative != 0:
-        d_p_values.add_(curvature_values, alpha=derivative)
+    if Kp != 0:
+        d_p_values.add_(change_values, alpha=Kp)
+    if Kd != 0:
+        d_p_values.add_(curvature_values, alpha=Kd)
 
     # Weight decay is applied after estimating the change and curvsture, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.

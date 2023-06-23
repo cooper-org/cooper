@@ -9,8 +9,8 @@ from cooper.optim import PID
 # TODO(juan43ramirez): test with multiple parameter groups
 
 
-@pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
-def test_manual_pid(proportional, integral, derivative):
+@pytest.mark.parametrize(["Kp", "Ki", "Kd"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
+def test_manual_pid(Kp, Ki, Kd):
     param = torch.tensor([1.0], requires_grad=True)
 
     loss_fn = lambda param: param**2 / 2
@@ -18,9 +18,9 @@ def test_manual_pid(proportional, integral, derivative):
     lr = 0.1
 
     def PID_direction(grad, change, curvature):
-        return integral * grad + proportional * change + derivative * curvature
+        return Ki * grad + Kp * change + Kd * curvature
 
-    optimizer = PID([param], lr=lr, proportional=proportional, integral=integral, derivative=derivative)
+    optimizer = PID([param], lr=lr, Kp=Kp, Ki=Ki, Kd=Kd)
 
     def do_step():
         optimizer.zero_grad()
@@ -66,8 +66,8 @@ def test_manual_pid(proportional, integral, derivative):
     assert torch.allclose(optimizer.state[param]["previous_change"], p2 - p1)
 
 
-@pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
-def test_manual_sparse_pid(proportional, integral, derivative):
+@pytest.mark.parametrize(["Kp", "Ki", "Kd"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
+def test_manual_sparse_pid(Kp, Ki, Kd):
     if not torch.cuda.is_available():
         pytest.skip("Sparse gradients are only supported on GPU.")
 
@@ -82,9 +82,9 @@ def test_manual_sparse_pid(proportional, integral, derivative):
     lr = 0.1
 
     def PID_direction(grad, change, curvature):
-        return integral * grad + proportional * change + derivative * curvature
+        return Ki * grad + Kp * change + Kd * curvature
 
-    optimizer = PID(param.parameters(), lr=lr, proportional=proportional, integral=integral, derivative=derivative)
+    optimizer = PID(param.parameters(), lr=lr, Kp=Kp, Ki=Ki, Kd=Kd)
 
     # -------------------------------------------- First step of optimization
     indices = torch.tensor([0, 1, 4, 7], device=device)
@@ -156,11 +156,11 @@ def test_manual_sparse_pid(proportional, integral, derivative):
     # -------------------------------------------- Third step of optimization
 
 
-@pytest.mark.parametrize(["proportional", "integral", "derivative"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
+@pytest.mark.parametrize(["Kp", "Ki", "Kd"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
 def test_pid_convergence(
-    proportional,
-    integral,
-    derivative,
+    Kp,
+    Ki,
+    Kd,
     Toy2dCMP_problem_properties,
     Toy2dCMP_params_init,
     use_multiple_primal_optimizers,
@@ -180,9 +180,7 @@ def test_pid_convergence(
     )
 
     dual_params = [{"params": constraint.multiplier.parameters()} for constraint in cmp.constraint_groups]
-    dual_optimizer = PID(
-        dual_params, lr=0.01, proportional=proportional, integral=integral, derivative=derivative, maximize=True
-    )
+    dual_optimizer = PID(dual_params, lr=0.01, Kp=Kp, Ki=Ki, Kd=Kd, maximize=True)
 
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
         primal_optimizers, dual_optimizer, constraint_groups=cmp.constraint_groups
