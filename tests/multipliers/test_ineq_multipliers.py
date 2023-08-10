@@ -38,15 +38,19 @@ def test_ineq_post_step_(mult_class, restart_on_feasible, init_tensor, feasible_
 
     # Overwrite the multiplier to have some *negative* entries and gradients
     ineq_multiplier.weight.data = init_tensor.clone()
-    ineq_multiplier.weight.grad = init_tensor.clone()
+    if hasattr(ineq_multiplier, "use_sparse_gradient") and ineq_multiplier.use_sparse_gradient:
+        ineq_multiplier.weight.grad = init_tensor.clone().to_sparse()
+    else:
+        ineq_multiplier.weight.grad = init_tensor.clone()
 
     # Post-step should ensure non-negativity. Note that no feasible indices are passed,
     # so "feasible" multipliers and their gradients are not reset.
     ineq_multiplier.post_step_()
     multiplier_values = ineq_multiplier(all_indices) if is_indexed else ineq_multiplier()
 
+    current_grad = ineq_multiplier.weight.grad.to_dense()
     assert torch.allclose(multiplier_values, init_tensor.relu().reshape(multiplier_values.shape))
-    assert torch.allclose(ineq_multiplier.weight.grad, init_tensor.reshape(ineq_multiplier.weight.grad.shape))
+    assert torch.allclose(current_grad, init_tensor.reshape(current_grad.shape))
 
     # Perform post-step again, this time with feasible indices
     ineq_multiplier.strictly_feasible_indices = feasible_indices
@@ -54,19 +58,20 @@ def test_ineq_post_step_(mult_class, restart_on_feasible, init_tensor, feasible_
 
     multiplier_values = ineq_multiplier(all_indices) if is_indexed else ineq_multiplier()
 
+    current_grad = ineq_multiplier.weight.grad.to_dense()
     if not ineq_multiplier.restart_on_feasible:
         # Latest post-step is a no-op
         assert torch.allclose(multiplier_values, init_tensor.relu().reshape(multiplier_values.shape))
-        assert torch.allclose(ineq_multiplier.weight.grad, init_tensor.reshape(ineq_multiplier.weight.grad.shape))
+        assert torch.allclose(current_grad, init_tensor.reshape(current_grad.shape))
     else:
         assert torch.allclose(multiplier_values[feasible_indices], torch.tensor(0.0))
-        assert torch.allclose(ineq_multiplier.weight.grad[feasible_indices], torch.tensor(0.0))
+        assert torch.allclose(current_grad[feasible_indices], torch.tensor(0.0))
 
         target = init_tensor.relu()[~feasible_indices].reshape(multiplier_values[~feasible_indices].shape)
         assert torch.allclose(multiplier_values[~feasible_indices], target)
 
-        target = init_tensor[~feasible_indices].reshape(ineq_multiplier.weight.grad[~feasible_indices].shape)
-        assert torch.allclose(ineq_multiplier.weight.grad[~feasible_indices], target)
+        target = init_tensor[~feasible_indices].reshape(current_grad[~feasible_indices].shape)
+        assert torch.allclose(current_grad[~feasible_indices], target)
 
 
 def test_save_load_multiplier(mult_class, restart_on_feasible, init_tensor, multiplier_shape, all_indices, random_seed):
