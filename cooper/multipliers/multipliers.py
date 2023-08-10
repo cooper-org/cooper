@@ -126,7 +126,7 @@ class ExplicitMultiplier(Multiplier):
                         masked_values = torch.einsum("i..., i... -> i...", values, non_feasible_indices)
                         non_zero_mask = masked_values.squeeze().nonzero(as_tuple=True)[0]
                         non_zero_indices = indices[:, non_zero_mask]
-                        non_zero_values = masked_values[non_zero_mask].flatten()
+                        non_zero_values = masked_values[non_zero_mask, ...]
                         self.weight.grad = torch.sparse_coo_tensor(non_zero_indices, non_zero_values, grad.shape)
                     else:
                         grad[self.strictly_feasible_indices, ...] = 0.0
