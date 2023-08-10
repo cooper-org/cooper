@@ -128,7 +128,7 @@ class CMPState:
                         feasible_indices[constraint_state.constraint_features] = strict_violation.unsqueeze(1) < 0.0
                     else:
                         feasible_indices = strict_violation < 0.0
-                    
+
                     constraint_group.multiplier.strictly_feasible_indices = feasible_indices
 
             if return_multipliers:
