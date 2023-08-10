@@ -211,7 +211,6 @@ class IndexedMultiplier(ExplicitMultiplier):
     def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
         """Move the multipler to a new device and/or change its dtype."""
         self.last_seen_mask = self.last_seen_mask.to(device=device)
-        self.device = device
         return super().to(device=device, dtype=dtype)
 
     def __repr__(self):
