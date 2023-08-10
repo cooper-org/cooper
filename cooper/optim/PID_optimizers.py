@@ -1,11 +1,12 @@
 """Implementation of a PID controller as a PyTorch optimizer.
-Parameters are control variables, and gradients are errors
+The parameters are treated as the control variables, and the gradients are considered 
+the error signal, which we aim to drive to zero.
 
 Inspired by:
 https://pytorch-optimizer.readthedocs.io/en/latest/_modules/torch_optimizer/pid.html
 
-Intended to be used on the multipliers, as the P and D terms can reduce oscillations
-common to min-max optimization problems.
+This optimizer is intended to be used on the Lagrange multipliers, as the (P) and (D)
+terms can help reduce oscillations common to min-max optimization problems.
 """
 
 import warnings
@@ -83,49 +84,53 @@ class PID(torch.optim.Optimizer):
         """
         loss = None
         if closure is not None:
-            loss = closure()
+            with torch.enable_grad():
+                loss = closure()
 
         for group in self.param_groups:
-            lr = group["lr"]
-            weight_decay = group["weight_decay"]
-            Kp, Ki, Kd = group["Kp"], group["Ki"], group["Kd"]
-            maximize = group["maximize"]
-
             for p in group["params"]:
                 if p.grad is None:
                     continue
 
-                state = self.state[p]
-                func = _sparse_pid if p.grad.is_sparse else _pid
-                func(p, state, lr, weight_decay, Kp, Ki, Kd, maximize)
+                update_function = _sparse_pid if p.grad.is_sparse else _pid
+                update_function(
+                    param=p,
+                    state=self.state[p],
+                    lr=group["lr"],
+                    weight_decay=group["weight_decay"],
+                    Kp=group["Kp"],
+                    Ki=group["Ki"],
+                    Kd=group["Kd"],
+                    maximize=group["maximize"],
+                )
 
         return loss
 
 
-def _estimate_change_and_curvature(grad: torch.Tensor, state: dict) -> tuple[torch.Tensor, torch.Tensor]:
+def _estimate_gradient_delta_and_curvature(grad: torch.Tensor, state: dict) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Calculate the change in direction and curvature of the gradient.
-        change_t = grad_t - grad_{t-1} = `grad` - `state["previous_direction"]`
-        curvature_t = change_t - change_{t-1} = change_t - `state["previous_change"]`
+    Calculate the gradient delta and curvature.
+        delta_t = grad_t - grad_{t-1} = `grad` - `state["previous_grad"]`
+        curvature_t = delta_t - delta_{t-1} = delta_t - `state["previous_delta"]`
     """
 
     if len(state) == 0:
-        # At this stage, there is not enough information to compute the
-        # change in direction for the P term nor the curvature for the D
-        # term. Therefore, only the I term is used for the first update.
-        change = 0
+        # At this stage, there is not enough information to compute the gradient delta
+        # for the (P) term nor the curvature for the (D) term. Therefore, only the
+        # (I) term is used for the first update.
+        delta = 0
         curvature = 0
-    elif "previous_change" not in state:
-        assert "previous_direction" in state
-        # Using the previous update direction to compute the P term, but
-        # there is not enough information to compute the D term.
-        change = grad.sub(state["previous_direction"])
+    elif "previous_delta" not in state:
+        assert "previous_grad" in state
+        # We use the previous grad to compute the (P) term, but there is still not enough
+        # information to compute the (D) term.
+        delta = grad.sub(state["previous_grad"])
         curvature = 0
     else:
-        change = grad.sub(state["previous_direction"])
-        curvature = change.sub(state["previous_change"])
+        delta = grad.sub(state["previous_grad"])
+        curvature = delta.sub(state["previous_delta"])
 
-    return change, curvature
+    return delta, curvature
 
 
 def _pid(
@@ -135,13 +140,13 @@ def _pid(
     Applies a PID step update to `param`
 
     The general form of the update (for minimization, without weight decay) is:
-        change_t = grad_t - grad_{t-1}
-        curvature_t = change_t - change_{t-1} = grad_t - 2 * grad_{t-1} + grad_{t-2}
-        x_{t+1} = x_t - lr * (Ki * grad_t + Kp * change_t + Kd * curvature_t)
+        delta_t = grad_t - grad_{t-1}
+        curvature_t = grad_t - 2 * grad_{t-1} + grad_{t-2} = delta_t - delta_{t-1}
+        x_{t+1} = x_t - lr * (Ki * grad_t + Kp * delta_t + Kd * curvature_t)
 
-    Note that there is not enough information to compute change_0, curvature_0, nor
+    Note that there is not enough information to compute delta_0, curvature_0, nor
     curvature_1. Therefore, we define the following convention:
-        change_0 = curvature_0 = curvature_1 = 0
+        delta_0 = curvature_0 = curvature_1 = 0
 
     This means that the first update corresponds to SGD with learning rate lr * Ki:
         x_1 = x_0 - lr * Ki * grad_0
@@ -150,18 +155,18 @@ def _pid(
     """
 
     grad = param.grad
-    assert not grad.is_sparse
+    assert not grad.is_sparse, "For sparse gradients, use _sparse_pid instead"
 
-    change, curvature = _estimate_change_and_curvature(grad, state)
+    delta, curvature = _estimate_gradient_delta_and_curvature(grad, state)
 
     d_p = grad.mul(Ki)
 
     if Kp != 0:
-        d_p.add_(change, alpha=Kp)
+        d_p.add_(delta, alpha=Kp)
     if Kd != 0:
         d_p.add_(curvature, alpha=Kd)
 
-    # Weight decay is applied after estimating the change and curvature, similar to
+    # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
         d_p.add_(param, alpha=weight_decay)
@@ -173,15 +178,14 @@ def _pid(
 
     if len(state) == 0:
         # Lazily initialize the state after the first update.
-        #
-        # Only the I term was used for the first update. For the next step,
-        # the current update direction will be used to compute the P term.
-        # We do not initialize `previous_change` as a convention to indicate
-        # that the D term should not be used in the following update.
-        state["previous_direction"] = grad.clone().detach()
+        # Only the (I) term was used for the first update. For the next step,
+        # the current gradient will be used to compute the (P) term.
+        # We do not initialize `previous_delta` as a convention to indicate
+        # that the (D) term should not be used in the following update.
+        state["previous_grad"] = grad.clone().detach()
     else:
-        state["previous_direction"] = grad.clone().detach()
-        state["previous_change"] = change.clone().detach()
+        state["previous_grad"] = grad.clone().detach()
+        state["previous_delta"] = delta.clone().detach()
 
 
 def _sparse_pid(
@@ -192,7 +196,7 @@ def _sparse_pid(
     https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
     """
     grad = param.grad
-    assert grad.is_sparse
+    assert grad.is_sparse, "For dense gradients, use _pid instead"
 
     grad = grad.coalesce()  # the update is non-linear so indices must be unique
     grad_indices = grad._indices()
@@ -214,32 +218,32 @@ def _sparse_pid(
         return constructor(grad_indices, values, size)
 
     if len(state) == 0:
-        # NOTE: considering a *dense* state. Note that IndexedMultipliers are
-        # stored in a dense representation as well.
+        # NOTE: considering a *dense* state. Note that tensors related to IndexedMultipliers
+        # are stored in a dense representation as well.
         state["steps"] = torch.zeros_like(param, dtype=torch.int)
-        state["previous_direction"] = torch.zeros_like(param)
-        state["previous_change"] = torch.zeros_like(param)
+        state["previous_grad"] = torch.zeros_like(param)
+        state["previous_delta"] = torch.zeros_like(param)
 
     step_counter = state["steps"].sparse_mask(grad)
-    previous_direction = state["previous_direction"].sparse_mask(grad)
-    previous_change = state["previous_change"].sparse_mask(grad)
-
-    # Given the available information from previous updates, the change and
-    # curvature are estimated or not.
+    # Given the available information from previous updates, the delta and curvature are
+    # estimated or not.
     is_after_first_update = step_counter._values().ge(1)
     is_after_second_update = step_counter._values().ge(2)
 
-    change_values = grad_values.sub(previous_direction._values()).mul(is_after_first_update.float())
-    curvature_values = change_values.sub(previous_change._values()).mul(is_after_second_update.float())
+    previous_grad = state["previous_grad"].sparse_mask(grad)
+    previous_delta = state["previous_delta"].sparse_mask(grad)
+
+    delta_values = grad_values.sub(previous_grad._values()).mul(is_after_first_update.float())
+    curvature_values = delta_values.sub(previous_delta._values()).mul(is_after_second_update.float())
 
     d_p_values = grad_values.mul(Ki)
 
     if Kp != 0:
-        d_p_values.add_(change_values, alpha=Kp)
+        d_p_values.add_(delta_values, alpha=Kp)
     if Kd != 0:
         d_p_values.add_(curvature_values, alpha=Kd)
 
-    # Weight decay is applied after estimating the change and curvsture, similar to
+    # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
         p_values = torch.index_select(param, 0, grad_indices[0])
@@ -253,8 +257,9 @@ def _sparse_pid(
     # Update the step counter for observed parameters.
     state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
 
-    # Update the previous direction and change for observed parameters. We
-    # always store `previous_direction` for the next update. `previous_change`
-    # is only used for the second update, so we store it using ``
-    state["previous_direction"][grad_indices] = grad_values.clone().detach()
-    state["previous_change"][grad_indices] = change_values.mul(is_after_first_update.float()).clone().detach()
+    # Update the previous grad and delta for observed parameters. We always store
+    # `previous_grad` for the next update. `previous_delta` is only used for the second
+    # update, so we store it only for the parameters that have been observed after their
+    # first update.
+    state["previous_grad"][grad_indices] = grad_values.clone().detach()
+    state["previous_delta"][grad_indices] = delta_values.mul(is_after_first_update.float()).clone().detach()

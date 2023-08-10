@@ -39,9 +39,9 @@ def test_manual_pid(Kp, Ki, Kd):
     assert torch.allclose(param, p1)
 
     # Check the state of the optimizer. Should contain the first gradient in
-    # `previous_direction` and also in `previous_change`.
-    assert torch.allclose(optimizer.state[param]["previous_direction"], p0)
-    assert "previous_change" not in optimizer.state[param]
+    # `previous_grad` and also in `previous_delta`.
+    assert torch.allclose(optimizer.state[param]["previous_grad"], p0)
+    assert "previous_delta" not in optimizer.state[param]
 
     # -------------------------------------------- Second step of optimization
     p2 = p1 - lr * PID_direction(p1, p1 - p0, 0.0)
@@ -50,9 +50,9 @@ def test_manual_pid(Kp, Ki, Kd):
 
     assert torch.allclose(param, p2)
 
-    # The state contain p1 in `previous_direction` and p1 - p0 in `previous_change`.
-    assert torch.allclose(optimizer.state[param]["previous_direction"], p1)
-    assert torch.allclose(optimizer.state[param]["previous_change"], p1 - p0)
+    # The state contain p1 in `previous_grad` and p1 - p0 in `previous_delta`.
+    assert torch.allclose(optimizer.state[param]["previous_grad"], p1)
+    assert torch.allclose(optimizer.state[param]["previous_delta"], p1 - p0)
 
     # -------------------------------------------- Third step of optimization
     p3 = p2 - lr * PID_direction(p2, p2 - p1, p2 - 2 * p1 + p0)
@@ -61,9 +61,9 @@ def test_manual_pid(Kp, Ki, Kd):
 
     assert torch.allclose(param, p3)
 
-    # The state contain p2 in `previous_direction` and p2 - p1 in `previous_change`.
-    assert torch.allclose(optimizer.state[param]["previous_direction"], p2)
-    assert torch.allclose(optimizer.state[param]["previous_change"], p2 - p1)
+    # The state contain p2 in `previous_grad` and p2 - p1 in `previous_delta`.
+    assert torch.allclose(optimizer.state[param]["previous_grad"], p2)
+    assert torch.allclose(optimizer.state[param]["previous_delta"], p2 - p1)
 
 
 @pytest.mark.parametrize(["Kp", "Ki", "Kd"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
@@ -95,10 +95,10 @@ def test_manual_sparse_pid(Kp, Ki, Kd):
     p1[indices] -= lr * PID_direction(p0, 0.0, 0.0)[indices]  # only update the current indices
 
     # Manually calculate the state of the optimizer
-    previous_direction = torch.zeros_like(p0)
-    previous_direction[indices] = p0.clone()[indices]
-    # For the first step, the previous_change is 0 for all indices
-    previous_change = torch.zeros_like(p0)
+    previous_grad = torch.zeros_like(p0)
+    previous_grad[indices] = p0.clone()[indices]
+    # For the first step, the previous_delta is 0 for all indices
+    previous_delta = torch.zeros_like(p0)
 
     optimizer.zero_grad()
     loss = loss_fn(param, indices)
@@ -108,11 +108,11 @@ def test_manual_sparse_pid(Kp, Ki, Kd):
     assert torch.allclose(param(all_indices), p1)
 
     # Check the state of the optimizer. For observer indices, should contain the first
-    # gradient in `previous_direction` and also in `previous_change`. 0 otherwise.
+    # gradient in `previous_grad` and also in `previous_delta`. 0 otherwise.
     state = optimizer.state[list(param.parameters())[0]]
 
-    assert torch.allclose(state["previous_direction"].flatten(), previous_direction)
-    assert torch.allclose(state["previous_change"].flatten(), previous_change)
+    assert torch.allclose(state["previous_grad"].flatten(), previous_grad)
+    assert torch.allclose(state["previous_delta"].flatten(), previous_delta)
 
     # -------------------------------------------- Second step of optimization
     old_indices = indices.clone()
@@ -121,7 +121,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd):
 
     # Manual second step
     p2 = p1.clone()
-    change = p1 - previous_direction
+    change = p1 - previous_grad
 
     unseen_indices = torch.ones_like(all_indices, dtype=torch.bool)
     unseen_indices[old_indices] = False
@@ -129,17 +129,17 @@ def test_manual_sparse_pid(Kp, Ki, Kd):
 
     p2[indices] -= lr * PID_direction(p1, change, 0.0)[indices]
 
-    previous_direction[indices] = p1.clone()[indices]
+    previous_grad[indices] = p1.clone()[indices]
 
-    # We modify previous_change only for the indices that were updated.
-    # For indices that were only observed now, the previous_change is 0
-    previous_change[indices] = torch.zeros_like(p1[indices])
+    # We modify previous_delta only for the indices that were updated.
+    # For indices that were only observed now, the previous_delta is 0
+    previous_delta[indices] = torch.zeros_like(p1[indices])
 
-    # For indices that were observed before *and* now, the previous_change is p1 - p0.
+    # For indices that were observed before *and* now, the previous_delta is p1 - p0.
     # Note that the following line overwites the previous line for the indices that
     # belong to both old_indices and indices.
     twice_observed_indices = [idx for idx in range(10) if idx in old_indices and idx in indices]
-    previous_change[twice_observed_indices] = p1[twice_observed_indices] - p0[twice_observed_indices]
+    previous_delta[twice_observed_indices] = p1[twice_observed_indices] - p0[twice_observed_indices]
 
     optimizer.zero_grad()
     loss = loss_fn(param, indices)
@@ -150,8 +150,8 @@ def test_manual_sparse_pid(Kp, Ki, Kd):
 
     state = optimizer.state[list(param.parameters())[0]]
 
-    assert torch.allclose(state["previous_direction"].flatten(), previous_direction)
-    assert torch.allclose(state["previous_change"].flatten(), previous_change)
+    assert torch.allclose(state["previous_grad"].flatten(), previous_grad)
+    assert torch.allclose(state["previous_delta"].flatten(), previous_delta)
 
     # -------------------------------------------- Third step of optimization
 
