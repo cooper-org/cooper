@@ -5,7 +5,6 @@ import torch
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintContribution, ConstraintState, ConstraintType
 from cooper.formulations import FormulationType
-from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 class ConstraintGroup:
@@ -19,9 +18,9 @@ class ConstraintGroup:
         self,
         constraint_type: ConstraintType,
         formulation_type: Optional[FormulationType] = FormulationType.LAGRANGIAN,
-        multiplier: Optional[Multiplier] = None,
+        multiplier: Optional[multipliers.Multiplier] = None,
         multiplier_kwargs: Optional[dict] = {},
-        penalty_coefficient: Optional[PenaltyCoefficient] = None,
+        penalty_coefficient: Optional[multipliers.PenaltyCoefficient] = None,
     ):
         if not isinstance(constraint_type, ConstraintType):
             raise ValueError(
@@ -58,7 +57,7 @@ class ConstraintGroup:
 
         self.formulation = formulation_class(**formulation_kwargs)
 
-    def sanity_check_multiplier(self, multiplier: Multiplier) -> None:
+    def sanity_check_multiplier(self, multiplier: multipliers.Multiplier) -> None:
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
             if multiplier.implicit_constraint_type != self.constraint_type:
                 raise ValueError(f"Provided multiplier is inconsistent with {self.constraint_type} constraint.")
@@ -76,14 +75,14 @@ class ConstraintGroup:
         self._state = value
 
     @property
-    def multiplier(self) -> Optional[Multiplier]:
+    def multiplier(self) -> Optional[multipliers.Multiplier]:
         if hasattr(self.formulation, "multiplier"):
             return self.formulation.multiplier
         else:
             return None
 
     @property
-    def penalty_coefficient(self) -> Optional[PenaltyCoefficient]:
+    def penalty_coefficient(self) -> Optional[multipliers.PenaltyCoefficient]:
         if hasattr(self.formulation, "penalty_coefficient"):
             return self.formulation.penalty_coefficient
         else:
