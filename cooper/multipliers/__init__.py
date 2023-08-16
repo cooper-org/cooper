@@ -33,7 +33,7 @@ def evaluate_constraint_factor(module: ConstraintFactor, constraint_state: Const
         # Expand the value of the penalty coefficient to match the shape of the violation.
         # This enables the use of a single penalty coefficient for all constraints in a
         # constraint group.
-        # We only do this for penalty coefficients an not multipliers because we expect
+        # We only do this for penalty coefficients and not multipliers because we expect
         # a one-to-one mapping between multiplier values and constraints. If multiplier
         # sharing is desired, this should be done explicitly by the user.
         value = value.expand(constraint_state.violation.shape)
