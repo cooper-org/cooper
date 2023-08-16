@@ -7,6 +7,7 @@ from cooper.multipliers import IndexedMultiplier
 from cooper.optim import PID
 
 # TODO(juan43ramirez): test with multiple parameter groups
+# TODO(juan43ramirez): test PID with momentum
 
 
 @pytest.mark.parametrize(["Kp", "Ki", "Kd"], [(0, 1, 0), (1, 1, 0), (0, 1, 1), (1, 1, 1)])
