@@ -7,7 +7,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.constraints import SlackVariable
+from cooper.constraints.slacks import SlackVariable, build_explicit_slack
 from cooper.multipliers import PenaltyCoefficient
 
 
@@ -41,11 +41,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             s0, s1 >= 0
 
     For a value of C=1, the solution is:
-        (x=1/2, y=1/4, s0=0, s1=1/4)
+        (x=2/5, y=1/5, s0=2/5, s1=0)
 
     Link to WolframAlpha queries:
         Standard CMP: https://tinyurl.com/ye8dw6t3
-        CMP with slack variables: https://tinyurl.com/bds5b3yj
+        CMP with slack variables: https://tinyurl.com/5n6hwaps
     """
 
     def __init__(
@@ -54,7 +54,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
         formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        slack_variables: Optional[tuple[SlackVariable]] = None,
+        use_slack_variables: Optional[tuple[SlackVariable]] = None,
         penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
         device=None,
     ):
@@ -62,7 +62,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_constraint_surrogate = use_constraint_surrogate
         super().__init__()
 
-        self.slack_variables = slack_variables
+        self.slack_variables = []
 
         self.constraint_groups = []
         if self.use_ineq_constraints:
@@ -73,10 +73,18 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             for ix in range(2):
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
 
+                # slack_kwargs = {} if use_slack_variables else None
                 constraint_group = cooper.ConstraintGroup(
-                    **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
+                    **constraint_kwargs,
+                    multiplier_kwargs=multiplier_kwargs,
+                    penalty_coefficient=penalty_coefficient,
+                    # slack_kwargs=slack_kwargs
                 )
                 self.constraint_groups.append(constraint_group)
+
+                if use_slack_variables:
+                    slack = build_explicit_slack(**{"constraint_type": constraint_type, "shape": 1, "device": device})
+                    self.slack_variables.append(slack)
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -114,8 +122,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         cg1_violation = param_x**2 + param_y - 1.0
 
         if self.slack_variables is not None:
-            cg0_violation -= self.slack_variables[0]()
-            cg1_violation -= self.slack_variables[1]()
+            cg0_violation = cg0_violation - self.slack_variables[0]()
+            cg1_violation = cg0_violation - self.slack_variables[1]()
 
         if self.use_constraint_surrogate:
             # The constraint surrogates take precedence over the `strict_violation`
@@ -128,8 +136,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
 
             if self.slack_variables is not None:
-                cg0_surrogate -= self.slack_variables[0]()
-                cg1_surrogate -= self.slack_variables[1]()
+                cg0_surrogate = cg0_surrogate - self.slack_variables[0]()
+                cg1_surrogate = cg1_surrogate - self.slack_variables[1]()
 
             cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
@@ -151,7 +159,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         loss = param_x**2 + 2 * param_y**2
 
         if self.slack_variables is not None:
-            loss += self.slack_variables[0]() ** 2 + self.slack_variables[1]() ** 2
+            slack_cost = self.slack_variables[0]() ** 2 + self.slack_variables[1]() ** 2
+            loss = loss + slack_cost
 
         cmp_state = cooper.CMPState(loss=loss)
 
@@ -160,6 +169,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             cmp_state.observed_constraints = violation_cmp_state.observed_constraints
 
         return cmp_state
+
+    def extract_slack_params(self):
+        if self.slack_variables is not None:
+            for slack in self.slack_variables:
+                yield slack.weight
 
 
 @pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
@@ -171,15 +185,16 @@ def Toy2dCMP_params_init(device, request):
 def Toy2dCMP_problem_properties(request, device):
     use_ineq_constraints, use_slack_variables = request.param
 
-    use_slack_variables = False
     cmp_properties = dict(use_ineq_constraints=use_ineq_constraints, use_slack_variables=use_slack_variables)
     if use_ineq_constraints:
         if use_slack_variables:
-            exact_solution = torch.tensor([1.0 / 2.0, 1.0 / 4.0], device=device)
-            cmp_properties["slack_variables"] = torch.tensor([0.0, 1.0 / 4.0])
+            exact_solution = torch.tensor([2.0 / 5.0, 1.0 / 5.0], device=device)
+            cmp_properties["optimal_slack_variables"] = torch.tensor([2.0 / 5.0, 0.0])
         else:
             exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
     else:
+        # Having a constrained problem is a pre-req for using slack variables
+        cmp_properties["use_slack_variables"] = False
         exact_solution = torch.tensor([0.0, 0.0], device=device)
 
     cmp_properties["exact_solution"] = exact_solution
@@ -272,7 +287,9 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+
     is_constrained = len(constraint_groups) > 0
+
     dual_optimizers = build_dual_optimizers(
         is_constrained, constraint_groups, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
     )
