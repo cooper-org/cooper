@@ -88,6 +88,10 @@ class ExplicitMultiplier(Multiplier):
             raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
 
     @property
+    def dtype(self):
+        return self.weight.dtype
+
+    @property
     def implicit_constraint_type(self):
         return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
 
