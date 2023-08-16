@@ -73,12 +73,8 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             for ix in range(2):
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
 
-                # slack_kwargs = {} if use_slack_variables else None
                 constraint_group = cooper.ConstraintGroup(
-                    **constraint_kwargs,
-                    multiplier_kwargs=multiplier_kwargs,
-                    penalty_coefficient=penalty_coefficient,
-                    # slack_kwargs=slack_kwargs
+                    **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
                 )
                 self.constraint_groups.append(constraint_group)
 
