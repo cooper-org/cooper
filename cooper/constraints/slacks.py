@@ -1,7 +1,11 @@
 import abc
 import warnings
+from enum import Enum
+from typing import Optional
 
 import torch
+
+from cooper.constraints.constraint_state import ConstraintState, ConstraintType
 
 
 class SlackVariable(torch.nn.Module, abc.ABC):
@@ -154,3 +158,62 @@ class IndexedSlack(ExplicitSlack):
 
         # Flatten slack values to 1D since Embedding works with 2D tensors.
         return torch.flatten(slack_values)
+
+
+class SlackType(Enum):
+    CONSTANT = ConstantSlack
+    DENSE = DenseSlack
+    INDEXED = IndexedSlack
+
+
+# TODO(gallego-posada): Consider unifying this with `build_explicit_multiplier` in multipliers.builders
+def build_explicit_slack(
+    constraint_type: ConstraintType,
+    shape: int,
+    device: Optional[torch.device] = None,
+    is_indexed: bool = False,
+    dtype: torch.dtype = torch.float32,
+) -> ExplicitSlack:
+    """Initializes a dense or sparse slack variable at zero, with desired shape, dtype
+    and destination device."""
+
+    if constraint_type == ConstraintType.PENALTY:
+        raise ValueError("`Penalty` constraints do not admit slack variables.")
+
+    slack_class = IndexedSlack if is_indexed else DenseSlack
+    enforce_positive = constraint_type == ConstraintType.INEQUALITY
+
+    tensor_factory = dict(dtype=dtype, device=device)
+    # Indexed multipliers require the weight to be 2D
+    tensor_factory["size"] = (shape, 1) if is_indexed else (shape,)
+
+    return slack_class(init=torch.zeros(**tensor_factory), enforce_positive=enforce_positive)
+
+
+# TODO(gallego-posada): Consider unifying this with `evaluate_constraint_factor` in multipliers.__init__
+def evaluate_slack(module: SlackVariable, constraint_state: ConstraintState) -> torch.Tensor:
+    """Evaluate the slack variable associated with a constraint group.
+
+    Args:
+        module: Slack variable.
+        constraint_state: The current state of the constraint.
+    """
+    value: torch.Tensor
+    if constraint_state.constraint_features is None:
+        value = module()
+    else:
+        value = module(constraint_state.constraint_features)
+
+    if len(value.shape) == 0:
+        value.unsqueeze_(0)
+
+    if not value.requires_grad and value.numel() == 1 and constraint_state.violation.numel() > 1:
+        # Expand the value of the penalty coefficient to match the shape of the violation.
+        # This enables the use of a single penalty coefficient for all constraints in a
+        # constraint group.
+        # We only do this for penalty coefficients and not multipliers because we expect
+        # a one-to-one mapping between multiplier values and constraints. If multiplier
+        # sharing is desired, this should be done explicitly by the user.
+        value = value.expand(constraint_state.violation.shape)
+
+    return value
