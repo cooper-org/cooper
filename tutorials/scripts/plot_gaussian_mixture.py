@@ -127,18 +127,16 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         hinge_defect = self.const_level - hinge
 
         if not self.use_proxy:
-            self.ineq_group.state = ConstraintState(violation=hinge_defect)
-            proxy_ineq_defect = None
+            ineq_group_state = ConstraintState(violation=hinge_defect)
         else:
             # Use non-proxy defects to update the Lagrange multipliers
             # Proportion of elements in class 0 is the non-proxy defect
             classes = logits >= 0.0
             prop_0 = torch.sum(classes == 0) / targets.numel()
-            ineq_defect = self.const_level - prop_0
-            proxy_ineq_defect = hinge_defect
-            self.ineq_group.state = ConstraintState(violation=proxy_ineq_defect, strict_violation=ineq_defect)
+            ineq_group_state = ConstraintState(violation=hinge_defect, strict_violation=self.const_level - prop_0)
 
-        state = CMPState(loss=loss, observed_constraints=[self.ineq_group])
+        observed_constraints = [(self.ineq_group, ineq_group_state)]
+        state = CMPState(loss=loss, observed_constraints=observed_constraints)
 
         return state
 

@@ -75,10 +75,10 @@ for epoch_num in range(7):
         sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
         # Constraint defects use convention “g - \epsilon ≤ 0”
         constraint_defect = sq_l2_norm - 1.0
-        ineq_group.state = ConstraintState(violation=constraint_defect)
+        constraint_state = ConstraintState(violation=constraint_defect)
 
         # Create a CMPState object, which contains the loss and observed constraints
-        cmp_state = CMPState(loss=loss, observed_constraints=[ineq_group])
+        cmp_state = CMPState(loss=loss, observed_constraints=[(ineq_group, constraint_state)])
 
         cooper_optimizer.zero_grad()
         lagrangian_store = cmp_state.populate_lagrangian()

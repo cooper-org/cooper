@@ -82,12 +82,6 @@ def test_pipeline_without_cmp(
         if use_ineq_constraints:
             cg0_state, cg1_state = evaluate_constraints(params)
             observed_constraints = [(cg0, cg0_state), (cg1, cg1_state)]
-
-            # # Alternatively, one could assign the constraint states directly to the
-            # # constraint groups and collect only the constraint groups when gathering
-            # # the observed constraints.
-            # cg0.state, cg1.state = evaluate_constraints(params)
-            # observed_constraints = [cg0, cg1]
         else:
             observed_constraints = []
 

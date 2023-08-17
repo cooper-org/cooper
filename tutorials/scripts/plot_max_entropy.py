@@ -48,10 +48,15 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         # Equality constraints for proper normalization and mean constraint
         mean = torch.sum(probs * torch.arange(1, len(probs) + 1, device=DEVICE))
 
-        self.sum_constraint.state = ConstraintState(violation=torch.sum(probs) - 1)
-        self.mean_constraint.state = ConstraintState(violation=mean - self.target_mean)
+        sum_constraint_state = ConstraintState(violation=torch.sum(probs) - 1)
+        mean_constraint_state = ConstraintState(violation=mean - self.target_mean)
 
-        return CMPState(loss=entropy, observed_constraints=self.all_constraints)
+        observed_constraints = [
+            (self.sum_constraint, sum_constraint_state),
+            (self.mean_constraint, mean_constraint_state),
+        ]
+
+        return CMPState(loss=entropy, observed_constraints=observed_constraints)
 
 
 # Define the problem with the constraint groups
@@ -78,11 +83,11 @@ for i in range(3500):
     cmp_state, lagrangian_store = cooper_optimizer.roll(
         compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs), return_multipliers=True
     )
-
+    observed_violations = [cg_state.violation.data for cg, cg_state in cmp_state.observed_constraints]
     state_history[i] = {
         "loss": cmp_state.loss.item(),
         "multipliers": deepcopy(torch.stack([_.multiplier().data for _ in cmp.all_constraints])),
-        "violation": deepcopy(torch.stack([_.state.violation.data for _ in cmp.all_constraints])),
+        "violation": deepcopy(torch.stack(observed_violations)),
     }
 
 # Theoretical solution

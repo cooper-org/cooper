@@ -69,6 +69,8 @@ def create_linear_system(num_equations: int, num_variable: int, seed: int = 0):
     # Verify that the analytical solution is sufficiently close numerically
     assert torch.allclose(A @ x_optim, b, atol=1e-5)
 
+    A, b, x_optim = A.to(DEVICE), b.to(DEVICE), x_optim.to(DEVICE)
+
     return A, b, x_optim
 
 
@@ -145,7 +147,9 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_optimizer = torch.optim.SGD(cmp.eq_constraint.multiplier.parameters(), lr=dual_lr, maximize=True)
+    dual_optimizer = torch.optim.SGD(
+        cmp.eq_constraint.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False
+    )
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
         primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.eq_constraint
     )
@@ -156,6 +160,9 @@ def run_experiment(
     while step_ix < num_steps:
         for sampled_equations, sampled_RHS, indices in constraint_loader:
             step_ix += 1
+
+            sampled_equations, sampled_RHS = sampled_equations.to(DEVICE), sampled_RHS.to(DEVICE)
+            indices = indices.to(DEVICE)
             compute_cmp_state_fn = lambda: cmp.compute_cmp_state(x, sampled_equations, sampled_RHS, indices)
             cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
 

@@ -31,9 +31,7 @@ class CMPState:
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
         observed_constraints: List of tuples containing the observed/measured constraint
-            groups along with their states. The constraint state may be held internally
-            by the constraint group (`constraint_group.state`), or it may be passed
-            explicitly as the second element of the tuple.
+            groups along with their states.
         misc: Optional storage space for additional information relevant to the state of
             the CMP. This dict enables persisting the results of certain computations
             for post-processing. For example, one may want to retain the value of the
@@ -45,7 +43,7 @@ class CMPState:
     def __init__(
         self,
         loss: Optional[torch.Tensor] = None,
-        observed_constraints: Union[Sequence[ConstraintGroup], Sequence[Tuple[ConstraintGroup, ConstraintState]]] = (),
+        observed_constraints: Sequence[Tuple[ConstraintGroup, ConstraintState]] = (),
         misc: Optional[dict] = None,
     ):
         self.loss = loss
@@ -80,7 +78,7 @@ class CMPState:
         # dual Lagrangians
         any_primal_contribution = False
         any_dual_contribution = False
-        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
+        for constraint_group, constraint_state in self.observed_constraints:
             if not constraint_state.skip_dual_contribution:
                 any_dual_contribution = True
             if not constraint_state.skip_primal_contribution:
@@ -184,7 +182,7 @@ class CMPState:
 
     def __repr__(self) -> str:
         _string = f"CMPState(loss={self.loss}, \n"
-        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
+        for constraint_group, constraint_state in self.observed_constraints:
             _string += f"  {constraint_group}: {constraint_state}, \n"
         _string += f"misc={self.misc})"
         return _string
