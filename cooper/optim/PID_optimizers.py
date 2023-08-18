@@ -1,5 +1,5 @@
 """Implementation of a PID controller as a PyTorch optimizer.
-The parameters are treated as the control variables, and the gradients are considered 
+The parameters are treated as the control variables, and the gradients are considered
 the error signal, which we aim to drive to zero.
 
 Inspired by:

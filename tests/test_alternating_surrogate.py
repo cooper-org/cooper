@@ -242,6 +242,9 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     assert torch.allclose(params, x2_y2, atol=1e-4)
 
 
+# TODO(juan43ramirez): implement
+
+
 @pytest.mark.parametrize(
     "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL]
 )
