@@ -255,6 +255,10 @@ def build_dual_optimizers(
     if is_constrained:
         dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
         if not extrapolation:
+            if dual_optimizer_name == "SGD":
+                # SGD does not support `foreach=True` when the parameters use sparse
+                # gradients. Disabling foreach everywhere for simplicity.
+                dual_optimizer_kwargs["foreach"] = False
             dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
         else:
             dual_optimizers = getattr(cooper.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
