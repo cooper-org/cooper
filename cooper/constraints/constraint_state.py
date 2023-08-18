@@ -19,6 +19,15 @@ class ConstraintState:
         violation: Measurement of the constraint violation at some value of the primal
             parameters. This is expected to be differentiable with respect to the
             primal parameters.
+        constraint_features: The features of the (differentiable) constraint. This is
+            used to evaluate the Lagrange multiplier associated with a constraint group.
+            For example, an `IndexedMultiplier` expects the indices of the constraints
+            whose Lagrange multipliers are to be retrieved; while an
+            `ImplicitMultiplier` expects general tensor-valued features for the
+            constraints. This field is not used for `DenseMultiplier`//s.
+            This can be used in conjunction with an `IndexedMultiplier` to indicate the
+            measurement of the violation for only a subset of the constraints within a
+            `ConstraintGroup`.
         strict_violation: Measurement of the constraint violation which may be
             non-differentiable with respect to the primal parameters. When provided,
             the (necessarily differentiable) `violation` is used to compute the gradient
@@ -26,15 +35,8 @@ class ConstraintState:
             `strict_violation` is used to compute the gradient of the Lagrangian with
             respect to the dual parameters. For more details, see the proxy-constraint
             proposal of :cite:t:`cotter2019JMLR`.
-        constraint_features: The features of the constraint. This is used to evaluate
-            the lagrange multiplier associated with a constraint group. For example,
-            An `IndexedMultiplier` expects the indices of the constraints whose Lagrange
-            multipliers are to be retrieved; while an `ImplicitMultiplier` expects
-            general tensor-valued features for the constraints. This field is not used
-            for `DenseMultiplier`//s.
-            This can be used in conjunction with an `IndexedMultiplier` to indicate the
-            measurement of the violation for only a subset of the constraints within a
-            `ConstraintGroup`.
+        strict_constraint_features: The features of the (possibly non-differentiable)
+            constraint. For more details, see `constraint_features`.
         skip_primal_conribution: When `True`, we ignore the contribution of the current
             observed constraint violation towards the primal Lagrangian, but keep their
             contribution to the dual Lagrangian. In other words, the observed violations
@@ -49,19 +51,20 @@ class ConstraintState:
     """
 
     violation: torch.Tensor
-    strict_violation: Optional[torch.Tensor] = None
     constraint_features: Optional[torch.Tensor] = None
+    strict_violation: Optional[torch.Tensor] = None
+    strict_constraint_features: Optional[torch.Tensor] = None
     skip_primal_contribution: bool = False
     skip_dual_contribution: bool = False
 
 
 @dataclass
-class ConstraintContribution:
+class ConstraintStore:
     """Stores the value of the constraint factor (multiplier or penalty coefficient),
     the contribution of the constraint to the primal-differentiable Lagrian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""
 
     multiplier_value: Optional[torch.Tensor] = None
+    violation: Optional[torch.Tensor] = None
     penalty_coefficient_value: Optional[torch.Tensor] = None
-    primal_contribution: Optional[torch.Tensor] = None
-    dual_contribution: Optional[torch.Tensor] = None
+    lagrangian_contribution: Optional[torch.Tensor] = None

@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType, observed_constraints_iterator
+from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
 from cooper.formulations import extract_and_patch_violations
 from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
@@ -21,7 +21,8 @@ class LagrangianStore:
 
     lagrangian: torch.Tensor
     dual_lagrangian: Optional[torch.Tensor] = None
-    observed_multipliers: Optional[list[torch.Tensor]] = None
+    primal_observed_multipliers: Optional[list[torch.Tensor]] = None
+    dual_observed_multipliers: Optional[list[torch.Tensor]] = None
 
 
 class CMPState:
@@ -95,18 +96,17 @@ class CMPState:
 
         dual_lagrangian = 0.0 if any_dual_contribution else None
 
-        observed_multiplier_values = []
+        primal_observed_multiplier_values = []
+        dual_observed_multiplier_values = []
 
-        for constraint_group, constraint_state in observed_constraints_iterator(self.observed_constraints):
-            constraint_contribution = constraint_group.compute_constraint_contribution(constraint_state)
-            primal_contribution = constraint_contribution.primal_contribution
-            dual_contribution = constraint_contribution.dual_contribution
+        for constraint_group, constraint_state in self.observed_constraints:
+            primal_store, dual_store = constraint_group.compute_constraint_contribution(constraint_state)
 
-            if not constraint_state.skip_primal_contribution and primal_contribution is not None:
-                primal_lagrangian = primal_lagrangian + primal_contribution
+            if not constraint_state.skip_primal_contribution and primal_store is not None:
+                primal_lagrangian = primal_lagrangian + primal_store.lagrangian_contribution
 
-            if not constraint_state.skip_dual_contribution and dual_contribution is not None:
-                dual_lagrangian = dual_lagrangian + dual_contribution
+            if not constraint_state.skip_dual_contribution and dual_store is not None:
+                dual_lagrangian = dual_lagrangian + dual_store.lagrangian_contribution
 
                 # Determine which of the constraints are strictly feasible and update
                 # the `strictly_feasible_indices` attribute of the multiplier.
@@ -115,7 +115,7 @@ class CMPState:
                     and (constraint_group.constraint_type == ConstraintType.INEQUALITY)
                     and constraint_group.multiplier.restart_on_feasible
                 ):
-                    _, strict_violation = extract_and_patch_violations(constraint_state)
+                    strict_violation = dual_store.violation
 
                     if isinstance(constraint_group.multiplier, IndexedMultiplier):
                         # Need to expand the indices to the size of the multiplier
@@ -130,7 +130,8 @@ class CMPState:
                     constraint_group.multiplier.strictly_feasible_indices = feasible_indices
 
             if return_multipliers:
-                observed_multiplier_values.append(constraint_contribution.multiplier_value)
+                primal_observed_multiplier_values.append(primal_store.multiplier_value)
+                dual_observed_multiplier_values.append(dual_store.multiplier_value)
 
         if primal_lagrangian is not None:
             # Either a loss was provided, or at least one observed constraint
@@ -145,7 +146,8 @@ class CMPState:
 
         lagrangian_store = LagrangianStore(lagrangian=self._primal_lagrangian, dual_lagrangian=self._dual_lagrangian)
         if return_multipliers:
-            lagrangian_store.observed_multipliers = observed_multiplier_values
+            lagrangian_store.primal_observed_multipliers = primal_observed_multiplier_values
+            lagrangian_store.dual_observed_multipliers = dual_observed_multiplier_values
 
         return lagrangian_store
 

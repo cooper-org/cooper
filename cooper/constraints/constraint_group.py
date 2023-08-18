@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 
 from cooper import multipliers
-from cooper.constraints.constraint_state import ConstraintContribution, ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
 from cooper.formulations import FormulationType
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 

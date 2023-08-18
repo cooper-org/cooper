@@ -3,15 +3,15 @@ import abc
 import torch
 
 import cooper.formulations.utils as formulation_utils
-from cooper.constraints.constraint_state import ConstraintContribution, ConstraintState, ConstraintType
-from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
+from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
+from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor_for_primal_and_dual
 
 
 class Formulation(abc.ABC):
     # TODO(gallego-posada): Add documentation
 
     @abc.abstractmethod
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> ConstraintContribution:
+    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
         """Computes the contribution from the current constraint to the primal and dual
         Lagrangians, and evaluates the associated Lagrange multiplier or penalty
         coefficient."""
@@ -27,7 +27,6 @@ class Formulation(abc.ABC):
 
 
 class PenaltyFormulation(Formulation):
-
     expects_multiplier = False
     expects_penalty_coefficient = True
 
@@ -42,18 +41,24 @@ class PenaltyFormulation(Formulation):
         self.constraint_type = constraint_type
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> ConstraintContribution:
-        penalty_coefficient_value = evaluate_constraint_factor(self.penalty_coefficient, constraint_state)
+    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+        penalty_coefficient_value, _ = evaluate_constraint_factor_for_primal_and_dual(
+            module=self.penalty_coefficient, constraint_state=constraint_state
+        )
+
+        violation, _ = formulation_utils.extract_and_patch_violations(constraint_state)
 
         weighted_violation_for_primal = formulation_utils.compute_primal_weighted_violation(
-            constraint_factor=penalty_coefficient_value, constraint_state=constraint_state
+            penalty_coefficient_value, violation, constraint_state.skip_primal_contribution
         )
 
-        return ConstraintContribution(
+        primal_store = ConstraintStore(
+            violation=violation,
             penalty_coefficient_value=penalty_coefficient_value,
-            primal_contribution=weighted_violation_for_primal,
-            dual_contribution=None,
+            lagrangian_contribution=weighted_violation_for_primal,
         )
+
+        return primal_store, None
 
     def state_dict(self):
         return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient.state_dict()}
@@ -85,20 +90,28 @@ class QuadraticPenaltyFormulation(Formulation):
         self.constraint_type = constraint_type
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> ConstraintContribution:
-        penalty_coefficient_value = evaluate_constraint_factor(self.penalty_coefficient, constraint_state)
+    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+        penalty_coefficient_value, _ = evaluate_constraint_factor_for_primal_and_dual(
+            module=self.penalty_coefficient, constraint_state=constraint_state
+        )
+
+        violation, strict_violation = formulation_utils.extract_and_patch_violations(constraint_state)
 
         weighted_violation_for_primal = formulation_utils.compute_quadratic_penalty(
-            penalty_coefficient_value=penalty_coefficient_value,
-            constraint_state=constraint_state,
-            constraint_type=self.constraint_type,
+            penalty_coefficient_value,
+            violation,
+            strict_violation,
+            constraint_state.skip_primal_contribution,
+            self.constraint_type,
         )
 
-        return ConstraintContribution(
+        primal_store = ConstraintStore(
+            violation=violation,
             penalty_coefficient_value=penalty_coefficient_value,
-            primal_contribution=weighted_violation_for_primal,
-            dual_contribution=None,
+            lagrangian_contribution=weighted_violation_for_primal,
         )
+
+        return primal_store, None
 
     def state_dict(self):
         return {"constraint_type": self.constraint_type, "penalty_coefficient": self.penalty_coefficient.state_dict()}
@@ -112,7 +125,6 @@ class QuadraticPenaltyFormulation(Formulation):
 
 
 class LagrangianFormulation(Formulation):
-
     expects_multiplier = True
     expects_penalty_coefficient = False
 
@@ -125,21 +137,34 @@ class LagrangianFormulation(Formulation):
         self.constraint_type = constraint_type
         self.multiplier = multiplier
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> ConstraintContribution:
-        multiplier_value = evaluate_constraint_factor(self.multiplier, constraint_state)
+    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+        multiplier_for_primal, multiplier_for_dual = evaluate_constraint_factor_for_primal_and_dual(
+            module=self.multiplier, constraint_state=constraint_state
+        )
+
+        violation_for_primal, violation_for_dual = formulation_utils.extract_and_patch_violations(constraint_state)
 
         weighted_violation_for_primal = formulation_utils.compute_primal_weighted_violation(
-            multiplier_value, constraint_state
-        )
-        weighted_violation_for_dual = formulation_utils.compute_dual_weighted_violation(
-            multiplier_value, constraint_state
+            multiplier_for_primal, violation_for_primal, constraint_state.skip_primal_contribution
         )
 
-        return ConstraintContribution(
-            multiplier_value=multiplier_value,
-            primal_contribution=weighted_violation_for_primal,
-            dual_contribution=weighted_violation_for_dual,
+        weighted_violation_for_dual = formulation_utils.compute_dual_weighted_violation(
+            multiplier_for_dual, violation_for_dual, constraint_state.skip_dual_contribution
         )
+
+        primal_store = ConstraintStore(
+            multiplier_value=multiplier_for_primal,
+            violation=violation_for_primal,
+            lagrangian_contribution=weighted_violation_for_primal,
+        )
+
+        dual_store = ConstraintStore(
+            multiplier_value=multiplier_for_dual,
+            violation=violation_for_dual,
+            lagrangian_contribution=weighted_violation_for_dual,
+        )
+
+        return primal_store, dual_store
 
     def state_dict(self):
         return {"constraint_type": self.constraint_type, "multiplier": self.multiplier.state_dict()}
@@ -153,7 +178,6 @@ class LagrangianFormulation(Formulation):
 
 
 class AugmentedLagrangianFormulation(Formulation):
-
     expects_multiplier = True
     expects_penalty_coefficient = True
 
@@ -175,38 +199,51 @@ class AugmentedLagrangianFormulation(Formulation):
         self.multiplier = multiplier
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> ConstraintContribution:
+    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+        multiplier_for_primal, multiplier_for_dual = evaluate_constraint_factor_for_primal_and_dual(
+            module=self.multiplier, constraint_state=constraint_state
+        )
+        penalty_coefficient_for_primal, penalty_coefficient_for_dual = evaluate_constraint_factor_for_primal_and_dual(
+            module=self.penalty_coefficient, constraint_state=constraint_state
+        )
 
-        multiplier_value = evaluate_constraint_factor(self.multiplier, constraint_state)
-        penalty_coefficient_value = evaluate_constraint_factor(self.penalty_coefficient, constraint_state)
+        violation_for_primal, violation_for_dual = formulation_utils.extract_and_patch_violations(constraint_state)
 
         weighted_violation_for_primal = formulation_utils.compute_primal_weighted_violation(
-            multiplier_value, constraint_state
+            multiplier_for_primal, violation_for_primal, constraint_state.skip_primal_contribution
         )
-        if weighted_violation_for_primal is not None and not torch.all(penalty_coefficient_value == 0):
+        if weighted_violation_for_primal is not None and not torch.all(penalty_coefficient_for_primal == 0):
             quadratic_penalty = formulation_utils.compute_quadratic_penalty(
-                penalty_coefficient_value=penalty_coefficient_value,
-                constraint_state=constraint_state,
-                constraint_type=self.constraint_type,
+                penalty_coefficient_for_primal,
+                violation_for_primal,
+                violation_for_dual,
+                constraint_state.skip_primal_contribution,
+                self.constraint_type,
             )
             weighted_violation_for_primal = weighted_violation_for_primal + quadratic_penalty
 
-        # The update rule for the Augmented Lagrangian method uses the penalty
-        # coefficient as the dual learning rate (up to a constant factor). So we pass
-        # the penalty coefficient as an additional argument to effectively adjust the
-        # dual learning rate by scaling it by the penalty coefficient.
         weighted_violation_for_dual = formulation_utils.compute_dual_weighted_violation(
-            constraint_factor=multiplier_value,
-            constraint_state=constraint_state,
-            penalty_coefficient_value=penalty_coefficient_value,
+            multiplier_for_dual,
+            violation_for_dual,
+            constraint_state.skip_dual_contribution,
+            penalty_coefficient_for_dual,
         )
 
-        return ConstraintContribution(
-            multiplier_value=multiplier_value,
-            penalty_coefficient_value=penalty_coefficient_value,
-            primal_contribution=weighted_violation_for_primal,
-            dual_contribution=weighted_violation_for_dual,
+        primal_store = ConstraintStore(
+            multiplier_value=multiplier_for_primal,
+            violation=violation_for_primal,
+            lagrangian_contribution=weighted_violation_for_primal,
+            penalty_coefficient_value=penalty_coefficient_for_primal,
         )
+
+        dual_store = ConstraintStore(
+            multiplier_value=multiplier_for_dual,
+            violation=violation_for_dual,
+            lagrangian_contribution=weighted_violation_for_dual,
+            penalty_coefficient_value=penalty_coefficient_for_dual,
+        )
+
+        return primal_store, dual_store
 
     def state_dict(self):
         return {

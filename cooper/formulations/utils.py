@@ -24,7 +24,7 @@ def extract_and_patch_violations(constraint_state: ConstraintState) -> Tuple[tor
 
 
 def compute_primal_weighted_violation(
-    constraint_factor: torch.Tensor, constraint_state: ConstraintState
+    constraint_factor: torch.Tensor, violation: torch.Tensor, skip_contribution: bool
 ) -> Optional[torch.Tensor]:
     """Computes the sum of constraint violations weighted by the associated constraint
     factors (multipliers or penalty coefficients), while preserving the gradient for the
@@ -33,16 +33,16 @@ def compute_primal_weighted_violation(
     Args:
         constraint_factor: The value of the multiplier or penalty coefficient for the
             constraint group.
-        constraint_state: The current state of the constraint.
+        violation: Tensor of constraint violations.
+        skip_conribution: When `True`, we ignore the contribution of the
+            violation towards the primal Lagrangian.
     """
 
-    if constraint_state.skip_primal_contribution:
+    if skip_contribution:
         # Ignore the primal contribution if the constraint is marked as non-contributing
         # to the primal Lagrangian.
         return None
     else:
-        violation, _ = extract_and_patch_violations(constraint_state)
-
         if constraint_factor is None:
             raise ValueError("The constraint factor tensor must be provided if the primal contribution is not skipped.")
         if violation is None:
@@ -57,7 +57,8 @@ def compute_primal_weighted_violation(
 
 def compute_dual_weighted_violation(
     constraint_factor: torch.Tensor,
-    constraint_state: ConstraintState,
+    violation: torch.Tensor,
+    skip_contribution: bool,
     penalty_coefficient_value: Optional[torch.Tensor] = None,
 ) -> Optional[torch.Tensor]:
     """Computes the sum of constraint violations weighted by the associated constraint
@@ -76,13 +77,13 @@ def compute_dual_weighted_violation(
 
     Args:
         multiplier_value: The value of the multiplier for the constraint group.
-        constraint_state: The current state of the constraint.
-        penalty_coefficient_value: The value of the penalty coefficient for the
-            constraint group.
+        violation: Tensor of constraint violations.
+        skip_conribution: When `True`, we ignore the contribution of the
+            violation towards the dual Lagrangian.
     """
 
-    if constraint_state.skip_dual_contribution:
-        # Ignore the primal contribution if the constraint is marked as non-contributing
+    if skip_contribution:
+        # Ignore the dual contribution if the constraint is marked as non-contributing
         # to the dual Lagrangian.
         return None
     elif not constraint_factor.requires_grad:
@@ -94,29 +95,36 @@ def compute_dual_weighted_violation(
         multiplier_value = constraint_factor
         if multiplier_value is None:
             raise ValueError("The constraint factor tensor must be provided if the dual contribution is not skipped.")
+        if violation is None:
+            raise ValueError("The violation tensor must be provided if the dual contribution is not skipped.")
 
-        # Strict violation represents the "actual" violation of the constraint. When
-        # provided, we use the strict violation to update the value of the multiplier.
-        # Otherwise, we default to using the differentiable violation.
-        _, strict_violation = extract_and_patch_violations(constraint_state)
-        detached_violation = strict_violation.detach()
+        detached_violation = violation.detach()
 
         if penalty_coefficient_value is None:
             return torch.einsum("i...,i...->", multiplier_value, detached_violation)
         else:
+            # TODO(juan43ramirez): add comment explaining why the penalty coefficient is
+            # used to re-weight the dual_lagrangian. This is motivated by Augmented
+            # Lagrangian Method updates.
             return torch.einsum("i...,i...,i...->", multiplier_value, penalty_coefficient_value, detached_violation)
 
 
 def compute_quadratic_penalty(
-    penalty_coefficient_value: torch.Tensor, constraint_state: ConstraintState, constraint_type: ConstraintType
+    penalty_coefficient_value: torch.Tensor,
+    violation: torch.Tensor,
+    strict_violation: torch.Tensor,
+    skip_contribution: bool,
+    constraint_type: ConstraintType,
 ) -> Optional[torch.Tensor]:
     # TODO(juan43ramirez): Add documentation
 
-    if constraint_state.skip_primal_contribution:
+    if skip_contribution:
         return None
     else:
-        violation, strict_violation = extract_and_patch_violations(constraint_state)
-
+        if penalty_coefficient_value is None:
+            raise ValueError(
+                "The penalty coefficient tensor must be provided if the primal contribution is not skipped."
+            )
         if violation is None:
             raise ValueError("The violation tensor must be provided if the primal contribution is not skipped.")
 
