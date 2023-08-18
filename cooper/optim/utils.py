@@ -120,7 +120,10 @@ def load_cooper_optimizer_from_state_dict(
     multiplier_states = cooper_optimizer_state.multiplier_states
 
     if multipliers is None:
-        multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
+        if constraint_groups is None:
+            multipliers = []
+        else:
+            multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
     else:
         multipliers = ensure_sequence(multipliers)
 
