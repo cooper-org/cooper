@@ -60,7 +60,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     assert torch.allclose(params, x1_y1)
 
     # Observed multipliers should be zero, matching lmdba0
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda0)
+    assert torch.allclose(torch.cat(lagrangian_store.primal_observed_multipliers), lmbda0)
 
     lmbda1 = torch.relu(lmbda0 + 1e-2 * strict_violations)
 
@@ -83,7 +83,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     # NOTE: this test requires a relaxed tolerance of 1e-4
     assert torch.allclose(params, x2_y2, atol=1e-4)
 
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda1)
+    assert torch.allclose(torch.cat(lagrangian_store.primal_observed_multipliers), lmbda1)
 
 
 # TODO(juan43ramirez): implement

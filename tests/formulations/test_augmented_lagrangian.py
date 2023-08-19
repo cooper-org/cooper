@@ -59,7 +59,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
 
     # Observed multipliers from the lagrangian_store should be before the update, thus
     # matching lmbda0
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda0)
+    assert torch.allclose(torch.cat(lagrangian_store.primal_observed_multipliers), lmbda0)
 
     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
     # The gradient of the Augmented Lagrangian wrt the primal variables is:
@@ -85,7 +85,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
     violations = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda1)
+    assert torch.allclose(torch.cat(lagrangian_store.primal_observed_multipliers), lmbda1)
 
     grad_x1_y1 = cmp.analytical_gradients(x1_y1)
     const_contrib0 = (lmbda1[0] + const1_penalty_coefficient() * violations[0].relu()) * grad_x1_y1[1][0]

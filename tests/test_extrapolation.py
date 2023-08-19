@@ -38,7 +38,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
     lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
-    lagrangian, observed_multiplier_values = lagrangian_store.lagrangian, lagrangian_store.observed_multipliers
+    lagrangian, observed_multiplier_values = lagrangian_store.lagrangian, lagrangian_store.primal_observed_multipliers
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -54,7 +54,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
 
     # Dual gradients must match the constraint violations.
-    for (constraint, constraint_state) in cmp_state.observed_constraints:
+    for constraint, constraint_state in cmp_state.observed_constraints:
         assert torch.allclose(constraint.multiplier.weight.grad, constraint_state.violation)
 
     cooper_optimizer.step(call_extrapolation=True)
