@@ -14,9 +14,6 @@ from typing import Optional
 
 import torch
 
-# TODO(juan43ramirez): implement a PID optimizer which incorporates some noise filtering
-# scheme. This could be by using EMAs of the error/gradient terms.
-
 # TODO(juan43ramirez): current implementation always keeps buffers for calculating the
 # momentum, (P), and (D) terms. Some of these are not necessary when the momentum, Kp,
 # or Kd coefficients are zero. This could be optimized to save memory.
