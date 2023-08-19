@@ -111,11 +111,91 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint_group, constraint_state)])
 
 
-@pytest.fixture(params=[0.9])
+@pytest.fixture(params=[0.1, 0.5, 0.7, 1.0])
 def observe_probability(request):
     return request.param
 
 
+def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device, observe_probability):
+    """Test first few iterations on a modified version of the toy 2D problem."""
+
+    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+    if not use_ineq_constraints:
+        pytest.skip("This test is only relevant for constrained problems.")
+
+    if not torch.allclose(Toy2dCMP_params_init, torch.tensor([0.0, -1.0], device=device)):
+        pytest.skip("Manual test only considers the case of initialization at [0, -1]")
+
+    mktensor = testing_utils.mktensor(device=device)
+    cmp = RandomConstraintsToy2dCMP(
+        use_constraint_surrogate=True, device=device, observe_probability=observe_probability
+    )
+    multipliers = cmp.constraint_group.multiplier
+
+    primal_lr, dual_lr = 1e-2, 1e-2
+    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+        use_multiple_primal_optimizers=False,
+        params_init=Toy2dCMP_params_init,
+        optimizer_names="SGD",
+        optimizer_kwargs={"lr": primal_lr},
+    )
+
+    # Only perfoming this test for the case of a single primal optimizer
+    assert isinstance(params, torch.nn.Parameter)
+
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers=primal_optimizers,
+        constraint_groups=[cmp.constraint_group],
+        extrapolation=False,
+        alternating=False,
+        dual_optimizer_name="SGD",
+        dual_optimizer_kwargs={"lr": dual_lr},
+    )
+
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+
+    def manual_update_on_primal(xy, lmbda, grads, constraint_features):
+        if constraint_features.numel() == 0:
+            weighted_violation = 0.0
+        else:
+            weighted_violation = torch.sum(lmbda[constraint_features] * grads[1][:, constraint_features])
+
+        return xy - primal_lr * (grads[0] + weighted_violation)
+
+    def manual_update_on_dual(lmbda, strict_violation, strict_constraint_features):
+        new_lmbda = lmbda.clone()
+
+        if strict_constraint_features.numel() == 0:
+            return new_lmbda
+
+        # No need to filter the strict_violation since the cmp already does this
+        new_lmbda[strict_constraint_features] += dual_lr * strict_violation
+        new_lmbda = torch.clamp(new_lmbda, min=0.0)
+
+        return new_lmbda
+
+    # Manual measurements of the primal and dual variables
+    xy = mktensor([0.0, -1.0])
+    lmbda = mktensor([0.0, 0.0])
+
+    for i in range(10):
+        _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+
+        constraint_features = _cmp_state.observed_constraints[0][1].constraint_features
+        new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_features)
+
+        strict_violation = _cmp_state.observed_constraints[0][1].strict_violation
+        strict_constraint_features = _cmp_state.observed_constraints[0][1].strict_constraint_features
+        new_lmbda = manual_update_on_dual(lmbda, strict_violation, strict_constraint_features)
+
+        assert torch.allclose(params, new_xy, atol=1e-3)
+        assert torch.allclose(multipliers.weight.flatten(), new_lmbda)
+
+        xy, lmbda = new_xy, new_lmbda
+
+
+# # Convergence test fails due to the stochastic sampling of the constraints. This
+# # effectively yields an unstable behavior around the constrained optimum.
 # def test_convergence(
 #     Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device, observe_probability
 # ):
