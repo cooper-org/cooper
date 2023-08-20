@@ -22,8 +22,6 @@ def evaluate_constraint_factor(
         module: Multiplier or penalty coefficient.
         constraint_state: The current state of the constraint.
     """
-    value: torch.Tensor
-
     if violation is None:
         return None
 
