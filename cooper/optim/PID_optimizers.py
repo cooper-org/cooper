@@ -40,17 +40,22 @@ class PID(torch.optim.Optimizer):
     comparison with other optimizers.
 
     .. note::
-        :math:`e_{-1}` and :math:`\partial_{-1}` are hyperparameters of the optimizer
-        which require initialization. Typically, :math:`e_{-1} = 0` and
-        :math:`\partial_{-1} = 0`.
-
-    .. note::
         Setting :math:`K_P=0`, :math:`K_I=1`, and :math:`K_D=0` corresponds to
         SGD with learning rate :math:`\text{lr}`.
 
         Setting :math:`K_P=1`, :math:`K_I=1`, and :math:`K_D=0` corresponds to the
         optimistic gradient method.
 
+    .. note::
+        :math:`e_{-1}` and :math:`\partial_{-1}` are hyperparameters of the optimizer
+        which require initialization. Typically, :math:`e_{-1} = 0` and
+        :math:`\partial_{-1} = 0`.
+
+    .. warning::
+        This implementation assumes an initialization of :math:`e_{-1} = 0` and
+        :math:`\partial_{-1} = 0`. Currently NAG-short is not supported since it would
+        require a different initialization of :math:`\partial_{-1}`.
+        
     Arguments:
         params: iterable of parameters to optimize or dicts defining parameter groups
         lr: learning rate
