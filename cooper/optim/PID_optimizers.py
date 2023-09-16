@@ -14,30 +14,42 @@ from typing import Optional
 
 import torch
 
-# TODO(juan43ramirez): current implementation always keeps buffers for calculating the
-# momentum, (P), and (D) terms. Some of these are not necessary when the momentum, Kp,
-# or Kd coefficients are zero. This could be optimized to save memory.
-
 
 class PID(torch.optim.Optimizer):
     r"""
-    Consider a variable x_t, and its gradient g_t = \nabla f(x_t) at time t. This
-    optimizer applies PID control to x_t in order to drive g_t to zero and thus find a
-    stationary point of f.
+    Implements a PID controller as a PyTorch optimizer.
 
-    The unrolled PID update is:
-        x_{t+1} = x_0 - lr * (Ki * \sum_{i=0}^t g_i + Kp * g_t + Kd * (g_t - g_{t-1}))
+    The error signal used for the PID controller is the gradient of a cost function 
+    :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
+    as the control variable, and the gradient of :math:`L` as the error signal. The
+    error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
+    the function :math:`L_t` may change over time. 
 
-    Where Ki is the integral gain, Kp is the proportional gain, and Kd is the derivative
-    gain.
+    When ``maximize=False``, the incoming error signal is multiplied by :math:`-1`.
 
-    This implementation is *recursive*:
-        x_{t+1} = x_t - lr * (Ki * g_t + Kp * (g_t - g_{t-1}) + Kd * (g_t - 2 * g_{t-1} + g_{t-2}))
+    The execution of the PID controller is given by:
 
-    Note that setting Ki=1, Kp=0, Kd=0 corresponds to SGD with learning rate lr
-    Setting Ki=1, Kp=1, Kd=0 corresponds to the optimistic gradient method.
+    .. math::
+        \partial_t &= \nu \partial_{t-1} + (1 - \nu) (e_t - e_{t-1}), \\\\
+        \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1} + K_I e_t + K_D (\partial_t - \partial_{t-1})),
 
-    # TODO(juan43ramirez): document the noise filtering applied to the (D) term.
+    where :math:`K_P`, :math:`K_I`, and :math:`K_D` are the proportional, integral, and
+    derivative gains, respectively, and :math:`\nu` is the EMA coefficient used to 
+    reduce noise in the estimation of the derivative term. 
+    We keep the learning rate :math:`\text{lr}` as a separate parameter to facilitate 
+    comparison with other optimizers.
+
+    .. note::
+        :math:`e_{-1}` and :math:`\partial_{-1}` are hyperparameters of the optimizer
+        which require initialization. Typically, :math:`e_{-1} = 0` and 
+        :math:`\partial_{-1} = 0`.
+
+    .. note::
+        Setting :math:`K_P=0`, :math:`K_I=1`, and :math:`K_D=0` corresponds to 
+        SGD with learning rate :math:`\text{lr}`.
+    
+        Setting :math:`K_P=1`, :math:`K_I=1`, and :math:`K_D=0` corresponds to the 
+        optimistic gradient method. 
 
     Arguments:
         params: iterable of parameters to optimize or dicts defining parameter groups
@@ -57,33 +69,33 @@ class PID(torch.optim.Optimizer):
         Kp: Optional[float] = 0.0,
         Ki: float = 1.0,
         Kd: Optional[float] = 0.0,
-        ema_beta: Optional[float] = 0.0,
+        ema_nu: Optional[float] = 0.0,
         maximize: bool = False,
     ):
-        if not 0.0 <= lr:
+        if lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
-        # NOTE: allowing for a negative Kp coefficient to allow for the use of PID+EMA
-        # as a generalization of Polyak and Nesterov momentum. For details, see
-        # http://www.argmin.net/2018/04/19/pid/
+        # We allowing for negative PID coefficients Kp, Ki and Kd to realize common
+        # momentum-based methods as instances of PID control.
         if Kp < 0.0:
             warnings.warn("Using a negative Kp coefficient: {}".format(Kp))
-            # raise ValueError("Invalid Kp coefficient: {}".format(Kp))
         if Ki < 0.0:
-            raise ValueError("Invalid Ki coefficient: {}".format(Ki))
+            warnings.warn("Using a negative Ki coefficient: {}".format(Kp))
         if Kd < 0.0:
-            raise ValueError("Invalid Kd coefficient: {}".format(Kd))
+            warnings.warn("Using a negative Kd coefficient: {}".format(Kp))
         if all([Kp == 0.0, Ki == 0.0, Kd == 0.0]):
-            warnings.warn("Invalid PID coefficients: all are zero")
-        if ema_beta < 0.0 or ema_beta >= 1.0:
-            raise ValueError("Invalid EMA coefficient: {}".format(ema_beta))
+            warnings.warn("All PID coefficients are zero")
 
-        if ema_beta != 0.0 and Kd == 0.0:
+        if ema_nu < 0.0:
+            warnings.warn("Using a negative EMA coefficient: {}".format(ema_nu))
+        elif ema_nu >= 1.0:
+            raise ValueError("EMA coefficient is above one: {}".format(ema_nu))
+        if ema_nu != 0.0 and Kd == 0.0:
             warnings.warn("EMA coefficient is non-zero but Kd is zero")
 
-        defaults = dict(lr=lr, weight_decay=weight_decay, Kp=Kp, Ki=Ki, Kd=Kd, ema_beta=ema_beta, maximize=maximize)
+        defaults = dict(lr=lr, weight_decay=weight_decay, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu, maximize=maximize)
 
         super().__init__(params, defaults)
 
@@ -114,44 +126,11 @@ class PID(torch.optim.Optimizer):
                     Kp=group["Kp"],
                     Ki=group["Ki"],
                     Kd=group["Kd"],
-                    ema_beta=group["ema_beta"],
+                    ema_nu=group["ema_nu"],
                     maximize=group["maximize"],
                 )
 
         return loss
-
-
-def _estimate_delta_and_curvature(
-    grad: torch.Tensor, state: dict, ema_beta: float
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    TODO: update docstring
-    Calculate the gradient delta and curvature.
-        delta_t = grad_t - grad_{t-1} = `grad` - `state["previous_grad"]`
-        curvature_t = delta_t - delta_{t-1} = delta_t - `state["previous_delta"]`
-    """
-
-    if len(state) == 0:
-        # At this stage, there is not enough information to compute the parameter or
-        # gradient delta for the (P) term nor the curvature for the (D) term. Therefore,
-        # only the (I) term is used for the first update.
-        grad_delta = 0
-        filtered_delta = 0
-        filtered_curvature = 0
-    elif "delta_ema" not in state:
-        assert "previous_grad" in state
-        # We use the previous grad to compute the momentum and (P) terms, but there is
-        # still not enough information to compute the (D) term.
-        # `filtered_delta` is used to initialize the EMA. It it not used for the updates
-        grad_delta = grad.sub(state["previous_grad"])
-        filtered_delta = grad_delta
-        filtered_curvature = 0
-    else:
-        grad_delta = grad.sub(state["previous_grad"])
-        filtered_delta = state["delta_ema"].mul(ema_beta).add(grad_delta, alpha=1 - ema_beta)
-        filtered_curvature = filtered_delta.sub(state["delta_ema"])
-
-    return grad_delta, filtered_delta, filtered_curvature
 
 
 def _pid(
@@ -162,64 +141,50 @@ def _pid(
     Kp: float,
     Ki: float,
     Kd: float,
-    ema_beta: float,
+    ema_nu: float,
     maximize: bool,
 ):
-    """
-    Applies a PID step update to `param`
+    """Applies a PID step update to `param`"""
 
-    The general form of the update (for minimization, without weight decay) is:
-        delta_t = grad_t - grad_{t-1}
-        curvature_t = grad_t - 2 * grad_{t-1} + grad_{t-2} = delta_t - delta_{t-1}
-        x_{t+1} = x_t - lr * (Ki * grad_t + Kp * delta_t + Kd * curvature_t)
+    error = param.grad
+    assert not error.is_sparse, "For sparse updates, use _sparse_pid instead"
 
-    # TODO(juan43ramirez): address the EMA on the (D) term.
+    if "previous_error" not in state and (Kp != 0 or Ki != 0):
+        state["previous_error"] = torch.zeros_like(error)
+    if "previous_delta" not in state and (Kd != 0):
+        state["previous_delta"] = torch.zeros_like(error)
 
-    Note that there is not enough information to compute delta_0, curvature_0, nor
-    curvature_1. Therefore, we define the following convention:
-        delta_0 = curvature_0 = curvature_1 = 0
+    if not maximize:
+        error.mul_(-1)
 
-    This means that the first update corresponds to SGD with learning rate lr * Ki:
-        x_1 = x_0 - lr * Ki * grad_0
-    And the second update corresponds to the optimistic gradient method:
-        x_2 = x_1 - lr * (Ki * grad_1 + Kp * (grad_1 - grad_0))
-    """
+    pid_update = torch.zeros_like(param)
 
-    grad = param.grad
-    assert not grad.is_sparse, "For sparse gradients, use _sparse_pid instead"
+    if Ki != 0:
+        pid_update.add_(error, alpha=Ki)
 
-    grad_delta, filtered_delta, filtered_curvature = _estimate_delta_and_curvature(grad, state, ema_beta)
+    if Kp != 0 or Kd != 0:
+        error_change = error.sub(state["previous_error"])
 
-    d_p = grad.mul(Ki)
+        if Kp != 0:
+            pid_update.add_(error_change, alpha=Kp)
 
-    if Kp != 0:
-        d_p.add_(grad_delta, alpha=Kp)
-    if Kd != 0:
-        d_p.add_(filtered_curvature, alpha=Kd)
+        if Kd != 0:
+            new_delta = state["previous_delta"].mul(ema_nu).add(error_change, alpha=1 - ema_nu)
+            delta_change = new_delta.sub(state["previous_delta"])
+            pid_update.add_(delta_change, alpha=Kd)
 
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
-        d_p.add_(param, alpha=weight_decay)
+        weight_decay_sign = -1 if maximize else 1
+        pid_update.add_(param, alpha=weight_decay_sign * weight_decay)
 
-    if maximize:
-        d_p.mul_(-1)
+    param.add_(pid_update, alpha=lr)
 
-    if len(state) == 0:
-        # Lazily initialize the state after the first update.
-        # Only the (I) term was used for the first update. For the next step, the
-        # current gradient will be used to compute the (P) term.
-        # We do not initialize `delta_ema` as a convention to indicate that the (D) term
-        # should not be used in the following update.
-        state["previous_param"] = param.clone().detach()
-        state["previous_grad"] = grad.clone().detach()
-    else:
-        state["previous_param"] = param.clone().detach()
-        state["previous_grad"] = grad.clone().detach()
-        # The delta EMA is initialized to the first delta.
-        state["delta_ema"] = filtered_delta.clone().detach()
-
-    param.add_(d_p, alpha=-lr)
+    if "previous_error" in state:
+        state["previous_error"] = error.detach()
+    if "previous_delta" in state:
+        state["previous_delta"] = new_delta.detach()
 
 
 def _sparse_pid(
@@ -230,90 +195,62 @@ def _sparse_pid(
     Kp: float,
     Ki: float,
     Kd: float,
-    ema_beta: float,
+    ema_nu: float,
     maximize: bool,
 ):
-    r"""
-    Analogous to _pid but with support for sparse gradients. Inspired by SparseAdam.
+    """
+    Analogous to _pid but with support for sparse gradients.
+    Inspired by SparseAdam:
     https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
     """
-    grad = param.grad
-    assert grad.is_sparse, "For dense gradients, use _pid instead"
 
-    grad = grad.coalesce()  # the update is non-linear so indices must be unique
-    grad_indices = grad._indices()
-    grad_values = grad._values()
-    observed_param_values = torch.index_select(param, 0, grad_indices[0])
+    error = param.grad
+    assert error.is_sparse, "For dense updates, use _pid instead"
 
-    if grad_values.numel() == 0:
+    error = error.coalesce()  # the update is non-linear so indices must be unique
+    error_indices = error._indices()
+    error_values = error._values()
+
+    if error_values.numel() == 0:
         # Skip update for empty grad
         return
-    size = grad.size()
 
-    def make_sparse(values):
-        """
-        Function to convert a dense tensor of values to a sparse representation with the
-        same indices as `grad`.
-        """
+    if "previous_error" not in state and (Kp != 0 or Ki != 0):
+        state["previous_error"] = torch.zeros_like(error)
+    if "previous_delta" not in state and (Kd != 0):
+        state["previous_delta"] = torch.zeros_like(error)
 
-        constructor = grad.new
-        if grad_indices.dim() == 0 or values.dim() == 0:
-            return constructor().resize_as_(grad)
-        return constructor(grad_indices, values, size)
+    if not maximize:
+        error.mul_(-1)
 
-    if len(state) == 0:
-        # NOTE: considering a *dense* state. Note that tensors related to IndexedMultipliers
-        # are stored in a dense representation as well.
-        state["steps"] = torch.zeros_like(param, dtype=torch.int)
-        state["previous_grad"] = torch.zeros_like(param)
-        state["delta_ema"] = torch.zeros_like(param)
+    pid_update = torch.zeros_like(param)
 
-    step_counter = state["steps"].sparse_mask(grad)
-    # Given the available information from previous updates, the deltas and curvature
-    # are estimated or not.
-    is_after_first_update = step_counter._values().ge(1)
-    is_after_second_update = step_counter._values().ge(2)
+    if Ki != 0:
+        pid_update.add_(error, alpha=Ki)
 
-    previous_grad = state["previous_grad"].sparse_mask(grad)
-    delta_ema = state["delta_ema"].sparse_mask(grad)
+    if Kp != 0 or Kd != 0:
+        previous_error = state["previous_error"].sparse_mask(error)
+        error_change = error.sub(previous_error)
 
-    delta_values = grad_values.sub(previous_grad._values()).mul(is_after_first_update.float())
+        if Kp != 0:
+            pid_update.add_(error_change, alpha=Kp)
 
-    # We initialize the `new_ema_values` to the first unfiltered delta
-    is_first_update = step_counter._values().eq(1)
-    first_delta_ema_values = delta_values.clone().detach().mul(is_first_update.float())
-    # For any step after that, we compute the EMA of the deltas.
-    current_delta_ema_values = delta_ema._values().mul(ema_beta).add(delta_values, alpha=1 - ema_beta)
-    current_delta_ema_values = current_delta_ema_values.mul(is_after_second_update.float())
-
-    current_delta_ema_values = current_delta_ema_values.add(first_delta_ema_values)
-    curvature_values = current_delta_ema_values.sub(delta_ema._values()).mul(is_after_second_update.float())
-
-    d_p_values = grad_values.mul(Ki)
-
-    if Kp != 0:
-        d_p_values.add_(delta_values, alpha=Kp)
-    if Kd != 0:
-        d_p_values.add_(curvature_values, alpha=Kd)
+        if Kd != 0:
+            previous_delta = state["previous_delta"].sparse_mask(error)
+            new_delta = previous_delta.mul(ema_nu).add(error_change, alpha=1 - ema_nu)
+            delta_change = new_delta.sub(previous_delta)
+            pid_update.add_(delta_change, alpha=Kd)
 
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
-        d_p_values.add_(observed_param_values, alpha=weight_decay)
+        weight_decay_sign = -1 if maximize else 1
+        observed_params = param.sparse_mask(error)
+        pid_update.add_(observed_params, alpha=weight_decay_sign * weight_decay)
 
-    if maximize:
-        d_p_values.mul_(-1)
+    param.add_(pid_update, alpha=lr)
 
-    # Update the step counter for observed parameters.
-    state["steps"].add_(make_sparse(torch.ones_like(grad_values, dtype=torch.int)))
-
-    # Update the previous grad, and delta for observed parameters. We always store
-    # `previous_grad` for the next update. `
-    #
-    # delta_ema` is only used after the
-    # second update, so we store it only for the parameters that have been observed
-    # after their first update.
-    state["previous_grad"][grad_indices] = grad_values.clone().detach()
-    state["delta_ema"][grad_indices] = current_delta_ema_values.clone().detach()
-
-    param.add_(make_sparse(d_p_values), alpha=-lr)
+    if "previous_error" in state:
+        state["previous_error"][error_indices] = error._values().detach()
+    if "previous_delta" in state:
+        state["previous_delta"][error_indices] = new_delta._values().detach()
