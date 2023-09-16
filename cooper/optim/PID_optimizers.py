@@ -1,12 +1,7 @@
-"""Implementation of a PID controller as a PyTorch optimizer.
-The parameters are treated as the control variables, and the gradients are considered
-the error signal, which we aim to drive to zero.
-
-Inspired by:
-https://pytorch-optimizer.readthedocs.io/en/latest/_modules/torch_optimizer/pid.html
-
-This optimizer is intended to be used on the Lagrange multipliers, as the (P) and (D)
-terms can help reduce oscillations common to min-max optimization problems.
+"""Implementation of a PID controller as a PyTorch optimizer. This optimizer is mainly
+intended to be used on the Lagrange multipliers, as the (P) and (D) terms can help
+reduce oscillations compared to SGD, which corresponds to a PID controller with
+only the (I) term.
 """
 
 import warnings
@@ -55,7 +50,7 @@ class PID(torch.optim.Optimizer):
         This implementation assumes an initialization of :math:`e_{-1} = 0` and
         :math:`\partial_{-1} = 0`. Currently NAG-short is not supported since it would
         require a different initialization of :math:`\partial_{-1}`.
-        
+
     Arguments:
         params: iterable of parameters to optimize or dicts defining parameter groups
         lr: learning rate
