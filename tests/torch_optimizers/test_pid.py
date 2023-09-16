@@ -51,8 +51,11 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     # -------------------------------------------- First step of optimization
     error_0 = -compute_gradient()
     error_change_0 = error_0 - error_minus_1
-    delta_0 = update_ema(delta_minus_1, error_change_0)
-    delta_change_0 = delta_0 - delta_minus_1
+    if Kd != 0:
+        delta_0 = update_ema(delta_minus_1, error_change_0)
+        delta_change_0 = delta_0 - delta_minus_1
+    else:
+        delta_change_0 = 0.0
     p1 = p0 + lr * recursive_PID_direction(error_0, error_change_0, delta_change_0)
 
     do_optimizer_step()
@@ -61,7 +64,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     assert torch.allclose(param, p1)
 
     # When entering the next iteration, the "current" error and delta become the "previous"
-    if Kp != 0 or Ki != 0:
+    if Kp != 0 or Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_error"], error_0)
     if Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_delta"], delta_0)
@@ -69,8 +72,11 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     # -------------------------------------------- Second step of optimization
     error_1 = -compute_gradient()
     error_change_1 = error_1 - error_0
-    delta_1 = update_ema(delta_0, error_change_1)
-    delta_change_1 = delta_1 - delta_0
+    if Kd != 0:
+        delta_1 = update_ema(delta_0, error_change_1)
+        delta_change_1 = delta_1 - delta_0
+    else:
+        delta_change_1 = 0.0
     p2 = p1 + lr * recursive_PID_direction(error_1, error_change_1, delta_change_1)
 
     do_optimizer_step()
@@ -79,7 +85,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     assert torch.allclose(param, p2)
 
     # When entering the next iteration, the "current" error and delta become the "previous"
-    if Kp != 0 or Ki != 0:
+    if Kp != 0 or Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_error"], error_1)
     if Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_delta"], delta_1)
@@ -87,8 +93,11 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     # -------------------------------------------- Third step of optimization
     error_2 = -compute_gradient()
     error_change_2 = error_2 - error_1
-    delta_2 = update_ema(delta_1, error_change_2)
-    delta_change_2 = delta_2 - delta_1
+    if Kd != 0:
+        delta_2 = update_ema(delta_1, error_change_2)
+        delta_change_2 = delta_2 - delta_1
+    else:
+        delta_change_2 = 0.0
     p3 = p2 + lr * recursive_PID_direction(error_2, error_change_2, delta_change_2)
 
     do_optimizer_step()
@@ -97,7 +106,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     assert torch.allclose(param, p3)
 
     # When entering the next iteration, the "current" error and delta become the "previous"
-    if Kp != 0 or Ki != 0:
+    if Kp != 0 or Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_error"], error_2)
     if Kd != 0:
         assert torch.allclose(optimizer.state[param]["previous_delta"], delta_2)
@@ -165,7 +174,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
 
     # When entering the next iteration, the "current" error and delta become the "previous"
     # Check that entries in both modified and unmodified indices correspond to the correct values
-    if Kp != 0 or Ki != 0:
+    if Kp != 0 or Kd != 0:
         print(optimizer.state[param].keys())
         buffer = optimizer.state[param]["previous_error"]
         assert torch.allclose(buffer[selected_indices], error_0)
@@ -180,7 +189,10 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
     not_selected_indices_mask = torch.ones(param.shape[0], dtype=bool)
     not_selected_indices_mask[selected_indices] = False
 
-    previous_error = optimizer.state[param]["previous_error"].clone()
+    if Kp != 0 or Kd != 0:
+        previous_error = optimizer.state[param]["previous_error"].clone()
+    else:
+        previous_error = torch.zeros_like(param)
     error_1 = -compute_gradient(selected_indices)
     error_change_1 = error_1 - previous_error[selected_indices]
     if Kd != 0:
@@ -198,7 +210,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
 
     # When entering the next iteration, the "current" error and delta become the "previous"
     # Check that entries in both modified and unmodified indices correspond to the correct values
-    if Kp != 0 or Ki != 0:
+    if Kp != 0 or Kd != 0:
         print(optimizer.state[param].keys())
         buffer = optimizer.state[param]["previous_error"]
         assert torch.allclose(buffer[selected_indices], error_1)

@@ -154,9 +154,9 @@ def _pid(
     error = param.grad
     assert not error.is_sparse, "For sparse updates, use _sparse_pid instead"
 
-    if "previous_error" not in state and (Kp != 0 or Ki != 0):
+    if "previous_error" not in state and (Kp != 0 or Kd != 0):
         state["previous_error"] = torch.zeros_like(error)
-    if "previous_delta" not in state and (Kd != 0):
+    if "previous_delta" not in state and Kd != 0:
         state["previous_delta"] = torch.zeros_like(error)
 
     if not maximize:
@@ -220,7 +220,7 @@ def _sparse_pid(
         # Skip update for empty grad
         return
 
-    if "previous_error" not in state and (Kp != 0 or Ki != 0):
+    if "previous_error" not in state and (Kp != 0 or Kd != 0):
         state["previous_error"] = torch.zeros_like(param)
     if "previous_delta" not in state and (Kd != 0):
         state["previous_delta"] = torch.zeros_like(param)
