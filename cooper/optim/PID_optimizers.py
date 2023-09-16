@@ -19,11 +19,11 @@ class PID(torch.optim.Optimizer):
     r"""
     Implements a PID controller as a PyTorch optimizer.
 
-    The error signal used for the PID controller is the gradient of a cost function 
+    The error signal used for the PID controller is the gradient of a cost function
     :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
     as the control variable, and the gradient of :math:`L` as the error signal. The
     error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
-    the function :math:`L_t` may change over time. 
+    the function :math:`L_t` may change over time.
 
     When ``maximize=False``, the incoming error signal is multiplied by :math:`-1`.
 
@@ -34,22 +34,22 @@ class PID(torch.optim.Optimizer):
         \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1} + K_I e_t + K_D (\partial_t - \partial_{t-1})),
 
     where :math:`K_P`, :math:`K_I`, and :math:`K_D` are the proportional, integral, and
-    derivative gains, respectively, and :math:`\nu` is the EMA coefficient used to 
-    reduce noise in the estimation of the derivative term. 
-    We keep the learning rate :math:`\text{lr}` as a separate parameter to facilitate 
+    derivative gains, respectively, and :math:`\nu` is the EMA coefficient used to
+    reduce noise in the estimation of the derivative term.
+    We keep the learning rate :math:`\text{lr}` as a separate parameter to facilitate
     comparison with other optimizers.
 
     .. note::
         :math:`e_{-1}` and :math:`\partial_{-1}` are hyperparameters of the optimizer
-        which require initialization. Typically, :math:`e_{-1} = 0` and 
+        which require initialization. Typically, :math:`e_{-1} = 0` and
         :math:`\partial_{-1} = 0`.
 
     .. note::
-        Setting :math:`K_P=0`, :math:`K_I=1`, and :math:`K_D=0` corresponds to 
+        Setting :math:`K_P=0`, :math:`K_I=1`, and :math:`K_D=0` corresponds to
         SGD with learning rate :math:`\text{lr}`.
-    
-        Setting :math:`K_P=1`, :math:`K_I=1`, and :math:`K_D=0` corresponds to the 
-        optimistic gradient method. 
+
+        Setting :math:`K_P=1`, :math:`K_I=1`, and :math:`K_D=0` corresponds to the
+        optimistic gradient method.
 
     Arguments:
         params: iterable of parameters to optimize or dicts defining parameter groups
@@ -216,9 +216,9 @@ def _sparse_pid(
         return
 
     if "previous_error" not in state and (Kp != 0 or Ki != 0):
-        state["previous_error"] = torch.zeros_like(error)
+        state["previous_error"] = torch.zeros_like(param)
     if "previous_delta" not in state and (Kd != 0):
-        state["previous_delta"] = torch.zeros_like(error)
+        state["previous_delta"] = torch.zeros_like(param)
 
     if not maximize:
         error.mul_(-1)

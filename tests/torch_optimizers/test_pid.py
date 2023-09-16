@@ -49,7 +49,6 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
     p0 = param.clone().detach()
 
     # -------------------------------------------- First step of optimization
-    # Manual first step of optimization. The gradient is simply the current value of p.
     error_0 = -compute_gradient()
     error_change_0 = error_0 - error_minus_1
     delta_0 = update_ema(delta_minus_1, error_change_0)
@@ -108,127 +107,106 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
 def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
     if not torch.cuda.is_available():
         pytest.skip("Sparse gradients are only supported on GPU.")
-
     device = "cuda"
 
-    param = IndexedMultiplier(torch.ones(10, 1, device=device), use_sparse_gradient=True)
-    all_indices = torch.arange(10, device=device)
+    num_multipliers = 10
+    multiplier_init = torch.ones(num_multipliers, 1, device=device)
+    multiplier_module = IndexedMultiplier(init=multiplier_init, use_sparse_gradient=True)
+    param = multiplier_module.weight
 
-    def loss_fn(param, index):
-        return param(index).pow(2).sum() / 2
+    def loss_fn(indices):
+        return multiplier_module(indices).pow(2).sum() / 2
 
     lr = 0.1
 
-    def PID_direction(grad, change, curvature):
-        return Ki * grad + Kp * change + Kd * curvature
+    def compute_gradient(indices):
+        # For the quadratic loss, the gradient is simply the current value of p.
+        return multiplier_module(indices).reshape(-1, 1).clone().detach()
 
-    optimizer = PID(param.parameters(), lr=lr, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu)
+    def update_ema(ema, value):
+        return ema_nu * ema + (1 - ema_nu) * value
 
-    def do_step(indices):
+    def recursive_PID_direction(error, error_change, delta_change):
+        return Kp * error_change + Ki * error + Kd * delta_change
+
+    optimizer = PID(multiplier_module.parameters(), lr=lr, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu, maximize=False)
+
+    def do_optimizer_step(indices):
         optimizer.zero_grad()
-        loss = loss_fn(param, indices)
+        loss = loss_fn(indices)
         loss.backward()
         optimizer.step()
 
+    # Initialization of PID hyperparameters
+    error_minus_1 = torch.zeros_like(param)
+    delta_minus_1 = torch.zeros_like(param)
+    p0 = param.clone().detach()
+
     # -------------------------------------------- First step of optimization
-    first_indices = torch.tensor([0, 1, 2, 4, 7], device=device)
+    selected_indices = torch.tensor([0, 1, 2, 4, 7], device=device)
+    not_selected_indices_mask = torch.ones(param.shape[0], dtype=bool)
+    not_selected_indices_mask[selected_indices] = False
 
-    # Manual first step of optimization. The gradient is simply the current value of p.
-    p0 = param(all_indices).clone().detach()
+    previous_error = error_minus_1
+    error_0 = -compute_gradient(selected_indices)
+    error_change_0 = error_0 - previous_error[selected_indices]
+    if Kd != 0:
+        previous_delta = delta_minus_1
+        delta_0 = update_ema(previous_delta[selected_indices], error_change_0)
+        delta_change_0 = delta_0 - previous_delta[selected_indices]
+    else:
+        delta_change_0 = 0.0
     p1 = p0.clone()
-    p1[first_indices] -= lr * PID_direction(p0, 0.0, 0.0)[first_indices]  # only update the current indices
+    p1[selected_indices] += lr * recursive_PID_direction(error_0, error_change_0, delta_change_0)
 
-    # Manually calculate the state of the optimizer
-    previous_error = torch.zeros_like(p0)
-    previous_error[first_indices] = p0.clone()[first_indices]
-    # For the first step, the `previous_delta` is 0 for all indices
-    previous_delta = torch.zeros_like(p0)
+    do_optimizer_step(selected_indices)
 
-    do_step(first_indices)
+    assert torch.allclose(param, p1)
 
-    assert torch.allclose(param(all_indices), p1)
+    # When entering the next iteration, the "current" error and delta become the "previous"
+    # Check that entries in both modified and unmodified indices correspond to the correct values
+    if Kp != 0 or Ki != 0:
+        print(optimizer.state[param].keys())
+        buffer = optimizer.state[param]["previous_error"]
+        assert torch.allclose(buffer[selected_indices], error_0)
+        assert torch.allclose(buffer[not_selected_indices_mask], error_minus_1[not_selected_indices_mask])
+    if Kd != 0:
+        buffer = optimizer.state[param]["previous_delta"]
+        assert torch.allclose(buffer[selected_indices], delta_0)
+        assert torch.allclose(buffer[not_selected_indices_mask], delta_minus_1[not_selected_indices_mask])
 
-    # Check the state of the optimizer. For observer indices, should contain the first
-    # gradient in `previous_error` and also in `previous_delta`. 0 otherwise.
-    state = optimizer.state[list(param.parameters())[0]]
+    # -------------------------------------------- First step of optimization
+    selected_indices = torch.tensor([3, 5, 7, 8, 9], device=device)
+    not_selected_indices_mask = torch.ones(param.shape[0], dtype=bool)
+    not_selected_indices_mask[selected_indices] = False
 
-    assert torch.allclose(state["previous_error"].flatten(), previous_error)
-    assert torch.allclose(state["previous_delta"].flatten(), previous_delta)
-
-    # -------------------------------------------- Second step of optimization
-    second_indices = torch.tensor([0, 3, 5, 7, 9], device=device)
-
-    # Manual second step
+    previous_error = optimizer.state[param]["previous_error"].clone()
+    error_1 = -compute_gradient(selected_indices)
+    error_change_1 = error_1 - previous_error[selected_indices]
+    if Kd != 0:
+        previous_delta = optimizer.state[param]["previous_delta"]
+        delta_1 = update_ema(previous_delta[selected_indices], error_change_1)
+        delta_change_1 = delta_1 - previous_delta[selected_indices]
+    else:
+        delta_change_1 = 0.0
     p2 = p1.clone()
-    change = p1 - previous_error
+    p2[selected_indices] += lr * recursive_PID_direction(error_1, error_change_1, delta_change_1)
 
-    unseen_indices = torch.ones_like(all_indices, dtype=torch.bool)
-    unseen_indices[first_indices] = False
-    change[unseen_indices] = 0.0
+    do_optimizer_step(selected_indices)
 
-    p2[second_indices] -= lr * PID_direction(p1, change, 0.0)[second_indices]
+    assert torch.allclose(param, p2)
 
-    previous_error[second_indices] = p1.clone()[second_indices]
-
-    # For indices that were observed before *and* now, the previous_delta is p1 - p0.
-    # Note that no EMA calculation is being applied yet.
-    twice_observed_indices = [idx for idx in range(10) if idx in first_indices and idx in second_indices]
-    previous_delta[twice_observed_indices] = p1[twice_observed_indices] - p0[twice_observed_indices]
-
-    do_step(second_indices)
-
-    assert torch.allclose(param(all_indices), p2)
-
-    state = optimizer.state[list(param.parameters())[0]]
-
-    assert torch.allclose(state["previous_error"].flatten(), previous_error)
-    assert torch.allclose(state["previous_delta"].flatten(), previous_delta)
-
-    #  -------------------------------------------- Third step of optimization
-    third_indices = torch.tensor([0, 2, 4, 7], device=device)
-
-    # Manual third step
-    p3 = p2.clone()
-
-    # Change is simply p2 - previous_error
-    change = p2 - previous_error
-
-    # Calculate the previous_delta
-    new_previous_delta = previous_delta.clone()
-    # * For indices observed only once in the past, and also now:
-    #  * If they are part of first_indices, the previous_delta is p2 - p0
-    observed_now_and_first = [idx for idx in range(10) if idx in first_indices and idx in third_indices]
-    new_previous_delta[observed_now_and_first] = p2[observed_now_and_first] - p0[observed_now_and_first]
-    #  * If they are part of second_indices, the previous_delta is p2 - p1
-    observed_now_and_second = [idx for idx in range(10) if idx in second_indices and idx in third_indices]
-    new_previous_delta[observed_now_and_second] = p2[observed_now_and_second] - p1[observed_now_and_second]
-    # * For indices observed twice in the past, previous_delta is:
-    #   ema_nu * previous_delta + (1 - ema_nu) * change
-    observed_thrice = [
-        idx for idx in range(10) if idx in first_indices and idx in second_indices and idx in third_indices
-    ]
-
-    new_previous_delta[observed_thrice] = (
-        ema_nu * previous_delta[observed_thrice] + (1 - ema_nu) * change[observed_thrice]
-    )
-
-    # Although the new_previous_delta is calculated for indices from `observer_now_and_first`
-    # and `observer_now_and_second`, since the old previous_delta was 0 for those indices,
-    # curvature is not estimated for them.
-    curvature = torch.zeros_like(p2)
-    curvature[observed_thrice] = new_previous_delta[observed_thrice] - previous_delta[observed_thrice]
-
-    p3[third_indices] -= lr * PID_direction(p2, change, curvature)[third_indices]
-
-    do_step(third_indices)
-    state = optimizer.state[list(param.parameters())[0]]
-
-    assert torch.allclose(param(all_indices), p3)
-
-    previous_error[third_indices] = p2.clone()[third_indices]
-
-    assert torch.allclose(state["previous_error"].flatten(), previous_error)
-    assert torch.allclose(state["previous_delta"].flatten(), new_previous_delta)
+    # When entering the next iteration, the "current" error and delta become the "previous"
+    # Check that entries in both modified and unmodified indices correspond to the correct values
+    if Kp != 0 or Ki != 0:
+        print(optimizer.state[param].keys())
+        buffer = optimizer.state[param]["previous_error"]
+        assert torch.allclose(buffer[selected_indices], error_1)
+        assert torch.allclose(buffer[not_selected_indices_mask], previous_error[not_selected_indices_mask])
+    if Kd != 0:
+        buffer = optimizer.state[param]["previous_delta"]
+        assert torch.allclose(buffer[selected_indices], delta_1)
+        assert torch.allclose(buffer[not_selected_indices_mask], previous_delta[not_selected_indices_mask])
 
 
 @pytest.mark.parametrize(["Kp", "Ki", "Kd", "ema_nu"], ALL_HYPER_PARAMS)
