@@ -131,21 +131,22 @@ def _sparse_pi(
         # Skip update for empty grad
         return
 
-    if "previous_error" not in state and Kp != 0:
-        state["all_initialized"] = False
-        state["is_initialized_mask"] = torch.zeros_like(param, dtype=torch.bool)
-        state["previous_error"] = torch.zeros_like(param)
+    if Kp != 0:
+        if "previous_error" not in state:
+            state["all_initialized"] = False
+            state["is_initialized_mask"] = torch.zeros_like(param, dtype=torch.bool)
+            state["previous_error"] = torch.zeros_like(param)
 
-    if not state["all_initialized"]:
-        needs_initialization_ix = state["is_initialized_mask"] == False
-        if needs_initialization_ix.sum() == 0:
-            state["all_initialized"] = True
-        else:
-            indices_to_initialize = needs_initialization_ix[error_indices]
-            state["previous_error"][error_indices] = torch.where(
-                indices_to_initialize, error_values, state["previous_error"][error_indices]
-            )
-            state["is_initialized_mask"][error_indices] = True
+        if not state["all_initialized"]:
+            needs_initialization_ix = state["is_initialized_mask"] == False
+            if needs_initialization_ix.sum() == 0:
+                state["all_initialized"] = True
+            else:
+                indices_to_initialize = needs_initialization_ix[error_indices]
+                state["previous_error"][error_indices] = torch.where(
+                    indices_to_initialize, error_values, state["previous_error"][error_indices]
+                )
+                state["is_initialized_mask"][error_indices] = True
 
     if not maximize:
         error.mul_(-1)
