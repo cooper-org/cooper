@@ -77,7 +77,7 @@ def _pi(
     assert not error.is_sparse, "For sparse updates, use _sparse_pi instead"
 
     if "previous_error" not in state and Kp != 0:
-        state["previous_error"] = error
+        state["previous_error"] = error.detach()
 
     if not maximize:
         error.mul_(-1)
@@ -89,9 +89,7 @@ def _pi(
 
     if Kp != 0:
         error_change = error.sub(state["previous_error"])
-
-        if Kp != 0:
-            pid_update.add_(error_change, alpha=Kp)
+        pid_update.add_(error_change, alpha=Kp)
 
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
