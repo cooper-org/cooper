@@ -38,7 +38,7 @@ def test_ineq_post_step_(mult_class, restart_on_feasible, init_tensor, feasible_
 
     # Overwrite the multiplier to have some *negative* entries and gradients
     ineq_multiplier.weight.data = init_tensor.clone()
-    if hasattr(ineq_multiplier, "use_sparse_gradient") and ineq_multiplier.use_sparse_gradient:
+    if isinstance(ineq_multiplier, multipliers.IndexedMultiplier):
         ineq_multiplier.weight.grad = init_tensor.clone().to_sparse(sparse_dim=1)
     else:
         ineq_multiplier.weight.grad = init_tensor.clone()
