@@ -137,14 +137,14 @@ def _sparse_pi(
 
         if not state["all_initialized"]:
             needs_initialization_ix = state["is_initialized_mask"] == False
-            if needs_initialization_ix.sum() == 0:
+            if torch.any(needs_initialization_ix):
                 state["all_initialized"] = True
             else:
                 indices_to_initialize = needs_initialization_ix[error_indices]
                 state["previous_error"][error_indices] = torch.where(
                     indices_to_initialize, error_values, state["previous_error"][error_indices]
                 )
-                state["is_initialized_mask"][error_indices] = True
+                state["is_initialized_mask"][indices_to_initialize] = True
 
     if not maximize:
         error.mul_(-1)
