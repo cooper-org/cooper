@@ -123,7 +123,7 @@ def _sparse_pi(
 
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error._indices()
-    error_values = error._values()
+    error_values = error._values().detach()
 
     if error_values.numel() == 0:
         # Skip update for empty grad
@@ -137,14 +137,14 @@ def _sparse_pi(
 
         if not state["all_initialized"]:
             needs_initialization_ix = state["is_initialized_mask"] == False
-            if torch.any(needs_initialization_ix):
+            if torch.sum(needs_initialization_ix) == 0:
                 state["all_initialized"] = True
             else:
                 indices_to_initialize = needs_initialization_ix[error_indices]
                 state["previous_error"][error_indices] = torch.where(
                     indices_to_initialize, error_values, state["previous_error"][error_indices]
                 )
-                state["is_initialized_mask"][indices_to_initialize] = True
+                state["is_initialized_mask"][error_indices] = True
 
     if not maximize:
         error.mul_(-1)
