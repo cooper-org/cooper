@@ -200,8 +200,6 @@ def _sparse_pid(
 ):
     """
     Analogous to _pid but with support for sparse gradients.
-    Inspired by SparseAdam:
-    https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
     """
 
     error = param.grad

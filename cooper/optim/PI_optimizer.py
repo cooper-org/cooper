@@ -14,6 +14,47 @@ class PI(torch.optim.Optimizer):
         Ki: float = 1.0,
         maximize: bool = False,
     ):
+        """
+        Implements a PI controller as a PyTorch optimizer.
+
+        The error signal used for the PI controller is the gradient of a cost function
+        :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
+        as the control variable, and the gradient of :math:`L` as the error signal. The
+        error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
+        the function :math:`L_t` may change over time.
+
+        When ``maximize=False``, the incoming error signal is multiplied by :math:`-1`.
+
+        The execution of the PI controller is given by:
+
+        .. math::
+            \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1} + K_I e_t),
+
+        where :math:`K_P`, :math:`K_I` are the proportional and integral gains,
+        respectively. We keep the learning rate :math:`\text{lr}` as a separate
+        parameter to facilitate comparison with other optimizers.
+
+        .. note::
+            Setting :math:`K_P=0`, :math:`K_I=1`, corresponds to SGD with learning rate
+            :math:`\text{lr}`.
+
+            Setting :math:`K_P=1`, :math:`K_I=1` corresponds to the optimistic gradient
+            method.
+
+        .. warning::
+            This class implements an initialization scheme :math:`e_{-1} = e_{0}`. This
+            choice ensures that the first step taken by the optimizer in each direction
+            is the same as that of SGD. This initialization scheme is not the same as
+            that of :class:`PID`, which uses :math:`e_{-1} = 0`.
+
+        Arguments:
+            params: iterable of parameters to optimize or dicts defining parameter groups
+            lr: learning rate
+            weight_decay: weight decay (L2 penalty)
+            Kp: proportional gain
+            Ki: integral gain
+            maximize: whether to maximize or minimize the loss
+        """
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if weight_decay < 0.0:
@@ -114,8 +155,6 @@ def _sparse_pi(
 ):
     """
     Analogous to _pi but with support for sparse gradients.
-    Inspired by SparseAdam:
-    https://github.com/pytorch/pytorch/blob/release/2.0/torch/optim/_functional.py
     """
 
     error = param.grad
