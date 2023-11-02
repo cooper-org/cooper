@@ -11,7 +11,9 @@ class Formulation(abc.ABC):
     # TODO(gallego-posada): Add documentation
 
     @abc.abstractmethod
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         """Computes the contribution from the current constraint to the primal and dual
         Lagrangians, and evaluates the associated Lagrange multiplier or penalty
         coefficient."""
@@ -41,7 +43,9 @@ class PenaltyFormulation(Formulation):
         self.constraint_type = constraint_type
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         penalty_coefficient_value, _ = evaluate_constraint_factor_for_primal_and_dual(
             module=self.penalty_coefficient, constraint_state=constraint_state
         )
@@ -90,7 +94,9 @@ class QuadraticPenaltyFormulation(Formulation):
         self.constraint_type = constraint_type
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         penalty_coefficient_value, _ = evaluate_constraint_factor_for_primal_and_dual(
             module=self.penalty_coefficient, constraint_state=constraint_state
         )
@@ -137,7 +143,9 @@ class LagrangianFormulation(Formulation):
         self.constraint_type = constraint_type
         self.multiplier = multiplier
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         multiplier_for_primal, multiplier_for_dual = evaluate_constraint_factor_for_primal_and_dual(
             module=self.multiplier, constraint_state=constraint_state
         )
@@ -202,7 +210,9 @@ class AugmentedLagrangianFormulation(Formulation):
         self.multiplier = multiplier
         self.penalty_coefficient = penalty_coefficient
 
-    def compute_lagrangian_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_lagrangian_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         multiplier_for_primal, multiplier_for_dual = evaluate_constraint_factor_for_primal_and_dual(
             module=self.multiplier, constraint_state=constraint_state
         )

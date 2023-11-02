@@ -83,7 +83,9 @@ class ConstraintGroup:
         else:
             self.penalty_coefficient.value = value
 
-    def compute_constraint_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
+    def compute_constraint_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[ConstraintStore, ConstraintStore]:
         """Compute the contribution of the current constraint to the primal and dual
         Lagrangians."""
 
