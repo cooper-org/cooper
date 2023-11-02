@@ -182,15 +182,9 @@ class IndexedMultiplier(ExplicitMultiplier):
     and memory-efficient sparse gradients (on GPU).
     """
 
-    def __init__(self, init: torch.Tensor, *args, use_sparse_gradient: bool = True, **kwargs):
+    def __init__(self, init: torch.Tensor, *args, **kwargs):
         super(IndexedMultiplier, self).__init__(init=init, *args, **kwargs)
         self.last_seen_mask = torch.zeros_like(init, dtype=torch.bool)
-
-        if use_sparse_gradient and not torch.cuda.is_available():
-            warnings.warn("Backend for sparse gradients is only supported on GPU.")
-
-        # Backend for sparse gradients only supported on GPU.
-        self.use_sparse_gradient = use_sparse_gradient and torch.cuda.is_available()
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
@@ -203,7 +197,7 @@ class IndexedMultiplier(ExplicitMultiplier):
         # Mark the corresponding constraints as "seen" since the last multiplier update.
         self.last_seen_mask[indices] = True
 
-        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=self.use_sparse_gradient)
+        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
         return torch.flatten(multiplier_values)

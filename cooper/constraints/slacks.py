@@ -133,14 +133,8 @@ class IndexedSlack(ExplicitSlack):
     only, and memory-efficient sparse gradients (on GPU).
     """
 
-    def __init__(self, init: torch.Tensor, *args, use_sparse_gradient: bool = True, **kwargs):
+    def __init__(self, init: torch.Tensor, *args, **kwargs):
         super(IndexedSlack, self).__init__(init=init, *args, **kwargs)
-
-        if use_sparse_gradient and not torch.cuda.is_available():
-            warnings.warn("Backend for sparse gradients is only supported on GPU.")
-
-        # Backend for sparse gradients only supported on GPU.
-        self.use_sparse_gradient = use_sparse_gradient and torch.cuda.is_available()
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the slack at the provided indices."""
@@ -150,7 +144,7 @@ class IndexedSlack(ExplicitSlack):
             # torch.nn.functional.embedding and *not* as masks.
             raise ValueError("Indices must be of type torch.long.")
 
-        slack_values = torch.nn.functional.embedding(indices, self.weight, sparse=self.use_sparse_gradient)
+        slack_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
         # Flatten slack values to 1D since Embedding works with 2D tensors.
         return torch.flatten(slack_values)

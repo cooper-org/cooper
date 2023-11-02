@@ -201,3 +201,6 @@ extra-gradient in the context of solving Variational Inequality Problems.
 
 .. autoclass:: ExtraAdam
     :members:
+
+.. autoclass:: PID
+    :members:
