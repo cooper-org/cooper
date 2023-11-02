@@ -23,6 +23,7 @@ class ConstraintGroup:
         multiplier_kwargs: Optional[dict] = {},
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
+        # TODO: expect instantiated multiplier
         if not isinstance(constraint_type, ConstraintType):
             raise ValueError(
                 f"Expected `constraint_type` to be of type {ConstraintType}, but received {type(constraint_type)}"
@@ -82,18 +83,14 @@ class ConstraintGroup:
         else:
             self.penalty_coefficient.value = value
 
-    def compute_constraint_contribution(
-        self, constraint_state: Optional[ConstraintState] = None
-    ) -> tuple[ConstraintStore]:
+    def compute_constraint_contribution(self, constraint_state: ConstraintState) -> tuple[ConstraintStore]:
         """Compute the contribution of the current constraint to the primal and dual
         Lagrangians."""
-
-        if constraint_state is None:
-            raise ValueError("A `ConstraintState` is needed to compute Lagrangian contribution")
 
         return self.formulation.compute_lagrangian_contribution(constraint_state=constraint_state)
 
     def state_dict(self):
+        # TODO: updateme
         return {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}
 
     def load_state_dict(self, state_dict):

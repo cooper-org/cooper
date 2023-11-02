@@ -21,6 +21,8 @@ class LagrangianStore:
 
     lagrangian: torch.Tensor
     dual_lagrangian: Optional[torch.Tensor] = None
+    # TODO: change primal_observed_multipliers and dual_observed_multipliers to
+    # constraint_stores.
     primal_observed_multipliers: Optional[list[torch.Tensor]] = None
     dual_observed_multipliers: Optional[list[torch.Tensor]] = None
 
@@ -55,6 +57,10 @@ class CMPState:
         self._dual_lagrangian = None
 
     def populate_lagrangian(self, return_multipliers: bool = False) -> LagrangianStore:
+        # TODO: this function could return the ConstraintStores for each of the
+        # observed constraints. As such, change the return_multipliers argument to
+        # return_constraint_stores.
+
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -74,6 +80,9 @@ class CMPState:
             observed_multiplier_values: When `return_multipliers=True`, return the value
                 of the multiplier for each of the observed_constraints.
         """
+
+        # TODO: could populate the primal and dual lagrangians separately. This is useful
+        # for alternating updates to not waste computation.
 
         # Check if any of the observed constraints will contribute to the primal and
         # dual Lagrangians
@@ -100,6 +109,7 @@ class CMPState:
         dual_observed_multiplier_values = []
 
         for constraint_group, constraint_state in self.observed_constraints:
+            # TODO (juan43ramirez): rename primal_store and dual_store to primal_constraint_store and dual_constraint_store
             primal_store, dual_store = constraint_group.compute_constraint_contribution(constraint_state)
 
             if not constraint_state.skip_primal_contribution and primal_store is not None:

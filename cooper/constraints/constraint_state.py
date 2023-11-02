@@ -54,6 +54,7 @@ class ConstraintState:
     constraint_features: Optional[torch.Tensor] = None
     strict_violation: Optional[torch.Tensor] = None
     strict_constraint_features: Optional[torch.Tensor] = None
+    # TODO: use_in_primal_update: bool = True, use_in_dual_update: bool = True
     skip_primal_contribution: bool = False
     skip_dual_contribution: bool = False
 

@@ -185,6 +185,9 @@ class AugmentedLagrangianFormulation(Formulation):
         self, constraint_type: ConstraintType, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ):
         # TODO(juan43ramirez): Add documentation
+        # TODO: do not need pointers to the multiplier, penalty_coefficient, and
+        # constraint_type. Provide them every time to compute_lagrangian_contribution.
+        # Add expects for each one of them.
 
         if constraint_type == ConstraintType.PENALTY:
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")

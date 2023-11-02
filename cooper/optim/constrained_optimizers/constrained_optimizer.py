@@ -65,6 +65,7 @@ class ConstrainedOptimizer:
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
+        # TODO: get rid of constraint_groups and make multipliers a required argument
         constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)

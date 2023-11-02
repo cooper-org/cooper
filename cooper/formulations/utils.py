@@ -12,12 +12,16 @@ def extract_and_patch_violations(constraint_state: ConstraintState) -> Tuple[tor
 
     violation = constraint_state.violation
     if len(violation.shape) == 0:
+        # If the violation is a scalar, we unsqueeze it to ensure that it has at least
+        # one dimension for using einsum.
         violation = violation.unsqueeze(0)
 
     strict_violation = constraint_state.strict_violation
     if strict_violation is None:
         strict_violation = constraint_state.violation
     if len(strict_violation.shape) == 0:
+        # If the strict_violation is a scalar, we unsqueeze it to ensure that it has at
+        # least one dimension for using einsum.
         strict_violation = strict_violation.unsqueeze(0)
 
     return violation, strict_violation
@@ -38,6 +42,8 @@ def compute_primal_weighted_violation(
             violation towards the primal Lagrangian.
     """
 
+    # TODO (juan43ramirez): ignore the skip_contribution flag. This should be handled
+    # by the caller of this function.
     if skip_contribution:
         # Ignore the primal contribution if the constraint is marked as non-contributing
         # to the primal Lagrangian.
@@ -82,6 +88,8 @@ def compute_dual_weighted_violation(
             violation towards the dual Lagrangian.
     """
 
+    # TODO (juan43ramirez): ignore the skip_contribution flag. This should be handled
+    # by the caller of this function.
     if skip_contribution:
         # Ignore the dual contribution if the constraint is marked as non-contributing
         # to the dual Lagrangian.
@@ -118,6 +126,8 @@ def compute_quadratic_penalty(
 ) -> Optional[torch.Tensor]:
     # TODO(juan43ramirez): Add documentation
 
+    # TODO (juan43ramirez): ignore the skip_contribution flag. This should be handled
+    # by the caller of this function.
     if skip_contribution:
         return None
     else:
