@@ -65,7 +65,7 @@ class ConstraintStore:
     the contribution of the constraint to the primal-differentiable Lagrian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""
 
-    multiplier_value: Optional[torch.Tensor] = None
-    violation: Optional[torch.Tensor] = None
-    penalty_coefficient_value: Optional[torch.Tensor] = None
     lagrangian_contribution: Optional[torch.Tensor] = None
+    violation: Optional[torch.Tensor] = None
+    multiplier_value: Optional[torch.Tensor] = None
+    penalty_coefficient_value: Optional[torch.Tensor] = None
