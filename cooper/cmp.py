@@ -129,15 +129,19 @@ class CMPState:
 
                     if isinstance(constraint_group.multiplier, IndexedMultiplier):
                         # Need to expand the indices to the size of the multiplier
-                        feasible_indices = torch.zeros_like(constraint_group.multiplier.weight, dtype=torch.bool)
+                        strictly_feasible_indices = torch.zeros_like(
+                            constraint_group.multiplier.weight, dtype=torch.bool
+                        )
 
                         # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
                         # dimension 1 of the violations
-                        feasible_indices[constraint_state.constraint_features] = strict_violation.unsqueeze(1) < 0.0
+                        strictly_feasible_indices[constraint_state.constraint_features] = (
+                            strict_violation.unsqueeze(1) < 0.0
+                        )
                     else:
-                        feasible_indices = strict_violation < 0.0
+                        strictly_feasible_indices = strict_violation < 0.0
 
-                    constraint_group.multiplier.strictly_feasible_indices = feasible_indices
+                    constraint_group.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
             if return_multipliers:
                 primal_observed_multiplier_values.append(primal_store.multiplier_value)
