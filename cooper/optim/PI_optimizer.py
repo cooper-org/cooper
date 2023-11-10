@@ -175,15 +175,16 @@ def _sparse_pi(
             state["previous_error"] = torch.zeros_like(param)
 
         if not state["all_initialized"]:
-            needs_initialization_ix = state["is_initialized_mask"] == False
-            if torch.sum(needs_initialization_ix) == 0:
+            if torch.all(state["is_initialized_mask"]):
+                # All indices have been initialized, so flag that we can skip this check
+                # in the future.
                 state["all_initialized"] = True
             else:
-                indices_to_initialize = needs_initialization_ix[error_indices]
-                state["previous_error"][error_indices] = torch.where(
-                    indices_to_initialize, error_values, state["previous_error"][error_indices]
-                )
-                state["is_initialized_mask"][error_indices] = True
+                # Check if current seen indices has been initialized before, if not,
+                # then mark as initialized and store first error value in `previous_error`
+                should_initialize_now_ix = ~state["is_initialized_mask"][error_indices]
+                state["is_initialized_mask"][should_initialize_now_ix] = True
+                state["previous_error"][should_initialize_now_ix] = error_values
 
     if not maximize:
         error.mul_(-1)
