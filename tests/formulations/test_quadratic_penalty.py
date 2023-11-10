@@ -32,7 +32,7 @@ def test_manual_quadratic_penalty(Toy2dCMP_params_init, device):
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=[],
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
     )

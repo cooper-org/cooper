@@ -34,7 +34,7 @@
 
 #     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
 #         primal_optimizers=primal_optimizers,
-#         constraint_groups=cmp.constraint_groups,
+#         multipliers=cmp.multipliers,
 #         extrapolation=False,
 #         alternating=alternating,
 #         dual_optimizer_name="SGD",
@@ -132,7 +132,7 @@
 
 #     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
 #         primal_optimizers=primal_optimizers,
-#         constraint_groups=cmp.constraint_groups,
+#         multipliers=cmp.multipliers,
 #         extrapolation=False,
 #         alternating=alternating_type,
 #     )

@@ -26,7 +26,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=True,
         alternating=False,
         dual_optimizer_name="ExtraSGD",
@@ -98,7 +98,7 @@ def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, 
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=True,
         alternating=False,
         dual_optimizer_name="ExtraSGD",

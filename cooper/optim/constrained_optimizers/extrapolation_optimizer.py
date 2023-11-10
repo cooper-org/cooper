@@ -31,9 +31,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
-        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
+        super().__init__(primal_optimizers, dual_optimizers, multipliers)
 
         self.base_sanity_checks()
 

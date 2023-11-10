@@ -44,7 +44,6 @@ def create_optimizer_from_kwargs(
     extrapolation: bool,
     alternating: AlternatingType,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
     """Creates a constrained or unconstrained optimizer from a set of keyword arguments.
@@ -64,7 +63,6 @@ def create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,
         multipliers=multipliers,
-        constraint_groups=constraint_groups,
     )
 
     if extrapolation:
@@ -81,7 +79,6 @@ def load_cooper_optimizer_from_state_dict(
     cooper_optimizer_state: CooperOptimizerState,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ):
     """Creates a Cooper optimizer and loads the state_dicts contained in a
@@ -117,16 +114,9 @@ def load_cooper_optimizer_from_state_dict(
             dual_optimizer.load_state_dict(dual_state)
 
     # Load multipliers
+    multipliers = ensure_sequence(multipliers) if multipliers is not None else []
+
     multiplier_states = cooper_optimizer_state.multiplier_states
-
-    if multipliers is None:
-        if constraint_groups is None:
-            multipliers = []
-        else:
-            multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
-    else:
-        multipliers = ensure_sequence(multipliers)
-
     if multiplier_states is None:
         if len(multipliers) > 0:
             raise ValueError("Unable to load multiplier states since state dict does not contain `multiplier_states`.")
@@ -142,6 +132,5 @@ def load_cooper_optimizer_from_state_dict(
         extrapolation=cooper_optimizer_state.extrapolation,
         alternating=cooper_optimizer_state.alternating,
         dual_optimizers=dual_optimizers,
-        constraint_groups=None,
         multipliers=multipliers,
     )

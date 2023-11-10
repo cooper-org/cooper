@@ -103,6 +103,8 @@ class ExplicitMultiplier(Multiplier):
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
+            # TODO(gallego-posada): Can we make the dependence on
+            # `strictly_feasible_indices` explicit in the signature of `post_step_`?
             if self.restart_on_feasible and self.strictly_feasible_indices is not None:
                 # We reset multipliers to zero when their corresponding constraint
                 # is *strictly* feasible.
@@ -117,6 +119,15 @@ class ExplicitMultiplier(Multiplier):
 
                 grad = self.weight.grad
                 if grad is not None and torch.any(self.strictly_feasible_indices):
+                    # TODO(gallego-posada): Why do we need to do this different treatment
+                    # for dense and sparse gradients?
+                    # This fn gets called at end of `dual_step` and this tends to be
+                    # preceded or followed by a call to `zero_grad` which will zero out
+                    # the gradient anyway. (???)
+                    # Checked and discarded PI optimizer to see if sparsity played a
+                    # role in optimizer update.
+                    # It seems like we could get rid of this entire block that zeros the
+                    # gradient.
                     if grad.is_sparse:
                         # Construct a sparse tensor where the entries corresponding to
                         # strictly feasible constraints are zero, and the rest are
@@ -165,7 +176,7 @@ class DenseMultiplier(ExplicitMultiplier):
         return torch.clone(self.weight)
 
     def __repr__(self):
-        return f"DenseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
+        return f"DenseMultiplier(enforce_positive={self.enforce_positive}, shape={tuple(self.weight.shape)})"
 
 
 class IndexedMultiplier(ExplicitMultiplier):
@@ -197,6 +208,8 @@ class IndexedMultiplier(ExplicitMultiplier):
         # Mark the corresponding constraints as "seen" since the last multiplier update.
         self.last_seen_mask[indices] = True
 
+        # TODO(gallego-posada): Document sparse gradients are expected for stateful
+        # optimizers (having buffers)
         multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.

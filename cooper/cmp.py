@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
-from cooper.formulations import extract_and_patch_violations
+
 from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
 # Formulation, and some other classes below, are heavily inspired by the design of the
@@ -86,13 +86,8 @@ class CMPState:
 
         # Check if any of the observed constraints will contribute to the primal and
         # dual Lagrangians
-        any_primal_contribution = False
-        any_dual_contribution = False
-        for constraint_group, constraint_state in self.observed_constraints:
-            if not constraint_state.skip_dual_contribution:
-                any_dual_contribution = True
-            if not constraint_state.skip_primal_contribution:
-                any_primal_contribution = True
+        any_primal_contribution = any([cs.contributes_to_primal_update for cg, cs in self.observed_constraints])
+        any_dual_contribution = any([cs.contributes_to_dual_update for cg, cs in self.observed_constraints])
 
         if self.loss is None and not any_primal_contribution:
             # No loss provided, and no observed constraints will contribute to the
@@ -112,11 +107,14 @@ class CMPState:
             # TODO (juan43ramirez): rename primal_store and dual_store to primal_constraint_store and dual_constraint_store
             primal_store, dual_store = constraint_group.compute_constraint_contribution(constraint_state)
 
-            if not constraint_state.skip_primal_contribution and primal_store is not None:
+            if constraint_state.contributes_to_primal_update and primal_store is not None:
                 primal_lagrangian = primal_lagrangian + primal_store.lagrangian_contribution
 
-            if not constraint_state.skip_dual_contribution and dual_store is not None:
+            if constraint_state.contributes_to_dual_update and dual_store is not None:
                 dual_lagrangian = dual_lagrangian + dual_store.lagrangian_contribution
+
+                # TODO(gallego-posada): Consider forbidding the use of extrapolation and
+                # restart_on_feasible together.
 
                 # Determine which of the constraints are strictly feasible and update
                 # the `strictly_feasible_indices` attribute of the multiplier.
@@ -133,6 +131,8 @@ class CMPState:
                             constraint_group.multiplier.weight, dtype=torch.bool
                         )
 
+                        # FIXME(gallego-posada): This should be using
+                        # `strict_constraint_features` instead of `constraint_features`.
                         # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
                         # dimension 1 of the violations
                         strictly_feasible_indices[constraint_state.constraint_features] = (
@@ -144,8 +144,10 @@ class CMPState:
                     constraint_group.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
             if return_multipliers:
-                primal_observed_multiplier_values.append(primal_store.multiplier_value)
-                dual_observed_multiplier_values.append(dual_store.multiplier_value)
+                if primal_store is not None:
+                    primal_observed_multiplier_values.append(primal_store.multiplier_value)
+                if dual_store is not None:
+                    dual_observed_multiplier_values.append(dual_store.multiplier_value)
 
         if primal_lagrangian is not None:
             # Either a loss was provided, or at least one observed constraint

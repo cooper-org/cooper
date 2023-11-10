@@ -32,7 +32,7 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
         dual_optimizer_name="SGD",
@@ -130,7 +130,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
         dual_optimizer_name="SGD",
@@ -218,7 +218,7 @@ def test_convergence_alternating(
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating_type,
     )

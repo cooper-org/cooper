@@ -41,7 +41,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers, cmp.constraint_groups, dual_optimizer_name="SGD", dual_optimizer_kwargs={"lr": 1e-2}
+        primal_optimizers, multipliers=cmp.multipliers, dual_optimizer_name="SGD", dual_optimizer_kwargs={"lr": 1e-2}
     )
 
     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model)
@@ -82,14 +82,14 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     loaded_model.to(device)
 
     loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(
-        is_constrained=use_ineq_constraints, constraint_groups=new_cmp.constraint_groups
+        is_constrained=use_ineq_constraints, multipliers=new_cmp.multipliers
     )
 
     loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
         cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
         dual_optimizers=loaded_dual_optimizers,
-        constraint_groups=new_cmp.constraint_groups,
+        multipliers=new_cmp.multipliers,
     )
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
@@ -145,7 +145,7 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups if has_multipliers else [],
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
     )

@@ -37,7 +37,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
     )
@@ -49,7 +49,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     alternating = cooper.optim.AlternatingType("PrimalDual")
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
         dual_optimizer_name="SGD",
@@ -155,7 +155,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
     )
@@ -167,7 +167,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     alternating = cooper.optim.AlternatingType("DualPrimal")
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
         alternating=alternating,
         dual_optimizer_name="SGD",
