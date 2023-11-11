@@ -14,6 +14,7 @@ from .types import AlternatingType
 from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
+# TODO(gallego-posada): This functions is not being called
 def sanity_check_constraints_and_optimizer(
     constrained_optimizer: constrained_optimizers.ConstrainedOptimizer,
     constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
