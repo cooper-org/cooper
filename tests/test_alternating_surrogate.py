@@ -33,13 +33,11 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
 
     mktensor = testing_utils.mktensor(device=device)
 
-    alternating = cooper.optim.AlternatingType("PrimalDual")
-
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
     )
 
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, use_constraint_surrogate=True, device=device)
@@ -51,7 +49,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
@@ -159,19 +157,18 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
     )
 
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=True, use_constraint_surrogate=True, device=device)
 
     mktensor = testing_utils.mktensor(device=device)
 
-    alternating = cooper.optim.AlternatingType("DualPrimal")
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
@@ -250,8 +247,8 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
 
 @pytest.mark.parametrize(
-    "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL]
+    "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL]
 )
 @pytest.mark.parametrize("use_defect_fn", [True, False])
-def test_convergence_surrogate(alternating_type, use_defect_fn, Toy2dCMP_problem_properties, device):
+def test_convergence_surrogate(alternation_type, use_defect_fn, Toy2dCMP_problem_properties, device):
     pass

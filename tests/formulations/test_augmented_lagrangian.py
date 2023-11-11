@@ -9,7 +9,7 @@ import torch
 import cooper
 
 
-def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
+def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, device):
     const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
 
@@ -24,7 +24,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternating, device):
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=alternation_type,
     )
 
     return cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient
@@ -45,7 +45,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
     mktensor = testing_utils.mktensor(device=device)
 
     cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient = setup_augmented_lagrangian_objects(
-        primal_optimizers, alternating, device
+        primal_optimizers=primal_optimizers, alternation_type=cooper.optim.AlternationType.FALSE, device=device
     )
 
     roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
@@ -104,10 +104,10 @@ def test_manual_augmented_lagrangian_dual_primal():
 
 
 @pytest.mark.parametrize(
-    "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL, False]
+    "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL, False]
 )
 def test_convergence_augmented_lagrangian(
-    alternating_type, Toy2dCMP_params_init, Toy2dCMP_problem_properties, use_multiple_primal_optimizers, device
+    alternation_type, Toy2dCMP_params_init, Toy2dCMP_problem_properties, use_multiple_primal_optimizers, device
 ):
     """Test convergence of Augmented Lagrangian updates on toy 2D problem."""
 
@@ -120,13 +120,13 @@ def test_convergence_augmented_lagrangian(
     )
 
     cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient = setup_augmented_lagrangian_objects(
-        primal_optimizers, alternating_type, device
+        primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
     )
 
     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
     roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
 
-    if alternating_type == cooper.optim.AlternatingType.PRIMAL_DUAL:
+    if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
         roll_kwargs["compute_violations_fn"] = lambda: cmp.compute_violations(params)
 
     for step_id in range(1500):
@@ -146,10 +146,7 @@ def test_save_and_load_state_dict(Toy2dCMP_params_init, device):
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
-    alternating = cooper.optim.AlternatingType.FALSE
-
-    cmp, cooper_optimizer, const1_penalty_coefficient, const2_penalty_coefficient = setup_augmented_lagrangian_objects(
-        primal_optimizers, alternating, device
+        primal_optimizers=primal_optimizers, alternation_type=cooper.optim.AlternationType.FALSE, device=device
     )
 
     roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}

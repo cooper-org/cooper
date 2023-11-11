@@ -34,7 +34,7 @@ def test_manual_quadratic_penalty(Toy2dCMP_params_init, device):
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.FALSE,
     )
 
     roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}

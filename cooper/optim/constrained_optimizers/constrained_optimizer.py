@@ -12,7 +12,7 @@ from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
-from ..types import AlternatingType
+from ..types import AlternationType
 
 
 class ConstrainedOptimizer:
@@ -51,7 +51,7 @@ class ConstrainedOptimizer:
     """
 
     extrapolation: bool
-    alternating: AlternatingType
+    alternation_type: AlternationType
 
     def __init__(
         self,
@@ -137,5 +137,5 @@ class ConstrainedOptimizer:
             dual_optimizer_states=dual_optimizer_states,
             multiplier_states=multiplier_states,
             extrapolation=self.extrapolation,
-            alternating=self.alternating,
+            alternation_type=self.alternation_type,
         )

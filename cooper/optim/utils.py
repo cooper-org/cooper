@@ -10,7 +10,7 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
-from .types import AlternatingType
+from .types import AlternationType
 from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
@@ -33,17 +33,17 @@ def sanity_check_constraints_and_optimizer(
         fn_augmented_lagrangian = lambda constraint: constraint.formulation.formulation_type == "augmented_lagrangian"
         any_is_augmented_lagrangian = any(map(fn_augmented_lagrangian, constraint_groups))
 
-        if constrained_optimizer.alternating and any_restart_on_feasible:
+        if constrained_optimizer.alternation_type != AlternationType.FALSE and any_restart_on_feasible:
             warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
 
-        if any_is_augmented_lagrangian and not constrained_optimizer.alternating:
+        if any_is_augmented_lagrangian and constrained_optimizer.alternation_type == AlternationType.FALSE:
             raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
 
 
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-    extrapolation: bool,
-    alternating: AlternatingType,
+    extrapolation: bool = False,
+    alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
@@ -53,7 +53,7 @@ def create_optimizer_from_kwargs(
     Args:
         primal_optimizers: Optimizer(s) for the primal variables.
         extrapolation: Whether the optimizer uses extrapolation.
-        alternating: Whether the optimizer performs alternating updates.
+        alternation_type: Choice of alternation strategy.
         dual_optimizer: Optional optimizer(s) for the dual variables.
     """
 
@@ -68,9 +68,9 @@ def create_optimizer_from_kwargs(
 
     if extrapolation:
         return constrained_optimizers.ExtrapolationConstrainedOptimizer(**optimizer_kwargs)
-    elif alternating == AlternatingType.PRIMAL_DUAL:
+    elif alternation_type == AlternationType.PRIMAL_DUAL:
         return constrained_optimizers.AlternatingPrimalDualOptimizer(**optimizer_kwargs)
-    elif alternating == AlternatingType.DUAL_PRIMAL:
+    elif alternation_type == AlternationType.DUAL_PRIMAL:
         return constrained_optimizers.AlternatingDualPrimalOptimizer(**optimizer_kwargs)
     else:
         return constrained_optimizers.SimultaneousOptimizer(**optimizer_kwargs)
@@ -131,7 +131,7 @@ def load_cooper_optimizer_from_state_dict(
     return create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
         extrapolation=cooper_optimizer_state.extrapolation,
-        alternating=cooper_optimizer_state.alternating,
+        alternation_type=cooper_optimizer_state.alternation_type,
         dual_optimizers=dual_optimizers,
         multipliers=multipliers,
     )

@@ -12,7 +12,7 @@ from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
-from ..types import AlternatingType
+from ..types import AlternationType
 from .constrained_optimizer import ConstrainedOptimizer
 
 
@@ -24,7 +24,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
 
     extrapolation = True
-    alternating = AlternatingType.FALSE
+    alternation_type = AlternationType.FALSE
 
     def __init__(
         self,

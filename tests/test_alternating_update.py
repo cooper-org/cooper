@@ -28,13 +28,11 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
 
     mktensor = testing_utils.mktensor(device=device)
 
-    alternating = cooper.optim.AlternatingType("PrimalDual")
-
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
@@ -126,13 +124,11 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
 
     mktensor = testing_utils.mktensor(device=device)
 
-    alternating = cooper.optim.AlternatingType("DualPrimal")
-
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
@@ -193,11 +189,11 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
 
 
 @pytest.mark.parametrize(
-    "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL]
+    "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL]
 )
 @pytest.mark.parametrize("use_defect_fn", [True, False])
 def test_convergence_alternating(
-    alternating_type,
+    alternation_type,
     use_defect_fn,
     Toy2dCMP_problem_properties,
     Toy2dCMP_params_init,
@@ -220,14 +216,14 @@ def test_convergence_alternating(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating_type,
+        alternation_type=alternation_type,
     )
 
     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
     compute_violations_fn = (lambda: cmp.compute_violations(params)) if use_defect_fn else None
 
     roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
-    if alternating_type == cooper.optim.AlternatingType.PRIMAL_DUAL:
+    if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
         roll_kwargs["compute_violations_fn"] = compute_violations_fn
 
     for step_id in range(1500):

@@ -282,8 +282,8 @@ def build_dual_optimizers(
 def build_cooper_optimizer_for_Toy2dCMP(
     primal_optimizers,
     multipliers,
-    extrapolation=False,
-    alternating=cooper.optim.AlternatingType.FALSE,
+    extrapolation: bool = False,
+    alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
@@ -295,7 +295,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
         extrapolation=extrapolation,
-        alternating=alternating,
+        alternation_type=alternation_type,
         dual_optimizers=dual_optimizers,
         multipliers=multipliers,
     )

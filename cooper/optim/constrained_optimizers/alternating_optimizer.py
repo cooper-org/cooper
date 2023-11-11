@@ -6,14 +6,14 @@ Implementation of the :py:class:`AlternatingPrimalDualOptimizer` and
 
 from typing import Callable, Optional
 
+from enum import Enum
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
-from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
-from ..types import AlternatingType
+from ..types import AlternationType
 from .constrained_optimizer import ConstrainedOptimizer
 
 
@@ -25,7 +25,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
     extrapolation = False
-    alternating = AlternatingType.PRIMAL_DUAL
+    alternation_type = AlternationType.PRIMAL_DUAL
 
     def __init__(
         self,
@@ -126,7 +126,7 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
     extrapolation = False
-    alternating = AlternatingType.DUAL_PRIMAL
+    alternation_type = AlternationType.DUAL_PRIMAL
 
     def __init__(
         self,

@@ -7,6 +7,8 @@ import pytest
 import testing_utils
 import torch
 
+import cooper
+
 
 def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
     """Test first step of simultaneous GDA updates with surrogates on toy 2D problem."""
@@ -32,7 +34,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=False,
+        alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
