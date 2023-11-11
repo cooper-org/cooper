@@ -85,7 +85,7 @@ class ExplicitMultiplier(Multiplier):
             raise ValueError("Default restart value must be positive.")
 
         if (self.default_restart_value > 0) and not self.restart_on_feasible:
-            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
+            raise ValueError("Default restart value was provided but `restart_on_feasible=False`.")
 
     @property
     def implicit_constraint_type(self):
