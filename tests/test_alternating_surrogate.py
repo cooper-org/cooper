@@ -71,7 +71,8 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     cmp_state, lagrangian_store_after_primal_update = cooper_optimizer.roll(**roll_kwargs)
 
     # No dual update yet, so the observed multipliers should be zero, matching lmdba0
-    assert torch.allclose(torch.cat(lagrangian_store_after_primal_update.primal_observed_multipliers), lmbda0)
+    observed_multipliers = torch.cat(lagrangian_store_after_primal_update.multiplier_values_for_primal_constraints())
+    assert torch.allclose(observed_multipliers, lmbda0)
 
     # analytical_gradients computes the gradients of the loss and surrogate constraints
     grads_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -89,11 +90,11 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     else:
         loss = cmp_state.loss
 
-    primal_lag0 = loss + torch.sum(violations_after_primal_update * lmbda0)
-    dual_lag0 = torch.sum(strict_violations_after_primal_update * lmbda0)
+    primal_lagrangian0 = loss + torch.sum(violations_after_primal_update * lmbda0)
+    dual_lagrangian0 = torch.sum(strict_violations_after_primal_update * lmbda0)
 
-    assert torch.allclose(lagrangian_store_after_primal_update.lagrangian, primal_lag0)
-    assert torch.allclose(lagrangian_store_after_primal_update.dual_lagrangian, dual_lag0)
+    assert torch.allclose(lagrangian_store_after_primal_update.lagrangian, primal_lagrangian0)
+    assert torch.allclose(lagrangian_store_after_primal_update.dual_lagrangian, dual_lagrangian0)
 
     # Lambda update uses the violations after the primal update. Re-comuting them
     # manually to ensure correctness.
@@ -103,7 +104,8 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     # ----------------------- Second iteration -----------------------
     cmp_state, lagrangian_store_after_primal_update = cooper_optimizer.roll(**roll_kwargs)
 
-    assert torch.allclose(torch.cat(lagrangian_store_after_primal_update.primal_observed_multipliers), lmbda1)
+    observed_multipliers = torch.cat(lagrangian_store_after_primal_update.multiplier_values_for_primal_constraints())
+    assert torch.allclose(observed_multipliers, lmbda1)
 
     grads_x1_y1 = cmp.analytical_gradients(x1_y1)
     x2_y2 = x1_y1 - 1e-2 * (grads_x1_y1[0] + torch.sum(lmbda1 * grads_x1_y1[1]))
@@ -197,14 +199,15 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
     # Computing the dual update manually to ensure correctness
     lmbda1 = torch.relu(lmbda0 + 1e-2 * strict_violations_after_dual_update)
-    assert torch.allclose(torch.cat(lagrangian_store_after_dual_update.dual_observed_multipliers), lmbda1)
+    observed_multipliers = torch.cat(lagrangian_store_after_dual_update.multiplier_values_for_dual_constraints())
+    assert torch.allclose(observed_multipliers, lmbda1)
 
-    # Check primal and dual Lagrangians.
-    primal_lag0 = cmp_state.loss + torch.sum(violations_after_dual_update * lmbda1)
-    dual_lag0 = torch.sum(strict_violations_after_dual_update * lmbda1)
+    # Check primal and dual Lagrangians
+    primal_lagrangian0 = cmp_state.loss + torch.sum(violations_after_dual_update * lmbda1)
+    dual_lagrangian0 = torch.sum(strict_violations_after_dual_update * lmbda1)
 
-    assert torch.allclose(lagrangian_store_after_dual_update.lagrangian, primal_lag0)
-    assert torch.allclose(lagrangian_store_after_dual_update.dual_lagrangian, dual_lag0)
+    assert torch.allclose(lagrangian_store_after_dual_update.lagrangian, primal_lagrangian0)
+    assert torch.allclose(lagrangian_store_after_dual_update.dual_lagrangian, dual_lagrangian0)
 
     # Computing the primal update
     # analytical_gradients computes the gradients of the loss and surrogate constraints
@@ -227,7 +230,8 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     assert torch.allclose(strict_violations_after_dual_update, manual_strict_violations, atol=1e-4)
 
     lmbda2 = torch.relu(lmbda1 + 1e-2 * strict_violations_after_dual_update)
-    assert torch.allclose(torch.cat(lagrangian_store_after_dual_update.dual_observed_multipliers), lmbda2)
+    observed_multipliers = torch.cat(lagrangian_store_after_dual_update.multiplier_values_for_dual_constraints())
+    assert torch.allclose(observed_multipliers, lmbda2)
 
     primal_lag1 = cmp_state.loss + torch.sum(violations_after_dual_update * lmbda2)
     dual_lag1 = torch.sum(strict_violations_after_dual_update * lmbda2)

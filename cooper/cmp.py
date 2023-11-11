@@ -5,10 +5,10 @@ from typing import Optional, Tuple
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
+from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintStore, ConstraintType
 from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
-# Formulation, and some other classes below, are heavily inspired by the design of the
+# Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
 # https://github.com/google-research/tensorflow_constrained_optimization
 
@@ -20,10 +20,14 @@ class LagrangianStore:
 
     lagrangian: torch.Tensor
     dual_lagrangian: Optional[torch.Tensor] = None
-    # TODO: change primal_observed_multipliers and dual_observed_multipliers to
-    # constraint_stores.
-    primal_observed_multipliers: Optional[list[torch.Tensor]] = None
-    dual_observed_multipliers: Optional[list[torch.Tensor]] = None
+    primal_constraint_stores: Optional[list[ConstraintStore]] = None
+    dual_constraint_stores: Optional[list[ConstraintStore]] = None
+
+    def multiplier_values_for_primal_constraints(self):
+        return [_.multiplier_value for _ in self.primal_constraint_stores]
+
+    def multiplier_values_for_dual_constraints(self):
+        return [_.multiplier_value for _ in self.dual_constraint_stores]
 
 
 class CMPState:
@@ -53,7 +57,9 @@ class CMPState:
         self.misc = misc
 
         self._primal_lagrangian = None
+        self._primal_constraint_stores = []
         self._dual_lagrangian = None
+        self._dual_constraint_stores = []
 
     def populate_lagrangian(self, return_multipliers: bool = False) -> LagrangianStore:
         # TODO: this function could return the ConstraintStores for each of the
@@ -99,12 +105,11 @@ class CMPState:
 
         dual_lagrangian = 0.0 if any_dual_contribution else None
 
-        primal_observed_multiplier_values = []
-        dual_observed_multiplier_values = []
-
         for constraint_group, constraint_state in self.observed_constraints:
             # TODO (juan43ramirez): rename primal_store and dual_store to primal_constraint_store and dual_constraint_store
             primal_store, dual_store = constraint_group.compute_constraint_contribution(constraint_state)
+            self._primal_constraint_stores.append(primal_store)
+            self._dual_constraint_stores.append(dual_store)
 
             if constraint_state.contributes_to_primal_update and primal_store is not None:
                 primal_lagrangian = primal_lagrangian + primal_store.lagrangian_contribution
@@ -142,12 +147,6 @@ class CMPState:
 
                     constraint_group.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
-            if return_multipliers:
-                if primal_store is not None:
-                    primal_observed_multiplier_values.append(primal_store.multiplier_value)
-                if dual_store is not None:
-                    dual_observed_multiplier_values.append(dual_store.multiplier_value)
-
         if primal_lagrangian is not None:
             # Either a loss was provided, or at least one observed constraint
             # contributed to the primal Lagrangian.
@@ -159,10 +158,15 @@ class CMPState:
             previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
             self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
 
-        lagrangian_store = LagrangianStore(lagrangian=self._primal_lagrangian, dual_lagrangian=self._dual_lagrangian)
-        if return_multipliers:
-            lagrangian_store.primal_observed_multipliers = primal_observed_multiplier_values
-            lagrangian_store.dual_observed_multipliers = dual_observed_multiplier_values
+        lagrangian_store = LagrangianStore(
+            lagrangian=self._primal_lagrangian,
+            dual_lagrangian=self._dual_lagrangian,
+            primal_constraint_stores=self._primal_constraint_stores,
+            dual_constraint_stores=self._dual_constraint_stores,
+        )
+        # if return_multipliers:
+        #     lagrangian_store.primal_observed_multipliers = primal_observed_multiplier_values
+        #     lagrangian_store.dual_observed_multipliers = dual_observed_multiplier_values
 
         return lagrangian_store
 
@@ -170,8 +174,10 @@ class CMPState:
         """Purge the accumulated Lagrangian contributions."""
         if purge_primal:
             self._primal_lagrangian = None
+            self._primal_constraint_stores = []
         if purge_dual:
             self._dual_lagrangian = None
+            self._dual_constraint_stores = []
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
