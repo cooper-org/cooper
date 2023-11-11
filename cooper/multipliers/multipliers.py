@@ -237,8 +237,6 @@ class IndexedMultiplier(ExplicitMultiplier):
 
         # TODO(gallego-posada): Document sparse gradients are expected for stateful
         # optimizers (having buffers)
-        if len(self.weight.shape) != 2:
-            breakpoint()
         multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
