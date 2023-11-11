@@ -89,14 +89,13 @@ class ConstraintState:
         differentiable constraint features. Similarly, if differentiable constraint
         features are not provided, attempts to patch them with the strict constraint
         features."""
-
         constraint_features = self.constraint_features
-        if constraint_features is None:
-            strict_constraint_features = self.strict_constraint_features
 
         strict_constraint_features = self.strict_constraint_features
+        # If strict_constraint_features is not available, patch it with features for
+        # differentiable constraints.
         if strict_constraint_features is None:
-            constraint_features = self.constraint_features
+            strict_constraint_features = self.constraint_features
 
         return constraint_features, strict_constraint_features
 
