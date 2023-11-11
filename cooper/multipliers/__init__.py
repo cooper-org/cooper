@@ -1,11 +1,8 @@
 from enum import Enum
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
-from cooper.constraints.constraint_state import ConstraintState
-
-from .builders import build_explicit_multiplier
 from .multipliers import DenseMultiplier, ExplicitMultiplier, ImplicitMultiplier, IndexedMultiplier, Multiplier
 from .penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient, PenaltyCoefficient
 

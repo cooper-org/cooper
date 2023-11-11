@@ -1,12 +1,11 @@
 import abc
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
-
 from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
 # Formulation, and some other classes below, are heavily inspired by the design of the

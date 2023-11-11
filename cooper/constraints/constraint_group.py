@@ -45,9 +45,9 @@ class ConstraintGroup:
 
     def sanity_check_multiplier(self, multiplier: Multiplier, constraint_type: ConstraintType) -> None:
         if isinstance(multiplier, multipliers.ExplicitMultiplier):
-            if multiplier.implicit_constraint_type != constraint_type:
+            if multiplier.constraint_type != constraint_type:
                 raise ValueError(
-                    f"Constraint type of provided multiplier is {multiplier.implicit_constraint_type} \
+                    f"Constraint type of provided multiplier is {multiplier.constraint_type} \
                     which is inconsistent with {constraint_type} set for the constraint group."
                 )
 
