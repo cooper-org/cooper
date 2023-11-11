@@ -50,11 +50,11 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
     # Check primal and dual Lagrangians
-    primal_lag0 = cmp_state.loss + torch.sum(violations * lmbda0)
-    dual_lag0 = torch.sum(strict_violations * lmbda0)
+    primal_lagrangian0 = cmp_state.loss + torch.sum(violations * lmbda0)
+    dual_lagrangian0 = torch.sum(strict_violations * lmbda0)
 
-    assert torch.allclose(lagrangian_store.lagrangian, primal_lag0)
-    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag0)
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lagrangian0)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lagrangian0)
 
     # analytical_gradients computes the gradients of the loss and surrogate constraints
     grads_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -72,11 +72,11 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
     # Check primal and dual Lagrangians
-    primal_lag1 = cmp_state.loss + torch.sum(violations * lmbda1)
-    dual_lag1 = torch.sum(strict_violations * lmbda1)
+    primal_lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda1)
+    dual_lagrangian1 = torch.sum(strict_violations * lmbda1)
 
-    assert torch.allclose(lagrangian_store.lagrangian, primal_lag1)
-    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag1)
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lagrangian1)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lagrangian1)
 
     # analytical_gradients computes the gradients of the loss and surrogate constraints
     grads_x1_y1 = cmp.analytical_gradients(x1_y1)

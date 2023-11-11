@@ -66,15 +66,15 @@
 #     if use_violation_fn:
 #         # We don't see the value of the loss at the updated point since we only
 #         # evaluate the violations
-#         lag1 = torch.sum(violations * lmbda0)
+#         lagrangian1 = torch.sum(violations * lmbda0)
 #         # When the final Lagrangian is evaluated, the primal variables have changed,
 #         # but the multipliers are still zero (not yet updated)
-#         assert torch.allclose(lagrangian_store.lagrangian, lag1)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 #     else:
-#         lag1 = cmp_state.loss + torch.sum(violations * lmbda0)
+#         lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda0)
 #         # Since the multipliers are still zero, the Lagrangian matches the loss at
 #         # the updated primal point
-#         assert torch.allclose(lagrangian_store.lagrangian, lag1)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 
 #     # ------------ Second step of alternating updates ------------
 #     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
@@ -94,15 +94,15 @@
 #     if use_violation_fn:
 #         # We don't see the value of the loss at the updated point since we only
 #         # evaluate the violations
-#         lag2 = torch.sum(violations * lmbda1)
+#         lagrangian2 = torch.sum(violations * lmbda1)
 #         # When the final Lagrangian is evaluated, the primal variables have changed,
 #         # but the multipliers are still zero (not yet updated)
-#         assert torch.allclose(lagrangian_store.lagrangian, lag2)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 #     else:
-#         lag2 = cmp_state.loss + torch.sum(violations * lmbda1)
+#         lagrangian2 = cmp_state.loss + torch.sum(violations * lmbda1)
 #         # Since the multipliers are still zero, the Lagrangian matches the loss at
 #         # the updated primal point
-#         assert torch.allclose(lagrangian_store.lagrangian, lag2)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 
 # @pytest.mark.parametrize(
 #     "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL]

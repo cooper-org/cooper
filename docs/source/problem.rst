@@ -110,21 +110,21 @@ define a ``ConstrainedMinimizationProblem`` in **Cooper**.
 
             logits = model.forward(inputs)
 
-            const_level1, const_level2 = self.problem_attributes
+            const_level0, const_level1 = self.problem_attributes
 
             # Remember to write the constraints using the convention "g <= 0"!
 
             # (Greater than) Inequality that only depends on the model properties or parameters
-            # g_1 >= const_level1 --> const_level1 - g_1 <= 0
-            defect1 = const_level1 - ineq_const1(model)
+            # g_0 >= const_level0 --> const_level0 - g_0 <= 0
+            defect0 = const_level0 - ineq_const0(model)
 
             # (Less than) Inequality that depends on the model's predictions
-            # g_2 <= const_level2 --> g_2  - const_level2 <= 0
-            defect2 = ineq_const2(logits) - const_level2
+            # g_1 <= const_level1 --> g_2  - const_level1 <= 0
+            defect1 = ineq_const1(logits) - const_level1
 
             # We recommend using torch.stack to ensure the dependencies in the computational
             # graph are properly preserved.
-            ineq_defect = torch.stack([defect1, defect2])
+            ineq_defect = torch.stack([defect0, defect1])
 
             return cooper.CMPState(ineq_defect=ineq_defect, eq_defect=None, misc={'logits': logits})
 

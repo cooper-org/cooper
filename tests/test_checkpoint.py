@@ -114,27 +114,29 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     ],
 )
 def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
+    formulation_class = formulation_type.value
+
     if formulation_type == cooper.FormulationType.PENALTY:
         constraint_type = cooper.ConstraintType.PENALTY
     else:
         constraint_type = cooper.ConstraintType.INEQUALITY
 
-    has_multipliers = formulation_type in [
-        cooper.FormulationType.LAGRANGIAN,
-        cooper.FormulationType.AUGMENTED_LAGRANGIAN,
-    ]
-    has_penalties = formulation_type != cooper.FormulationType.LAGRANGIAN
+    has_multiplier = formulation_class.expects_multiplier
+    has_penalties = formulation_class.expects_penalty_coefficient
 
     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
-    alternating = cooper.optim.AlternatingType.FALSE
+    def make_fresh_penalty_coefficients(has_penalties):
+        if has_penalties:
+            penalty_coefficient0 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+            penalty_coefficient1 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
+            return [penalty_coefficient0, penalty_coefficient1]
+        else:
+            return None
 
-    const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    penalty_coefficients = [const1_penalty_coefficient, const2_penalty_coefficient] if has_penalties else [None, None]
-
+    penalty_coefficients = make_fresh_penalty_coefficients(has_penalties=has_penalties)
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
         formulation_type=formulation_type,
@@ -147,7 +149,7 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=alternating,
+        alternation_type=cooper.optim.AlternationType.FALSE,
     )
 
     roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
@@ -156,16 +158,17 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
         cooper_optimizer.roll(**roll_kwargs)
         if has_penalties:
             # Multiply the penalty coefficients by 1.01
-            const1_penalty_coefficient.value = const1_penalty_coefficient() * 1.01
-            const2_penalty_coefficient.value = const2_penalty_coefficient() * 1.01
+            for _penalty_coefficient in penalty_coefficients:
+                _penalty_coefficient.value = _penalty_coefficient() * 1.01
 
     # Generate checkpoints after 10 steps of training
     if has_penalties:
-        penalty1_after10 = const1_penalty_coefficient().clone().detach()
-        penalty2_after10 = const2_penalty_coefficient().clone().detach()
-    if has_multipliers:
-        multiplier1_after10 = cmp.constraint_groups[0].multiplier().clone().detach()
-        multiplier2_after10 = cmp.constraint_groups[1].multiplier().clone().detach()
+        penalty_coefficient0_after10 = penalty_coefficients[0]().clone().detach()
+        penalty_coefficient1_after10 = penalty_coefficients[1]().clone().detach()
+
+    if has_multiplier:
+        multiplier0_after10 = cmp.constraint_groups[0].multiplier().clone().detach()
+        multiplier1_after10 = cmp.constraint_groups[1].multiplier().clone().detach()
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         torch.save(cmp.constraint_groups[0].state_dict(), os.path.join(tmpdirname, "cg0.pt"))
@@ -178,15 +181,12 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
     for _ in range(10):
         cooper_optimizer.roll(**roll_kwargs)
         if has_penalties:
-            const1_penalty_coefficient.value = const1_penalty_coefficient() * 1.01
-            const2_penalty_coefficient.value = const2_penalty_coefficient() * 1.01
+            # Multiply the penalty coefficients by 1.01
+            for penalty_coefficient in penalty_coefficients:
+                penalty_coefficient.value = penalty_coefficient() * 1.01
 
     # Reload from checkpoint
-    new_const1_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_const2_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_penalty_coefficients = (
-        [new_const1_penalty_coefficient, new_const2_penalty_coefficient] if has_penalties else [None, None]
-    )
+    new_penalty_coefficients = make_fresh_penalty_coefficients(has_penalties=has_penalties)
 
     new_cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
@@ -201,25 +201,25 @@ def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
     if has_penalties:
         # The loaded penalty coefficients come from 10 steps of training, so they should be
         # different from the current ones
-        new_penalty1_value = new_const1_penalty_coefficient().clone().detach()
-        new_penalty2_value = new_const2_penalty_coefficient().clone().detach()
-        assert not torch.allclose(new_penalty1_value, const1_penalty_coefficient())
-        assert not torch.allclose(new_penalty2_value, const2_penalty_coefficient())
+        new_penalty_coefficient0_value = new_penalty_coefficients[0]().clone().detach()
+        new_penalty_coefficient1_value = new_penalty_coefficients[1]().clone().detach()
+        assert not torch.allclose(new_penalty_coefficient0_value, penalty_coefficients[0]())
+        assert not torch.allclose(new_penalty_coefficient1_value, penalty_coefficients[1]())
 
         # They should, however, be the same as the ones recorded before the checkpoint
-        assert torch.allclose(new_penalty1_value, penalty1_after10)
-        assert torch.allclose(new_penalty2_value, penalty2_after10)
+        assert torch.allclose(new_penalty_coefficient0_value, penalty_coefficient0_after10)
+        assert torch.allclose(new_penalty_coefficient1_value, penalty_coefficient1_after10)
 
-    if has_multipliers:
+    if has_multiplier:
         # Similar story for the multipliers
-        new_multiplier1_value = new_cmp.constraint_groups[0].multiplier().clone().detach()
-        new_multiplier2_value = new_cmp.constraint_groups[1].multiplier().clone().detach()
+        new_multiplier0_value = new_cmp.constraint_groups[0].multiplier().clone().detach()
+        new_multiplier1_value = new_cmp.constraint_groups[1].multiplier().clone().detach()
 
         # Ignoring the case where the multiplier is 0 as both may match simply because
         # the run is feasible
+        if new_multiplier0_value != 0:
+            assert not torch.allclose(new_multiplier0_value, cmp.constraint_groups[0].multiplier())
         if new_multiplier1_value != 0:
-            assert not torch.allclose(new_multiplier1_value, cmp.constraint_groups[0].multiplier())
-        if new_multiplier2_value != 0:
-            assert not torch.allclose(new_multiplier2_value, cmp.constraint_groups[1].multiplier())
+            assert not torch.allclose(new_multiplier1_value, cmp.constraint_groups[1].multiplier())
+        assert torch.allclose(new_multiplier0_value, multiplier0_after10)
         assert torch.allclose(new_multiplier1_value, multiplier1_after10)
-        assert torch.allclose(new_multiplier2_value, multiplier2_after10)

@@ -64,15 +64,15 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     if use_violation_fn:
         # We don't see the value of the loss at the updated point since we only
         # evaluate the violations
-        lag1 = torch.sum(violations * lmbda0)
+        lagrangian1 = torch.sum(violations * lmbda0)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
-        assert torch.allclose(lagrangian_store.lagrangian, lag1)
+        assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
     else:
-        lag1 = cmp_state.loss + torch.sum(violations * lmbda0)
+        lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda0)
         # Since the multipliers are still zero, the Lagrangian matches the loss at
         # the updated primal point
-        assert torch.allclose(lagrangian_store.lagrangian, lag1)
+        assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 
     # ------------ Second step of alternating updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
@@ -92,15 +92,15 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     if use_violation_fn:
         # We don't see the value of the loss at the updated point since we only
         # evaluate the violations
-        lag2 = torch.sum(violations * lmbda1)
+        lagrangian2 = torch.sum(violations * lmbda1)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
-        assert torch.allclose(lagrangian_store.lagrangian, lag2)
+        assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
     else:
-        lag2 = cmp_state.loss + torch.sum(violations * lmbda1)
+        lagrangian2 = cmp_state.loss + torch.sum(violations * lmbda1)
         # Since the multipliers are still zero, the Lagrangian matches the loss at
         # the updated primal point
-        assert torch.allclose(lagrangian_store.lagrangian, lag2)
+        assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 
 
 def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
@@ -158,8 +158,8 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
     # Original loss = 2 ---  Original violations = [2, -2]
     # Updated multipliers = [0.02, 0.0]
     # Lagrangian value = 2 + 0.02 * 2 + 0.0 * (-2) = 2.04
-    lag1 = cmp_state.loss + torch.sum(violations * lmbda1)
-    assert torch.allclose(lagrangian_store.lagrangian, lag1)
+    lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda1)
+    assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 
     # ------------ Second step of alternating updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
@@ -178,8 +178,8 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
         assert torch.allclose(multiplier, mktensor([target_value]))
 
     # Lagrangian value = 1.84243212 + 0.039596 * 1.9596 + 0.0 * (-1.95979996) = 1.9216
-    lag2 = cmp_state.loss + torch.sum(violations * lmbda2)
-    assert torch.allclose(lagrangian_store.lagrangian, lag2)
+    lagrangian2 = cmp_state.loss + torch.sum(violations * lmbda2)
+    assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 
     # grad_x = -0.039196, grad_y = -3.878796
     # x2 = 0.0002 - 0.01 * (-0.039196) = 0.00059196
