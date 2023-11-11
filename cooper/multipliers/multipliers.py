@@ -91,6 +91,37 @@ class ExplicitMultiplier(Multiplier):
     def implicit_constraint_type(self):
         return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
 
+    def state_dict(self):
+        _state_dict = super().state_dict()
+        _state_dict["enforce_positive"] = self.enforce_positive
+        _state_dict["restart_on_feasible"] = self.restart_on_feasible
+        _state_dict["default_restart_value"] = self.default_restart_value
+        return _state_dict
+
+    def load_state_dict(self, state_dict):
+        self.enforce_positive = state_dict.pop("enforce_positive")
+        self.restart_on_feasible = state_dict.pop("restart_on_feasible")
+        self.default_restart_value = state_dict.pop("default_restart_value")
+        super().load_state_dict(state_dict)
+        self.device = self.weight.device
+
+
+class DenseMultiplier(ExplicitMultiplier):
+    """Simplest kind of trainable Lagrange multiplier.
+
+    :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
+    :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
+    in the group are measured constantly.
+
+    For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
+    one constraint per training example) you may consider using an
+    :py:class:`~cooper.multipliers.IndexedMultiplier`.
+    """
+
+    def forward(self):
+        """Return the current value of the multiplier."""
+        return torch.clone(self.weight)
+
     def post_step_(self):
         """
         Post-step function for multipliers. This function is called after each step of
@@ -144,37 +175,6 @@ class ExplicitMultiplier(Multiplier):
 
             self.strictly_feasible_indices = None
 
-    def state_dict(self):
-        _state_dict = super().state_dict()
-        _state_dict["enforce_positive"] = self.enforce_positive
-        _state_dict["restart_on_feasible"] = self.restart_on_feasible
-        _state_dict["default_restart_value"] = self.default_restart_value
-        return _state_dict
-
-    def load_state_dict(self, state_dict):
-        self.enforce_positive = state_dict.pop("enforce_positive")
-        self.restart_on_feasible = state_dict.pop("restart_on_feasible")
-        self.default_restart_value = state_dict.pop("default_restart_value")
-        super().load_state_dict(state_dict)
-        self.device = self.weight.device
-
-
-class DenseMultiplier(ExplicitMultiplier):
-    """Simplest kind of trainable Lagrange multiplier.
-
-    :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
-    :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
-    in the group are measured constantly.
-
-    For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
-    one constraint per training example) you may consider using an
-    :py:class:`~cooper.multipliers.IndexedMultiplier`.
-    """
-
-    def forward(self):
-        """Return the current value of the multiplier."""
-        return torch.clone(self.weight)
-
     def __repr__(self):
         return f"DenseMultiplier(enforce_positive={self.enforce_positive}, shape={tuple(self.weight.shape)})"
 
@@ -220,9 +220,6 @@ class IndexedMultiplier(ExplicitMultiplier):
         self.last_seen_mask = self.last_seen_mask.to(device=device)
         return super().to(device=device, dtype=dtype)
 
-    def __repr__(self):
-        return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
-
     def post_step_(self):
         if self.strictly_feasible_indices is not None:
             # Only consider a constraint feasible if it was seen since the last step.
@@ -236,6 +233,9 @@ class IndexedMultiplier(ExplicitMultiplier):
 
         # Clear the contents of the seen mask.
         self.last_seen_mask *= False
+
+    def __repr__(self):
+        return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
 
 class ImplicitMultiplier(Multiplier):
