@@ -35,11 +35,8 @@ import numpy as np
 import style_utils
 import torch
 from style_utils import *
-from torch.nn.functional import binary_cross_entropy_with_logits as bce_loss
 
 import cooper
-from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType
-from cooper.optim import SimultaneousOptimizer, UnconstrainedOptimizer
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -82,7 +79,7 @@ def plot_pane(ax, inputs, x1, x2, achieved_const, titles, colors):
     ax.set_aspect("equal")
     ax.set_xlim(-2, 2)
     ax.set_ylim(-2, 2)
-    ax.set_title(titles[idx] + " - Pred. Blue Prop.: " + const_str)
+    ax.set_title(titles[idx] + " - Pred. Blue %: " + const_str)
 
 
 class UnconstrainedMixtureSeparation(cooper.ConstrainedMinimizationProblem):
@@ -91,8 +88,8 @@ class UnconstrainedMixtureSeparation(cooper.ConstrainedMinimizationProblem):
 
     def compute_cmp_state(self, model, inputs, targets):
         logits = model(inputs)
-        loss = bce_loss(logits.flatten(), targets)
-        return CMPState(loss=loss)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits.flatten(), targets)
+        return cooper.CMPState(loss=loss)
 
 
 class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
@@ -102,67 +99,68 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
     Args:
         use_proxy: Flag to use proxy-constraints. If ``True``, we use a hinge
             relaxation. Defaults to ``False``.
-        const_level: Minimum proportion of points to be predicted as belonging to the
-            blue class. Ignored when ``is_constrained==False``. Defaults to ``0.7``.
+        constraint_level: Minimum proportion of points to be predicted as belonging to
+            the blue class. Ignored when ``is_constrained==False``. Defaults to ``0.7``.
     """
 
-    def __init__(self, ineq_group: ConstraintGroup, use_proxy: bool = False, const_level: float = 0.7):
+    def __init__(self, use_strict_constraints: bool = False, constraint_level: float = 0.7):
         super().__init__()
 
-        self.ineq_group = ineq_group
-        self.const_level = const_level
-        self.use_proxy = use_proxy
+        constraint_type = constraint_type = cooper.ConstraintType.INEQUALITY
+        self.multiplier = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
+        self.constraint_group = cooper.ConstraintGroup(
+            constraint_type=constraint_type,
+            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            multiplier=self.multiplier,
+        )
+
+        self.constraint_level = constraint_level
+        self.use_strict_constraints = use_strict_constraints
 
     def compute_cmp_state(self, model, inputs, targets):
         logits = model(inputs)
-        loss = bce_loss(logits.flatten(), targets)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits.flatten(), targets)
 
-        # Separating classes s.t. predicting at least const_level as class 0
+        # Separating classes s.t. predicting at least constraint_level as class 0
 
         # Hinge approximation of the rate
         probs = torch.sigmoid(logits)
+
+        # The differentiable violation uses the hinge loss as a surrogate
         hinge = torch.mean(torch.max(torch.zeros_like(probs), 1 - probs))
+        differentiable_violation = -hinge
 
-        # level - proxy_ineq_defect <= 0
-        hinge_defect = self.const_level - hinge
-
-        if not self.use_proxy:
-            ineq_group_state = ConstraintState(violation=hinge_defect)
-        else:
-            # Use non-proxy defects to update the Lagrange multipliers
-            # Proportion of elements in class 0 is the non-proxy defect
+        strict_violation = None
+        if self.use_strict_constraints:
+            # Use strict violations to update the Lagrange multipliers
             classes = logits >= 0.0
             prop_0 = torch.sum(classes == 0) / targets.numel()
-            ineq_group_state = ConstraintState(violation=hinge_defect, strict_violation=self.const_level - prop_0)
+            strict_violation = self.constraint_level - prop_0
 
-        observed_constraints = [(self.ineq_group, ineq_group_state)]
-        state = CMPState(loss=loss, observed_constraints=observed_constraints)
-
-        return state
+        constraint_state = cooper.ConstraintState(violation=differentiable_violation, strict_violation=strict_violation)
+        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint_group, constraint_state)])
 
 
-def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.7):
+def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_level=0.7):
     """
     Train via SGD
     """
 
-    is_constrained = problem_name.lower() in ["constrained", "proxy"]
-    use_proxy = problem_name.lower() == "proxy"
+    is_constrained = "const" in problem_name.lower()
+    use_strict_constraints = "proxy" in problem_name.lower()
 
     model = torch.nn.Linear(2, 1)
     primal_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.7)
 
     if is_constrained:
-        ineq_group = ConstraintGroup(constraint_type=ConstraintType.INEQUALITY, multiplier_kwargs={"shape": 1})
-        cmp = MixtureSeparation(ineq_group, use_proxy, const_level)
-        dual_optimizer = torch.optim.SGD(ineq_group.multiplier.parameters(), lr=lr, momentum=0.7, maximize=True)
-
-        cooper_optimizer = SimultaneousOptimizer(
-            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=ineq_group
+        cmp = MixtureSeparation(use_strict_constraints, constraint_level)
+        dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=lr, momentum=0.7, maximize=True)
+        cooper_optimizer = cooper.optim.SimultaneousOptimizer(
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
         )
     else:
         cmp = UnconstrainedMixtureSeparation()
-        cooper_optimizer = UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
+        cooper_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
 
     for _ in range(num_iters):
         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model, inputs, targets)
@@ -177,17 +175,17 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, const_level=0.
 
 
 # Plot configs
-titles = ["Unconstrained", "Constrained", "Proxy"]
+titles = ["Unconstrained", "Const+Surrogate", "Const+Proxy"]
 fig, axs = plt.subplots(1, 3, figsize=(18, 6))
 
 # Data and training configs
 inputs, labels = generate_mog_dataset()
-const_level = 0.7
+constraint_level = 0.7
 lr = 2e-2
 num_iters = 5000
 
 for idx, name in enumerate(titles):
-    model, achieved_const = train(name, inputs, labels, lr=lr, num_iters=num_iters, const_level=const_level)
+    model, achieved_const = train(name, inputs, labels, lr=lr, num_iters=num_iters, constraint_level=constraint_level)
 
     # Compute decision boundary
     weight, bias = model.weight.data.flatten().numpy(), model.bias.data.numpy()
@@ -199,5 +197,5 @@ for idx, name in enumerate(titles):
     colors = [red if _ == 1 else blue for _ in labels.flatten()]
     plot_pane(axs[idx], inputs, x1, x2, achieved_const, titles, colors)
 
-fig.suptitle("Goal: Predict at least " + str(const_level * 100) + "% as blue")
+fig.suptitle("Goal: Predict at least " + str(constraint_level * 100) + "% as blue")
 plt.show()
