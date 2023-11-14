@@ -287,6 +287,8 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+
+    multipliers = cooper.utils.ensure_sequence(multipliers) if multipliers is not None else []
     is_constrained = len(multipliers) > 0
     dual_optimizers = build_dual_optimizers(
         is_constrained, multipliers, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
