@@ -34,13 +34,14 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_constraint_surrogate = use_constraint_surrogate
         self.observe_probability = observe_probability
 
-        multiplier_kwargs = {"shape": 2, "device": device, "is_indexed": True}
-        constraint_kwargs = {
-            "constraint_type": cooper.ConstraintType.INEQUALITY,
-            "formulation_type": cooper.FormulationType.LAGRANGIAN,
-        }
-
-        self.constraint_group = cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
+        self.multiplier = cooper.multipliers.IndexedMultiplier(
+            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=2, device=device
+        )
+        self.constraint_group = cooper.ConstraintGroup(
+            constraint_type=cooper.ConstraintType.INEQUALITY,
+            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            multiplier=self.multiplier,
+        )
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -98,6 +99,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         constraint_features = (torch.rand_like(violation) < self.observe_probability).nonzero().flatten()
         strict_constraint_features = (torch.rand_like(strict_violation) < self.observe_probability).nonzero().flatten()
 
+        breakpoint()
         violation = violation[constraint_features]
         strict_violation = strict_violation[strict_constraint_features]
 
@@ -145,7 +147,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        multipliers=cmp.multipliers,
+        multipliers=cmp.multiplier,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_name="SGD",
