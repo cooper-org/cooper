@@ -4,9 +4,9 @@ Implementation of the :py:class:`AlternatingPrimalDualOptimizer` and
 :py:class:`AlternatingPrimalDualOptimizer` classes.
 """
 
+from enum import Enum
 from typing import Callable, Optional
 
-from enum import Enum
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
@@ -110,7 +110,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         self.dual_step(call_extrapolation=False)
 
         # Purge the primal lagrangian to avoid reusing it in the next primal update
-        new_cmp_state.purge_lagrangian(purge_primal=True, purge_dual=False)
+        new_cmp_state.purge_primal_lagrangian()
 
         return new_cmp_state, lagrangian_store_post_primal_update
 
@@ -162,12 +162,12 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
         # Purge primal Lagrangian which was populated during the dual update
-        cmp_state.purge_lagrangian(purge_primal=True, purge_dual=False)
+        cmp_state.purge_primal_lagrangian()
         lagrangian_store_post_dual_step = cmp_state.populate_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
         # Purge the dual lagrangian to avoid reusing it in the next dual update
-        cmp_state.purge_lagrangian(purge_primal=False, purge_dual=True)
+        cmp_state.purge_dual_lagrangian()
 
         return cmp_state, lagrangian_store_post_dual_step

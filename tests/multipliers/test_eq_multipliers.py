@@ -4,7 +4,6 @@ import torch
 
 import cooper
 
-
 CONSTRAINT_TYPE = cooper.ConstraintType.EQUALITY
 
 

@@ -21,7 +21,6 @@ from torchvision import datasets, transforms
 
 import cooper
 
-
 np.random.seed(0)
 torch.manual_seed(0)
 
