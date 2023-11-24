@@ -61,24 +61,51 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         compute_cmp_state_fn: Callable[..., CMPState],
         compute_violations_fn: Optional[Callable[..., CMPState]] = None,
     ) -> tuple[CMPState, LagrangianStore]:
-        """Performs a primal-dual alternating step where the primal variables are
-        updated first, and the dual variables are updated based on the constraint
-        violations at the updated primal point.
+        r"""Performs a primal-dual alternating step where the primal variables are
+        updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
+        (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
+        constraint violations at the updated primal point :math:`x_{t+1}`.
 
-        Note that the constraint violations are computed twice: once for the initial
+        Note that the constraint violations must be computed twice: once for the initial
         primal update, and once more for the dual update. The second computation can
         exploit the fact that the objective function does not need to be re-evaluated,
         and so the computation can be sped up by only computing the constraint
-        violations through the `compute_violations_fn` argument.
+        violations via the ``compute_violations_fn`` argument.
+
+        .. note::
+            Since the ``compute_violations_fn`` argument allows to avoid re-evaluating
+            the objective function, we may not have enough information to exactly
+            compute the value of the Lagrangian before the dual update
+            :math:`\mathcal{L}(x_{t+1}, \lambda_t, \mu_t)`, since only the constraints are
+            evaluated at the new primal point :math:`x_{t+1}`.
+
+            Thus we `approximate the Lagrangian` by using the objective function
+            computed at the old iterate :math:`x_t`. However, we do have a new estimate
+            of the constraint violations :math:`g(x_{t+1})` and :math:`h(x_{t+1})`. The
+            Lagrangian value contained in the LagrangianStore at the end of the roll is:
+
+            .. math::
+                \mathcal{L} = f(x_t) + {\lambda_{t}}^{\\top} g(x_{t+1}) + {\mu_{t}}^{\\top} h(x_{t+1})
+
+            Whenever the ``compute_violations_fn`` argument is **not** provided, the
+            Lagrangian value is computed exactly as:
+
+            .. math::
+                \mathcal{L} = f(x_{t+1}) + {\lambda_{t}}^{\\top} g(x_{t+1}) + {\mu_{t}}^{\\top} h(x_{t+1})
+
+            Note that in either case, the returned Lagrangian value uses the value of
+            the multipliers before their update, i.e., :math:`\lambda_t` and
+            :math:`\mu_t`.
 
         Args:
             compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
 
             compute_violations_fn: ``Callable`` for re-evaluating the constraint
                 violations when performing alternating updates. When this argument
-                is provided, it takes precedence over the `compute_cmp_state_fn` for
+                is provided, it takes precedence over the ``compute_cmp_state_fn`` for
                 the update of the dual variables. If not provided, the violation
-                measured by `compute_cmp_state_fn` are used. Defaults to None.
+                measured by ``compute_cmp_state_fn`` at the updated primal iterate are
+                used. Defaults to None.
 
         """
 
@@ -89,7 +116,8 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         # TODO(gallego-posada): After the modularization of the populate_lagrangian
         # method of the CMPState, we can make code more efficient by only computing
         # the required primal/dual lagrangians as needed.
-        lagrangian_store = cmp_state.populate_lagrangian()
+
+        lagrangian_store_for_primal = cmp_state.populate_primal_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
@@ -99,43 +127,45 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         with torch.no_grad():
             # Note that the dual variables do not intervene in the computation of the
             # CMP state. This means we can skip gradient computation wrt the primal
-            # parameters to avoid wasteful computation, since we only need the gradient
-            # wrt the dual variables.
-            # Also note that the call to compute_violations_fn might _not_ have
-            # populated the loss.
+            # parameters to avoid wasteful computation, since we will only need the
+            # gradient wrt the dual variables.
             if compute_violations_fn is not None:
                 new_cmp_state = compute_violations_fn()
 
                 if new_cmp_state.loss is not None:
-                    raise RuntimeError("Expected `compute_violations_fn` to not populate the loss.")
-
-                # We copy the loss evaluated during the primal update so users can
-                # access it for logging purposes.
-                if new_cmp_state.misc is None:
-                    new_cmp_state.misc = {}
-                new_cmp_state.misc["previous_loss"] = cmp_state.loss.item()
-
+                    raise RuntimeError(
+                        "Expected `compute_violations_fn` to not populate the loss. Please provide this value for the `compute_cmp_state_fn` instead."
+                    )
             else:
                 new_cmp_state = compute_cmp_state_fn()
 
             if new_cmp_state._dual_lagrangian is not None:
                 error_message = (
-                    "Expected a fresh CMP state for alternating update but the provided state has a non-None value"
+                    "Expected a fresh CMPState for alternating update but the provided state has a non-None value"
                     " for the `_dual_lagrangian` attribute."
                 )
                 raise RuntimeError(error_message)
 
-        # TODO(gallego-posada): After the modularization of the populate_lagrangian
-        # method of the CMPState, we can make code more efficient by only computing
-        # the required primal/dual lagrangians as needed.
-        lagrangian_store_post_primal_update = new_cmp_state.populate_lagrangian()
+        # lagrangian_store_post_primal_update = new_cmp_state.populate_lagrangian()
+        lagrangian_store_for_dual = new_cmp_state.populate_dual_lagrangian()
         new_cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
 
         # Purge the primal lagrangian to avoid reusing it in the next primal update
         new_cmp_state.purge_primal_lagrangian()
 
-        return new_cmp_state, lagrangian_store_post_primal_update
+        # Patch the CMPState and LagrangianStore with the latest available loss and
+        # Lagrangian estimate. See the docstring for more details.
+        if new_cmp_state.loss is None:
+            # If the loss was not populated by the `compute_violations_fn`, we copy the
+            # loss evaluated during the primal update so users can access it for logging
+            new_cmp_state.loss = cmp_state.loss
+        assert lagrangian_store_for_dual.lagrangian is None
+        lagrangian_store_for_dual.lagrangian = new_cmp_state.loss + lagrangian_store_for_dual.dual_lagrangian
+        assert lagrangian_store_for_dual.primal_constraint_stores == []
+        lagrangian_store_for_dual.primal_constraint_stores = lagrangian_store_for_primal.primal_constraint_stores
+
+        return new_cmp_state, lagrangian_store_for_dual
 
 
 class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):

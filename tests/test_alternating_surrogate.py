@@ -79,13 +79,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     violations_after_primal_update = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     strict_violations_after_primal_update = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
-    if use_violation_fn:
-        # The loss is not evaluated at the updated primal point, so cmp_state.loss=None
-        assert cmp_state.loss is None
-        loss = torch.tensor(0.0, device=device)
-    else:
-        loss = cmp_state.loss
-
+    loss = cmp_state.loss
     primal_lagrangian0 = loss + torch.sum(violations_after_primal_update * lmbda0)
     dual_lagrangian0 = torch.sum(strict_violations_after_primal_update * lmbda0)
 
@@ -113,13 +107,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     violations_after_primal_update = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     strict_violations_after_primal_update = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
-    if use_violation_fn:
-        # The loss is not evaluated at the updated primal point, so cmp_state.loss=None
-        assert cmp_state.loss is None
-        loss = torch.tensor(0.0, device=device)
-    else:
-        loss = cmp_state.loss
-
+    loss = cmp_state.loss
     primal_lagrangian1 = loss + torch.sum(violations_after_primal_update * lmbda1)
     dual_lagrangian1 = torch.sum(strict_violations_after_primal_update * lmbda1)
 

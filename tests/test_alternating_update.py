@@ -61,9 +61,9 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         assert torch.allclose(multiplier_value, mktensor([target_value]))
 
     if use_violation_fn:
-        # We don't see the value of the loss at the updated point since we only
-        # evaluate the violations
-        lagrangian1 = torch.sum(violations * lmbda0)
+        # Use the loss in the CMP state before the primal update, but the violations
+        # after the primal update
+        lagrangian1 = _cmp_state.loss + torch.sum(violations * lmbda0)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
         assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
@@ -89,9 +89,9 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         assert torch.allclose(multiplier, mktensor([target_value]))
 
     if use_violation_fn:
-        # We don't see the value of the loss at the updated point since we only
-        # evaluate the violations
-        lagrangian2 = torch.sum(violations * lmbda1)
+        # Use the loss in the CMP state before the primal update, but the violations
+        # after the primal update
+        lagrangian2 = _cmp_state.loss + torch.sum(violations * lmbda1)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
         assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
