@@ -120,7 +120,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
 
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, 1, device=device)
-    multiplier_module = IndexedMultiplier(init=multiplier_init)
+    multiplier_module = IndexedMultiplier(init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY)
     param = multiplier_module.weight
 
     def loss_fn(indices):
