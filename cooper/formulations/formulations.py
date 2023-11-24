@@ -187,6 +187,8 @@ class AugmentedLagrangianFormulation(Formulation):
     def __init__(self, constraint_type: ConstraintType):
         # TODO(juan43ramirez): Add documentation
 
+        # FIXME(gallego-posada): We need to ensure that this formulation is being paired
+        # with an AlternatingOptimizer. This check is currently not being performed.
         self.constraint_type = constraint_type
         if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
