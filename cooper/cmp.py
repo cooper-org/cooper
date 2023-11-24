@@ -141,9 +141,6 @@ class CMPState:
             if dual_constraint_store is not None:
                 current_dual_lagrangian = current_dual_lagrangian + dual_constraint_store.lagrangian_contribution
 
-                # TODO(gallego-posada): Consider forbidding the use of extrapolation and
-                # restart_on_feasible together.
-
                 # Extracting the violation from the dual_constraint_store ensures that it is
                 # the "strict" violation, if available.
                 constraint_group.update_strictly_feasible_indices_(

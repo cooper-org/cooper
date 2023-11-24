@@ -57,6 +57,13 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 Please ensure that all optimizers are extrapolation capable."""
             )
 
+        for multiplier in self.multipliers:
+            if getattr(multiplier, "restart_on_feasible", False):
+                raise RuntimeError(
+                    """Using restart on feasible for multipliers is not supported in
+                    conjunction with the ExtrapolationConstrainedOptimizer."""
+                )
+
     def step(self, call_extrapolation: bool = False):
         """Performs an extrapolation step or update step on both the primal and dual
         variables.
