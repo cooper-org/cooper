@@ -66,10 +66,10 @@ def test_pipeline_without_cmp(
         constraint_type = cooper.ConstraintType.INEQUALITY
         default_cg_kwargs = {"constraint_type": constraint_type, "formulation_type": cooper.FormulationType.LAGRANGIAN}
 
-        multiplier0 = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
+        multiplier0 = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1, device=device)
         cg0 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier0)
 
-        multiplier1 = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
+        multiplier1 = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1, device=device)
         cg1 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier1)
 
         constraint_groups = [cg0, cg1]
