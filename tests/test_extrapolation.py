@@ -39,7 +39,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # -------------------- First full extra-gradient step  --------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian_store = cmp_state.populate_lagrangian()
     lagrangian = lagrangian_store.lagrangian
     observed_multiplier_values = lagrangian_store.multiplier_values_for_primal_constraints()
 
@@ -65,7 +65,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # Perform the actual update step
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian_store = cmp_state.populate_lagrangian()
     cmp_state.backward()
     cooper_optimizer.step(call_extrapolation=False)
 
@@ -74,7 +74,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     assert torch.allclose(params.grad, mktensor([-0.0200, -3.8600]))
 
     # -------------------- Second full extra-gradient step  --------------------
-    cooper_optimizer.roll(compute_cmp_state_fn, return_multipliers=True)
+    cooper_optimizer.roll(compute_cmp_state_fn)
 
     assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
     multiplier_values = [constraint.multiplier() for constraint in cmp.constraint_groups]

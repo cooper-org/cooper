@@ -72,9 +72,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             getattr(primal_optimizer, call_method)()  # type: ignore
             self.dual_step(call_extrapolation=call_extrapolation)
 
-    def roll(
-        self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
-    ) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -82,23 +80,18 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
         Args:
             compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
-
-            return_multipliers: When `True`, we return the updated value of the
-                multipliers for the observed constraints.
         """
 
         self.zero_grad()
         cmp_state_pre_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian(return_multipliers=False)
+        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()
         cmp_state_pre_extrapolation.backward()
         self.step(call_extrapolation=True)
 
         # Perform an update step
         self.zero_grad()
         cmp_state_post_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian(
-            return_multipliers=return_multipliers
-        )
+        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian()
         cmp_state_post_extrapolation.backward()
         self.step(call_extrapolation=False)
 

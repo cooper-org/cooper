@@ -46,7 +46,7 @@ def test_manual_augmented_lagrangian_simultaneous(Toy2dCMP_params_init, device):
         primal_optimizers=primal_optimizers, alternation_type=cooper.optim.AlternationType.FALSE, device=device
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])

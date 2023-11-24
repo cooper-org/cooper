@@ -61,11 +61,7 @@ class CMPState:
         self._dual_lagrangian = None
         self._dual_constraint_stores = []
 
-    def populate_lagrangian(self, return_multipliers: bool = False) -> LagrangianStore:
-        # TODO: this function could return the ConstraintStores for each of the
-        # observed constraints. As such, change the return_multipliers argument to
-        # return_constraint_stores.
-
+    def populate_lagrangian(self) -> LagrangianStore:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -75,15 +71,10 @@ class CMPState:
         between the primal (resp. dual) Lagrangian contribution and the dual (resp.
         primal) variables.
 
-        Args:
-            return_multipliers: When `True`, we return the value of the multipliers for
-                the observed constraints.
 
         Returns:
             primal_lagrangian: Value of the Lagrangian. This tensor has gradient with
                 respect to the primal variables.
-            observed_multiplier_values: When `return_multipliers=True`, return the value
-                of the multiplier for each of the observed_constraints.
         """
 
         # TODO: could populate the primal and dual lagrangians separately. This is useful
@@ -164,9 +155,6 @@ class CMPState:
             primal_constraint_stores=self._primal_constraint_stores,
             dual_constraint_stores=self._dual_constraint_stores,
         )
-        # if return_multipliers:
-        #     lagrangian_store.primal_observed_multipliers = primal_observed_multiplier_values
-        #     lagrangian_store.dual_observed_multipliers = dual_observed_multiplier_values
 
         return lagrangian_store
 

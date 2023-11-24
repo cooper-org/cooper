@@ -99,7 +99,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         constraint_features = (torch.rand_like(violation) < self.observe_probability).nonzero().flatten()
         strict_constraint_features = (torch.rand_like(strict_violation) < self.observe_probability).nonzero().flatten()
 
-        breakpoint()
+        # breakpoint()
         violation = violation[constraint_features]
         strict_violation = strict_violation[strict_constraint_features]
 
@@ -154,7 +154,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
         dual_optimizer_kwargs={"lr": dual_lr},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
 
     def manual_update_on_primal(xy, lmbda, grads, constraint_features):
         if constraint_features.numel() == 0:

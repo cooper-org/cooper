@@ -40,7 +40,6 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     roll_kwargs = {
         "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
         "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
-        "return_multipliers": True,
     }
 
     x0_y0 = mktensor([0.0, -1.0])
@@ -133,7 +132,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])

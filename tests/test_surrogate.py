@@ -39,7 +39,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])

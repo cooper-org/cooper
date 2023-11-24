@@ -42,7 +42,6 @@
 #     roll_kwargs = {
 #         "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
 #         "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
-#         "return_multipliers": True,
 #     }
 
 #     x0_y0 = mktensor([0.0, -1.0])
