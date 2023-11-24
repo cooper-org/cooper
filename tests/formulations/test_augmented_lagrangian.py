@@ -9,6 +9,11 @@ import torch
 import cooper
 
 
+@pytest.fixture(params=[cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL])
+def alternation_type(request):
+    return request.param
+
+
 def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, device):
     penalty_coefficient0 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     penalty_coefficient1 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
@@ -99,9 +104,6 @@ def test_manual_augmented_lagrangian_dual_primal():
     pass
 
 
-@pytest.mark.parametrize(
-    "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL, False]
-)
 def test_convergence_augmented_lagrangian(
     alternation_type, Toy2dCMP_params_init, Toy2dCMP_problem_properties, use_multiple_primal_optimizers, device
 ):
@@ -137,13 +139,13 @@ def test_convergence_augmented_lagrangian(
         assert torch.allclose(param, exact_solution, atol=1e-4)
 
 
-def test_save_and_load_state_dict(Toy2dCMP_params_init, device):
+def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device):
     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
     cmp, cooper_optimizer, penalty_coefficient0, penalty_coefficient1 = setup_augmented_lagrangian_objects(
-        primal_optimizers=primal_optimizers, alternation_type=cooper.optim.AlternationType.FALSE, device=device
+        primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
     )
 
     roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
