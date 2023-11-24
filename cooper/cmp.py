@@ -15,8 +15,8 @@ from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
 
 @dataclass
 class LagrangianStore:
-    """Stores the value of the (primal) Lagrangian, the dual Lagrangian, as well as the
-    values of the observed multipliers."""
+    """Stores the value of the (primal) Lagrangian, the dual Lagrangian, as well as
+    ConstraintStores for the primal-contributing and dual-contributing constraints."""
 
     lagrangian: torch.Tensor
     dual_lagrangian: Optional[torch.Tensor] = None
@@ -61,6 +61,112 @@ class CMPState:
         self._dual_lagrangian = None
         self._dual_constraint_stores = []
 
+    def populate_primal_lagrangian(self) -> LagrangianStore:
+        """Computes and accumulates the primal-differentiable Lagrangian based on the
+        loss and the contribution of the observed constraints.
+
+        Correct execution assumes that the private attributes are purged when necessary.
+        The re-use of CMPState objects is discouraged.
+        """
+
+        contributing_constraints = [(cg, cs) for cg, cs in self.observed_constraints if cs.contributes_to_primal_update]
+
+        if self.loss is None and len(contributing_constraints) == 0:
+            # No loss provided, and no observed constraints will contribute to the
+            # primal Lagrangian.
+            # We return any existent values for the private attributes, unmodified.
+            return LagrangianStore(
+                lagrangian=self._primal_lagrangian,
+                dual_lagrangian=self._dual_lagrangian,
+                primal_constraint_stores=self._primal_constraint_stores,
+                dual_constraint_stores=self._dual_constraint_stores,
+            )
+
+        # Either a loss was provided, or at least one observed constraint contributes to
+        # the primal Lagrangian.
+        previous_primal_lagrangian = 0.0 if self._primal_lagrangian is None else self._primal_lagrangian
+        current_primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
+
+        current_primal_constraint_stores = []
+        for constraint_group, constraint_state in contributing_constraints:
+            primal_constraint_store = constraint_group.compute_constraint_primal_contribution(constraint_state)
+            current_primal_constraint_stores.append(primal_constraint_store)
+            if primal_constraint_store is not None:
+                current_primal_lagrangian = current_primal_lagrangian + primal_constraint_store.lagrangian_contribution
+
+        # Modify "private" attributes to accumulate Lagrangian values over successive
+        # calls to `populate_primal_lagrangian`
+        self._primal_lagrangian = previous_primal_lagrangian + current_primal_lagrangian
+        self._primal_constraint_stores.extend(current_primal_constraint_stores)
+
+        # We return any existent values for the _dual_lagrangian, and the
+        # _dual_constraint_stores. The _primal_lagrangian and _primal_constraint_stores
+        # attributes have been modified earlier, so their updated values are returned.
+        lagrangian_store = LagrangianStore(
+            lagrangian=self._primal_lagrangian,
+            dual_lagrangian=self._dual_lagrangian,
+            primal_constraint_stores=self._primal_constraint_stores,
+            dual_constraint_stores=self._dual_constraint_stores,
+        )
+
+        return lagrangian_store
+
+    def populate_dual_lagrangian(self) -> LagrangianStore:
+        """Computes and accumulates the dual-differentiable Lagrangian based on the
+        loss and the contribution of the observed constraints.
+
+        Correct execution assumes that the private attributes are purged when necessary.
+        The re-use of CMPState objects is discouraged.
+        """
+        contributing_constraints = [(cg, cs) for cg, cs in self.observed_constraints if cs.contributes_to_dual_update]
+
+        if len(contributing_constraints) == 0:
+            # No observed constraints will contribute to the dual Lagrangian.
+            # We return any existent values for the private attributes, unmodified.
+            return LagrangianStore(
+                lagrangian=self._primal_lagrangian,
+                dual_lagrangian=self._dual_lagrangian,
+                primal_constraint_stores=self._primal_constraint_stores,
+                dual_constraint_stores=self._dual_constraint_stores,
+            )
+
+        # At least one observed constraint contributes to the dual Lagrangian.
+        previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
+        current_dual_lagrangian = 0.0
+
+        current_dual_constraint_stores = []
+        for constraint_group, constraint_state in contributing_constraints:
+            dual_constraint_store = constraint_group.compute_constraint_dual_contribution(constraint_state)
+            current_dual_constraint_stores.append(dual_constraint_store)
+            if dual_constraint_store is not None:
+                current_dual_lagrangian = current_dual_lagrangian + dual_constraint_store.lagrangian_contribution
+
+                # TODO(gallego-posada): Consider forbidding the use of extrapolation and
+                # restart_on_feasible together.
+
+                # Extracting the violation from the dual_constraint_store ensures that it is
+                # the "strict" violation, if available.
+                constraint_group.update_strictly_feasible_indices_(
+                    strict_violation=dual_constraint_store.violation, constraint_state=constraint_state
+                )
+
+        # Modify "private" attributes to accumulate Lagrangian values over successive
+        # calls to `populate_dual_lagrangian`
+        self._dual_lagrangian = previous_dual_lagrangian + current_dual_lagrangian
+        self._dual_constraint_stores.extend(current_dual_constraint_stores)
+
+        # We return any existent values for the _primal_lagrangian, and the
+        # _primal_constraint_stores. The _dual_lagrangian and _dual_constraint_stores
+        # attributes have been modified earlier, so their updated values are returned.
+        lagrangian_store = LagrangianStore(
+            lagrangian=self._primal_lagrangian,
+            dual_lagrangian=self._dual_lagrangian,
+            primal_constraint_stores=self._primal_constraint_stores,
+            dual_constraint_stores=self._dual_constraint_stores,
+        )
+
+        return lagrangian_store
+
     def populate_lagrangian(self) -> LagrangianStore:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
@@ -71,101 +177,34 @@ class CMPState:
         between the primal (resp. dual) Lagrangian contribution and the dual (resp.
         primal) variables.
 
-
         Returns:
-            primal_lagrangian: Value of the Lagrangian. This tensor has gradient with
-                respect to the primal variables.
+            lagrangian_store: LagrangianStore containing the value of the
+            primal-differentiable Lagrangian, the dual-differentiable Lagrangian,
+            as well as the ConstraintStores for the primal- and dual-contributing
+            constraints.
         """
 
-        # TODO: could populate the primal and dual lagrangians separately. This is useful
-        # for alternating updates to not waste computation.
-
-        # Check if any of the observed constraints will contribute to the primal and
-        # dual Lagrangians
-        any_primal_contribution = any([cs.contributes_to_primal_update for cg, cs in self.observed_constraints])
-        any_dual_contribution = any([cs.contributes_to_dual_update for cg, cs in self.observed_constraints])
-
-        if self.loss is None and not any_primal_contribution:
-            # No loss provided, and no observed constraints will contribute to the
-            # primal Lagrangian.
-            primal_lagrangian = None
-        else:
-            # Either a loss was provided, or at least one observed constraint will
-            # contribute to the primal Lagrangian.
-            primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
-
-        dual_lagrangian = 0.0 if any_dual_contribution else None
-
-        for constraint_group, constraint_state in self.observed_constraints:
-            # TODO (juan43ramirez): rename primal_store and dual_store to primal_constraint_store and dual_constraint_store
-            primal_store, dual_store = constraint_group.compute_constraint_contribution(constraint_state)
-            self._primal_constraint_stores.append(primal_store)
-            self._dual_constraint_stores.append(dual_store)
-
-            if constraint_state.contributes_to_primal_update and primal_store is not None:
-                primal_lagrangian = primal_lagrangian + primal_store.lagrangian_contribution
-
-            if constraint_state.contributes_to_dual_update and dual_store is not None:
-                dual_lagrangian = dual_lagrangian + dual_store.lagrangian_contribution
-
-                # TODO(gallego-posada): Consider forbidding the use of extrapolation and
-                # restart_on_feasible together.
-
-                # Determine which of the constraints are strictly feasible and update
-                # the `strictly_feasible_indices` attribute of the multiplier.
-                if (
-                    isinstance(constraint_group.multiplier, ExplicitMultiplier)
-                    and (constraint_group.constraint_type == ConstraintType.INEQUALITY)
-                    and constraint_group.multiplier.restart_on_feasible
-                ):
-                    strict_violation = dual_store.violation
-
-                    if isinstance(constraint_group.multiplier, IndexedMultiplier):
-                        # Need to expand the indices to the size of the multiplier
-                        strictly_feasible_indices = torch.zeros_like(
-                            constraint_group.multiplier.weight, dtype=torch.bool
-                        )
-
-                        # FIXME(gallego-posada): This should be using
-                        # `strict_constraint_features` instead of `constraint_features`.
-                        # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
-                        # dimension 1 of the violations
-                        strictly_feasible_indices[constraint_state.constraint_features] = (
-                            strict_violation.unsqueeze(1) < 0.0
-                        )
-                    else:
-                        strictly_feasible_indices = strict_violation < 0.0
-
-                    constraint_group.multiplier.strictly_feasible_indices = strictly_feasible_indices
-
-        if primal_lagrangian is not None:
-            # Either a loss was provided, or at least one observed constraint
-            # contributed to the primal Lagrangian.
-            previous_primal_lagrangian = 0.0 if self._primal_lagrangian is None else self._primal_lagrangian
-            self._primal_lagrangian = primal_lagrangian + previous_primal_lagrangian
-
-        if dual_lagrangian is not None:
-            # Some observed constraints contributed to the dual Lagrangian
-            previous_dual_lagrangian = 0.0 if self._dual_lagrangian is None else self._dual_lagrangian
-            self._dual_lagrangian = dual_lagrangian + previous_dual_lagrangian
-
-        lagrangian_store = LagrangianStore(
-            lagrangian=self._primal_lagrangian,
-            dual_lagrangian=self._dual_lagrangian,
-            primal_constraint_stores=self._primal_constraint_stores,
-            dual_constraint_stores=self._dual_constraint_stores,
-        )
-
+        # The attributes of the lagrangian_store returned by this function are populated
+        # _sequentially_ and disjointly by each of the function calls below. The order
+        # of the calls is not important.
+        _ = self.populate_primal_lagrangian()
+        lagrangian_store = self.populate_dual_lagrangian()
         return lagrangian_store
 
-    def purge_lagrangian(self, purge_primal: bool, purge_dual: bool) -> None:
+    def purge_primal_lagrangian(self) -> None:
+        """Purge the accumulated primal Lagrangian contributions."""
+        self._primal_lagrangian = None
+        self._primal_constraint_stores = []
+
+    def purge_dual_lagrangian(self) -> None:
+        """Purge the accumulated dual Lagrangian contributions."""
+        self._dual_lagrangian = None
+        self._dual_constraint_stores = []
+
+    def purge_lagrangian(self) -> None:
         """Purge the accumulated Lagrangian contributions."""
-        if purge_primal:
-            self._primal_lagrangian = None
-            self._primal_constraint_stores = []
-        if purge_dual:
-            self._dual_lagrangian = None
-            self._dual_constraint_stores = []
+        self.purge_primal_lagrangian()
+        self.purge_dual_lagrangian()
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -174,7 +213,7 @@ class CMPState:
             self._primal_lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated _primal_lagrangian
-        self.purge_lagrangian(purge_primal=True, purge_dual=False)
+        self.purge_primal_lagrangian()
 
     def dual_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -183,7 +222,7 @@ class CMPState:
             self._dual_lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated _dual_lagrangian
-        self.purge_lagrangian(purge_primal=False, purge_dual=True)
+        self.purge_dual_lagrangian()
 
     def backward(self) -> None:
         """Computes the gradient of the Lagrangian with respect to both the primal and
@@ -192,10 +231,10 @@ class CMPState:
         self.dual_backward()
 
     def __repr__(self) -> str:
-        _string = f"CMPState(loss={self.loss}, \n"
+        _string = f"CMPState(\n  loss={self.loss},\n  observed_constraints=["
         for constraint_group, constraint_state in self.observed_constraints:
-            _string += f"  {constraint_group}: {constraint_state}, \n"
-        _string += f"misc={self.misc})"
+            _string += f"\n\t{constraint_group} -> {constraint_state},"
+        _string += f"\n  ]\n  misc={self.misc}\n)"
         return _string
 
 

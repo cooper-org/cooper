@@ -5,7 +5,7 @@ import torch
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
 from cooper.formulations import Formulation, FormulationType
-from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier, Multiplier, PenaltyCoefficient
 
 
 class ConstraintGroup:
@@ -62,19 +62,46 @@ class ConstraintGroup:
         else:
             self.penalty_coefficient.value = value
 
-    def compute_constraint_contribution(
-        self, constraint_state: ConstraintState
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-        """Compute the contribution of the current constraint to the primal and dual
-        Lagrangians."""
-
+    def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
         kwargs = {"constraint_state": constraint_state}
         if self.formulation.expects_multiplier:
             kwargs["multiplier"] = self.multiplier
         if self.formulation.expects_penalty_coefficient:
             kwargs["penalty_coefficient"] = self.penalty_coefficient
 
-        return self.formulation.compute_lagrangian_contributions(**kwargs)
+        return kwargs
+
+    def compute_constraint_primal_contribution(self, constraint_state: ConstraintState) -> ConstraintStore:
+        """Compute the contribution of the current constraint to the primal Lagrangian."""
+        kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
+        return self.formulation.compute_contribution_for_primal_lagrangian(**kwargs)
+
+    def compute_constraint_dual_contribution(self, constraint_state: ConstraintState) -> ConstraintStore:
+        """Compute the contribution of the current constraint to the dual Lagrangian."""
+        kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
+        return self.formulation.compute_contribution_for_dual_lagrangian(**kwargs)
+
+    def update_strictly_feasible_indices_(
+        self, strict_violation: torch.Tensor, constraint_state: ConstraintState
+    ) -> None:
+
+        # Determine which of the constraints are strictly feasible and update the
+        # `strictly_feasible_indices` attribute of the multiplier.
+        if getattr(self.multiplier, "restart_on_feasible", False):
+
+            if isinstance(self.multiplier, IndexedMultiplier):
+                # Need to expand the indices to the size of the multiplier
+                strictly_feasible_indices = torch.zeros_like(self.multiplier.weight, dtype=torch.bool)
+
+                # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
+                # dimension 1 of the violations
+                strictly_feasible_indices[constraint_state.strict_constraint_features] = (
+                    strict_violation.unsqueeze(1) < 0.0
+                )
+            else:
+                strictly_feasible_indices = strict_violation < 0.0
+
+            self.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
     def state_dict(self):
         state_dict = {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}

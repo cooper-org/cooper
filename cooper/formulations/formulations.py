@@ -16,15 +16,6 @@ class Formulation(abc.ABC):
     def __init__(self, constraint_type: ConstraintType):
         pass
 
-    @abc.abstractmethod
-    def compute_lagrangian_contributions(
-        self, constraint_state: ConstraintState, **kwargs
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-        """Computes the contribution from the current constraint to the primal and dual
-        Lagrangians, and evaluates the associated Lagrange multiplier or penalty
-        coefficient."""
-        pass
-
     def state_dict(self):
         return {"constraint_type": self.constraint_type}
 
@@ -67,14 +58,6 @@ class PenaltyFormulation(Formulation):
 
     def compute_contribution_for_dual_lagrangian(self, *args, **kwargs):
         return None
-
-    def compute_lagrangian_contributions(
-        self, constraint_state: ConstraintState, penalty_coefficient: PenaltyCoefficient
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-        primal_constraint_store = self.compute_contribution_for_primal_lagrangian(constraint_state, penalty_coefficient)
-        # `compute_contribution_for_primal_lagrangian` is a dummy method for this formulation
-        dual_constraint_store = None
-        return primal_constraint_store, dual_constraint_store
 
     def __repr__(self):
         return f"PenaltyFormulation(constraint_type={self.constraint_type})"
@@ -124,13 +107,13 @@ class QuadraticPenaltyFormulation(Formulation):
     def compute_contribution_for_dual_lagrangian(self, *args, **kwargs):
         return None
 
-    def compute_lagrangian_contributions(
-        self, constraint_state: ConstraintState, penalty_coefficient: PenaltyCoefficient
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-        primal_constraint_store = self.compute_contribution_for_primal_lagrangian(constraint_state, penalty_coefficient)
-        # `compute_contribution_for_primal_lagrangian` is a dummy method for this formulation
-        dual_constraint_store = None
-        return primal_constraint_store, dual_constraint_store
+    # def compute_lagrangian_contributions(
+    #     self, constraint_state: ConstraintState, penalty_coefficient: PenaltyCoefficient
+    # ) -> tuple[ConstraintStore, ConstraintStore]:
+    #     primal_constraint_store = self.compute_contribution_for_primal_lagrangian(constraint_state, penalty_coefficient)
+    #     # `compute_contribution_for_primal_lagrangian` is a dummy method for this formulation
+    #     dual_constraint_store = None
+    #     return primal_constraint_store, dual_constraint_store
 
     def __repr__(self):
         return f"QuadraticPenaltyFormulation(constraint_type={self.constraint_type})"
@@ -192,15 +175,6 @@ class LagrangianFormulation(Formulation):
             )
 
             return dual_constraint_store
-
-    def compute_lagrangian_contributions(
-        self, constraint_state: ConstraintState, multiplier: Multiplier
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-
-        # TODO(gallego-posada): Avoid extract from constraint state twice in primal and dual
-        primal_constraint_store = self.compute_contribution_for_primal_lagrangian(constraint_state, multiplier)
-        dual_constraint_store = self.compute_contribution_for_dual_lagrangian(constraint_state, multiplier)
-        return primal_constraint_store, dual_constraint_store
 
     def __repr__(self):
         return f"LagrangianFormulation(constraint_type={self.constraint_type})"
@@ -282,16 +256,6 @@ class AugmentedLagrangianFormulation(Formulation):
             )
 
             return dual_constraint_store
-
-    def compute_lagrangian_contributions(
-        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
-    ) -> tuple[ConstraintStore, ConstraintStore]:
-
-        kwargs = dict(constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=penalty_coefficient)
-        primal_constraint_store = self.compute_contribution_for_primal_lagrangian(**kwargs)
-        dual_constraint_store = self.compute_contribution_for_dual_lagrangian(**kwargs)
-
-        return primal_constraint_store, dual_constraint_store
 
     def __repr__(self):
         return f"AugmentedLagrangianFormulation(constraint_type={self.constraint_type})"
