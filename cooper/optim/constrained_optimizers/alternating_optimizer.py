@@ -85,6 +85,10 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         # Update primal variables only
         self.zero_grad()
         cmp_state = compute_cmp_state_fn()
+
+        # TODO(gallego-posada): After the modularization of the populate_lagrangian
+        # method of the CMPState, we can make code more efficient by only computing
+        # the required primal/dual lagrangians as needed.
         lagrangian_store = cmp_state.populate_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
@@ -121,6 +125,9 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
                 )
                 raise RuntimeError(error_message)
 
+        # TODO(gallego-posada): After the modularization of the populate_lagrangian
+        # method of the CMPState, we can make code more efficient by only computing
+        # the required primal/dual lagrangians as needed.
         lagrangian_store_post_primal_update = new_cmp_state.populate_lagrangian()
         new_cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
@@ -184,6 +191,9 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         # This cmp_state is shared for both the dual and primal updates
         cmp_state = compute_cmp_state_fn()
 
+        # TODO(gallego-posada): After the modularization of the populate_lagrangian
+        # method of the CMPState, we can make code more efficient by only computing
+        # the required primal/dual lagrangians as needed.
         # Update dual variables only
         lagrangian_store = cmp_state.populate_lagrangian()
         cmp_state.dual_backward()
@@ -194,6 +204,10 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         self.zero_grad()
         # Purge primal Lagrangian which was populated during the dual update
         cmp_state.purge_primal_lagrangian()
+
+        # TODO(gallego-posada): After the modularization of the populate_lagrangian
+        # method of the CMPState, we can make code more efficient by only computing
+        # the required primal/dual lagrangians as needed.
         lagrangian_store_post_dual_step = cmp_state.populate_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
