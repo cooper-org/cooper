@@ -14,32 +14,6 @@ from .types import AlternationType
 from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
-# TODO(gallego-posada): This functions is not being called
-def sanity_check_constraints_and_optimizer(
-    constrained_optimizer: constrained_optimizers.ConstrainedOptimizer,
-    constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
-):
-    """Execute sanity checks on the properties of the provided constraints and optimizer
-    to raise appropriate exceptions or warnings when detecting invalid or untested
-    configurations.
-    """
-
-    if constraint_groups is not None:
-        constraint_groups = ensure_sequence(constraint_groups)
-
-        fn_restart_on_feasible = lambda constraint: getattr(constraint.multiplier, "restart_on_feasible", False)
-        any_restart_on_feasible = any(map(fn_restart_on_feasible, constraint_groups))
-
-        fn_augmented_lagrangian = lambda constraint: constraint.formulation.formulation_type == "augmented_lagrangian"
-        any_is_augmented_lagrangian = any(map(fn_augmented_lagrangian, constraint_groups))
-
-        if constrained_optimizer.alternation_type != AlternationType.FALSE and any_restart_on_feasible:
-            warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
-
-        if any_is_augmented_lagrangian and constrained_optimizer.alternation_type == AlternationType.FALSE:
-            raise RuntimeError("Augmented Lagrangian formulation requires alternating updates.")
-
-
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     extrapolation: bool = False,

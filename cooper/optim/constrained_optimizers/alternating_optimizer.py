@@ -4,6 +4,7 @@ Implementation of the :py:class:`AlternatingPrimalDualOptimizer` and
 :py:class:`AlternatingPrimalDualOptimizer` classes.
 """
 
+import warnings
 from enum import Enum
 from typing import Callable, Optional
 
@@ -36,6 +37,21 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         super().__init__(primal_optimizers, dual_optimizers, multipliers)
 
         self.base_sanity_checks()
+
+        self.custom_sanity_checks()
+
+    def custom_sanity_checks(self):
+        """
+        Perform sanity checks on the initialization of ``AlternatingPrimalDualOptimizer``.
+
+        Warns:
+            UserWarning: Using an AlternatingPrimalDualOptimizer together with
+                multipliers that have ``restart_on_feasible=True`` is untested.
+        """
+
+        for multiplier in self.multipliers:
+            if getattr(multiplier, "restart_on_feasible", False):
+                warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
 
     def step(self):
         pass
@@ -134,6 +150,21 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         super().__init__(primal_optimizers, dual_optimizers, multipliers)
 
         self.base_sanity_checks()
+
+        self.custom_sanity_checks()
+
+    def custom_sanity_checks(self):
+        """
+        Perform sanity checks on the initialization of ``AlternatingDualPrimalOptimizer``.
+
+        Warns:
+            UserWarning: Using an AlternatingDualPrimalOptimizer together with
+                multipliers that have ``restart_on_feasible=True`` is untested.
+        """
+
+        for multiplier in self.multipliers:
+            if getattr(multiplier, "restart_on_feasible", False):
+                warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
 
     def step(self):
         pass
