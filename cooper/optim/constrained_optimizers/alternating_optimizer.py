@@ -109,14 +109,10 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
 
         """
 
-        # Update primal variables only
         self.zero_grad()
         cmp_state = compute_cmp_state_fn()
 
-        # TODO(gallego-posada): After the modularization of the populate_lagrangian
-        # method of the CMPState, we can make code more efficient by only computing
-        # the required primal/dual lagrangians as needed.
-
+        # Update primal variables only
         lagrangian_store_for_primal = cmp_state.populate_primal_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
@@ -150,9 +146,6 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         lagrangian_store_for_dual = new_cmp_state.populate_dual_lagrangian()
         new_cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
-
-        # Purge the primal lagrangian to avoid reusing it in the next primal update
-        new_cmp_state.purge_primal_lagrangian()
 
         # Patch the CMPState and LagrangianStore with the latest available loss and
         # Lagrangian estimate. See the docstring for more details.
@@ -207,42 +200,48 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         pass
 
     def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
-        """Performs a dual-primal alternating step where the dual variables are
-        updated first, and the primal variables are updated based on the Lagrangian
-        computed at the updated dual point. Note that the objective function and
-        constraint violations are only computed once, since the primal variables do not
-        change during the dual update.
+
+        r"""Performs a dual-primal alternating step where the dual variables are
+        updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
+        and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
+        Lagrangian computed with the updated dual variables.
+
+        Note that, unlike for the ``AlternatingPrimalDualOptimizer``, the constraint
+        violations only need to be computed once, since the primal variables are not
+        changed during the update to the dual variables.
+
+        .. note::
+            The Lagrangian value contained in the LagrangianStore at the end of the roll is:
+
+            .. math::
+                \mathcal{L} = f(x_t) + {\lambda_{t+1}}^{\\top} g(x_t) + {\mu_{t+1}}^{\\top} h(x_t)
 
         Args:
             compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
-        """
-        self.zero_grad()
 
-        # This cmp_state is shared for both the dual and primal updates
+        """
+
+        self.zero_grad()
         cmp_state = compute_cmp_state_fn()
 
-        # TODO(gallego-posada): After the modularization of the populate_lagrangian
-        # method of the CMPState, we can make code more efficient by only computing
-        # the required primal/dual lagrangians as needed.
         # Update dual variables only
-        lagrangian_store = cmp_state.populate_lagrangian()
+        lagrangian_store_for_dual = cmp_state.populate_dual_lagrangian()
         cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
 
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
-        # Purge primal Lagrangian which was populated during the dual update
-        cmp_state.purge_primal_lagrangian()
-
-        # TODO(gallego-posada): After the modularization of the populate_lagrangian
-        # method of the CMPState, we can make code more efficient by only computing
-        # the required primal/dual lagrangians as needed.
-        lagrangian_store_post_dual_step = cmp_state.populate_lagrangian()
+        lagrangian_store_for_primal = cmp_state.populate_primal_lagrangian()
         cmp_state.primal_backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
-        # Purge the dual lagrangian to avoid reusing it in the next dual update
-        cmp_state.purge_dual_lagrangian()
 
-        return cmp_state, lagrangian_store_post_dual_step
+        # Patch the CMPState and LagrangianStore with the latest available loss and
+        # Lagrangian estimate. See the docstring for more details.
+        assert lagrangian_store_for_primal.dual_lagrangian is None
+        lagrangian_store_for_primal.dual_lagrangian = lagrangian_store_for_dual.dual_lagrangian
+        assert lagrangian_store_for_primal.dual_constraint_stores == []
+        lagrangian_store_for_primal.dual_constraint_stores = lagrangian_store_for_dual.dual_constraint_stores
+
+        return cmp_state, lagrangian_store_for_primal
