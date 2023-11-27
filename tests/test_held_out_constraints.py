@@ -196,8 +196,10 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
         xy, lmbda = new_xy, new_lmbda
 
 
-# # Convergence test fails due to the stochastic sampling of the constraints. This
-# # effectively yields an unstable behavior around the constrained optimum.
+# # Convergence test fails due to the stochastic sampling of the constraints:
+# # At the constrained optimum, we expect the gradient of the Lagrangian wrt the primal
+# # variables to be zero. However, the gradient of the objective function is not exactly
+# # balanced by a weighted sum of the gradients of the constraints due to the sampling.
 # def test_convergence(
 #     Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device, observe_probability
 # ):
