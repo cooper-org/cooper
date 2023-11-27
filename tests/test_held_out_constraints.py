@@ -95,12 +95,14 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
             violation = torch.stack([cg0_violation, cg1_violation])
             strict_violation = violation
 
-        # Randomly keep or drop each entry in violation and strict_violation
+        # Randomly drop violations -- this is equivalent to observing a subset of the
+        # constraints for the primal update.
         constraint_features = (torch.rand_like(violation) < self.observe_probability).nonzero().flatten()
-        strict_constraint_features = (torch.rand_like(strict_violation) < self.observe_probability).nonzero().flatten()
-
-        # breakpoint()
         violation = violation[constraint_features]
+
+        # Randomly drop strict_violations -- this is equivalent to observing a subset
+        # of the constraints for the dual update.
+        strict_constraint_features = (torch.rand_like(strict_violation) < self.observe_probability).nonzero().flatten()
         strict_violation = strict_violation[strict_constraint_features]
 
         constraint_state = cooper.ConstraintState(
