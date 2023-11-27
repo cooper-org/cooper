@@ -16,7 +16,7 @@ Alternating updates
 ^^^^^^^^^^^^^^^^^^^
 
 It is possible to perform alternating updates between the primal and dual
-parameters by setting the flag ``alternating=True`` in the construction of the
+parameters via the ``alternation_type`` argument in the construction of the
 :py:class:`ConstrainedOptimizer`. In this case, the gradient computed by calling
 :py:meth:`~cooper.formulation.Formulation.backward` is used to update the
 primal parameters. Then, the gradient with respect to the dual variables (given
@@ -24,16 +24,25 @@ the new value of the primal parameters!) is computed and used to update the dual
 variables. This two-stage process is handled by **Cooper** inside the
 :py:meth:`ConstrainedOptimizer.step` method.
 
+
+One can perform alternating updates in which the primal parameters are updated first. We
+refer to this update strategy as ``cooper.optim.AlternationType.PRIMAL_DUAL``.
 .. math::
 
     x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
     \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
 
+Alternative, ``cooper.optim.AlternationType.DUAL_PRIMAL`` carries out an update of the
+dual parameters first.
+.. math::
+
+    \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t}}, \lambda)|_{\lambda=\lambda_t} \right) \\
+    x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_{t+1})|_{x=x_t} \right)
 
 .. important::
 
-    Selecting ``alternating=True`` does not necessarily double the number of
-    backward passes through a the primal parameters!
+    Selecting ``alternation_type=AlternationType.DualPrimal`` does not double the number
+    of backward passes through the primal parameters!
 
     When using a ``LagrangianFormulation``, to obtain the gradients with respect
     to the Lagrange multipliers, it suffices to *evaluate* the constraint
@@ -142,7 +151,7 @@ Example
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
         dual_restarts=False,
-        alternating=True, # Remember that ALM performs alternating updates
+        alternation_type=AlternationType.PRIMAL_DUAL, # Remember that ALM performs alternating updates
     )
 
     # We need to manually trigger the creation of the Lagrange multipliers (formulation state)

@@ -66,17 +66,24 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         self.constraint_groups = []
         if self.use_ineq_constraints:
-            multiplier_kwargs = {"shape": 1, "device": device}
-            constraint_kwargs = {"constraint_type": constraint_type, "formulation_type": formulation_type}
-
-            self.constraint_groups = []
             for ix in range(2):
-                penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
 
+                multiplier = None
+                if constraint_type in [cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY]:
+                    multiplier = cooper.multipliers.DenseMultiplier(
+                        constraint_type=constraint_type, num_constraints=1, device=device
+                    )
+
+                penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
                 constraint_group = cooper.ConstraintGroup(
-                    **constraint_kwargs, multiplier_kwargs=multiplier_kwargs, penalty_coefficient=penalty_coefficient
+                    constraint_type=constraint_type,
+                    formulation_type=formulation_type,
+                    multiplier=multiplier,
+                    penalty_coefficient=penalty_coefficient,
                 )
                 self.constraint_groups.append(constraint_group)
+
+        self.multipliers = [cg.multiplier for cg in self.constraint_groups if cg.multiplier is not None]
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -245,7 +252,7 @@ def build_params_and_primal_optimizers(
 
 def build_dual_optimizers(
     is_constrained,
-    constraint_groups,
+    multipliers,
     extrapolation=False,
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
@@ -253,9 +260,17 @@ def build_dual_optimizers(
     dual_optimizer_kwargs["maximize"] = True
 
     if is_constrained:
-        dual_params = [{"params": constraint.multiplier.parameters()} for constraint in constraint_groups]
+        dual_params = [{"params": _.parameters()} for _ in multipliers]
         if not extrapolation:
-            dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
+            if dual_optimizer_name == "SGD":
+                # SGD does not support `foreach=True` (the default for 2.0.0) when the
+                # parameters use sparse gradients. Disabling foreach everywhere for
+                # simplicity.
+                dual_optimizers = getattr(torch.optim, dual_optimizer_name)(
+                    dual_params, foreach=False, **dual_optimizer_kwargs
+                )
+            else:
+                dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
         else:
             dual_optimizers = getattr(cooper.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
     else:
@@ -266,23 +281,25 @@ def build_dual_optimizers(
 
 def build_cooper_optimizer_for_Toy2dCMP(
     primal_optimizers,
-    constraint_groups,
-    extrapolation=False,
-    alternating=cooper.optim.AlternatingType.FALSE,
+    multipliers,
+    extrapolation: bool = False,
+    alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
     dual_optimizer_name="SGD",
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
-    is_constrained = len(constraint_groups) > 0
+
+    multipliers = cooper.utils.ensure_sequence(multipliers) if multipliers is not None else []
+    is_constrained = len(multipliers) > 0
     dual_optimizers = build_dual_optimizers(
-        is_constrained, constraint_groups, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
+        is_constrained, multipliers, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
     )
 
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
         extrapolation=extrapolation,
-        alternating=alternating,
+        alternation_type=alternation_type,
         dual_optimizers=dual_optimizers,
-        constraint_groups=constraint_groups,
+        multipliers=multipliers,
     )
 
     return cooper_optimizer

@@ -3,6 +3,12 @@ Constrained Optimizer
 
 .. currentmodule:: cooper.optim.constrained_optimizers.constrained_optimizer
 
+``ConstrainedOptimizer`` Class
+------------------------------
+
+.. autoclass:: ConstrainedOptimizer
+    :members:
+
 How to use a ``ConstrainedOptimizer``
 -------------------------------------
 
@@ -209,8 +215,5 @@ on the dual parameters, with simultaneous updates.
 
 .. include:: additional_features.rst
 
-``ConstrainedOptimizer`` Class
-------------------------------
-
-.. autoclass:: ConstrainedOptimizer
+.. autoclass:: AlternatingPrimalDualOptimizer
     :members:

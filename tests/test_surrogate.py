@@ -7,6 +7,8 @@ import pytest
 import testing_utils
 import torch
 
+import cooper
+
 
 def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
     """Test first step of simultaneous GDA updates with surrogates on toy 2D problem."""
@@ -30,14 +32,14 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=False,
-        alternating=False,
+        alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_name="SGD",
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params), "return_multipliers": True}
+    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])
@@ -48,11 +50,11 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
     # Check primal and dual Lagrangians
-    primal_lag0 = cmp_state.loss + torch.sum(violations * lmbda0)
-    dual_lag0 = torch.sum(strict_violations * lmbda0)
+    primal_lagrangian0 = cmp_state.loss + torch.sum(violations * lmbda0)
+    dual_lagrangian0 = torch.sum(strict_violations * lmbda0)
 
-    assert torch.allclose(lagrangian_store.lagrangian, primal_lag0)
-    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag0)
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lagrangian0)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lagrangian0)
 
     # analytical_gradients computes the gradients of the loss and surrogate constraints
     grads_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -60,7 +62,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     assert torch.allclose(params, x1_y1)
 
     # Observed multipliers should be zero, matching lmdba0
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda0)
+    assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_primal_constraints()), lmbda0)
 
     lmbda1 = torch.relu(lmbda0 + 1e-2 * strict_violations)
 
@@ -70,11 +72,11 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
     # Check primal and dual Lagrangians
-    primal_lag1 = cmp_state.loss + torch.sum(violations * lmbda1)
-    dual_lag1 = torch.sum(strict_violations * lmbda1)
+    primal_lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda1)
+    dual_lagrangian1 = torch.sum(strict_violations * lmbda1)
 
-    assert torch.allclose(lagrangian_store.lagrangian, primal_lag1)
-    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lag1)
+    assert torch.allclose(lagrangian_store.lagrangian, primal_lagrangian1)
+    assert torch.allclose(lagrangian_store.dual_lagrangian, dual_lagrangian1)
 
     # analytical_gradients computes the gradients of the loss and surrogate constraints
     grads_x1_y1 = cmp.analytical_gradients(x1_y1)
@@ -83,8 +85,31 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     # NOTE: this test requires a relaxed tolerance of 1e-4
     assert torch.allclose(params, x2_y2, atol=1e-4)
 
-    assert torch.allclose(torch.cat(lagrangian_store.observed_multipliers), lmbda1)
+    assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_primal_constraints()), lmbda1)
 
 
-def test_convergence_surrogate():
-    pass
+# TODO(juan43ramirez): implement
+# def test_convergence_surrogate(
+#     Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device
+# ):
+#     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
+#         use_multiple_primal_optimizers, Toy2dCMP_params_init
+#     )
+
+#     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
+#     if not use_ineq_constraints:
+#         pytest.skip("Surrogate update tests require a problem with constraints.")
+#     use_constraint_surrogate = True
+
+#     cmp = cooper_test_utils.Toy2dCMP(
+#         use_ineq_constraints=use_ineq_constraints, use_constraint_surrogate=use_constraint_surrogate, device=device
+#     )
+
+#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=cmp.multipliers)
+
+#     for step_id in range(3000):
+#         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
+#         cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
+
+#     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
+#         assert torch.allclose(param, exact_solution)

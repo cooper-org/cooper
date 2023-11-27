@@ -3,6 +3,8 @@ import pytest
 import testing_utils
 import torch
 
+import cooper
+
 
 def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
     """Test first step of Extrapolation-based updates on toy 2D problem."""
@@ -26,9 +28,9 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=True,
-        alternating=False,
+        alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_name="ExtraSGD",
     )
 
@@ -37,8 +39,9 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # -------------------- First full extra-gradient step  --------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
-    lagrangian, observed_multiplier_values = lagrangian_store.lagrangian, lagrangian_store.observed_multipliers
+    lagrangian_store = cmp_state.populate_lagrangian()
+    lagrangian = lagrangian_store.lagrangian
+    observed_multiplier_values = lagrangian_store.multiplier_values_for_primal_constraints()
 
     # Check loss, proxy and non-proxy defects after forward pass
     assert torch.allclose(lagrangian, mktensor(2.0))
@@ -54,7 +57,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     assert torch.allclose(params.grad, mktensor([0.0, -4.0]))
 
     # Dual gradients must match the constraint violations.
-    for (constraint, constraint_state) in cmp_state.observed_constraints:
+    for constraint, constraint_state in cmp_state.observed_constraints:
         assert torch.allclose(constraint.multiplier.weight.grad, constraint_state.violation)
 
     cooper_optimizer.step(call_extrapolation=True)
@@ -62,7 +65,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # Perform the actual update step
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+    lagrangian_store = cmp_state.populate_lagrangian()
     cmp_state.backward()
     cooper_optimizer.step(call_extrapolation=False)
 
@@ -71,7 +74,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     assert torch.allclose(params.grad, mktensor([-0.0200, -3.8600]))
 
     # -------------------- Second full extra-gradient step  --------------------
-    cooper_optimizer.roll(compute_cmp_state_fn, return_multipliers=True)
+    cooper_optimizer.roll(compute_cmp_state_fn)
 
     assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
     multiplier_values = [constraint.multiplier() for constraint in cmp.constraint_groups]
@@ -98,9 +101,9 @@ def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, 
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        constraint_groups=cmp.constraint_groups,
+        multipliers=cmp.multipliers,
         extrapolation=True,
-        alternating=False,
+        alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_name="ExtraSGD",
     )
 

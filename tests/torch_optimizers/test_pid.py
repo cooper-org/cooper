@@ -120,7 +120,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
 
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, 1, device=device)
-    multiplier_module = IndexedMultiplier(init=multiplier_init)
+    multiplier_module = IndexedMultiplier(init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY)
     param = multiplier_module.weight
 
     def loss_fn(indices):
@@ -238,11 +238,11 @@ def test_pid_convergence(
         use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
     )
 
-    dual_params = [{"params": constraint.multiplier.parameters()} for constraint in cmp.constraint_groups]
+    dual_params = [{"params": _.parameters()} for _ in cmp.multipliers]
     dual_optimizer = PID(dual_params, lr=0.01, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu, maximize=True)
 
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers, dual_optimizer, constraint_groups=cmp.constraint_groups
+        primal_optimizers, dual_optimizer, multipliers=cmp.multipliers
     )
 
     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)

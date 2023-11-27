@@ -12,7 +12,7 @@ from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
-from ..types import AlternatingType
+from ..types import AlternationType
 
 
 class ConstrainedOptimizer:
@@ -46,37 +46,22 @@ class ConstrainedOptimizer:
 
         multipliers: Multiplier(s) associated with the constrained optimization problem.
             We keep a reference to the multipliers to post-process them after the dual
-            optimizer steps. If `multipliers=None` we extract the multipliers from the
-            `constraint_groups`. Exactly one of `multipliers` and `constraint_groups`
-            must be not `None`.
-
-        constraint_groups: Constraint group(s) associated with the constrained
-            optimization problem. We use the constraint groups to extract references to
-            the multipliers. Exactly one of `multipliers` and `constraint_groups` must
-            be not `None`.
+            optimizer steps.
 
     """
 
     extrapolation: bool
-    alternating: AlternatingType
+    alternation_type: AlternationType
 
     def __init__(
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
-        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)
         self.dual_optimizers = ensure_sequence(dual_optimizers)
-
-        if not ((constraint_groups is None) ^ (multipliers is None)):
-            raise ValueError("Exactly one of `constraint_groups` and `multipliers` must be not None.")
-
-        if multipliers is not None:
-            self.multipliers = ensure_sequence(multipliers)
-        else:
-            self.multipliers = [constraint.multiplier for constraint in ensure_sequence(constraint_groups)]
+        self.multipliers = ensure_sequence(multipliers)
 
     def base_sanity_checks(self):
         """
@@ -152,5 +137,5 @@ class ConstrainedOptimizer:
             dual_optimizer_states=dual_optimizer_states,
             multiplier_states=multiplier_states,
             extrapolation=self.extrapolation,
-            alternating=self.alternating,
+            alternation_type=self.alternation_type,
         )

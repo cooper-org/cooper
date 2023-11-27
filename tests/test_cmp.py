@@ -25,7 +25,9 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp.constraint_groups)
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        primal_optimizers, multipliers=cmp.multipliers
+    )
 
     for step_id in range(1500):
         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
@@ -61,18 +63,26 @@ def test_pipeline_without_cmp(
     )
 
     if use_ineq_constraints:
-        multiplier_kwargs = {"shape": 1, "device": device}
-        constraint_kwargs = {
-            "constraint_type": cooper.ConstraintType.INEQUALITY,
-            "formulation_type": cooper.FormulationType.LAGRANGIAN,
-        }
-        cg0 = cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
-        cg1 = cooper.ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
+        constraint_type = cooper.ConstraintType.INEQUALITY
+        default_cg_kwargs = {"constraint_type": constraint_type, "formulation_type": cooper.FormulationType.LAGRANGIAN}
+
+        multiplier0 = cooper.multipliers.DenseMultiplier(
+            constraint_type=constraint_type, num_constraints=1, device=device
+        )
+        cg0 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier0)
+
+        multiplier1 = cooper.multipliers.DenseMultiplier(
+            constraint_type=constraint_type, num_constraints=1, device=device
+        )
+        cg1 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier1)
+
         constraint_groups = [cg0, cg1]
+        multipliers = [multiplier0, multiplier1]
     else:
+        multipliers = []
         constraint_groups = []
 
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, constraint_groups)
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=multipliers)
 
     for step_id in range(1500):
         cooper_optimizer.zero_grad()
@@ -82,17 +92,11 @@ def test_pipeline_without_cmp(
         if use_ineq_constraints:
             cg0_state, cg1_state = evaluate_constraints(params)
             observed_constraints = [(cg0, cg0_state), (cg1, cg1_state)]
-
-            # # Alternatively, one could assign the constraint states directly to the
-            # # constraint groups and collect only the constraint groups when gathering
-            # # the observed constraints.
-            # cg0.state, cg1.state = evaluate_constraints(params)
-            # observed_constraints = [cg0, cg1]
         else:
             observed_constraints = []
 
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
-        lagrangian_store = cmp_state.populate_lagrangian(return_multipliers=True)
+        lagrangian_store = cmp_state.populate_lagrangian()
         cmp_state.backward()
         cooper_optimizer.step()
 

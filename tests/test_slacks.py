@@ -30,13 +30,11 @@
 
 #     mktensor = testing_utils.mktensor(device=device)
 
-#     alternating = cooper.optim.AlternatingType("PrimalDual")
-
 #     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
 #         primal_optimizers=primal_optimizers,
-#         constraint_groups=cmp.constraint_groups,
+#         multipliers=cmp.multipliers,
 #         extrapolation=False,
-#         alternating=alternating,
+#         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
 #         dual_optimizer_name="SGD",
 #         dual_optimizer_kwargs={"lr": 1e-2},
 #     )
@@ -44,7 +42,6 @@
 #     roll_kwargs = {
 #         "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
 #         "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
-#         "return_multipliers": True,
 #     }
 
 #     x0_y0 = mktensor([0.0, -1.0])
@@ -68,15 +65,15 @@
 #     if use_violation_fn:
 #         # We don't see the value of the loss at the updated point since we only
 #         # evaluate the violations
-#         lag1 = torch.sum(violations * lmbda0)
+#         lagrangian1 = torch.sum(violations * lmbda0)
 #         # When the final Lagrangian is evaluated, the primal variables have changed,
 #         # but the multipliers are still zero (not yet updated)
-#         assert torch.allclose(lagrangian_store.lagrangian, lag1)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 #     else:
-#         lag1 = cmp_state.loss + torch.sum(violations * lmbda0)
+#         lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda0)
 #         # Since the multipliers are still zero, the Lagrangian matches the loss at
 #         # the updated primal point
-#         assert torch.allclose(lagrangian_store.lagrangian, lag1)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian1)
 
 #     # ------------ Second step of alternating updates ------------
 #     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
@@ -96,22 +93,22 @@
 #     if use_violation_fn:
 #         # We don't see the value of the loss at the updated point since we only
 #         # evaluate the violations
-#         lag2 = torch.sum(violations * lmbda1)
+#         lagrangian2 = torch.sum(violations * lmbda1)
 #         # When the final Lagrangian is evaluated, the primal variables have changed,
 #         # but the multipliers are still zero (not yet updated)
-#         assert torch.allclose(lagrangian_store.lagrangian, lag2)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 #     else:
-#         lag2 = cmp_state.loss + torch.sum(violations * lmbda1)
+#         lagrangian2 = cmp_state.loss + torch.sum(violations * lmbda1)
 #         # Since the multipliers are still zero, the Lagrangian matches the loss at
 #         # the updated primal point
-#         assert torch.allclose(lagrangian_store.lagrangian, lag2)
+#         assert torch.allclose(lagrangian_store.lagrangian, lagrangian2)
 
 # @pytest.mark.parametrize(
-#     "alternating_type", [cooper.optim.AlternatingType.PRIMAL_DUAL, cooper.optim.AlternatingType.DUAL_PRIMAL]
+#     "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL]
 # )
 # @pytest.mark.parametrize("use_defect_fn", [True, False])
 # def test_convergence_alternating(
-#     alternating_type,
+#     alternation_type,
 #     use_defect_fn,
 #     Toy2dCMP_problem_properties,
 #     Toy2dCMP_params_init,
@@ -132,16 +129,16 @@
 
 #     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
 #         primal_optimizers=primal_optimizers,
-#         constraint_groups=cmp.constraint_groups,
+#         multipliers=cmp.multipliers,
 #         extrapolation=False,
-#         alternating=alternating_type,
+#         alternation_type=alternation_type,
 #     )
 
 #     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
 #     compute_violations_fn = (lambda: cmp.compute_violations(params)) if use_defect_fn else None
 
 #     roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
-#     if alternating_type == cooper.optim.AlternatingType.PRIMAL_DUAL:
+#     if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
 #         roll_kwargs["compute_violations_fn"] = compute_violations_fn
 
 #     for step_id in range(1500):

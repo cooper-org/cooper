@@ -12,7 +12,7 @@ from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
-from ..types import AlternatingType
+from ..types import AlternationType
 from .constrained_optimizer import ConstrainedOptimizer
 
 
@@ -24,16 +24,15 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
 
     extrapolation = True
-    alternating = AlternatingType.FALSE
+    alternation_type = AlternationType.FALSE
 
     def __init__(
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
-        constraint_groups: Optional[OneOrSequence[ConstraintGroup]] = None,
     ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers, constraint_groups)
+        super().__init__(primal_optimizers, dual_optimizers, multipliers)
 
         self.base_sanity_checks()
 
@@ -47,6 +46,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
                 some of the provided optimizers do not have an extrapolation method.
+            RuntimeError: Using an ExtrapolationConstrainedOptimizer together with
+                multipliers that have ``restart_on_feasible=True`` is not supported.
         """
 
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
@@ -57,6 +58,13 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 """Some of the provided optimizers do not have an extrapolation method.
                 Please ensure that all optimizers are extrapolation capable."""
             )
+
+        for multiplier in self.multipliers:
+            if getattr(multiplier, "restart_on_feasible", False):
+                raise RuntimeError(
+                    """Using restart on feasible for multipliers is not supported in
+                    conjunction with the ExtrapolationConstrainedOptimizer."""
+                )
 
     def step(self, call_extrapolation: bool = False):
         """Performs an extrapolation step or update step on both the primal and dual
@@ -73,9 +81,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             getattr(primal_optimizer, call_method)()  # type: ignore
             self.dual_step(call_extrapolation=call_extrapolation)
 
-    def roll(
-        self, compute_cmp_state_fn: Callable[..., CMPState], return_multipliers: bool = False
-    ) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -83,23 +89,18 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
         Args:
             compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
-
-            return_multipliers: When `True`, we return the updated value of the
-                multipliers for the observed constraints.
         """
 
         self.zero_grad()
         cmp_state_pre_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian(return_multipliers=False)
+        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()
         cmp_state_pre_extrapolation.backward()
         self.step(call_extrapolation=True)
 
         # Perform an update step
         self.zero_grad()
         cmp_state_post_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian(
-            return_multipliers=return_multipliers
-        )
+        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian()
         cmp_state_post_extrapolation.backward()
         self.step(call_extrapolation=False)
 

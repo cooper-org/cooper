@@ -175,7 +175,6 @@ class Toy2DWidget:
 
         # Reset the state of the CMP. Update epsilon if necessary.
         self.cmp.epsilon = epsilon
-        self.cmp.state = None
 
         # Reset multipliers
         # self.ineq_group.multiplier = None

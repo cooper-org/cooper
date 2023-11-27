@@ -7,7 +7,6 @@ from .formulations import (
     PenaltyFormulation,
     QuadraticPenaltyFormulation,
 )
-from .utils import extract_and_patch_violations
 
 
 class FormulationType(Enum):

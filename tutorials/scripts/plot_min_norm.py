@@ -69,6 +69,8 @@ def create_linear_system(num_equations: int, num_variable: int, seed: int = 0):
     # Verify that the analytical solution is sufficiently close numerically
     assert torch.allclose(A @ x_optim, b, atol=1e-5)
 
+    A, b, x_optim = A.to(DEVICE), b.to(DEVICE), x_optim.to(DEVICE)
+
     return A, b, x_optim
 
 
@@ -112,9 +114,13 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         # Create a constraint group for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
-        multiplier_kwargs = {"shape": num_equations, "device": DEVICE, "is_indexed": True}
-        constraint_kwargs = {"constraint_type": ConstraintType.EQUALITY, "formulation_type": FormulationType.LAGRANGIAN}
-        self.eq_constraint = ConstraintGroup(**constraint_kwargs, multiplier_kwargs=multiplier_kwargs)
+        constraint_type = ConstraintType.EQUALITY
+        self.multiplier = cooper.multipliers.IndexedMultiplier(
+            constraint_type=constraint_type, num_constraints=num_equations, device=DEVICE
+        )
+        self.eq_constraint = ConstraintGroup(
+            constraint_type=constraint_type, formulation_type=FormulationType.LAGRANGIAN, multiplier=self.multiplier
+        )
         super().__init__()
 
     def compute_cmp_state(
@@ -145,29 +151,32 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_optimizer = torch.optim.SGD(cmp.eq_constraint.multiplier.parameters(), lr=dual_lr, maximize=True)
+    dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, constraint_groups=cmp.eq_constraint
+        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
     )
 
-    state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], violation_gap=[])
+    state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], max_abs_violation=[])
     step_ix = 0
 
     while step_ix < num_steps:
         for sampled_equations, sampled_RHS, indices in constraint_loader:
             step_ix += 1
+
+            sampled_equations, sampled_RHS = sampled_equations.to(DEVICE), sampled_RHS.to(DEVICE)
+            indices = indices.to(DEVICE)
             compute_cmp_state_fn = lambda: cmp.compute_cmp_state(x, sampled_equations, sampled_RHS, indices)
             cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
 
             with torch.no_grad():
                 full_violation = A @ x - b
-                violation_gap = torch.linalg.vector_norm(full_violation, ord=np.inf)
+                max_abs_violation = torch.linalg.vector_norm(full_violation, ord=np.inf)
 
             state_history["step"].append(step_ix)
             state_history["relative_norm"].append(cmp_state.loss.item() / optimal_sq_norm)
-            state_history["multipliers"].append(cmp.eq_constraint.multiplier(all_indices).cpu().tolist())
+            state_history["multipliers"].append(cmp.multiplier(all_indices).cpu().tolist())
             state_history["x_gap"].append(torch.linalg.vector_norm(x - x_optim, ord=np.inf).cpu().item())
-            state_history["violation_gap"].append(violation_gap.cpu().item())
+            state_history["max_abs_violation"].append(max_abs_violation.cpu().item())
 
     return state_history
 
@@ -189,7 +198,7 @@ def plot_results(state_histories) -> None:
         ax[exp_id, 2].set_yscale("log")
         ax[exp_id, 2].axhline(0, color="red", linestyle="--", alpha=0.3)
 
-        ax[exp_id, 3].plot(state_history["step"], np.stack(state_history["violation_gap"]).squeeze())
+        ax[exp_id, 3].plot(state_history["step"], np.stack(state_history["max_abs_violation"]).squeeze())
         ax[exp_id, 3].set_yscale("log")
         ax[exp_id, 3].axhline(0, color="red", linestyle="--", alpha=0.3)
 
