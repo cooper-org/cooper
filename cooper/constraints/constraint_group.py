@@ -19,11 +19,12 @@ class ConstraintGroup:
         formulation_type: Optional[FormulationType] = FormulationType.LAGRANGIAN,
         multiplier: Optional[Multiplier] = None,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
+        formulation_kwargs: Optional[dict] = {},
     ):
 
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
-        self.formulation = formulation_type.value(constraint_type=self.constraint_type)
+        self.formulation = formulation_type.value(constraint_type=self.constraint_type, **formulation_kwargs)
 
         self.multiplier = multiplier
         if multiplier is not None:
@@ -56,12 +57,17 @@ class ConstraintGroup:
         if torch.any(penalty_coefficient.value < 0):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
-    def update_penalty_coefficient(self, value: torch.Tensor) -> None:
+    def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
         """Update the penalty coefficient of the constraint group."""
         if self.penalty_coefficient is None:
             raise ValueError(f"Constraint group does not have a penalty coefficient.")
         else:
-            self.penalty_coefficient.value = value
+            self.penalty_coefficient.update_value(
+                constraint_state=constraint_state,
+                constraint_type=self.constraint_type,
+                growth_factor=self.formulation.penalty_growth_factor,
+                violation_tolerance=self.formulation.violation_tolerance,
+            )
 
     def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
         kwargs = {"constraint_state": constraint_state}
