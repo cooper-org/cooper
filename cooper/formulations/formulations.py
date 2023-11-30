@@ -1,7 +1,5 @@
 import abc
 
-import torch
-
 import cooper.formulations.utils as formulation_utils
 from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
@@ -183,14 +181,27 @@ class AugmentedLagrangianFormulation(Formulation):
     def __init__(
         self, constraint_type: ConstraintType, penalty_growth_factor: float = 1.01, violation_tolerance: float = 1e-4
     ):
-        # TODO(juan43ramirez): Add documentation
+        """Implements the Augmented Lagrangian formulation.
 
-        # FIXME(gallego-posada): We need to ensure that this formulation is being paired
-        # with an AlternatingOptimizer. This check is currently not being performed.
+        .. warning::
+            This formulation is only compatible with the
+            :class:`cooper.optim.AugmentedLagrangianPrimalDualOptimizer` and
+            :class:`cooper.optim.AugmentedLagrangianDualPrimalOptimizer` classes.
 
-        # FIXME(gallego-posada): We need to ensure that this formulation is being paired
-        # with a dual_optimizer that uses SGD with LR=1.0 to ensure consistency with the
-        # ALM formulation.
+            The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
+
+        Args:
+            constraint_type: Type of constraint that this formulation will be applied to.
+            penalty_growth_factor: The factor by which the penalty coefficient will be
+                multiplied when the constraint is violated beyond ``violation_tolerance``.
+            violation_tolerance: Tolerance for the constraint violation. If the
+                violation is smaller than this value, the penalty coefficient is not
+                updated. The comparison is done at the constraint-level (i.e., each
+                entry of the violation tensor). For equality constraints, the absolute
+                violation is compared to the tolerance. All constraint types use the
+                strict violation (when available) for the comparison.
+        """
+
         self.constraint_type = constraint_type
         if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")

@@ -1,16 +1,18 @@
 # coding: utf8
 """
-Implementation of the :py:class:`AlternatingPrimalDualOptimizer` and
-:py:class:`AlternatingPrimalDualOptimizer` classes.
+Implementation of constrained optimizers based on alternation such as 
+:py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`, 
+:py:class:`AugmentedLagrangianPrimalDualOptimizer` and 
+:py:class:`AugmentedLagrangianDualPrimalOptimizer`.
 """
 
 import warnings
-from enum import Enum
 from typing import Callable, Optional
 
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
+from cooper.formulations import FormulationType
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
@@ -18,15 +20,11 @@ from ..types import AlternationType
 from .constrained_optimizer import ConstrainedOptimizer
 
 
-class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing primal-dual alternating updates to the primal and dual variables.
-    """
-
-    # TODO(gallego-posada): Add equations to illustrate the alternating update
+class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
     extrapolation = False
-    alternation_type = AlternationType.PRIMAL_DUAL
+    alternation_type: AlternationType
+    is_augmented_lagrangian_optimizer: bool
 
     def __init__(
         self,
@@ -42,12 +40,21 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
 
     def custom_sanity_checks(self):
         """
-        Perform sanity checks on the initialization of ``AlternatingPrimalDualOptimizer``.
+        Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
-            UserWarning: Using an AlternatingPrimalDualOptimizer together with
-                multipliers that have ``restart_on_feasible=True`` is untested.
+            UserWarning: The Augmented Lagrangian Method requires all dual optimizers to
+                be SGD(lr=1.0).
+            UserWarning: Using an AlternatingOptimizer together with multipliers that
+                have ``restart_on_feasible=True`` is untested.
+
         """
+
+        if self.is_augmented_lagrangian_optimizer:
+            for dual_optimizer in self.dual_optimizers:
+                all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
+                if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
+                    warnings.warn("The Augmented Lagrangian Method requires all dual optimizers to be SGD(lr=1.0).")
 
         for multiplier in self.multipliers:
             if getattr(multiplier, "restart_on_feasible", False):
@@ -56,7 +63,28 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
     def step(self):
         pass
 
-    def roll(
+    def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
+        """Update the penalty coefficients of the constraint groups. Only the penalty
+        coefficients associated with the ``FormulationType.AUGMENTED_LAGRANGIAN`` and
+        constraints that ``contributes_to_dual_update`` are updated.
+        """
+        for constraint_group, constraint_state in cmp_state.observed_constraints:
+            if constraint_group.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
+                if constraint_state.contributes_to_dual_update:
+                    constraint_group.update_penalty_coefficient(constraint_state=constraint_state)
+
+
+class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing primal-dual alternating updates to the primal and dual variables.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the alternating update
+
+    alternation_type = AlternationType.PRIMAL_DUAL
+    is_augmented_lagrangian_optimizer = False
+
+    def primal_dual_roll(
         self,
         compute_cmp_state_fn: Callable[..., CMPState],
         compute_violations_fn: Optional[Callable[..., CMPState]] = None,
@@ -147,6 +175,9 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         new_cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
 
+        if self.is_augmented_lagrangian_optimizer:
+            self.update_penalty_coefficients(cmp_state=cmp_state)
+
         # Patch the CMPState and LagrangianStore with the latest available loss and
         # Lagrangian estimate. See the docstring for more details.
         if new_cmp_state.loss is None:
@@ -161,46 +192,17 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         return new_cmp_state, lagrangian_store_for_dual
 
 
-class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
+class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing dual-primal alternating updates to the primal and dual variables.
     """
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
-    extrapolation = False
     alternation_type = AlternationType.DUAL_PRIMAL
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers)
-
-        self.base_sanity_checks()
-
-        self.custom_sanity_checks()
-
-    def custom_sanity_checks(self):
-        """
-        Perform sanity checks on the initialization of ``AlternatingDualPrimalOptimizer``.
-
-        Warns:
-            UserWarning: Using an AlternatingDualPrimalOptimizer together with
-                multipliers that have ``restart_on_feasible=True`` is untested.
-        """
-
-        for multiplier in self.multipliers:
-            if getattr(multiplier, "restart_on_feasible", False):
-                warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
-
-    def step(self):
-        pass
+    is_augmented_lagrangian_optimizer = False
 
     def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
-
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -229,6 +231,9 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
 
+        if self.is_augmented_lagrangian_optimizer:
+            self.update_penalty_coefficients(cmp_state=cmp_state)
+
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
@@ -245,3 +250,21 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         lagrangian_store_for_primal.dual_constraint_stores = lagrangian_store_for_dual.dual_constraint_stores
 
         return cmp_state, lagrangian_store_for_primal
+
+
+class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing primal-dual updates according to the Augmented Lagrangian Method.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the alternating update
+    is_augmented_lagrangian_optimizer = True
+
+
+class AugmentedLagrangianDualPrimalOptimizer(AlternatingDualPrimalOptimizer):
+    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing dual-primal updates according to the Augmented Lagrangian Method.
+    """
+
+    # TODO(gallego-posada): Add equations to illustrate the alternating update
+    is_augmented_lagrangian_optimizer = True
