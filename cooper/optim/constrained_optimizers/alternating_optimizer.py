@@ -84,7 +84,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     alternation_type = AlternationType.PRIMAL_DUAL
     is_augmented_lagrangian_optimizer = False
 
-    def primal_dual_roll(
+    def roll(
         self,
         compute_cmp_state_fn: Callable[..., CMPState],
         compute_violations_fn: Optional[Callable[..., CMPState]] = None,
