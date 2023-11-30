@@ -46,9 +46,9 @@ def create_optimizer_from_kwargs(
                 raise ValueError("Alternation type {alternation_type} not supported for Augmented Lagrangian.")
         else:
             if alternation_type == AlternationType.DUAL_PRIMAL:
-                constrained_optimizers_class = constrained_optimizers.DualPrimalOptimizer
+                constrained_optimizers_class = constrained_optimizers.AlternatingDualPrimalOptimizer
             elif alternation_type == AlternationType.PRIMAL_DUAL:
-                constrained_optimizers_class = constrained_optimizers.PrimalDualOptimizer
+                constrained_optimizers_class = constrained_optimizers.AlternatingPrimalDualOptimizer
             else:
                 constrained_optimizers_class = constrained_optimizers.SimultaneousOptimizer
 
