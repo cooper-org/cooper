@@ -4,6 +4,8 @@ from typing import Optional
 
 import torch
 
+from cooper.constraints.constraint_state import ConstraintState, ConstraintType
+
 
 class PenaltyCoefficient(torch.nn.Module, abc.ABC):
     """Abstract class for constant (non-trainable) coefficients used in penalized
@@ -64,6 +66,31 @@ class DensePenaltyCoefficient(PenaltyCoefficient):
         """Return the current value of the penalty coefficient."""
         return self.value
 
+    def update_value(
+        self,
+        constraint_state: ConstraintState,
+        constraint_type: ConstraintType,
+        growth_factor: float,
+        violation_tolerance: float,
+    ):
+        """Update the value of the penalty multiplicatively according to the provided
+        growth factor. The penalty is only updated for violated constraints.
+        """
+
+        if violation_tolerance < 0.0:
+            raise ValueError("Violation tolerance must be non-negative.")
+
+        violation, strict_violation = constraint_state.extract_violations()
+
+        if constraint_type == ConstraintType.INEQUALITY:
+            new_value = torch.where(strict_violation > violation_tolerance, self._value * growth_factor, self._value)
+        elif constraint_type == ConstraintType.EQUALITY:
+            new_value = torch.where(
+                strict_violation.abs() > violation_tolerance, self._value * growth_factor, self._value
+            )
+
+        self.value = new_value.detach()
+
 
 class IndexedPenaltyCoefficient(PenaltyCoefficient):
     """Constant (non-trainable) coefficient class used in penalized formulations.
@@ -87,3 +114,33 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
 
         # Flatten coefficient values to 1D since Embedding works with 2D tensors.
         return torch.flatten(coefficient_values)
+
+    def update_value(
+        self,
+        constraint_state: ConstraintState,
+        constraint_type: ConstraintType,
+        growth_factor: float,
+        violation_tolerance: float,
+    ):
+        """Update the value of the penalty multiplicatively according to the provided
+        growth factor. The penalty is only updated for violated constraints.
+        """
+
+        if violation_tolerance < 0.0:
+            raise ValueError("Violation tolerance must be non-negative.")
+
+        violation, strict_violation = constraint_state.extract_violations()
+        constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
+
+        values_for_observed = self._value[strict_constraint_features]
+
+        if constraint_type == ConstraintType.INEQUALITY:
+            new_value = torch.where(
+                strict_violation > violation_tolerance, values_for_observed * growth_factor, values_for_observed
+            )
+        elif constraint_type == ConstraintType.EQUALITY:
+            new_value = torch.where(
+                strict_violation.abs() > violation_tolerance, values_for_observed * growth_factor, values_for_observed
+            )
+
+        self._value[strict_constraint_features] = new_value.detach()
