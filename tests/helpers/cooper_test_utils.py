@@ -1,6 +1,7 @@
 """Cooper-related utilities for writing tests."""
 
 import itertools
+from copy import deepcopy
 from typing import Optional, Union
 
 import pytest
@@ -56,6 +57,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
         slack_variables: Optional[tuple[SlackVariable]] = None,
         penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
+        formulation_kwargs: Optional[dict] = {},
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
@@ -80,6 +82,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
+                    formulation_kwargs=formulation_kwargs,
                 )
                 self.constraint_groups.append(constraint_group)
 
@@ -251,30 +254,34 @@ def build_params_and_primal_optimizers(
 
 
 def build_dual_optimizers(
-    is_constrained,
     multipliers,
     extrapolation=False,
-    dual_optimizer_name="SGD",
+    augmented_lagrangian=False,
+    dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
+    if len(multipliers) == 0:
+        return None
+
+    # Make copy of this fixture since we are modifying in-place
+    dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
 
-    if is_constrained:
-        dual_params = [{"params": _.parameters()} for _ in multipliers]
-        if not extrapolation:
-            if dual_optimizer_name == "SGD":
-                # SGD does not support `foreach=True` (the default for 2.0.0) when the
-                # parameters use sparse gradients. Disabling foreach everywhere for
-                # simplicity.
-                dual_optimizers = getattr(torch.optim, dual_optimizer_name)(
-                    dual_params, foreach=False, **dual_optimizer_kwargs
-                )
-            else:
-                dual_optimizers = getattr(torch.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
-        else:
-            dual_optimizers = getattr(cooper.optim, dual_optimizer_name)(dual_params, **dual_optimizer_kwargs)
+    dual_params = [{"params": _.parameters()} for _ in multipliers]
+    if extrapolation:
+        # Extrapolation optimizers are part of the `cooper.optim` module
+        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
     else:
-        dual_optimizers = None
+        if augmented_lagrangian:
+            assert dual_optimizer_class == torch.optim.SGD
+            dual_optimizer_kwargs["lr"] = 1.0
+
+        if dual_optimizer_class == torch.optim.SGD:
+            # SGD does not support `foreach=True` (the default for 2.0.0) when the
+            # parameters use sparse gradients. Disabling foreach.
+            dual_optimizer_kwargs["foreach"] = False
+
+        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
 
     return dual_optimizers
 
@@ -283,23 +290,29 @@ def build_cooper_optimizer_for_Toy2dCMP(
     primal_optimizers,
     multipliers,
     extrapolation: bool = False,
+    augmented_lagrangian: bool = False,
     alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
-    dual_optimizer_name="SGD",
+    dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
 
     multipliers = cooper.utils.ensure_sequence(multipliers) if multipliers is not None else []
-    is_constrained = len(multipliers) > 0
+
     dual_optimizers = build_dual_optimizers(
-        is_constrained, multipliers, extrapolation, dual_optimizer_name, dual_optimizer_kwargs
+        multipliers=multipliers,
+        augmented_lagrangian=augmented_lagrangian,
+        extrapolation=extrapolation,
+        dual_optimizer_class=dual_optimizer_class,
+        dual_optimizer_kwargs=dual_optimizer_kwargs,
     )
 
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
-        extrapolation=extrapolation,
-        alternation_type=alternation_type,
         dual_optimizers=dual_optimizers,
         multipliers=multipliers,
+        extrapolation=extrapolation,
+        alternation_type=alternation_type,
+        augmented_lagrangian=augmented_lagrangian,
     )
 
     return cooper_optimizer

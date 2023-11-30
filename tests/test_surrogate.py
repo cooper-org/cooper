@@ -35,7 +35,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
-        dual_optimizer_name="SGD",
+        dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 

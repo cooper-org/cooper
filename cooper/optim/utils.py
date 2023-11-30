@@ -4,7 +4,6 @@ from typing import Optional, Union
 
 import torch
 
-from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence, ensure_sequence
 
@@ -16,38 +15,44 @@ from .unconstrained_optimizer import UnconstrainedOptimizer
 
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-    extrapolation: bool = False,
-    alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
+    extrapolation: bool = False,
+    alternation_type: AlternationType = AlternationType.FALSE,
+    augmented_lagrangian: bool = False,
 ) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
     """Creates a constrained or unconstrained optimizer from a set of keyword arguments.
     This method disambiguates the appropriate optimizer class to instantiate.
-
-    Args:
-        primal_optimizers: Optimizer(s) for the primal variables.
-        extrapolation: Whether the optimizer uses extrapolation.
-        alternation_type: Choice of alternation strategy.
-        dual_optimizer: Optional optimizer(s) for the dual variables.
     """
 
     if dual_optimizers is None:
+        assert not extrapolation
+        assert not augmented_lagrangian
         return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
 
     optimizer_kwargs = dict(
-        primal_optimizers=primal_optimizers,
-        dual_optimizers=dual_optimizers,
-        multipliers=multipliers,
+        primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, multipliers=multipliers
     )
 
     if extrapolation:
-        return constrained_optimizers.ExtrapolationConstrainedOptimizer(**optimizer_kwargs)
-    elif alternation_type == AlternationType.PRIMAL_DUAL:
-        return constrained_optimizers.AlternatingPrimalDualOptimizer(**optimizer_kwargs)
-    elif alternation_type == AlternationType.DUAL_PRIMAL:
-        return constrained_optimizers.AlternatingDualPrimalOptimizer(**optimizer_kwargs)
+        constrained_optimizers_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
     else:
-        return constrained_optimizers.SimultaneousOptimizer(**optimizer_kwargs)
+        if augmented_lagrangian:
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianDualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianPrimalDualOptimizer
+            else:
+                raise ValueError("Alternation type {alternation_type} not supported for Augmented Lagrangian.")
+        else:
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                constrained_optimizers_class = constrained_optimizers.DualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                constrained_optimizers_class = constrained_optimizers.PrimalDualOptimizer
+            else:
+                constrained_optimizers_class = constrained_optimizers.SimultaneousOptimizer
+
+    return constrained_optimizers_class(**optimizer_kwargs)
 
 
 def load_cooper_optimizer_from_state_dict(

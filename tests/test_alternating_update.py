@@ -33,7 +33,7 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
-        dual_optimizer_name="SGD",
+        dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
@@ -128,7 +128,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
-        dual_optimizer_name="SGD",
+        dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 

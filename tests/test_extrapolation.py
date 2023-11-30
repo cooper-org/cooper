@@ -31,7 +31,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
         multipliers=cmp.multipliers,
         extrapolation=True,
         alternation_type=cooper.optim.AlternationType.FALSE,
-        dual_optimizer_name="ExtraSGD",
+        dual_optimizer_class=cooper.optim.ExtraSGD,
     )
 
     mktensor = testing_utils.mktensor(device=device)
@@ -104,7 +104,7 @@ def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, 
         multipliers=cmp.multipliers,
         extrapolation=True,
         alternation_type=cooper.optim.AlternationType.FALSE,
-        dual_optimizer_name="ExtraSGD",
+        dual_optimizer_class=cooper.optim.ExtraSGD,
     )
 
     for step_id in range(1500):

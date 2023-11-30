@@ -35,7 +35,7 @@
 #         multipliers=cmp.multipliers,
 #         extrapolation=False,
 #         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
-#         dual_optimizer_name="SGD",
+#         dual_optimizer_class=torch.optim.SGD,
 #         dual_optimizer_kwargs={"lr": 1e-2},
 #     )
 

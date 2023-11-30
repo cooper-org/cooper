@@ -23,12 +23,14 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, devi
         formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
         penalty_coefficients=(penalty_coefficient0, penalty_coefficient1),
         device=device,
+        formulation_kwargs={"penalty_growth_factor": 1.001, "violation_tolerance": 1e-5},
     )
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         multipliers=cmp.multipliers,
         extrapolation=False,
+        augmented_lagrangian=True,
         alternation_type=alternation_type,
     )
 

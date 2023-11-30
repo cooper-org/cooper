@@ -41,7 +41,10 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers, multipliers=cmp.multipliers, dual_optimizer_name="SGD", dual_optimizer_kwargs={"lr": 1e-2}
+        primal_optimizers,
+        multipliers=cmp.multipliers,
+        dual_optimizer_class=torch.optim.SGD,
+        dual_optimizer_kwargs={"lr": 1e-2},
     )
 
     compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model)
@@ -81,9 +84,10 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device)
 
-    loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(
-        is_constrained=use_ineq_constraints, multipliers=new_cmp.multipliers
-    )
+    if len(new_cmp.multipliers) == 0:
+        loaded_dual_optimizers = None
+    else:
+        loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers)
 
     loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
         cooper_optimizer_state=constrained_optimizer_state_dict_100,

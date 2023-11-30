@@ -152,7 +152,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
         multipliers=cmp.multiplier,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
-        dual_optimizer_name="SGD",
+        dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": dual_lr},
     )
 
