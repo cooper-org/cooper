@@ -17,6 +17,8 @@ jobs:
                 # No gpu workflow yet!: https://github.com/apache/singa/issues/802
 
         steps:
+            # TODO: should not run all combinations of python version and torch version.
+            # torch 1.13.1 does not support python 3.11.
             - uses: actions/checkout@v2
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v2
