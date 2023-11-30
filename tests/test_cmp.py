@@ -1,5 +1,3 @@
-from typing import List
-
 import cooper_test_utils
 import pytest
 import testing_utils
@@ -50,7 +48,7 @@ def test_pipeline_without_cmp(
         param_x, param_y = params
         return param_x**2 + 2 * param_y**2
 
-    def evaluate_constraints(params) -> List[cooper.ConstraintState]:
+    def evaluate_constraints(params) -> list[cooper.ConstraintState]:
         param_x, param_y = params
         cg0_state = cooper.ConstraintState(violation=-param_x - param_y + 1.0)  # x + y \ge 1
         cg1_state = cooper.ConstraintState(violation=param_x**2 + param_y - 1.0)  # x**2 + y \le 1.0

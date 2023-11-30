@@ -1,8 +1,7 @@
 import abc
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Tuple
-
+from typing import Optional
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintStore, ConstraintType
@@ -49,7 +48,7 @@ class CMPState:
     def __init__(
         self,
         loss: Optional[torch.Tensor] = None,
-        observed_constraints: Sequence[Tuple[ConstraintGroup, ConstraintState]] = (),
+        observed_constraints: Sequence[tuple[ConstraintGroup, ConstraintState]] = (),
         misc: Optional[dict] = None,
     ):
         self.loss = loss
