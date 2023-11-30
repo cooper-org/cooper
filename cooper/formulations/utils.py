@@ -49,9 +49,17 @@ def compute_dual_weighted_violation(
     and Other Goals" under the name of "proxy" constraints.
     (https://jmlr.org/papers/v20/18-616.html, Sec. 4.2)
 
+    When both the constraint factor and the penalty coefficient are provided, the
+    contribution for each violation is weighted by both the value of the multiplier and
+    the penalty coefficient. This way, the gradient with respect to the multiplier is
+    the constraint violation times the penalty coefficient, as required by the updates
+    of the Augmented Lagrangian Method. See Eq. 5.62 in Nonlinear Programming by
+    Bertsekas (2016).
+
     Args:
         multiplier_value: The value of the multiplier for the constraint group.
         violation: Tensor of constraint violations.
+        penalty_coefficient_value: Tensor of penalty coefficient values.
     """
 
     if not constraint_factor_value.requires_grad:
@@ -71,19 +79,41 @@ def compute_dual_weighted_violation(
         if penalty_coefficient_value is None:
             return torch.einsum("i...,i...->", multiplier_value, detached_violation)
         else:
-            # TODO(juan43ramirez): add comment explaining why the penalty coefficient is
-            # used to re-weight the dual_lagrangian. This is motivated by Augmented
-            # Lagrangian Method updates.
-            return torch.einsum("i...,i...,i...->", multiplier_value, penalty_coefficient_value, detached_violation)
+            return torch.einsum(
+                "i...,i...,i...->", multiplier_value, penalty_coefficient_value.detach(), detached_violation
+            )
 
 
-def compute_quadratic_penalty(
+def compute_quadratic_augmented_contribution(
+    multiplier_value: torch.Tensor,
     penalty_coefficient_value: torch.Tensor,
     violation: torch.Tensor,
-    strict_violation: torch.Tensor,
     constraint_type: ConstraintType,
 ) -> Optional[torch.Tensor]:
-    # TODO(juan43ramirez): Add documentation
+    r"""
+    Computes the quadratic penalty for a constraint group.
+
+    When the constraint is an inequality constraint, the quadratic penalty is computed
+    following Eq 17.65 in Numerical Optimization by Nocedal and Wright (2006). Denoting
+    the multiplier by :math:`\lambda` and the penalty coefficient by :math:`\rho`, the
+
+    .. math::
+      \frac{1}{2 \rho} ( || max(0, \lambda + violation * rho) ||_2^2 - || \lambda ||_2^2)
+
+    Note that when the multiplier is zero, the formula simplifies to the standard
+    quadratic penalty for inequality constraints.
+    .. math::
+        \frac{\rho}{2} || max(0, violation) ||_2^2
+
+    When the constraint is an equality constraint, the quadratic penalty is computed
+    following Eq 17.36 in Numerical Optimization by Nocedal and Wright (2006). Note
+    that, unlike inequality constraints, there is no thresholding at zero for equality
+    constraints.
+
+    .. math::
+        \frac{rho}{2} ||violation||_2^2
+
+    """
 
     if penalty_coefficient_value is None:
         raise ValueError("The penalty coefficient tensor must be provided if the primal contribution is not skipped.")
@@ -91,19 +121,24 @@ def compute_quadratic_penalty(
         raise ValueError("The violation tensor must be provided if the primal contribution is not skipped.")
 
     if constraint_type == ConstraintType.INEQUALITY:
-        # We penalize the square violation associated with violated constraints.
-        # This follows the setup from Eq. 17.7 in Numerical Optimization by
-        # Nocedal and Wright (2006).
 
-        # Violated constraintd are determined using the strict violation.
-        constraint_filter = strict_violation >= 0
+        aux1 = torch.einsum("i...,i...->i...", penalty_coefficient_value, violation)
 
-        sq_violation = constraint_filter * (violation**2)
+        if multiplier_value is None:
+            return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, torch.relu(aux1) ** 2)
+        else:
+            aux2 = torch.relu(multiplier_value + aux1) ** 2 - multiplier_value**2
+            return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, aux2)
+
     elif constraint_type == ConstraintType.EQUALITY:
-        # Equality constraints do not need to be filtered
-        sq_violation = violation**2
+        if multiplier_value is None:
+            linear_contribution = 0.0
+        else:
+            linear_contribution = compute_primal_weighted_violation(
+                constraint_factor_value=multiplier_value, violation=violation
+            )
+        quadratic_penalty = 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, violation**2)
+        return linear_contribution + quadratic_penalty
     else:
         # constraint_type not in [ConstraintType.INEQUALITY, ConstraintType.EQUALITY]:
         raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
-
-    return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, sq_violation)
