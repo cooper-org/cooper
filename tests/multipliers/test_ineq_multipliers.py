@@ -61,13 +61,11 @@ def test_ineq_post_step_(multiplier_class, restart_on_feasible, init_tensor, fea
     if not ineq_multiplier.restart_on_feasible:
         # Latest post-step is a no-op
         assert torch.allclose(multiplier_values, target_weight_data)
-        assert torch.allclose(current_grad, hard_coded_gradient_data)
     else:
         assert torch.allclose(multiplier_values[feasible_indices], torch.tensor(0.0))
         assert torch.allclose(multiplier_values[~feasible_indices], target_weight_data[~feasible_indices])
 
-        assert torch.allclose(current_grad[feasible_indices], torch.tensor(0.0))
-        assert torch.allclose(current_grad[~feasible_indices], hard_coded_gradient_data[~feasible_indices])
+    assert torch.allclose(current_grad, hard_coded_gradient_data)
 
 
 def test_save_load_multiplier(

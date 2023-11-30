@@ -122,50 +122,23 @@ class ExplicitMultiplier(Multiplier):
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative. It also restarts the value of the multipliers for inequality
         constraints that are strictly feasible.
+
+        # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+        # about the pitfalls of using dual_restars with stateful optimizers.
+
         """
 
         if self.enforce_positive:
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
-            # TODO(gallego-posada): Can we make the dependence on
-            # `strictly_feasible_indices` explicit in the signature of `post_step_`?
             if self.restart_on_feasible and self.strictly_feasible_indices is not None:
                 # We reset multipliers to zero when their corresponding constraint
                 # is *strictly* feasible.
                 # We do not reset multipliers for active constraints (satisfied with
                 # equality) to avoid changing the value of a multiplier whose
-                # optimal value is potentially strictly positive.
-
-                # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
-                # about the pitfalls of using dual_restars with stateful optimizers.
-
+                # optimal value is potentially strictly positive.                
                 self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
-
-                grad = self.weight.grad
-                if grad is not None and torch.any(self.strictly_feasible_indices):
-                    # TODO(gallego-posada): Why do we need to do this different treatment
-                    # for dense and sparse gradients?
-                    # This fn gets called at end of `dual_step` and this tends to be
-                    # preceded or followed by a call to `zero_grad` which will zero out
-                    # the gradient anyway. (???)
-                    # Checked and discarded PI optimizer to see if sparsity played a
-                    # role in optimizer update.
-                    # It seems like we could get rid of this entire block that zeros the
-                    # gradient.
-                    if grad.is_sparse:
-                        # Construct a sparse tensor where the entries corresponding to
-                        # strictly feasible constraints are zero, and the rest are
-                        # unchanged.
-                        indices, values = grad._indices(), grad._values()
-                        non_feasible_indices = ~self.strictly_feasible_indices[indices[0]]
-                        masked_values = torch.einsum("i..., i... -> i...", values, non_feasible_indices)
-                        non_zero_mask = masked_values.squeeze().nonzero(as_tuple=True)[0]
-                        non_zero_indices = indices[:, non_zero_mask]
-                        non_zero_values = masked_values[non_zero_mask, ...]
-                        self.weight.grad = torch.sparse_coo_tensor(non_zero_indices, non_zero_values, grad.shape)
-                    else:
-                        grad[self.strictly_feasible_indices, ...] = 0.0
 
             self.strictly_feasible_indices = None
 
