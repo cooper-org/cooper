@@ -70,6 +70,9 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         """
         for constraint_group, constraint_state in cmp_state.observed_constraints:
             if constraint_group.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
+                # We might reach this point via an AugmetedLagrangianOptimizer acting
+                # on some constraints that do not use an Augmented Lagrangian formulation,
+                # so we do _not_ apply penalty coefficient updates to those.
                 if constraint_state.contributes_to_dual_update:
                     constraint_group.update_penalty_coefficient(constraint_state=constraint_state)
 
