@@ -170,13 +170,12 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
                 )
                 raise RuntimeError(error_message)
 
-        # lagrangian_store_post_primal_update = new_cmp_state.populate_lagrangian()
         lagrangian_store_for_dual = new_cmp_state.populate_dual_lagrangian()
         new_cmp_state.dual_backward()
         self.dual_step(call_extrapolation=False)
 
         if self.is_augmented_lagrangian_optimizer:
-            self.update_penalty_coefficients(cmp_state=cmp_state)
+            self.update_penalty_coefficients(cmp_state=new_cmp_state)
 
         # Patch the CMPState and LagrangianStore with the latest available loss and
         # Lagrangian estimate. See the docstring for more details.
