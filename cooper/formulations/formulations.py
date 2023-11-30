@@ -180,7 +180,9 @@ class AugmentedLagrangianFormulation(Formulation):
     expects_multiplier = True
     expects_penalty_coefficient = True
 
-    def __init__(self, constraint_type: ConstraintType, penalty_growth_factor: float = 1.01):
+    def __init__(
+        self, constraint_type: ConstraintType, penalty_growth_factor: float = 1.01, violation_tolerance: float = 1e-4
+    ):
         # TODO(juan43ramirez): Add documentation
 
         # FIXME(gallego-posada): We need to ensure that this formulation is being paired
@@ -194,6 +196,7 @@ class AugmentedLagrangianFormulation(Formulation):
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
 
         self.penalty_growth_factor = penalty_growth_factor
+        self.violation_tolerance = violation_tolerance
 
     def compute_contribution_for_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
