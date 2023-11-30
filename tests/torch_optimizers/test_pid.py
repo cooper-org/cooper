@@ -56,7 +56,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
         delta_change_0 = delta_0 - delta_minus_1
     else:
         delta_change_0 = 0.0
-    p1 = p0 + lr * recursive_PID_direction(error_0, error_change_0, delta_change_0)
+    p1 = p0 + lr * recursive_PID_direction(error_0, error_change_0, delta_change_0).clone().detach()
 
     do_optimizer_step()
 
@@ -77,7 +77,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
         delta_change_1 = delta_1 - delta_0
     else:
         delta_change_1 = 0.0
-    p2 = p1 + lr * recursive_PID_direction(error_1, error_change_1, delta_change_1)
+    p2 = p1 + lr * recursive_PID_direction(error_1, error_change_1, delta_change_1).clone().detach()
 
     do_optimizer_step()
 
@@ -98,7 +98,7 @@ def test_manual_pid(Kp, Ki, Kd, ema_nu):
         delta_change_2 = delta_2 - delta_1
     else:
         delta_change_2 = 0.0
-    p3 = p2 + lr * recursive_PID_direction(error_2, error_change_2, delta_change_2)
+    p3 = p2 + lr * recursive_PID_direction(error_2, error_change_2, delta_change_2).clone().detach()
 
     do_optimizer_step()
 
@@ -166,7 +166,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
     else:
         delta_change_0 = 0.0
     p1 = p0.clone()
-    p1[selected_indices] += lr * recursive_PID_direction(error_0, error_change_0, delta_change_0)
+    p1[selected_indices] += lr * recursive_PID_direction(error_0, error_change_0, delta_change_0).clone().detach()
 
     do_optimizer_step(selected_indices)
 
@@ -202,7 +202,7 @@ def test_manual_sparse_pid(Kp, Ki, Kd, ema_nu):
     else:
         delta_change_1 = 0.0
     p2 = p1.clone()
-    p2[selected_indices] += lr * recursive_PID_direction(error_1, error_change_1, delta_change_1)
+    p2[selected_indices] += lr * recursive_PID_direction(error_1, error_change_1, delta_change_1).clone().detach()
 
     do_optimizer_step(selected_indices)
 

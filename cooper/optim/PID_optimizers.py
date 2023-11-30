@@ -182,9 +182,9 @@ def _pid(
     param.add_(pid_update, alpha=lr)
 
     if "previous_error" in state:
-        state["previous_error"] = error.detach()
+        state["previous_error"] = error.clone().detach()
     if "previous_delta" in state:
-        state["previous_delta"] = new_delta.detach()
+        state["previous_delta"] = new_delta.clone().detach()
 
 
 def _sparse_pid(
@@ -249,6 +249,6 @@ def _sparse_pid(
     param.add_(pid_update, alpha=lr)
 
     if "previous_error" in state:
-        state["previous_error"][error_indices] = error._values().detach()
+        state["previous_error"][error_indices] = error._values().clone().detach()
     if "previous_delta" in state:
-        state["previous_delta"][error_indices] = new_delta._values().detach()
+        state["previous_delta"][error_indices] = new_delta._values().clone().detach()
