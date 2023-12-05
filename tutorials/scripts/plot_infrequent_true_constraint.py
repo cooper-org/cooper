@@ -8,8 +8,8 @@ Linear transformation between two vectors with constrained spectrum
     `contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
     specify whether a constraint contributes to the primal or dual update. By default,
     both flags are set to True. However, in this example, we want to update the 
-    multipliers based on the surrogate constraint since the true constraint is expensive
-    to compute.
+    primal parameters based on the surrogate constraint since the true constraint is
+    expensive to compute, and difficult to differentiate.
 
 Consider the problem of finding the matrix :math:`X` that transforms a vector :math:`y`
 so as to minimize the mean squared error between :math:`Xy` and another vector :math:`z`.
@@ -30,12 +30,14 @@ squared singular values of X can be computed cheaply as it corresponds to the tr
 
 Therefore, we can use the arithmetic mean as a surrogate for the true constraint on the
 geometric mean of the singular values of X. While this choice of surrogate is not 
-guaranteed to produce the same solution as the true constraint, it can serve as a good
-practical heuristic. 
+guaranteed to produce the same solution as the true constraint, the tutorial illustrates
+it is a good practical heuristic. 
 
 This example illustrates the ability to update the primal and dual variables at 
 different frequencies. Here, we make use of the cheap surrogate constraint to update the
-multipliers at every iteration, while the true constraint is only observed sporadically.
+primal variables at every iteration, while the multipliers are updated using the _true_ 
+constraint which is only observed sporadically. Note how the multiplier value remains
+constant in-between measurements of the true constraint.
 
 """
 
