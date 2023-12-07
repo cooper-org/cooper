@@ -118,7 +118,7 @@ def _pi(
     assert not error.is_sparse, "For sparse updates, use _sparse_pi instead"
 
     if "previous_error" not in state and Kp != 0:
-        state["previous_error"] = error.detach()
+        state["previous_error"] = error.clone().detach()
 
     if not maximize:
         error.mul_(-1)
@@ -141,7 +141,7 @@ def _pi(
     param.add_(pid_update, alpha=lr)
 
     if "previous_error" in state:
-        state["previous_error"] = error.detach()
+        state["previous_error"] = error.clone().detach()
 
 
 def _sparse_pi(
@@ -162,7 +162,7 @@ def _sparse_pi(
 
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error._indices()
-    error_values = error._values().detach()
+    error_values = error._values().clone().detach()
 
     if error_values.numel() == 0:
         # Skip update for empty grad
@@ -213,4 +213,4 @@ def _sparse_pi(
     param.add_(pid_update, alpha=lr)
 
     if "previous_error" in state:
-        state["previous_error"][error_indices] = error_values.detach()
+        state["previous_error"][error_indices] = error_values.clone().detach()
