@@ -28,7 +28,7 @@ class PI(torch.optim.Optimizer):
         The execution of the PI controller is given by:
 
         .. math::
-            \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1} + K_I e_t),
+            \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1}) + K_I e_t),
 
         where :math:`K_P`, :math:`K_I` are the proportional and integral gains,
         respectively. We keep the learning rate :math:`\text{lr}` as a separate
@@ -44,8 +44,9 @@ class PI(torch.optim.Optimizer):
         .. warning::
             This class implements an initialization scheme :math:`e_{-1} = e_{0}`. This
             choice ensures that the first step taken by the optimizer in each direction
-            is the same as that of SGD. This initialization scheme is not the same as
-            that of :class:`PID`, which uses :math:`e_{-1} = 0`.
+            is the same as that of SGD with a learning rate of :math:`\text{lr} K_I`.
+            This initialization scheme is not the same as that of :class:`PID`, which
+            uses :math:`e_{-1} = 0`.
 
         Arguments:
             params: iterable of parameters to optimize or dicts defining parameter groups
