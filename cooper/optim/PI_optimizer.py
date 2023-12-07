@@ -121,9 +121,6 @@ def _pi(
     if "previous_error" not in state and Kp != 0:
         state["previous_error"] = error.clone().detach()
 
-    if not maximize:
-        error.mul_(-1)
-
     pid_update = torch.zeros_like(param)
 
     if Ki != 0:
@@ -136,10 +133,10 @@ def _pi(
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
-        weight_decay_sign = -1 if maximize else 1
-        pid_update.add_(param, alpha=weight_decay_sign * weight_decay)
+        pid_update.add_(param, alpha=weight_decay)
 
-    param.add_(pid_update, alpha=lr)
+    alpha = lr if maximize else -lr
+    param.add_(pid_update, alpha=alpha)
 
     if "previous_error" in state:
         state["previous_error"] = error.clone().detach()
@@ -207,11 +204,11 @@ def _sparse_pi(
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
     if weight_decay != 0:
-        weight_decay_sign = -1 if maximize else 1
         observed_params = param.sparse_mask(error)
-        pid_update.add_(observed_params, alpha=weight_decay_sign * weight_decay)
+        pid_update.add_(observed_params, alpha=weight_decay)
 
-    param.add_(pid_update, alpha=lr)
+    alpha = lr if maximize else -lr
+    param.add_(pid_update, alpha=alpha)
 
     if "previous_error" in state:
         state["previous_error"][error_indices] = error_values.clone().detach()
