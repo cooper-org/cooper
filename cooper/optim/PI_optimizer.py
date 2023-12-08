@@ -23,7 +23,8 @@ class PI(torch.optim.Optimizer):
         error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
         the function :math:`L_t` may change over time.
 
-        When ``maximize=False``, the incoming error signal is multiplied by :math:`-1`.
+        When ``maximize=False``, the parameter update is multiplied by :math:`-1` before
+        being applied.
 
         The execution of the PI controller is given by:
 
