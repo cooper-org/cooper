@@ -159,45 +159,39 @@ def _sparse_pi(
     assert error.is_sparse, "For dense updates, use _pi instead"
 
     error = error.coalesce()  # the update is non-linear so indices must be unique
-    error_indices = error._indices()
-    error_values = error._values().clone().detach()
+    error_indices = error.indices()
+    detached_error_values = error._values().clone().detach()
 
-    if error_values.numel() == 0:
+    if detached_error_values.numel() == 0:
         # Skip update for empty grad
         return
 
     if Kp != 0:
         if "previous_error" not in state:
-            state["all_initialized"] = False
-            state["is_initialized_mask"] = torch.zeros_like(param, dtype=torch.bool)
+            state["all_previous_error_initialized"] = False
+            state["needs_initialization_mask"] = torch.ones_like(param, dtype=torch.bool)
             state["previous_error"] = torch.zeros_like(param)
 
-        if not state["all_initialized"]:
-            if torch.all(state["is_initialized_mask"]):
-                # All indices have been initialized, so flag that we can skip this check
-                # in the future.
-                state["all_initialized"] = True
-            else:
-                # Check if current seen indices has been initialized before, if not,
-                # then mark as initialized and store first error value in `previous_error`
-                should_initialize_now_ix = ~state["is_initialized_mask"][error_indices]
-                state["is_initialized_mask"][should_initialize_now_ix] = True
-                state["previous_error"][should_initialize_now_ix] = error_values
+        if not state["all_previous_error_initialized"]:
+            # Check if current seen indices has been initialized before, if not,
+            # then mark as initialized and store first error value in `previous_error`
+            state["previous_error"] += error * state["needs_initialization_mask"]
+            state["needs_initialization_mask"][error_indices] *= False
 
-    if not maximize:
-        error.mul_(-1)
+            if not torch.any(state["needs_initialization_mask"]):
+                # If all buffer entries have been initialized, we flag this so we can
+                # cheaply skip this check in the future.
+                state["all_previous_error_initialized"] = True
 
-    pid_update_values = torch.zeros_like(error_values)
+    pid_update_values = torch.zeros_like(detached_error_values)
 
     if Ki != 0:
-        pid_update_values.add_(error_values, alpha=Ki)
+        pid_update_values.add_(detached_error_values, alpha=Ki)
 
     if Kp != 0:
         previous_error = state["previous_error"].sparse_mask(error)
-        error_change_values = error_values - previous_error._values()
-
-        if Kp != 0:
-            pid_update_values.add_(error_change_values, alpha=Kp)
+        error_change_values = detached_error_values - previous_error._values()
+        pid_update_values.add_(error_change_values, alpha=Kp)
 
     pid_update = torch.sparse_coo_tensor(error_indices, pid_update_values, size=param.shape)
 
@@ -211,4 +205,4 @@ def _sparse_pi(
     param.add_(pid_update, alpha=alpha)
 
     if "previous_error" in state:
-        state["previous_error"][error_indices] = error_values.clone().detach()
+        state["previous_error"][error_indices] = detached_error_values
