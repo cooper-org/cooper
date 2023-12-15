@@ -46,8 +46,9 @@ class PI(torch.optim.Optimizer):
             This class implements an initialization scheme :math:`e_{-1} = e_{0}`. This
             choice ensures that the first step taken by the optimizer in each direction
             is the same as that of SGD with a learning rate of :math:`\text{lr} K_I`.
-            This initialization scheme is not the same as that of :class:`PID`, which
-            uses :math:`e_{-1} = 0`.
+            This initialization scheme matches the behavior of a `PID` optimizer with
+            :math:`K_D=0` and initialization scheme `PIDInitType.SGD_PI`. This class
+            does not implement the `PIDInitType.ZEROS` scheme.
 
         Arguments:
             params: iterable of parameters to optimize or dicts defining parameter groups

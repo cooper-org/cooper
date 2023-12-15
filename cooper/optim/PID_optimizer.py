@@ -132,7 +132,14 @@ class PID(torch.optim.Optimizer):
                 if p.grad is None:
                     continue
 
-                update_function = _sparse_pid if p.grad.is_sparse else _pid
+                if p.grad.is_sparse:
+                    if group["init_type"] == PIDInitType.ZEROS:
+                        update_function = _sparse_pid_zero_init
+                    elif group["init_type"] == PIDInitType.SGD_PI:
+                        update_function = _sparse_pid_sgd_pi_init
+                else:
+                    update_function = _pid
+
                 update_function(
                     param=p,
                     state=self.state[p],
@@ -169,6 +176,8 @@ def _pid(
     error = param.grad
     assert not error.is_sparse, "For sparse updates, use _sparse_pid instead"
 
+    # This case initializes the buffers to zero under the `PIDInitType.ZEROS` scheme.
+    # For the `PIDInitType.SGD_PI` scheme, the buffers are initialized below.
     if init_type == PIDInitType.ZEROS:
         if uses_error_buffer and ("previous_error" not in state):
             state["previous_error"] = torch.zeros_like(error)
@@ -194,6 +203,7 @@ def _pid(
                 pid_update.add_(delta_change, alpha=Kd)
             else:
                 # First time delta is populated, we use the first valid error change
+                # This branch handles the initializtion for the SGD_PI scheme
                 new_delta = error_change
 
     # Weight decay is applied after estimating the delta and curvature, similar to
@@ -205,12 +215,14 @@ def _pid(
     param.add_(pid_update, alpha=alpha)
 
     if uses_error_buffer:
+        # This branch handles the initializtion for the SGD_PI scheme (when called for
+        # the first time)
         state["previous_error"] = error.clone().detach()
     if uses_delta_buffer and (new_delta is not None):
         state["previous_delta"] = new_delta.clone().detach()
 
 
-def _sparse_pid(
+def _sparse_pid_zero_init(
     param: torch.Tensor,
     state: dict,
     lr: float,
@@ -222,9 +234,8 @@ def _sparse_pid(
     init_type: PIDInitType,
     maximize: bool,
 ):
-    """Analogous to _pid but with support for sparse gradients."""
-
-    raise NotImplementedError("Sparse PID is not implemented yet")
+    """Analogous to _pid but with support for sparse gradients. This method implements
+    updates under a buffer initialization of all zeros."""
 
     uses_error_buffer = Kp != 0 or Kd != 0
     uses_delta_buffer = Kd != 0
@@ -233,35 +244,24 @@ def _sparse_pid(
     assert error.is_sparse, "For dense updates, use _pid instead"
 
     error = error.coalesce()  # the update is non-linear so indices must be unique
-    error_indices = error._indices()
+    error_idx = error._indices()
     detached_error_values = error._values().clone().detach()
 
     if detached_error_values.numel() == 0:
         # Skip update for empty grad
         return
 
-    if init_type == PIDInitType.ZEROS:
-        if uses_error_buffer and ("previous_error" not in state):
-            state["previous_error"] = torch.zeros_like(param)
-        if uses_delta_buffer and ("previous_delta" not in state):
-            state["previous_delta"] = torch.zeros_like(param)
-    elif init_type == PIDInitType.SGD_PI:
-        if "previous_error" not in state:
-            state["all_previous_error_initialized"] = False
-            state["needs_error_initialization_mask"] = torch.ones_like(param, dtype=torch.bool)
-            state["previous_error"] = torch.zeros_like(param)
-
-        if "previous_delta" not in state:
-            state["all_previous_delta_initialized"] = False
-            state["needs_delta_initialization_mask"] = torch.ones_like(param, dtype=torch.bool)
-            state["previous_delta"] = torch.zeros_like(param)
+    if uses_error_buffer and ("previous_error" not in state):
+        state["previous_error"] = torch.zeros_like(param)
+    if uses_delta_buffer and ("previous_delta" not in state):
+        state["previous_delta"] = torch.zeros_like(param)
 
     pid_update_values = torch.zeros_like(detached_error_values)
 
     if Ki != 0:
         pid_update_values.add_(detached_error_values, alpha=Ki)
 
-    if uses_delta_buffer:
+    if uses_error_buffer:
         previous_error = state["previous_error"].sparse_mask(error)
         error_change_values = detached_error_values - previous_error._values()
 
@@ -270,11 +270,11 @@ def _sparse_pid(
 
         if Kd != 0:
             previous_delta = state["previous_delta"].sparse_mask(error)
-            new_delta = previous_delta.mul(ema_nu).add(error_change_values, alpha=1 - ema_nu)
-            delta_change = new_delta.sub(previous_delta)
+            new_delta_values = previous_delta._values().mul(ema_nu).add(error_change_values, alpha=1 - ema_nu)
+            delta_change = new_delta_values.sub(previous_delta._values())
             pid_update_values.add_(delta_change, alpha=Kd)
 
-    pid_update = torch.sparse_coo_tensor(error_indices, pid_update_values, size=param.shape)
+    pid_update = torch.sparse_coo_tensor(error_idx, pid_update_values, size=param.shape)
 
     # Weight decay is applied after estimating the delta and curvature, similar to
     # AdamW. See https://arxiv.org/abs/1711.05101 for details.
@@ -286,6 +286,116 @@ def _sparse_pid(
     param.add_(pid_update, alpha=alpha)
 
     if "previous_error" in state:
-        state["previous_error"][error_indices] = error._values().clone().detach()
+        state["previous_error"][error_idx] = detached_error_values
     if "previous_delta" in state:
-        state["previous_delta"][error_indices] = new_delta._values().clone().detach()
+        state["previous_delta"][error_idx] = new_delta_values.clone().detach()
+
+
+def _sparse_pid_sgd_pi_init(
+    param: torch.Tensor,
+    state: dict,
+    lr: float,
+    weight_decay: float,
+    Kp: float,
+    Ki: float,
+    Kd: float,
+    ema_nu: float,
+    init_type: PIDInitType,
+    maximize: bool,
+):
+    """Analogous to _pid but with support for sparse gradients. This method implements
+    updates under a buffer initialization scheme that makes the first two updates of the
+    algorithm (in each dimension) match those of a PI optimizer."""
+
+    uses_error_buffer = Kp != 0 or Kd != 0
+    uses_delta_buffer = Kd != 0
+
+    error = param.grad
+    assert error.is_sparse, "For dense updates, use _pid instead"
+
+    error = error.coalesce()  # the update is non-linear so indices must be unique
+    error_idx = error._indices()
+    detached_error_values = error._values().clone().detach()
+
+    if detached_error_values.numel() == 0:
+        # Skip update for empty grad
+        return
+
+    if uses_error_buffer and ("previous_error" not in state):
+        state["previous_error"] = torch.zeros_like(param)
+        state["needs_error_initialization_mask"] = torch.ones_like(param, dtype=torch.bool)
+
+    if uses_delta_buffer and ("previous_delta" not in state):
+        state["previous_delta"] = torch.zeros_like(param)
+        state["needs_delta_initialization_mask"] = torch.ones_like(param, dtype=torch.bool)
+
+    pid_update_values = torch.zeros_like(detached_error_values)
+
+    if Ki != 0:
+        pid_update_values.add_(detached_error_values, alpha=Ki)
+
+    if uses_error_buffer:
+
+        previous_error_values = state["previous_error"].sparse_mask(error)._values()
+        error_change_values = torch.where(
+            state["needs_error_initialization_mask"].sparse_mask(error)._values(),
+            torch.zeros_like(detached_error_values),
+            detached_error_values - previous_error_values,
+        )
+        if Kp != 0:
+            pid_update_values.add_(error_change_values, alpha=Kp)
+
+        if Kd != 0:
+            previous_delta_values = state["previous_delta"].sparse_mask(error)._values()
+            new_delta_values = torch.where(
+                state["needs_delta_initialization_mask"].sparse_mask(error)._values(),
+                torch.zeros_like(detached_error_values),
+                previous_delta_values.mul(ema_nu).add(error_change_values, alpha=1 - ema_nu),
+            )
+            pid_update_values.add_(new_delta_values.sub(previous_delta_values), alpha=Kd)
+
+    pid_update = torch.sparse_coo_tensor(error_idx, pid_update_values, size=param.shape)
+
+    # Weight decay is applied after estimating the delta and curvature, similar to
+    # AdamW. See https://arxiv.org/abs/1711.05101 for details.
+    if weight_decay != 0:
+        observed_params = param.sparse_mask(error)
+        pid_update.add_(observed_params, alpha=weight_decay)
+
+    alpha = lr if maximize else -lr
+    param.add_(pid_update, alpha=alpha)
+
+    if uses_delta_buffer:
+        # The update of the delta buffer works as follows:
+        # - If delta has already been initialized, then we keep the EMA value stored in
+        #   `new_delta_values`.
+        # - If delta has not been initialized, then we check if the error buffer has
+        #   been initialized.
+        #   - If the error buffer has been initialized, we initialize delta with the
+        #     first error change value `(e_1 - e_0)`.
+        #   - Otherwise, we keep a value of zero in the delta buffer.
+        # Finally, we mark the delta buffer as initialized for the .
+        delta_buffer_update = torch.where(
+            state["needs_delta_initialization_mask"].sparse_mask(error)._values(),
+            torch.where(
+                state["needs_error_initialization_mask"].sparse_mask(error)._values(),
+                torch.zeros_like(detached_error_values),
+                error_change_values,
+            ),
+            new_delta_values,
+        )
+        state["previous_delta"][error_idx] = delta_buffer_update.clone().detach()
+        # The resulting value of the delta buffer initialization mask matches the
+        # error buffer initialization mask at this stage:
+        # - If the error buffer has been initialized (marked as False), then the delta
+        #   buffer was either initialized previosuly or initialized in this step. Thus
+        #   the delta buffer initialization mask can be marked as False.
+        # - If the error buffer has not been initialized (marked as True), then the
+        #   delta buffer is definitely not yet initialized, so retains the value True.
+        # Note that error buffers for indices seen for the first time in this step are
+        # only marked as initialized _after_ the update of the delta buffer. (See block
+        # below.)
+        state["needs_delta_initialization_mask"][error_idx] = state["needs_error_initialization_mask"][error_idx]
+    if uses_error_buffer:
+        state["previous_error"][error_idx] = detached_error_values
+        state["needs_error_initialization_mask"][error_idx] *= False
