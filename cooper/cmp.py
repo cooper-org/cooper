@@ -2,6 +2,7 @@ import abc
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Optional
+
 import torch
 
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintStore, ConstraintType

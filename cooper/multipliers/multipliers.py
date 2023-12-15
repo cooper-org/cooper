@@ -137,7 +137,7 @@ class ExplicitMultiplier(Multiplier):
                 # is *strictly* feasible.
                 # We do not reset multipliers for active constraints (satisfied with
                 # equality) to avoid changing the value of a multiplier whose
-                # optimal value is potentially strictly positive.                
+                # optimal value is potentially strictly positive.
                 self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
 
             self.strictly_feasible_indices = None
