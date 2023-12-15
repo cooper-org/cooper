@@ -14,6 +14,8 @@ ALL_HYPER_PARAMS = [
     (1, 0),  # P controller
 ]
 
+LR = 0.01
+
 
 @pytest.mark.parametrize(["Kp", "Ki"], ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
@@ -29,7 +31,6 @@ def test_manual_pi_update(Kp, Ki, maximize):
     def recursive_PI_direction(error, error_change):
         return Kp * error_change + Ki * error
 
-    LR = 0.1
     update_sign = 1 if maximize else -1
     optimizer = PI([param], lr=LR, Kp=Kp, Ki=Ki, maximize=maximize)
 
@@ -73,7 +74,6 @@ def test_manual_sparse_pi_update(Kp, Ki, maximize, device):
     def loss_fn(indices):
         return multiplier_module(indices).pow(2).sum() / 2
 
-    LR = 0.1
     update_sign = 1 if maximize else -1
 
     def compute_analytic_gradient(indices):
@@ -170,7 +170,7 @@ def test_pi_convergence(
     )
 
     dual_params = [{"params": _.parameters()} for _ in cmp.multipliers]
-    dual_optimizer = PI(dual_params, lr=0.01, Kp=Kp, Ki=Ki, maximize=True)
+    dual_optimizer = PI(dual_params, lr=LR, Kp=Kp, Ki=Ki, maximize=True)
 
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
         primal_optimizers, dual_optimizer, multipliers=cmp.multipliers

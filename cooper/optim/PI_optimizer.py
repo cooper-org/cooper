@@ -14,7 +14,7 @@ class PI(torch.optim.Optimizer):
         Ki: float = 1.0,
         maximize: bool = False,
     ):
-        """
+        r"""
         Implements a PI controller as a PyTorch optimizer.
 
         The error signal used for the PI controller is the gradient of a cost function
@@ -120,6 +120,12 @@ def _pi(
     assert not error.is_sparse, "For sparse updates, use _sparse_pi instead"
 
     if "previous_error" not in state and Kp != 0:
+        # Note that technically, one should initialize the previous error to be
+        # :math:`e_{-1} = - (Kp/Ki) e_{0}`. However, since this function implements the
+        # recursive formulation of the PI controller
+        # :math:`\theta_{t+1} = \theta_t + \text{lr} (K_P (e_t - e_{t-1}) + K_I e_t)`,
+        # we can initialize :math:`e_{-1} = e_{0}` to ensure that the first step taken
+        # matches that of SGD with learning rate :math:`\text{lr} K_I`.
         state["previous_error"] = error.clone().detach()
 
     pid_update = torch.zeros_like(param)
