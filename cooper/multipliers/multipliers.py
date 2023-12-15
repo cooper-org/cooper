@@ -50,7 +50,10 @@ class ExplicitMultiplier(Multiplier):
             multiplier.
         restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
             default) when the constrain is feasible. This is only supported for
-            inequality constraints (i.e. enforce_positive=True)
+            inequality constraints (i.e. enforce_positive=True). Note that we discourage
+            the use of `restart_on_feasible` along with stateful optimizers (such as
+            :py:class:`~torch.optim.SGD` with momentum or :py:class:`~torch.optim.Adam`).
+
     """
 
     def __init__(
