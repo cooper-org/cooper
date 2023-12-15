@@ -105,6 +105,37 @@ def test_dense_pid_gd_init_matches_pi_first_two_steps(Kp, Ki, Kd, ema_nu, maximi
 
 @pytest.mark.parametrize(["Kp", "Ki", "Kd", "ema_nu"], ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
+def test_dense_pid_no_kd_matches_pi(Kp, Ki, Kd, ema_nu, maximize):
+    """This test checks that the first 100 steps of `PID(KP, KI, KD=0, init_type=SGD_PI)`
+    are equivalent to PI(KP, KI)."""
+
+    if Kd != 0:
+        pytest.skip("Test only applies to PID with KD gain equal zero")
+
+    param_pi = torch.tensor([1.0], requires_grad=True)
+    param_pid = torch.tensor([1.0], requires_grad=True)
+
+    loss_fn = lambda param: param**2 / 2
+
+    def do_optimizer_step(_param, _optimizer):
+        _optimizer.zero_grad()
+        loss = loss_fn(_param)
+        loss.backward()
+        _optimizer.step()
+
+    pid_optimizer = PID(
+        [param_pid], lr=LR, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu, maximize=maximize, init_type=PIDInitType.SGD_PI
+    )
+    pi_optimizer = PID([param_pi], lr=LR, Kp=Kp, Ki=Ki, maximize=maximize)
+
+    for step_id in range(100):
+        do_optimizer_step(param_pi, pi_optimizer)
+        do_optimizer_step(param_pid, pid_optimizer)
+        assert torch.allclose(param_pi, param_pid)
+
+
+@pytest.mark.parametrize(["Kp", "Ki", "Kd", "ema_nu"], ALL_HYPER_PARAMS)
+@pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_pid_update_zeros_init(Kp, Ki, Kd, ema_nu, maximize, device):
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, 1, device=device)
