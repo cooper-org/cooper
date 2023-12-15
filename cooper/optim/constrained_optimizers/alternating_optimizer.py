@@ -1,8 +1,8 @@
 # coding: utf8
 """
-Implementation of constrained optimizers based on alternation such as 
-:py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`, 
-:py:class:`AugmentedLagrangianPrimalDualOptimizer` and 
+Implementation of constrained optimizers based on alternation such as
+:py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`,
+:py:class:`AugmentedLagrangianPrimalDualOptimizer` and
 :py:class:`AugmentedLagrangianDualPrimalOptimizer`.
 """
 

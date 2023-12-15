@@ -1,5 +1,5 @@
-from enum import Enum
 import warnings
+from enum import Enum
 from typing import Optional
 
 import torch
@@ -39,7 +39,7 @@ class PID(torch.optim.Optimizer):
         \theta_{t+1} &= \theta_t - \text{lr} (K_P (e_t - e_{t-1} + K_I e_t + K_D (\partial_t - \partial_{t-1})),
 
     where :math:`K_P`, :math:`K_I`, and :math:`K_D` are the proportional, integral, and
-    derivative gains. :math:`\nu` is the EMA coefficient used to reduce the noise in 
+    derivative gains. :math:`\nu` is the EMA coefficient used to reduce the noise in
     the estimation of the derivative term. We keep the learning rate :math:`\text{lr}`
     as a separate parameter to facilitate comparison with other optimizers.
 

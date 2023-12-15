@@ -7,7 +7,7 @@ Linear transformation between two vectors with constrained spectrum
     This example highlights the use of the flags `contributes_to_primal_update` and
     `contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
     specify whether a constraint contributes to the primal or dual update. By default,
-    both flags are set to True. However, in this example, we want to update the 
+    both flags are set to True. However, in this example, we want to update the
     primal parameters based on the surrogate constraint since the true constraint is
     expensive to compute, and difficult to differentiate.
 
@@ -19,23 +19,23 @@ Formally,
 .. math::
     \min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \\text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
 
-where :math:`X \in \mathbb{R}^{m \\times n}`, :math:`y \in \mathbb{R}^m`, 
+where :math:`X \in \mathbb{R}^{m \\times n}`, :math:`y \in \mathbb{R}^m`,
 :math:`z \in \mathbb{R}^n`, :math:`r = \min\{m, n\}`, :math:`\sigma_i(X)` denotes the
 :math:`i`-th singular value of :math:`X`, and :math:`c` is a constant.
 
 Note that calculating the geometric mean of the singular values of X is expensive since
 it requires computing the SVD decomposition of X. However, the *arithmetic* mean of the
 squared singular values of X can be computed cheaply as it corresponds to the trace of
-:math:`X X^T`. 
+:math:`X X^T`.
 
 Therefore, we can use the arithmetic mean as a surrogate for the true constraint on the
-geometric mean of the singular values of X. While this choice of surrogate is not 
+geometric mean of the singular values of X. While this choice of surrogate is not
 guaranteed to produce the same solution as the true constraint, the tutorial illustrates
-it is a good practical heuristic. 
+it is a good practical heuristic.
 
-This example illustrates the ability to update the primal and dual variables at 
+This example illustrates the ability to update the primal and dual variables at
 different frequencies. Here, we make use of the cheap surrogate constraint to update the
-primal variables at every iteration, while the multipliers are updated using the _true_ 
+primal variables at every iteration, while the multipliers are updated using the _true_
 constraint which is only observed sporadically. Note how the multiplier value remains
 constant in-between measurements of the true constraint.
 
