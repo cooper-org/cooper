@@ -3,9 +3,9 @@
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
 [![DOCS](https://readthedocs.org/projects/cooper/badge/?version=latest)](https://cooper.readthedocs.io/en/latest/?version=latest)
 [![Build and Test](https://github.com/cooper-org/cooper/actions/workflows/build.yml/badge.svg)](https://github.com/cooper-org/cooper/actions/workflows/build.yml)
-[![Codecov](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)](https://codecov.io/gh/cooper-org/cooper/branch/dev/graph/badge.svg?token=1AKM2EQ7RT)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/cooper-org/cooper/issues)
+[![Coverage](https://codecov.io/gh/cooper-org/cooper/graph/badge.svg?token=4U41P8JCE1)](https://codecov.io/gh/cooper-org/cooper)
 [![HitCount](https://hits.dwyl.com/cooper-org/cooper.svg?style=flat-square)](https://cooper.readthedocs.io/en/latest/?version=latest)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/cooper-org/cooper/issues)
 
 ## About
 
