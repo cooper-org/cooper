@@ -13,7 +13,7 @@ jobs:
         # Setup lastest python version
         steps:
             - uses: actions/checkout@v2
-            - name: Set up Python 3.10
+            -  name: Set up Python 3.10
               uses: actions/setup-python@v2
               with:
                   python-version: "3.10"
@@ -26,8 +26,7 @@ jobs:
             - name: Coverage tests
               run: pytest --cov=cooper . --cov-report term-missing
 
-            - name: Codecov
-              if: success()
+            - name: Upload coverage reports to Codecov
+              uses: codecov/codecov-action@v3
               env:
-                  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-              run: codecov
+                CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
