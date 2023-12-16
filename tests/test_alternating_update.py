@@ -42,7 +42,7 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
     }
 
-    x0_y0 = mktensor([0.0, -1.0])
+    x0_y0 = mktensor([0.0, -1.0])  # noqa: F841
     lmbda0 = mktensor([0.0, 0.0])
 
     # ------------ First step of alternating updates ------------

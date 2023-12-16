@@ -90,7 +90,7 @@ def test_pipeline_without_cmp(
             observed_constraints = []
 
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
-        lagrangian_store = cmp_state.populate_lagrangian()
+        lagrangian_store = cmp_state.populate_lagrangian()  # noqa: F841
         cmp_state.backward()
         cooper_optimizer.step()
 

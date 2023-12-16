@@ -15,7 +15,6 @@ def alternation_type(request):
 
 
 def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, device):
-
     penalty_coefficients = (
         cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device)),
         cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device)),
@@ -251,7 +250,7 @@ def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device
 
     # Train for another 10 steps -- so a total of 20 steps
     for _ in range(10):
-        cmp_state = cooper_optimizer.roll(**roll_kwargs)
+        cmp_state = cooper_optimizer.roll(**roll_kwargs)  # noqa: F841
 
     # Reload from checkpoint at 10 steps
     new_penalty_coefficient0 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
