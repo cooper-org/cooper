@@ -8,7 +8,6 @@ from typing import Callable, Optional
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
-from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 

@@ -65,7 +65,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])
     rho0 = torch.stack([penalty_coefficients[0](), penalty_coefficients[1]()]).flatten().detach()
-    initial_cmp_state = cmp.compute_cmp_state(params)
+    initial_cmp_state = cmp.compute_cmp_state(params)  # noqa: F841
 
     # ------------ First step of dual-primal updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)

@@ -7,7 +7,6 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintType
 from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence

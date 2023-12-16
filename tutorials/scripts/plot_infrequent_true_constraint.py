@@ -1,4 +1,4 @@
-"""
+r"""
 Linear transformation between two vectors with constrained spectrum
 ===================================================================
 
@@ -45,7 +45,6 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 from style_utils import *
 

@@ -5,8 +5,7 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintStore, ConstraintType
-from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier
+from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintStore
 
 # Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:

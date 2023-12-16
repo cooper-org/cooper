@@ -1,6 +1,4 @@
 import cooper_test_utils
-import pytest
-import testing_utils
 import torch
 
 import cooper
@@ -74,11 +72,9 @@ def test_pipeline_without_cmp(
         )
         cg1 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier1)
 
-        constraint_groups = [cg0, cg1]
         multipliers = [multiplier0, multiplier1]
     else:
         multipliers = []
-        constraint_groups = []
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=multipliers)
 

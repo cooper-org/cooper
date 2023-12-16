@@ -1,5 +1,5 @@
 from . import utils
-from .constrained_optimizers import *
+from .constrained_optimizers import *  # noqa: F403
 from .extra_optimizers import ExtraAdam, ExtragradientOptimizer, ExtraSGD
 from .optimizer_state import CooperOptimizerState
 from .PI_optimizer import PI

@@ -4,8 +4,8 @@ import torch
 
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
-from cooper.formulations import Formulation, FormulationType
-from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier, Multiplier, PenaltyCoefficient
+from cooper.formulations import FormulationType
+from cooper.multipliers import IndexedMultiplier, Multiplier, PenaltyCoefficient
 
 
 class ConstraintGroup:
@@ -60,7 +60,7 @@ class ConstraintGroup:
     def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
         """Update the penalty coefficient of the constraint group."""
         if self.penalty_coefficient is None:
-            raise ValueError(f"Constraint group does not have a penalty coefficient.")
+            raise ValueError("Constraint group does not have a penalty coefficient.")
         else:
             self.penalty_coefficient.update_value(
                 constraint_state=constraint_state,

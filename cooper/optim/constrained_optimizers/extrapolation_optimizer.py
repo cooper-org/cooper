@@ -8,7 +8,6 @@ from typing import Callable, Optional
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
-from cooper.constraints import ConstraintGroup
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
@@ -93,7 +92,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
         self.zero_grad()
         cmp_state_pre_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()
+        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()  # noqa: F841
         cmp_state_pre_extrapolation.backward()
         self.step(call_extrapolation=True)
 

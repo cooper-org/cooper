@@ -87,7 +87,7 @@ class PID(torch.optim.Optimizer):
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
-        if not init_type in [PIDInitType.ZEROS, PIDInitType.SGD_PI]:
+        if init_type not in [PIDInitType.ZEROS, PIDInitType.SGD_PI]:
             raise ValueError("Invalid init_type: {}".format(init_type))
 
         # We allowing for negative PID coefficients Kp, Ki and Kd to realize common

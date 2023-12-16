@@ -1,6 +1,5 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 import abc
-import warnings
 from typing import Optional
 
 import torch
@@ -94,7 +93,7 @@ class ExplicitMultiplier(Multiplier):
         Otherwise, the weight is initialized to zero.
         """
         if (num_constraints is None) and (init is None):
-            raise ValueError(f"At least one of `num_constraints` and `init` must be provided.")
+            raise ValueError("At least one of `num_constraints` and `init` must be provided.")
         elif (num_constraints is not None) and (init is not None) and (num_constraints != init.shape[0]):
             raise ValueError(f"Inconsistent `init` shape {init.shape} and `num_constraints={num_constraints}")
         elif init is not None:

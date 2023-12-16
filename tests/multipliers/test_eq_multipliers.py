@@ -1,5 +1,4 @@
 import multiplier_test_utils
-import pytest
 import torch
 
 import cooper

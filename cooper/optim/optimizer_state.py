@@ -2,7 +2,7 @@
 
 import dataclasses
 from collections.abc import Sequence
-from typing import Dict, Literal, Optional, Union
+from typing import Dict, Optional
 
 from cooper.utils import validate_state_dicts
 
@@ -45,7 +45,7 @@ class CooperOptimizerState:
         for state_dict_name in state_dict_names:
             try:
                 dicts_match = validate_state_dicts(getattr(self, state_dict_name), getattr(other, state_dict_name))
-            except:
+            except:  # noqa: E722
                 dicts_match = False
             if not dicts_match:
                 return False

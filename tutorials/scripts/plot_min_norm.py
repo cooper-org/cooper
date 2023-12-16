@@ -1,4 +1,4 @@
-"""
+r"""
 Finding the min-norm solution to a linear system of equations
 ==============================================================
 

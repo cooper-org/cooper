@@ -2,9 +2,9 @@ import logging
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_sequence(argument: Any):

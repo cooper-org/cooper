@@ -1,4 +1,4 @@
-"""
+r"""
 Finding a discrete maximum entropy distribution
 ===============================================
 

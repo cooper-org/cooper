@@ -1,4 +1,4 @@
-"""
+r"""
 Linear classification with rate constraints
 ===============================================
 
