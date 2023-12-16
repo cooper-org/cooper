@@ -45,10 +45,12 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
+import style_utils
 import torch
-from style_utils import *
 
 import cooper
+
+style_utils.set_plot_style()
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -192,7 +194,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
         else:
             compute_cmp_state_fn = lambda: cmp.compute_surrogate_cmp_state(X)
 
-        lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
+        lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)  # noqa: F841
 
         if prev_X.allclose(X, atol=tolerance):
             break
@@ -215,7 +217,7 @@ def plot_results(state_history, constraint_level):
     ax[0, 0].grid(True, which="both", alpha=0.3)
 
     ax[0, 1].plot(state_history["arithmetic_mean"])
-    ax[0, 1].set_ylabel("Arith. mean sq. singular values", fontsize=SMALL_SIZE)
+    ax[0, 1].set_ylabel("Arith. mean sq. singular values", fontsize=style_utils.SMALL_SIZE)
 
     ax[1, 0].plot(state_history["geometric_mean"])
     ax[1, 0].set_ylabel("Geometric mean")
@@ -227,7 +229,7 @@ def plot_results(state_history, constraint_level):
     ax[1, 1].axhline(0, color="red", linestyle="--", alpha=0.3)
 
     for ax_ in ax.flatten():
-        ax_.set_xlabel("Iteration", fontsize=SMALL_SIZE)
+        ax_.set_xlabel("Iteration", fontsize=style_utils.SMALL_SIZE)
         for line in ax_.get_lines():
             line.set_linewidth(2)
 

@@ -15,12 +15,13 @@ This example illustrates how **Cooper** integrates with:`
 
 import matplotlib.pyplot as plt
 import numpy as np
+import style_utils
 import torch
-from style_utils import *
 from torchvision import datasets, transforms
 
 import cooper
 
+style_utils.set_plot_style()
 np.random.seed(0)
 torch.manual_seed(0)
 

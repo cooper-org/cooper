@@ -34,9 +34,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import style_utils
 import torch
-from style_utils import *
 
 import cooper
+
+style_utils.set_plot_style()
 
 torch.manual_seed(0)
 np.random.seed(0)

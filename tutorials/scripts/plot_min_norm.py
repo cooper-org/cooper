@@ -33,14 +33,15 @@ convergence of the algorithm.
 
 import matplotlib.pyplot as plt
 import numpy as np
+import style_utils
 import torch
-from style_utils import *
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
 from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType, FormulationType
 
+style_utils.set_plot_style()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -187,7 +188,7 @@ def plot_results(state_histories) -> None:
     for exp_id, (exp_label, state_history) in enumerate(state_histories):
         [ax[exp_id, _].set_xlabel("Step") for _ in range(4)]
 
-        ax[exp_id, 0].set_ylabel(exp_label, fontsize=MEDIUM_SIZE)
+        ax[exp_id, 0].set_ylabel(exp_label, fontsize=style_utils.MEDIUM_SIZE)
 
         ax[exp_id, 0].plot(state_history["step"], state_history["relative_norm"])
         ax[exp_id, 0].axhline(1, color="red", linestyle="--", alpha=0.3)
