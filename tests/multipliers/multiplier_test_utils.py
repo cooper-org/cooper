@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import pytest
@@ -48,10 +49,9 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
     new_multiplier = explicit_multiplier_class(constraint_type=multiplier.constraint_type, init=multiplier_init)
 
     # Save to file to force reading from file so we can ensure correct loading
-    tmp = tempfile.NamedTemporaryFile()
-    torch.save(multiplier.state_dict(), tmp.name)
-    state_dict = torch.load(tmp.name)
-    tmp.close()
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        torch.save(multiplier.state_dict(), os.path.join(tmpdirname, "multiplier.pt"))
+        state_dict = torch.load(os.path.join(tmpdirname, "multiplier.pt"))
 
     new_multiplier.load_state_dict(state_dict)
 
