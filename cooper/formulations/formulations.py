@@ -164,7 +164,7 @@ class LagrangianFormulation(Formulation):
             )
             dual_constraint_store = ConstraintStore(
                 multiplier_value=multiplier_value,
-                violation=weighted_violation,
+                violation=strict_violation,
                 lagrangian_contribution=weighted_violation,
             )
 
