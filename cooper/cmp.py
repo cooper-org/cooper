@@ -142,8 +142,10 @@ class CMPState:
 
                 # Extracting the violation from the dual_constraint_store ensures that it is
                 # the "strict" violation, if available.
+                _, strict_constraint_features = constraint_state.extract_constraint_features()
                 constraint_group.update_strictly_feasible_indices_(
-                    strict_violation=dual_constraint_store.violation, constraint_state=constraint_state
+                    strict_violation=dual_constraint_store.violation,
+                    strict_constraint_features=strict_constraint_features,
                 )
 
         # Modify "private" attributes to accumulate Lagrangian values over successive

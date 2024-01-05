@@ -89,7 +89,7 @@ class ConstraintGroup:
         return self.formulation.compute_contribution_for_dual_lagrangian(**kwargs)
 
     def update_strictly_feasible_indices_(
-        self, strict_violation: torch.Tensor, constraint_state: ConstraintState
+        self, strict_violation: torch.Tensor, strict_constraint_features: torch.Tensor
     ) -> None:
 
         # Determine which of the constraints are strictly feasible and update the
@@ -102,9 +102,7 @@ class ConstraintGroup:
 
                 # IndexedMultipliers have a shape of (-, 1). We need to unsqueeze
                 # dimension 1 of the violations
-                strictly_feasible_indices[constraint_state.strict_constraint_features] = (
-                    strict_violation.unsqueeze(1) < 0.0
-                )
+                strictly_feasible_indices[strict_constraint_features] = strict_violation.unsqueeze(1) < 0.0
             else:
                 strictly_feasible_indices = strict_violation < 0.0
 
