@@ -1,4 +1,5 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
+
 import abc
 from typing import Optional
 
@@ -97,7 +98,7 @@ class ExplicitMultiplier(Multiplier):
         elif (num_constraints is not None) and (init is not None) and (num_constraints != init.shape[0]):
             raise ValueError(f"Inconsistent `init` shape {init.shape} and `num_constraints={num_constraints}")
         elif init is not None:
-            return torch.nn.Parameter(init).to(device=device, dtype=dtype)
+            return torch.nn.Parameter(init.to(device=device, dtype=dtype))
         elif num_constraints is not None:
             return torch.nn.Parameter(torch.zeros(num_constraints, device=device, dtype=dtype))
 
