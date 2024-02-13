@@ -76,7 +76,7 @@ primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 # Define the dual optimizer
 dual_parameters = []
 [dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers.values()]
-dual_optimizer = cooper.optim.PI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
+dual_optimizer = cooper.optim.nuPI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multipliers.values()
