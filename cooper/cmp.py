@@ -244,6 +244,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     @property
     def state(self) -> CMPState:
+        # TODO: do we need this anymore?
         return self._state
 
     @state.setter

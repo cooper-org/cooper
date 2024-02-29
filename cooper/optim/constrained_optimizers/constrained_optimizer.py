@@ -15,7 +15,6 @@ from ..types import AlternationType
 
 
 class ConstrainedOptimizer:
-
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given a provided :py:class:`~cooper.formulation.Formulation`.
@@ -29,6 +28,11 @@ class ConstrainedOptimizer:
     of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
     :py:class:`~cooper.formulation.Formulation` classes for further details on
     handling unconstrained problems.
+
+    TODO: Document that we need the multiplier to be able to do projection steps
+    # on the dual variables. This is because the projection step is implemented at the
+    # multiplier level and there is not enough information in the dual optimizer to
+    # carry out the projection step.
 
     Args:
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
