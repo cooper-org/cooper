@@ -71,7 +71,11 @@ class ConstraintState:
         1-dimension."""
 
         violation = self.violation
-        strict_violation = self.strict_violation if (self.strict_violation is not None) else self.violation
+
+        if self.strict_violation is not None:
+            strict_violation = self.strict_violation
+        else:
+            strict_violation = self.violation
 
         if do_unsqueeze:
             # If the violation is a scalar, we unsqueeze it to ensure that it has at
@@ -91,10 +95,9 @@ class ConstraintState:
         features."""
         constraint_features = self.constraint_features
 
-        strict_constraint_features = self.strict_constraint_features
-        # If strict_constraint_features is not available, patch it with features for
-        # differentiable constraints.
-        if strict_constraint_features is None:
+        if self.strict_constraint_features is not None:
+            strict_constraint_features = self.strict_constraint_features
+        else:
             strict_constraint_features = self.constraint_features
 
         return constraint_features, strict_constraint_features
