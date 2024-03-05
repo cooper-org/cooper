@@ -54,7 +54,7 @@ class PenaltyCoefficient(torch.nn.Module, abc.ABC):
             return f"{type(self).__name__}(shape={self.value.shape})"
 
     @abc.abstractmethod
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         """Return the current value of the penalty coefficient."""
         pass
 
