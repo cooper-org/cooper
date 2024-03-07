@@ -79,6 +79,7 @@ def compute_dual_weighted_violation(
         if penalty_coefficient_value is None:
             return torch.einsum("i...,i...->", multiplier_value, detached_violation)
         else:
+            # TODO: add comment pointing back to the docstring
             return torch.einsum(
                 "i...,i...,i...->", multiplier_value, penalty_coefficient_value.detach(), detached_violation
             )

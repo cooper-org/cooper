@@ -122,6 +122,8 @@ class ConstraintState:
 
 @dataclass
 class ConstraintStore:
+    # TODO: update docstring. Current ConstraintStore is agnostic to dual or primal
+    # lagrangian.
     """Stores the value of the constraint factor (multiplier or penalty coefficient),
     the contribution of the constraint to the primal-differentiable Lagrian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""

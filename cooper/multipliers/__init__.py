@@ -22,10 +22,12 @@ def evaluate_constraint_factor(
     if violation is None:
         return None
 
-    if constraint_features is None:
-        value = module()
-    else:
-        value = module(constraint_features)
+    module_kwargs = {"constraint_features": constraint_features} if constraint_features is not None else {}
+    value = module(**module_kwargs)
+    # if constraint_features is None:
+    #     value = module()
+    # else:
+    #     value = module(constraint_features)
 
     if len(value.shape) == 0:
         value.unsqueeze_(0)

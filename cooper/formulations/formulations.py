@@ -14,15 +14,18 @@ class Formulation(abc.ABC):
     def __init__(self, constraint_type: ConstraintType):
         pass
 
-    def state_dict(self):
-        return {"constraint_type": self.constraint_type}
+    @abc.abstractmethod
+    def compute_contribution_for_primal_lagrangian(self, *args, **kwargs):
+        pass
 
-    def load_state_dict(self, state_dict: dict):
-        self.constraint_type = state_dict["constraint_type"]
+    @abc.abstractmethod
+    def compute_contribution_for_dual_lagrangian(self, *args, **kwargs):
         pass
 
 
 class PenaltyFormulation(Formulation):
+    """ """
+
     expects_multiplier = False
     expects_penalty_coefficient = True
 
@@ -255,6 +258,8 @@ class AugmentedLagrangianFormulation(Formulation):
             multiplier_value = evaluate_constraint_factor(
                 module=multiplier, violation=strict_violation, constraint_features=strict_constraint_features
             )
+
+            # TODO: why does evaluate_constraint_factor use violation instead of strict_violation?
             penalty_coefficient_value = evaluate_constraint_factor(
                 module=penalty_coefficient, violation=violation, constraint_features=constraint_features
             )
