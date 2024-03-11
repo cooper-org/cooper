@@ -1,16 +1,8 @@
 from enum import Enum
 
-from .formulations import (
-    AugmentedLagrangianFormulation,
-    Formulation,
-    LagrangianFormulation,
-    PenaltyFormulation,
-    QuadraticPenaltyFormulation,
-)
+from .formulations import AugmentedLagrangianFormulation, Formulation, LagrangianFormulation
 
 
 class FormulationType(Enum):
-    PENALTY = PenaltyFormulation
-    QUADRATIC_PENALTY = QuadraticPenaltyFormulation
     LAGRANGIAN = LagrangianFormulation
     AUGMENTED_LAGRANGIAN = AugmentedLagrangianFormulation

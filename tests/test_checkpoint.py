@@ -111,8 +111,6 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 @pytest.mark.parametrize(
     "formulation_type",
     [
-        cooper.FormulationType.PENALTY,
-        cooper.FormulationType.QUADRATIC_PENALTY,
         cooper.FormulationType.LAGRANGIAN,
         cooper.FormulationType.AUGMENTED_LAGRANGIAN,
     ],
@@ -120,10 +118,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
     formulation_class = formulation_type.value
 
-    if formulation_type == cooper.FormulationType.PENALTY:
-        constraint_type = cooper.ConstraintType.PENALTY
-    else:
-        constraint_type = cooper.ConstraintType.INEQUALITY
+    constraint_type = cooper.ConstraintType.INEQUALITY
 
     has_multiplier = formulation_class.expects_multiplier
     has_penalties = formulation_class.expects_penalty_coefficient
