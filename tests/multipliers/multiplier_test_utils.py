@@ -55,9 +55,6 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
 
     new_multiplier.load_state_dict(state_dict)
 
-    assert multiplier.constraint_type == new_multiplier.constraint_type
-    assert multiplier.restart_on_feasible == new_multiplier.restart_on_feasible
-
     if isinstance(multiplier, cooper.multipliers.IndexedMultiplier):
         assert torch.allclose(multiplier(all_indices), new_multiplier(all_indices))
     else:

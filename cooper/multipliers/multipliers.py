@@ -146,17 +146,10 @@ class ExplicitMultiplier(Multiplier):
             self.strictly_feasible_indices = None
 
     def state_dict(self):
-        _state_dict = super().state_dict()
-        _state_dict["constraint_type"] = self.constraint_type
-        _state_dict["restart_on_feasible"] = self.restart_on_feasible
-        _state_dict["default_restart_value"] = self.default_restart_value
-        return _state_dict
+        return dict(weight=self.weight)
 
     def load_state_dict(self, state_dict):
-        self.constraint_type = state_dict.pop("constraint_type")
-        self.restart_on_feasible = state_dict.pop("restart_on_feasible")
-        self.default_restart_value = state_dict.pop("default_restart_value")
-        super().load_state_dict(state_dict)
+        self.weight = state_dict["weight"]
 
 
 class DenseMultiplier(ExplicitMultiplier):
