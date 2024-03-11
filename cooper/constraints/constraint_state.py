@@ -102,23 +102,6 @@ class ConstraintState:
 
         return constraint_features, strict_constraint_features
 
-    def compute_strictly_feasible_constraints(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """Computes the strictly feasible constraints and their features."""
-
-        # FIXME(gallego-posada): This function is not being called
-        # There is `ConstraintGroup > update_strictly_feasible_indices_` which is actually called
-        # We should remove the current function.
-
-        _, strict_violation = self.extract_violations()
-        # When strict_violation is provided, we use it to determine the satisfaction of
-        # the constraints. Otherwise, `extract_violations` patches it with the
-        # differentiable violation.
-        strictly_feasible_constraints = strict_violation < 0
-
-        constraint_features = self.extract_constraint_features()
-
-        return strictly_feasible_constraints, constraint_features
-
 
 @dataclass
 class ConstraintStore:
