@@ -251,10 +251,13 @@ class ImplicitMultiplier(Multiplier):
     def forward(self):
         pass
 
+    @abc.abstractmethod
     def post_step_(self):
         """
-        Post-step function for multipliers. This function is called after each step of
-        the dual optimizer, and allows for additional post-processing of the implicit
-        multiplier module or its parameters.
+        This method is called after each step of the dual optimizer and allows for
+        additional post-processing of the implicit multiplier module or its parameters.
+        For example, one may want to enforce non-negativity of the parameters of the
+        implicit multiplier. Given the high flexibility of implicit multipliers, the
+        post-step function is left to be implemented by the user.
         """
         pass
