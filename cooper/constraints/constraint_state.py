@@ -87,7 +87,7 @@ class ConstraintState:
 
         return violation, strict_violation
 
-    def extract_constraint_features(self) -> torch.Tensor:
+    def extract_constraint_features(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Extracts the constraint features from the constraint state.
         If strict constraint features are not provided, attempts to patch them with the
         differentiable constraint features. Similarly, if differentiable constraint
