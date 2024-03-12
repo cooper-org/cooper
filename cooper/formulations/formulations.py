@@ -6,7 +6,12 @@ from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constrai
 
 
 class Formulation(abc.ABC):
-    # TODO(gallego-posada): Add documentation
+    """
+    Formulations prescribe how the different constraints contribute to the primal- and
+    dual-differentiable Lagrangians. In other words, they define how the constraints
+    affect the gradients of the Lagrangian with respect to the primal and dual variables.
+    """
+
     expects_multiplier: bool
     expects_penalty_coefficient: bool
 
