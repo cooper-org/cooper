@@ -39,7 +39,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         )
         self.constraint_group = cooper.ConstraintGroup(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=self.multiplier,
         )
 

@@ -12,7 +12,7 @@ from typing import Callable, Optional
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
-from cooper.formulations import FormulationType
+from cooper.formulations import AugmentedLagrangianFormulation
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
@@ -65,11 +65,11 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
     def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
         """Update the penalty coefficients of the constraint groups. Only the penalty
-        coefficients associated with the ``FormulationType.AUGMENTED_LAGRANGIAN`` and
+        coefficients associated with the ``AugmentedLagrangianFormulation`` and
         constraints that ``contributes_to_dual_update`` are updated.
         """
         for constraint_group, constraint_state in cmp_state.observed_constraints:
-            if constraint_group.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
+            if constraint_group.formulation_type == AugmentedLagrangianFormulation:
                 # We might reach this point via an AugmetedLagrangianOptimizer acting
                 # on some constraints that do not use an Augmented Lagrangian formulation,
                 # so we do _not_ apply penalty coefficient updates to those.

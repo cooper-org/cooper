@@ -108,13 +108,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     assert loaded_constrained_optimizer.state_dict() == constrained_optimizer_state_dict_200
 
 
-@pytest.mark.parametrize(
-    "formulation_type",
-    [
-        cooper.FormulationType.LAGRANGIAN,
-        cooper.FormulationType.AUGMENTED_LAGRANGIAN,
-    ],
-)
+@pytest.mark.parametrize("formulation_type", [cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
 def test_formulation_checkpoint(formulation_type, Toy2dCMP_params_init, device):
     formulation_class = formulation_type.value
 

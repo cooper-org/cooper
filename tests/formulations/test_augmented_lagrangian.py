@@ -23,7 +23,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, devi
     formulation_kwargs = dict(penalty_growth_factor=1.005, violation_tolerance=1e-4)
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
-        formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+        formulation_type=cooper.AugmentedLagrangianFormulation,
         penalty_coefficients=penalty_coefficients,
         device=device,
         formulation_kwargs=formulation_kwargs,
@@ -257,7 +257,7 @@ def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device
     new_penalty_coefficient1 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
     new_cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
-        formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+        formulation_type=cooper.AugmentedLagrangianFormulation,
         penalty_coefficients=(new_penalty_coefficient0, new_penalty_coefficient1),
         device=device,
     )

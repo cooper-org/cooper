@@ -8,8 +8,6 @@ import pytest
 import torch
 
 import cooper
-from cooper.constraints import SlackVariable
-from cooper.multipliers import PenaltyCoefficient
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -54,9 +52,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
-        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        slack_variables: Optional[tuple[SlackVariable]] = None,
-        penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
+        formulation_type: cooper.Formulation = cooper.LagrangianFormulation,
+        slack_variables: Optional[tuple[cooper.constraints.SlackVariable]] = None,
+        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
         formulation_kwargs: Optional[dict] = {},
         device=None,
     ):

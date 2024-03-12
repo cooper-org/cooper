@@ -41,14 +41,14 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
 
         self.mean_constraint = cooper.ConstraintGroup(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+            formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
             formulation_kwargs={"penalty_growth_factor": 1.001},
         )
         self.sum_constraint = cooper.ConstraintGroup(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=sum_multiplier,
         )
 

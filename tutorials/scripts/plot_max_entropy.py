@@ -35,7 +35,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
         default_cg_kwargs = {
             "constraint_type": cooper.ConstraintType.EQUALITY,
-            "formulation_type": cooper.FormulationType.LAGRANGIAN,
+            "formulation_type": cooper.LagrangianFormulation,
         }
         mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
         sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)

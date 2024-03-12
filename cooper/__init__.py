@@ -17,6 +17,6 @@ except PackageNotFoundError:
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
-from cooper.formulations import FormulationType
+from cooper.formulations import AugmentedLagrangianFormulation, Formulation, LagrangianFormulation
 
 from . import formulations, multipliers, optim, utils

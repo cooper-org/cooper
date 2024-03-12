@@ -96,7 +96,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         )
         self.constraint = cooper.ConstraintGroup(
             constraint_type=constraint_type,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=self.multiplier,
         )
         super().__init__()

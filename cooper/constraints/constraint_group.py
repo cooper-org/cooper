@@ -4,7 +4,7 @@ import torch
 
 from cooper import multipliers
 from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
-from cooper.formulations import FormulationType
+from cooper.formulations import Formulation, LagrangianFormulation
 from cooper.multipliers import IndexedMultiplier, Multiplier, PenaltyCoefficient
 
 
@@ -16,7 +16,7 @@ class ConstraintGroup:
     def __init__(
         self,
         constraint_type: ConstraintType,
-        formulation_type: Optional[FormulationType] = FormulationType.LAGRANGIAN,
+        formulation_type: Optional[Formulation] = LagrangianFormulation,
         multiplier: Optional[Multiplier] = None,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
         formulation_kwargs: Optional[dict] = {},
@@ -109,15 +109,12 @@ class ConstraintGroup:
             self.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
     def state_dict(self):
-        state_dict = {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}
+        state_dict = {}
         for attr_name, attr in [("multiplier", self.multiplier), ("penalty_coefficient", self.penalty_coefficient)]:
             state_dict[attr_name] = attr.state_dict() if attr is not None else None
         return state_dict
 
     def load_state_dict(self, state_dict):
-        self.constraint_type = state_dict["constraint_type"]
-        self.formulation.load_state_dict(state_dict["formulation"])
-
         if state_dict["multiplier"] is not None and self.multiplier is None:
             raise ValueError("Cannot load multiplier state dict since existing multiplier is `None`.")
         elif state_dict["multiplier"] is None and self.multiplier is not None:
