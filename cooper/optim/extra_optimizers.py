@@ -2,7 +2,7 @@
 
 import math
 from collections.abc import Iterable
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import torch
 
@@ -48,7 +48,7 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
 
     def __init__(self, params: Iterable, defaults: dict):
         super(ExtragradientOptimizer, self).__init__(params, defaults)
-        self.params_copy: List[torch.nn.Parameter] = []
+        self.params_copy: list[torch.nn.Parameter] = []
 
     def update(self, p, group):
         raise NotImplementedError
@@ -226,7 +226,7 @@ class ExtraAdam(ExtragradientOptimizer):
         self,
         params: Iterable,
         lr: float = 1e-3,
-        betas: Tuple[float, float] = (0.9, 0.999),
+        betas: tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8,
         weight_decay: float = 0,
         amsgrad: bool = False,

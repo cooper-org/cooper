@@ -1,6 +1,6 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
+
 import abc
-import warnings
 from typing import Optional
 
 import torch
@@ -50,29 +50,61 @@ class ExplicitMultiplier(Multiplier):
             multiplier.
         restart_on_feasible: Whether to restart the value of the multiplier (to 0 by
             default) when the constrain is feasible. This is only supported for
-            inequality constraints (i.e. enforce_positive=True)
+            inequality constraints (i.e. enforce_positive=True). Note that we discourage
+            the use of `restart_on_feasible` along with stateful optimizers (such as
+            :py:class:`~torch.optim.SGD` with momentum or :py:class:`~torch.optim.Adam`).
+
     """
 
     def __init__(
         self,
-        init: torch.Tensor,
-        *,
-        enforce_positive: bool = False,
+        constraint_type: ConstraintType,
+        num_constraints: Optional[int] = None,
+        init: Optional[torch.Tensor] = None,
         restart_on_feasible: bool = False,
         default_restart_value: float = 0.0,
+        device: Optional[torch.device] = None,
+        dtype: torch.dtype = torch.float32,
     ):
         super().__init__()
 
-        self.enforce_positive = enforce_positive
-        self.restart_on_feasible = restart_on_feasible
+        if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
+            raise ValueError(f"Constraint type {constraint_type} is not valid to create a multiplier.")
+        self.constraint_type = constraint_type
+        self.enforce_positive = self.constraint_type == ConstraintType.INEQUALITY
 
-        self.weight = torch.nn.Parameter(init)
-        self.device = self.weight.device
+        self.weight = self.initialize_weight(num_constraints=num_constraints, init=init, device=device, dtype=dtype)
+
+        self.restart_on_feasible = restart_on_feasible
         self.default_restart_value = default_restart_value
 
         self.strictly_feasible_indices = None
 
         self.base_sanity_checks()
+
+    def initialize_weight(
+        self,
+        num_constraints: Optional[int],
+        init: Optional[torch.Tensor],
+        device: Optional[torch.device] = None,
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        """Initialize the weight of the multiplier. If both `init` and `num_constraints`
+        are provided (and the shapes are consistent), `init` takes precedence.
+        Otherwise, the weight is initialized to zero.
+        """
+        if (num_constraints is None) and (init is None):
+            raise ValueError("At least one of `num_constraints` and `init` must be provided.")
+        elif (num_constraints is not None) and (init is not None) and (num_constraints != init.shape[0]):
+            raise ValueError(f"Inconsistent `init` shape {init.shape} and `num_constraints={num_constraints}")
+        elif init is not None:
+            return torch.nn.Parameter(init.to(device=device, dtype=dtype))
+        elif num_constraints is not None:
+            return torch.nn.Parameter(torch.zeros(num_constraints, device=device, dtype=dtype))
+
+    @property
+    def device(self):
+        return self.weight.device
 
     def base_sanity_checks(self):
         if self.enforce_positive and torch.any(self.weight.data < 0):
@@ -85,11 +117,7 @@ class ExplicitMultiplier(Multiplier):
             raise ValueError("Default restart value must be positive.")
 
         if (self.default_restart_value > 0) and not self.restart_on_feasible:
-            raise ValueError("Default restart was provided but `restart_on_feasible=False`.")
-
-    @property
-    def implicit_constraint_type(self):
-        return ConstraintType.INEQUALITY if self.enforce_positive else ConstraintType.EQUALITY
+            raise ValueError("Default restart value was provided but `restart_on_feasible=False`.")
 
     def post_step_(self):
         """
@@ -97,6 +125,10 @@ class ExplicitMultiplier(Multiplier):
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative. It also restarts the value of the multipliers for inequality
         constraints that are strictly feasible.
+
+        # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
+        # about the pitfalls of using dual_restars with stateful optimizers.
+
         """
 
         if self.enforce_positive:
@@ -109,43 +141,22 @@ class ExplicitMultiplier(Multiplier):
                 # We do not reset multipliers for active constraints (satisfied with
                 # equality) to avoid changing the value of a multiplier whose
                 # optimal value is potentially strictly positive.
-
-                # TODO(juan43ramirez): Document https://github.com/cooper-org/cooper/issues/28
-                # about the pitfalls of using dual_restars with stateful optimizers.
-
                 self.weight.data[self.strictly_feasible_indices, ...] = self.default_restart_value
-
-                grad = self.weight.grad
-                if grad is not None and torch.any(self.strictly_feasible_indices):
-                    if grad.is_sparse:
-                        # Construct a sparse tensor where the entries corresponding to
-                        # strictly feasible constraints are zero, and the rest are
-                        # unchanged.
-                        indices, values = grad._indices(), grad._values()
-                        non_feasible_indices = ~self.strictly_feasible_indices[indices[0]]
-                        masked_values = torch.einsum("i..., i... -> i...", values, non_feasible_indices)
-                        non_zero_mask = masked_values.squeeze().nonzero(as_tuple=True)[0]
-                        non_zero_indices = indices[:, non_zero_mask]
-                        non_zero_values = masked_values[non_zero_mask, ...]
-                        self.weight.grad = torch.sparse_coo_tensor(non_zero_indices, non_zero_values, grad.shape)
-                    else:
-                        grad[self.strictly_feasible_indices, ...] = 0.0
 
             self.strictly_feasible_indices = None
 
     def state_dict(self):
         _state_dict = super().state_dict()
-        _state_dict["enforce_positive"] = self.enforce_positive
+        _state_dict["constraint_type"] = self.constraint_type
         _state_dict["restart_on_feasible"] = self.restart_on_feasible
         _state_dict["default_restart_value"] = self.default_restart_value
         return _state_dict
 
     def load_state_dict(self, state_dict):
-        self.enforce_positive = state_dict.pop("enforce_positive")
+        self.constraint_type = state_dict.pop("constraint_type")
         self.restart_on_feasible = state_dict.pop("restart_on_feasible")
         self.default_restart_value = state_dict.pop("default_restart_value")
         super().load_state_dict(state_dict)
-        self.device = self.weight.device
 
 
 class DenseMultiplier(ExplicitMultiplier):
@@ -165,7 +176,7 @@ class DenseMultiplier(ExplicitMultiplier):
         return torch.clone(self.weight)
 
     def __repr__(self):
-        return f"DenseMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
+        return f"DenseMultiplier(enforce_positive={self.enforce_positive}, shape={tuple(self.weight.shape)})"
 
 
 class IndexedMultiplier(ExplicitMultiplier):
@@ -182,15 +193,12 @@ class IndexedMultiplier(ExplicitMultiplier):
     and memory-efficient sparse gradients (on GPU).
     """
 
-    def __init__(self, init: torch.Tensor, *args, use_sparse_gradient: bool = True, **kwargs):
-        super(IndexedMultiplier, self).__init__(init=init, *args, **kwargs)
-        self.last_seen_mask = torch.zeros_like(init, dtype=torch.bool)
-
-        if use_sparse_gradient and not torch.cuda.is_available():
-            warnings.warn("Backend for sparse gradients is only supported on GPU.")
-
-        # Backend for sparse gradients only supported on GPU.
-        self.use_sparse_gradient = use_sparse_gradient and torch.cuda.is_available()
+    def __init__(self, *args, **kwargs):
+        super(IndexedMultiplier, self).__init__(*args, **kwargs)
+        if len(self.weight.shape) == 1:
+            # Must reshape weight to be a order-2 tensor to use in F.embedding forward
+            self.weight.data = self.weight.data.unsqueeze(-1)
+        self.last_seen_mask = torch.zeros_like(self.weight, dtype=torch.bool)
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
@@ -203,7 +211,9 @@ class IndexedMultiplier(ExplicitMultiplier):
         # Mark the corresponding constraints as "seen" since the last multiplier update.
         self.last_seen_mask[indices] = True
 
-        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=self.use_sparse_gradient)
+        # TODO(gallego-posada): Document sparse gradients are expected for stateful
+        # optimizers (having buffers)
+        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
         return torch.flatten(multiplier_values)
@@ -212,9 +222,6 @@ class IndexedMultiplier(ExplicitMultiplier):
         """Move the multipler to a new device and/or change its dtype."""
         self.last_seen_mask = self.last_seen_mask.to(device=device)
         return super().to(device=device, dtype=dtype)
-
-    def __repr__(self):
-        return f"IndexedMultiplier({self.implicit_constraint_type}, shape={self.weight.shape})"
 
     def post_step_(self):
         if self.strictly_feasible_indices is not None:
@@ -229,6 +236,9 @@ class IndexedMultiplier(ExplicitMultiplier):
 
         # Clear the contents of the seen mask.
         self.last_seen_mask *= False
+
+    def __repr__(self):
+        return f"IndexedMultiplier({self.constraint_type}, shape={self.weight.shape})"
 
 
 class ImplicitMultiplier(Multiplier):

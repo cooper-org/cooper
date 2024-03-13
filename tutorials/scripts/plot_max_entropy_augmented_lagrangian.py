@@ -9,6 +9,8 @@ Here we consider a simple convex optimization problem to illustrate how to use
 *I am trying to solve the following problem using Pytorch: given a 6-sided die
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
+
+This tutorial shows how to use the Augmented Lagrangian  in **Cooper**.
 """
 
 from copy import deepcopy
@@ -33,16 +35,25 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         self.target_mean = target_mean
 
         default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
-        default_cg_kwargs = {
-            "constraint_type": cooper.ConstraintType.EQUALITY,
-            "formulation_type": cooper.FormulationType.LAGRANGIAN,
-        }
         mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
+        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
         sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
-        self.mean_constraint = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=mean_multiplier)
-        self.sum_constraint = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=sum_multiplier)
+
+        self.mean_constraint = cooper.ConstraintGroup(
+            constraint_type=cooper.ConstraintType.EQUALITY,
+            formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+            multiplier=mean_multiplier,
+            penalty_coefficient=mean_penalty_coefficient,
+            formulation_kwargs={"penalty_growth_factor": 1.001},
+        )
+        self.sum_constraint = cooper.ConstraintGroup(
+            constraint_type=cooper.ConstraintType.EQUALITY,
+            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            multiplier=sum_multiplier,
+        )
 
         self.multipliers = {"mean": mean_multiplier, "sum": sum_multiplier}
+        self.penalty_coefficients = {"mean": mean_penalty_coefficient}
         self.all_constraints = [self.sum_constraint, self.mean_constraint]
 
         super().__init__()
@@ -76,11 +87,13 @@ primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 # Define the dual optimizer
 dual_parameters = []
 [dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers.values()]
-dual_optimizer = cooper.optim.nuPI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
+# For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
+dual_optimizer = torch.optim.SGD(dual_parameters, lr=1.0, maximize=True)
 
-cooper_optimizer = cooper.optim.SimultaneousOptimizer(
+cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multipliers.values()
 )
+
 
 state_history = {}
 for i in range(3000):
@@ -88,36 +101,44 @@ for i in range(3000):
 
     observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
     observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]
+    observed_penalty_coefficients = [pc().data for pc in cmp.penalty_coefficients.values()]
+
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
         "multipliers": deepcopy(torch.stack(observed_multipliers)),
         "violation": deepcopy(torch.stack(observed_violations)),
+        "penalty_coefficients": deepcopy(torch.stack(observed_penalty_coefficients)),
     }
+
 
 # Theoretical solution
 optimal_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])
 optimal_entropy = -torch.sum(optimal_prob * torch.log(optimal_prob))
 
 # Generate plots
-iters, loss_hist, multipliers_hist, violation_hist = zip(
-    *[(k, v["loss"], v["multipliers"], v["violation"]) for k, v in state_history.items()]
+iters, loss_hist, multipliers_hist, violation_hist, penalty_hist = zip(
+    *[(k, v["loss"], v["multipliers"], v["violation"], v["penalty_coefficients"]) for k, v in state_history.items()]
 )
 
-_, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 4))
+_, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4, figsize=(24, 4))
 
 ax0.plot(iters, torch.stack(multipliers_hist).squeeze().cpu())
 ax0.axhline(0.0, c="gray", alpha=0.35)
 ax0.set_title("Multipliers")
 
-ax1.plot(iters, torch.stack(violation_hist).squeeze().cpu(), label=["Sum Constraint", "Mean Constraint"])
-ax1.legend()
-# Show that defect remains below/at zero
+ax1.plot(iters, torch.stack(penalty_hist).squeeze().cpu())
 ax1.axhline(0.0, c="gray", alpha=0.35)
-ax1.set_title("Constraint Violations")
+ax1.set_title("Penalty Coefficients")
 
-ax2.plot(iters, loss_hist)
+ax2.plot(iters, torch.stack(violation_hist).squeeze().cpu(), label=["Sum Constraint", "Mean Constraint"])
+ax2.legend()
+# Show that defect remains below/at zero
+ax2.axhline(0.0, c="gray", alpha=0.35)
+ax2.set_title("Constraint Violations")
+
+ax3.plot(iters, loss_hist)
 # Show optimal entropy is achieved
-ax2.axhline(optimal_entropy, c="gray", alpha=0.35, linestyle="dashed")
-ax2.set_title("Objective")
+ax3.axhline(optimal_entropy, c="gray", alpha=0.35, linestyle="dashed")
+ax3.set_title("Objective")
 
 plt.show()

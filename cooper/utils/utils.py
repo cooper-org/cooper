@@ -2,16 +2,18 @@ import logging
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_sequence(argument: Any):
     """
     Ensures that an argument is an instance of Sequence by wrapping it into a list
-    whenever necessary.
+    whenever necessary. When argument is None, None is returned without wrapping.
     """
+    if argument is None:
+        return None
     return argument if isinstance(argument, Sequence) else [argument]
 
 
