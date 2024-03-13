@@ -77,14 +77,14 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                     )
 
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
-                constraint_group = cooper.Constraint(
+                constraint = cooper.Constraint(
                     constraint_type=constraint_type,
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
                     formulation_kwargs=formulation_kwargs,
                 )
-                self.constraints.append(constraint_group)
+                self.constraints.append(constraint)
 
         self.multipliers = [cg.multiplier for cg in self.constraints if cg.multiplier is not None]
 
