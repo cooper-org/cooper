@@ -205,11 +205,6 @@ class CMPState:
         self._dual_lagrangian = None
         self._dual_constraint_measurements = []
 
-    def purge_lagrangian(self) -> None:
-        """Purge the accumulated Lagrangian contributions."""
-        self.purge_primal_lagrangian()
-        self.purge_dual_lagrangian()
-
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the primal variables."""
