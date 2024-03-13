@@ -88,13 +88,12 @@ class CMPState:
 
         current_primal_constraint_measurements = []
         for constraint_group, constraint_state in contributing_constraints:
-            (
-                primal_lagrangian_contribution,
-                primal_constraint_measurement,
-            ) = constraint_group.compute_constraint_primal_contribution(constraint_state)
-            current_primal_constraint_measurements.append(primal_constraint_measurement)
-            if primal_lagrangian_contribution is not None:
-                current_primal_lagrangian = current_primal_lagrangian + primal_lagrangian_contribution
+            primal_constraint_contrib, primal_measurement = constraint_group.compute_constraint_primal_contribution(
+                constraint_state
+            )
+            current_primal_constraint_measurements.append(primal_measurement)
+            if primal_constraint_contrib is not None:
+                current_primal_lagrangian = current_primal_lagrangian + primal_constraint_contrib
 
         # Modify "private" attributes to accumulate Lagrangian values over successive
         # calls to `populate_primal_lagrangian`
@@ -138,19 +137,18 @@ class CMPState:
 
         current_dual_constraint_measurements = []
         for constraint_group, constraint_state in contributing_constraints:
-            (
-                dual_lagrangian_contribution,
-                dual_constraint_measurement,
-            ) = constraint_group.compute_constraint_dual_contribution(constraint_state)
-            current_dual_constraint_measurements.append(dual_constraint_measurement)
-            if dual_lagrangian_contribution is not None:
-                current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contribution
+            dual_lagrangian_contrib, dual_measurement = constraint_group.compute_constraint_dual_contribution(
+                constraint_state
+            )
+            current_dual_constraint_measurements.append(dual_measurement)
+            if dual_lagrangian_contrib is not None:
+                current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contrib
 
                 # Extracting the violation from the dual_constraint_measurement ensures that it is
                 # the "strict" violation, if available.
                 _, strict_constraint_features = constraint_state.extract_constraint_features()
                 constraint_group.update_strictly_feasible_indices_(
-                    strict_violation=dual_constraint_measurement.violation,
+                    strict_violation=dual_lagrangian_contrib.violation,
                     strict_constraint_features=strict_constraint_features,
                 )
 
