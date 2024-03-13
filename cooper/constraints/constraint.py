@@ -112,30 +112,6 @@ class Constraint:
 
             self.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
-    def state_dict(self):
-        state_dict = {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}
-        for attr_name, attr in [("multiplier", self.multiplier), ("penalty_coefficient", self.penalty_coefficient)]:
-            state_dict[attr_name] = attr.state_dict() if attr is not None else None
-        return state_dict
-
-    def load_state_dict(self, state_dict):
-        self.constraint_type = state_dict["constraint_type"]
-        self.formulation.load_state_dict(state_dict["formulation"])
-
-        if state_dict["multiplier"] is not None and self.multiplier is None:
-            raise ValueError("Cannot load multiplier state dict since existing multiplier is `None`.")
-        elif state_dict["multiplier"] is None and self.multiplier is not None:
-            raise ValueError("Multiplier exists but state dict is `None`.")
-        elif state_dict["multiplier"] is not None and self.multiplier is not None:
-            self.multiplier.load_state_dict(state_dict["multiplier"])
-
-        if state_dict["penalty_coefficient"] is not None and self.penalty_coefficient is None:
-            raise ValueError("Cannot load penalty_coefficient state dict since existing penalty_coefficient is `None`.")
-        elif state_dict["penalty_coefficient"] is None and self.penalty_coefficient is not None:
-            raise ValueError("Penalty coefficient exists but state dict is `None`.")
-        elif state_dict["penalty_coefficient"] is not None and self.penalty_coefficient is not None:
-            self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
-
     def __repr__(self):
         repr = f"Constraint(constraint_type={self.constraint_type}, formulation={self.formulation}"
         if self.multiplier is not None:
