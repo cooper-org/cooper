@@ -14,7 +14,7 @@ def compute_primal_weighted_violation(
 
     Args:
         constraint_factor_value: The value of the multiplier or penalty coefficient for the
-            constraint group.
+            constraint.
         violation: Tensor of constraint violations.
     """
 
@@ -57,7 +57,7 @@ def compute_dual_weighted_violation(
     Bertsekas (2016).
 
     Args:
-        multiplier_value: The value of the multiplier for the constraint group.
+        multiplier_value: The value of the multiplier for the constraint.
         violation: Tensor of constraint violations.
         penalty_coefficient_value: Tensor of penalty coefficient values.
     """
@@ -92,7 +92,7 @@ def compute_quadratic_augmented_contribution(
     constraint_type: ConstraintType,
 ) -> Optional[torch.Tensor]:
     r"""
-    Computes the quadratic penalty for a constraint group.
+    Computes the quadratic penalty for a constraint.
 
     When the constraint is an inequality constraint, the quadratic penalty is computed
     following Eq 17.65 in Numerical Optimization by Nocedal and Wright (2006). Denoting

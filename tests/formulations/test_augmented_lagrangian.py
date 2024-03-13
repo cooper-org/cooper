@@ -238,12 +238,12 @@ def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device
     # Generate checkpoints after 10 steps of training
     penalty_coefficient0_after10 = penalty_coefficients[0]().clone().detach()
     penalty_coefficient1_after10 = penalty_coefficients[1]().clone().detach()
-    multiplier0_after10 = cmp.constraint_groups[0].multiplier().clone().detach()
-    multiplier1_after10 = cmp.constraint_groups[1].multiplier().clone().detach()
+    multiplier0_after10 = cmp.constraints[0].multiplier().clone().detach()
+    multiplier1_after10 = cmp.constraints[1].multiplier().clone().detach()
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        torch.save(cmp.constraint_groups[0].state_dict(), os.path.join(tmpdirname, "cg0.pt"))
-        torch.save(cmp.constraint_groups[1].state_dict(), os.path.join(tmpdirname, "cg1.pt"))
+        torch.save(cmp.constraints[0].state_dict(), os.path.join(tmpdirname, "cg0.pt"))
+        torch.save(cmp.constraints[1].state_dict(), os.path.join(tmpdirname, "cg1.pt"))
 
         cg0_state_dict = torch.load(os.path.join(tmpdirname, "cg0.pt"))
         cg1_state_dict = torch.load(os.path.join(tmpdirname, "cg1.pt"))
@@ -261,8 +261,8 @@ def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device
         penalty_coefficients=(new_penalty_coefficient0, new_penalty_coefficient1),
         device=device,
     )
-    new_cmp.constraint_groups[0].load_state_dict(cg0_state_dict)
-    new_cmp.constraint_groups[1].load_state_dict(cg1_state_dict)
+    new_cmp.constraints[0].load_state_dict(cg0_state_dict)
+    new_cmp.constraints[1].load_state_dict(cg1_state_dict)
 
     # Ensure loaded value of the penalty coefficient matches that observe when creating
     # the checkpoint
@@ -273,12 +273,12 @@ def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device
 
     # Ensure loaded value of the multipliers matches that observe when creating the
     # checkpoint
-    new_multiplier0_value = new_cmp.constraint_groups[0].multiplier().clone().detach()
-    new_multiplier1_value = new_cmp.constraint_groups[1].multiplier().clone().detach()
+    new_multiplier0_value = new_cmp.constraints[0].multiplier().clone().detach()
+    new_multiplier1_value = new_cmp.constraints[1].multiplier().clone().detach()
     if new_multiplier0_value != 0:
-        assert not torch.allclose(new_multiplier0_value, cmp.constraint_groups[0].multiplier())
+        assert not torch.allclose(new_multiplier0_value, cmp.constraints[0].multiplier())
     if new_multiplier1_value != 0:
-        assert not torch.allclose(new_multiplier1_value, cmp.constraint_groups[1].multiplier())
+        assert not torch.allclose(new_multiplier1_value, cmp.constraints[1].multiplier())
     assert torch.allclose(new_multiplier0_value, multiplier0_after10)
     assert torch.allclose(new_multiplier1_value, multiplier1_after10)
 

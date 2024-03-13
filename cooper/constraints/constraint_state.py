@@ -13,21 +13,21 @@ class ConstraintType(Enum):
 
 @dataclass
 class ConstraintState:
-    """State of a constraint group describing the current constraint violation.
+    """State of a constraint describing the current constraint violation.
 
     Args:
         violation: Measurement of the constraint violation at some value of the primal
             parameters. This is expected to be differentiable with respect to the
             primal parameters.
         constraint_features: The features of the (differentiable) constraint. This is
-            used to evaluate the Lagrange multiplier associated with a constraint group.
+            used to evaluate the Lagrange multiplier associated with a constraint.
             For example, an `IndexedMultiplier` expects the indices of the constraints
             whose Lagrange multipliers are to be retrieved; while an
             `ImplicitMultiplier` expects general tensor-valued features for the
             constraints. This field is not used for `DenseMultiplier`//s.
             This can be used in conjunction with an `IndexedMultiplier` to indicate the
             measurement of the violation for only a subset of the constraints within a
-            `ConstraintGroup`.
+            `Constraint`.
         strict_violation: Measurement of the constraint violation which may be
             non-differentiable with respect to the primal parameters. When provided,
             the (necessarily differentiable) `violation` is used to compute the gradient

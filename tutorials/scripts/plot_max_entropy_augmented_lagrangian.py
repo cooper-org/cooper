@@ -39,14 +39,14 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
         sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
 
-        self.mean_constraint = cooper.ConstraintGroup(
+        self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
             formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
             formulation_kwargs={"penalty_growth_factor": 1.001},
         )
-        self.sum_constraint = cooper.ConstraintGroup(
+        self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
             formulation_type=cooper.FormulationType.LAGRANGIAN,
             multiplier=sum_multiplier,
@@ -77,7 +77,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
 
-# Define the problem with the constraint groups
+# Define the problem with the constraints
 cmp = MaximumEntropy(target_mean=4.5)
 
 # Define the primal parameters and optimizer

@@ -13,7 +13,7 @@ def evaluate_constraint_factor(
     module: ConstraintFactor, constraint_features: torch.Tensor, violation: torch.Tensor
 ) -> torch.Tensor:
     """Evaluate the Lagrange multiplier or penalty coefficient associated with a
-    constraint group.
+    constraint.
 
     Args:
         module: Multiplier or penalty coefficient module.
@@ -35,7 +35,7 @@ def evaluate_constraint_factor(
     if not value.requires_grad and value.numel() == 1 and violation.numel() > 1:
         # Expand the value of the penalty coefficient to match the shape of the violation.
         # This enables the use of a single penalty coefficient for all constraints in a
-        # constraint group.
+        # constraint.
         # We only do this for penalty coefficients an not multipliers because we expect
         # a one-to-one mapping between multiplier values and constraints. If multiplier
         # sharing is desired, this should be done explicitly by the user.

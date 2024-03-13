@@ -39,8 +39,8 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         }
         mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
         sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
-        self.mean_constraint = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=mean_multiplier)
-        self.sum_constraint = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=sum_multiplier)
+        self.mean_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=mean_multiplier)
+        self.sum_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=sum_multiplier)
 
         self.multipliers = {"mean": mean_multiplier, "sum": sum_multiplier}
         self.all_constraints = [self.sum_constraint, self.mean_constraint]
@@ -66,7 +66,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
 
-# Define the problem with the constraint groups
+# Define the problem with the constraintss
 cmp = MaximumEntropy(target_mean=4.5)
 
 # Define the primal parameters and optimizer

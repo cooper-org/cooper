@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintMeasurement, ConstraintState
+from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
 
 # Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -48,7 +48,7 @@ class CMPState:
     def __init__(
         self,
         loss: Optional[torch.Tensor] = None,
-        observed_constraints: Sequence[tuple[ConstraintGroup, ConstraintState]] = (),
+        observed_constraints: Sequence[tuple[Constraint, ConstraintState]] = (),
         misc: Optional[dict] = None,
     ):
         self.loss = loss

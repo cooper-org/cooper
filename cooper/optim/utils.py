@@ -61,7 +61,7 @@ def load_cooper_optimizer_from_state_dict(
 ):
     """Creates a Cooper optimizer and loads the state_dicts contained in a
     :py:class:`~cooper.optim.CooperOptimizerState` onto instantiated primal and dual
-    optimizers and constraint groups or multipliers.
+    optimizers and constraints or multipliers.
     """
 
     # Load primal optimizers
@@ -104,7 +104,7 @@ def load_cooper_optimizer_from_state_dict(
         for multiplier, multiplier_state in zip(multipliers, multiplier_states):
             multiplier.load_state_dict(multiplier_state)
 
-    # Since we have extracted the multiplier information above, we discard the constraint_groups below
+    # Since we have extracted the multiplier information above, we discard the constraints below
     return create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
         extrapolation=cooper_optimizer_state.extrapolation,

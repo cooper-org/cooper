@@ -66,7 +66,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         self.slack_variables = slack_variables
 
-        self.constraint_groups = []
+        self.constraints = []
         if self.use_ineq_constraints:
             for ix in range(2):
 
@@ -77,16 +77,16 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                     )
 
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
-                constraint_group = cooper.ConstraintGroup(
+                constraint_group = cooper.Constraint(
                     constraint_type=constraint_type,
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
                     formulation_kwargs=formulation_kwargs,
                 )
-                self.constraint_groups.append(constraint_group)
+                self.constraints.append(constraint_group)
 
-        self.multipliers = [cg.multiplier for cg in self.constraint_groups if cg.multiplier is not None]
+        self.multipliers = [cg.multiplier for cg in self.constraints if cg.multiplier is not None]
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -147,7 +147,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             cg0_state = cooper.ConstraintState(violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_violation)
 
-        observed_constraints = [(self.constraint_groups[0], cg0_state), (self.constraint_groups[1], cg1_state)]
+        observed_constraints = [(self.constraints[0], cg0_state), (self.constraints[1], cg1_state)]
 
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 

@@ -64,7 +64,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         pass
 
     def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
-        """Update the penalty coefficients of the constraint groups. Only the penalty
+        """Update the penalty coefficients of the constraints. Only the penalty
         coefficients associated with the ``FormulationType.AUGMENTED_LAGRANGIAN`` and
         constraints that ``contributes_to_dual_update`` are updated.
         """

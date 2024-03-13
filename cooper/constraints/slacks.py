@@ -60,7 +60,7 @@ class ExplicitSlack(SlackVariable):
     """
     An explicit slack holds a :py:class:`~torch.nn.parameter.Parameter` which contains
     (explicitly) the value of the slack variable with a
-    :py:class:`~cooper.constraints.ConstraintGroup` in a
+    :py:class:`~cooper.constraints.Constraint` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
     Args:
@@ -105,10 +105,10 @@ class DenseSlack(ExplicitSlack):
     """Simplest kind of trainable slack variable.
 
     :py:class:`~cooper.constraints.slacks.DenseSlack`\\s are suitable for low to
-    mid-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the
+    mid-scale :py:class:`~cooper.constraints.Constraint`\\s for which all the
     constraints in the group are measured constantly.
 
-    For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
+    For large-scale :py:class:`~cooper.constraints.Constraint`\\s (for example,
     one constraint per training example) you may consider using an
     :py:class:`~cooper.constraints.slacks.IndexedSlack`.
     """
@@ -121,12 +121,12 @@ class DenseSlack(ExplicitSlack):
 class IndexedSlack(ExplicitSlack):
     """Indexed slacks extend the functionality of
     :py:class:`~cooper.constraints.slacks.DenseSlack`\\s to cases where the number of
-    constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
+    constraints in the :py:class:`~cooper.constraints.Constraint` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
     the training samples in a learning task.
 
     In such cases, it might be computationally prohibitive to measure the value for all
-    the constraints in the :py:class:`~cooper.constraints.ConstraintGroup` and one may
+    the constraints in the :py:class:`~cooper.constraints.Constraint` and one may
     typically resort to sampling. :py:class:`~cooper.constraints.slacks.IndexedSlack`\\s
     enable time-efficient retrieval of the slack variables for the sampled constraints
     only, and memory-efficient sparse gradients (on GPU).

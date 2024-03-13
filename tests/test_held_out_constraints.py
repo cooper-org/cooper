@@ -37,7 +37,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.multiplier = cooper.multipliers.IndexedMultiplier(
             constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=2, device=device
         )
-        self.constraint_group = cooper.ConstraintGroup(
+        self.constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
             formulation_type=cooper.FormulationType.LAGRANGIAN,
             multiplier=self.multiplier,
@@ -112,7 +112,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
             strict_constraint_features=strict_constraint_features,
         )
 
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint_group, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint, constraint_state)])
 
 
 @pytest.fixture(params=[0.1, 0.5, 0.7, 1.0])
@@ -134,7 +134,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     cmp = RandomConstraintsToy2dCMP(
         use_constraint_surrogate=True, device=device, observe_probability=observe_probability
     )
-    multipliers = cmp.constraint_group.multiplier
+    multipliers = cmp.constraint.multiplier
 
     primal_lr, dual_lr = 1e-2, 1e-2
     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(

@@ -16,7 +16,7 @@ except PackageNotFoundError:
     warnings.warn("Could not retrieve Cooper version!")
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.constraints import ConstraintGroup, ConstraintState, ConstraintType
+from cooper.constraints import Constraint, ConstraintState, ConstraintType
 from cooper.formulations import FormulationType
 
 from . import formulations, multipliers, optim, utils
