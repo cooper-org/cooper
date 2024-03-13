@@ -243,15 +243,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def __init__(self):
         self._state = CMPState()
 
-    @property
-    def state(self) -> CMPState:
-        # TODO: do we need this anymore?
-        return self._state
-
-    @state.setter
-    def state(self, value: CMPState):
-        self._state = value
-
     @abc.abstractmethod
     def compute_cmp_state(self, *args, **kwargs) -> CMPState:
         """Computes the state of the CMP based on the current value of the primal
