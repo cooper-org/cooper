@@ -188,8 +188,10 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             new_cmp_state.loss = cmp_state.loss
         assert lagrangian_store_for_dual.lagrangian is None
         lagrangian_store_for_dual.lagrangian = new_cmp_state.loss + lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_dual.primal_constraint_stores == []
-        lagrangian_store_for_dual.primal_constraint_stores = lagrangian_store_for_primal.primal_constraint_stores
+        assert lagrangian_store_for_dual.primal_constraint_measurements == []
+        lagrangian_store_for_dual.primal_constraint_measurements = (
+            lagrangian_store_for_primal.primal_constraint_measurements
+        )
 
         return new_cmp_state, lagrangian_store_for_dual
 
@@ -248,8 +250,10 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Lagrangian estimate. See the docstring for more details.
         assert lagrangian_store_for_primal.dual_lagrangian is None
         lagrangian_store_for_primal.dual_lagrangian = lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_primal.dual_constraint_stores == []
-        lagrangian_store_for_primal.dual_constraint_stores = lagrangian_store_for_dual.dual_constraint_stores
+        assert lagrangian_store_for_primal.dual_constraint_measurements == []
+        lagrangian_store_for_primal.dual_constraint_measurements = (
+            lagrangian_store_for_dual.dual_constraint_measurements
+        )
 
         return cmp_state, lagrangian_store_for_primal
 
