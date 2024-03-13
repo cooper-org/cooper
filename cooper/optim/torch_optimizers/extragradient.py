@@ -9,6 +9,14 @@ import torch
 # -----------------------------------------------------------------------------
 # Implementation of ExtraOptimizers contains minor edits on source code from:
 # https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py
+# * We add a `maximize` flag to the `ExtraSGD` and `ExtraAdam` classes to allow for
+# maximization steps.
+# * We slightly modify the docstrings to comply with our style guide.
+#
+# TODO(juan43ramirez): The implementations below manually apply SGD and Adam updates.
+# Alternatively, we could carry out updates using functional implementations of SGD and
+# Adam from `torch.optim`. This way, we can easily stay up-to-date with the community
+# approved implementations of these optimizers.
 # -----------------------------------------------------------------------------
 
 #  MIT License
