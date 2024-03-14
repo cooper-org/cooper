@@ -3,11 +3,11 @@
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore
+from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
@@ -29,9 +29,10 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
+        cmp: ConstrainedMinimizationProblem,
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
     ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers)
+        super().__init__(primal_optimizers, dual_optimizers, cmp, multipliers)
 
         self.base_sanity_checks()
 
@@ -82,27 +83,27 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             # FIXME(gallego-posada): This line should not be indented inside the loop!
             self.dual_step(call_extrapolation=call_extrapolation)
 
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
         and Lagrangian are carried out twice, since we compute an "extra" gradient.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
         self.zero_grad()
-        cmp_state_pre_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()  # noqa: F841
-        cmp_state_pre_extrapolation.backward()
+        cmp_state_pre_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
+        lagrangian_store_pre_extrapolation = self.cmp.populate_lagrangian(cmp_state_pre_extrapolation)
+        lagrangian_store_pre_extrapolation.backward()
         self.step(call_extrapolation=True)
 
         # Perform an update step
         self.zero_grad()
-        cmp_state_post_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian()
-        cmp_state_post_extrapolation.backward()
+        cmp_state_post_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
+        lagrangian_store_post_extrapolation = self.cmp.populate_lagrangian(cmp_state_post_extrapolation)
+        lagrangian_store_pre_extrapolation.backward()
         self.step(call_extrapolation=False)
 
         return cmp_state_post_extrapolation, lagrangian_store_post_extrapolation

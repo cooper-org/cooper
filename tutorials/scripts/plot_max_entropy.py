@@ -79,12 +79,12 @@ dual_parameters = []
 dual_optimizer = cooper.optim.nuPI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multipliers.values()
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multipliers.values()
 )
 
 state_history = {}
 for i in range(3000):
-    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs))
+    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
     observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
     observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]

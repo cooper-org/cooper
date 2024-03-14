@@ -149,6 +149,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multiplier,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
@@ -156,7 +157,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
         dual_optimizer_kwargs={"lr": dual_lr},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     def manual_update_on_primal(xy, lmbda, grads, constraint_features):
         if constraint_features.numel() == 0:

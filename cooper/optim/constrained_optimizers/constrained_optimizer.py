@@ -11,6 +11,7 @@ from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
+from ... import ConstrainedMinimizationProblem
 from ..types import AlternationType
 
 
@@ -60,10 +61,12 @@ class ConstrainedOptimizer:
         self,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
+        cmp: ConstrainedMinimizationProblem,
         multipliers: Optional[OneOrSequence[Multiplier]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)
         self.dual_optimizers = ensure_sequence(dual_optimizers)
+        self.cmp = cmp
         self.multipliers = ensure_sequence(multipliers)
 
     def base_sanity_checks(self):

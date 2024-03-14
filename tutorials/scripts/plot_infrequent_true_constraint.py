@@ -172,7 +172,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
     primal_optimizer = torch.optim.SGD([X], lr=primal_lr)
     dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+        primal_optimizers=primal_optimizer, cmp=cmp, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
     )
 
     # Initial values of the loss, trace and geometric mean
@@ -190,6 +190,8 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
         if iter % freq_for_dual_update == 0:
             # Compute the true violation every `freq_for_dual_update` iterations for
             # updating the multipliers.
+            # TODO(merajhashemi): Fix! roll only uses `compute_cmp_state` and not the surrogate.
+
             compute_cmp_state_fn = lambda: cmp.compute_cmp_state(X)
         else:
             compute_cmp_state_fn = lambda: cmp.compute_surrogate_cmp_state(X)

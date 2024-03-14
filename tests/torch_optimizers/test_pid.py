@@ -359,13 +359,11 @@ def test_pid_convergence(
     dual_optimizer = PID(dual_params, lr=LR, Kp=Kp, Ki=Ki, Kd=Kd, ema_nu=ema_nu, maximize=True, init_type=pid_init_type)
 
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers, dual_optimizer, multipliers=cmp.multipliers
+        primal_optimizers, dual_optimizer, cmp=cmp, multipliers=cmp.multipliers
     )
 
-    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-
     for step_id in range(1500):
-        cooper_optimizer.roll(compute_cmp_state_fn)
+        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
 
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         assert torch.allclose(param, exact_solution)

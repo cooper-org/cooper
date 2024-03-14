@@ -35,6 +35,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
@@ -46,6 +47,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
@@ -54,8 +56,8 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     )
 
     roll_kwargs = {
-        "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
-        "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
+        "compute_cmp_state_kwargs": dict(params=params),
+        "compute_violations_kwargs": dict(params=params) if use_violation_fn else {},
     }
 
     x0_y0 = mktensor([0.0, -1.0])
@@ -139,6 +141,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
@@ -150,6 +153,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
@@ -157,14 +161,12 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
-
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])
 
     # ----------------------- First iteration -----------------------
 
-    cmp_state, lagrangian_store_after_roll = cooper_optimizer.roll(**roll_kwargs)
+    cmp_state, lagrangian_store_after_roll = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
     violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
@@ -203,7 +205,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     assert torch.allclose(params, x1_y1, atol=1e-4)
 
     # ----------------------- Second iteration -----------------------
-    cmp_state, lagrangian_store_after_roll = cooper_optimizer.roll(**roll_kwargs)
+    cmp_state, lagrangian_store_after_roll = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
     violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 

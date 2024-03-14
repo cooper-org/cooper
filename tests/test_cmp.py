@@ -22,12 +22,11 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers, multipliers=cmp.multipliers
+        primal_optimizers, cmp=cmp, multipliers=cmp.multipliers
     )
 
     for step_id in range(1500):
-        compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
 
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         assert torch.allclose(param, exact_solution)
@@ -76,6 +75,7 @@ def test_pipeline_without_cmp(
     else:
         multipliers = []
 
+    # TODO(merajhashemi): Fix! How should we call build_cooper_optimizer_for_Toy2dCMP without a cmp?
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=multipliers)
 
     for step_id in range(1500):
@@ -89,6 +89,7 @@ def test_pipeline_without_cmp(
         else:
             observed_constraints = []
 
+        # TODO(merajhashemi): Fix! How should we call populate_lagrangian without a cmp?
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
         lagrangian_store = cmp_state.populate_lagrangian()  # noqa: F841
         cmp_state.backward()
