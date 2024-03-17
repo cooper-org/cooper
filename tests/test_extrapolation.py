@@ -39,7 +39,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # -------------------- First full extra-gradient step  --------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp.populate_lagrangian(cmp_state)
+    lagrangian_store = cmp.populate_lagrangian_(cmp_state)
     lagrangian = lagrangian_store.lagrangian
     observed_multiplier_values = lagrangian_store.multiplier_values_for_primal_constraints()
 
@@ -65,7 +65,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # Perform the actual update step
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    lagrangian_store = cmp.populate_lagrangian(cmp_state)
+    lagrangian_store = cmp.populate_lagrangian_(cmp_state)
     lagrangian_store.backward()
     cooper_optimizer.step(call_extrapolation=False)
 

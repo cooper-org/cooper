@@ -95,14 +95,14 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
         self.zero_grad()
         cmp_state_pre_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store_pre_extrapolation = self.cmp.populate_lagrangian(cmp_state_pre_extrapolation)
+        lagrangian_store_pre_extrapolation = self.cmp.populate_lagrangian_(cmp_state_pre_extrapolation)
         lagrangian_store_pre_extrapolation.backward()
         self.step(call_extrapolation=True)
 
         # Perform an update step
         self.zero_grad()
         cmp_state_post_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store_post_extrapolation = self.cmp.populate_lagrangian(cmp_state_post_extrapolation)
+        lagrangian_store_post_extrapolation = self.cmp.populate_lagrangian_(cmp_state_post_extrapolation)
         lagrangian_store_pre_extrapolation.backward()
         self.step(call_extrapolation=False)
 

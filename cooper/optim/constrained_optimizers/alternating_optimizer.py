@@ -145,7 +145,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update primal variables only
-        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian(cmp_state)
+        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian_(cmp_state)
         lagrangian_store_for_primal.primal_backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
@@ -172,7 +172,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             if self.cmp.lagrangian_store.dual_lagrangian is not None:
                 raise RuntimeError("Expected a LagrangianStore with no dual_lagrangian populated.")
 
-        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian(new_cmp_state)
+        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian_(new_cmp_state)
         lagrangian_store_for_dual.dual_backward()
         self.dual_step(call_extrapolation=False)
 
@@ -230,7 +230,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update dual variables only
-        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian(cmp_state)
+        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian_(cmp_state)
         lagrangian_store_for_dual.dual_backward()
         self.dual_step(call_extrapolation=False)
 
@@ -240,7 +240,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
-        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian(cmp_state)
+        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian_(cmp_state)
         lagrangian_store_for_primal.primal_backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()

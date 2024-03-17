@@ -52,7 +52,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
 
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store = self.cmp.populate_lagrangian(cmp_state)
+        lagrangian_store = self.cmp.populate_lagrangian_(cmp_state)
         lagrangian_store.backward()
         self.step()
 

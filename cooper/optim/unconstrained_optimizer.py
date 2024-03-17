@@ -52,7 +52,7 @@ class UnconstrainedOptimizer:
 
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store = self.cmp.populate_lagrangian(cmp_state)
+        lagrangian_store = self.cmp.populate_lagrangian_(cmp_state)
         # For unconstrained problems, the Lagrangian simply corresponds to the loss
         # loss = lagrangian_store.lagrangian
         # loss.backward()

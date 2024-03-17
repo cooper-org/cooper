@@ -15,18 +15,13 @@ from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintStat
 @dataclass
 class LagrangianStore:
     """Stores the value of the (primal) Lagrangian, the dual Lagrangian, as well as
-    ConstraintStores for the primal-contributing and dual-contributing constraints."""
+    ``ConstraintMeasurement``s for the primal-contributing and dual-contributing
+    constraints."""
 
     lagrangian: Optional[torch.Tensor] = None
     dual_lagrangian: Optional[torch.Tensor] = None
     primal_constraint_measurements: Optional[list[ConstraintMeasurement]] = None
     dual_constraint_measurements: Optional[list[ConstraintMeasurement]] = None
-
-    def multiplier_values_for_primal_constraints(self):
-        return [_.multiplier_value for _ in self.primal_constraint_measurements]
-
-    def multiplier_values_for_dual_constraints(self):
-        return [_.multiplier_value for _ in self.dual_constraint_measurements]
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -35,7 +30,7 @@ class LagrangianStore:
             self.lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated lagrangian
-        self.purge_primal_lagrangian()
+        self._purge_primal_lagrangian()
 
     def dual_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -44,7 +39,7 @@ class LagrangianStore:
             self.dual_lagrangian.backward()
 
         # After completing the backward call, we purge the accumulated dual_lagrangian
-        self.purge_dual_lagrangian()
+        self._purge_dual_lagrangian()
 
     def backward(self) -> None:
         """Computes the gradient of the Lagrangian with respect to both the primal and
@@ -52,15 +47,21 @@ class LagrangianStore:
         self.primal_backward()
         self.dual_backward()
 
-    def purge_primal_lagrangian(self) -> None:
+    def _purge_primal_lagrangian(self) -> None:
         """Purge the accumulated primal Lagrangian contributions."""
         self.lagrangian = None
         self.primal_constraint_measurements = []
 
-    def purge_dual_lagrangian(self) -> None:
+    def _purge_dual_lagrangian(self) -> None:
         """Purge the accumulated dual Lagrangian contributions."""
         self.dual_lagrangian = None
         self.dual_constraint_measurements = []
+
+    def multiplier_values_for_primal_constraints(self):
+        return [_.multiplier_value for _ in self.primal_constraint_measurements]
+
+    def multiplier_values_for_dual_constraints(self):
+        return [_.multiplier_value for _ in self.dual_constraint_measurements]
 
 
 @dataclass
@@ -98,7 +99,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def __init__(self):
         self.lagrangian_store = LagrangianStore()
 
-    def populate_primal_lagrangian(self, cmp_state: CMPState) -> LagrangianStore:
+    def populate_primal_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the primal-differentiable Lagrangian based on the
         loss and the contribution of the observed constraints.
         """
@@ -140,7 +141,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         # attributes have been modified earlier, so their updated values are returned.
         return self.lagrangian_store
 
-    def populate_dual_lagrangian(self, cmp_state: CMPState) -> LagrangianStore:
+    def populate_dual_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the dual-differentiable Lagrangian based on the
         loss and the contribution of the observed constraints.
         """
@@ -187,7 +188,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         # attributes have been modified earlier, so their updated values are returned.
         return self.lagrangian_store
 
-    def populate_lagrangian(self, cmp_state: CMPState) -> LagrangianStore:
+    def populate_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the Lagrangian based on the loss and the
         contributions to the "primal" and "dual" Lagrangians resulting from each of the
         observed constraints.
@@ -207,8 +208,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
         # The attributes of the lagrangian_store returned by this function are populated
         # _sequentially_ and disjointly by each of the function calls below. The order
         # of the calls is not important.
-        _ = self.populate_primal_lagrangian(cmp_state)
-        lagrangian_store = self.populate_dual_lagrangian(cmp_state)
+        _ = self.populate_primal_lagrangian_(cmp_state)
+        lagrangian_store = self.populate_dual_lagrangian_(cmp_state)
         return lagrangian_store
 
     @abc.abstractmethod
