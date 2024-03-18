@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 import torch
@@ -20,8 +20,8 @@ class LagrangianStore:
 
     lagrangian: Optional[torch.Tensor] = None
     dual_lagrangian: Optional[torch.Tensor] = None
-    primal_constraint_measurements: Optional[list[ConstraintMeasurement]] = None
-    dual_constraint_measurements: Optional[list[ConstraintMeasurement]] = None
+    primal_constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
+    dual_constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
 
     def primal_backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
