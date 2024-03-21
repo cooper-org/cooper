@@ -1,3 +1,3 @@
 from .constraint_group import ConstraintGroup
-from .constraint_state import ConstraintState, ConstraintStore, ConstraintType
+from .constraint_state import ConstraintMeasurement, ConstraintState, ConstraintType
 from .slacks import ConstantSlack, DenseSlack, ExplicitSlack, IndexedSlack, SlackVariable

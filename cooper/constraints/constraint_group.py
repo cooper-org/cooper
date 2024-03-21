@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 
 from cooper import multipliers
-from cooper.constraints.constraint_state import ConstraintState, ConstraintStore, ConstraintType
+from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState, ConstraintType
 from cooper.formulations import FormulationType
 from cooper.multipliers import IndexedMultiplier, Multiplier, PenaltyCoefficient
 
@@ -78,12 +78,16 @@ class ConstraintGroup:
 
         return kwargs
 
-    def compute_constraint_primal_contribution(self, constraint_state: ConstraintState) -> ConstraintStore:
+    def compute_constraint_primal_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
         """Compute the contribution of the current constraint to the primal Lagrangian."""
         kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
         return self.formulation.compute_contribution_for_primal_lagrangian(**kwargs)
 
-    def compute_constraint_dual_contribution(self, constraint_state: ConstraintState) -> ConstraintStore:
+    def compute_constraint_dual_contribution(
+        self, constraint_state: ConstraintState
+    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
         """Compute the contribution of the current constraint to the dual Lagrangian."""
         kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
         return self.formulation.compute_contribution_for_dual_lagrangian(**kwargs)

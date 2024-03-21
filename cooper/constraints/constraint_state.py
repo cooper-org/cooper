@@ -104,14 +104,13 @@ class ConstraintState:
 
 
 @dataclass
-class ConstraintStore:
-    # TODO: update docstring. Current ConstraintStore is agnostic to dual or primal
+class ConstraintMeasurement:
+    # TODO: update docstring. Current ConstraintMeasurement is agnostic to dual or primal
     # lagrangian.
     """Stores the value of the constraint factor (multiplier or penalty coefficient),
-    the contribution of the constraint to the primal-differentiable Lagrian, and the
+    the contribution of the constraint to the primal-differentiable Lagrangian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""
 
-    lagrangian_contribution: Optional[torch.Tensor] = None
     violation: Optional[torch.Tensor] = None
     multiplier_value: Optional[torch.Tensor] = None
     penalty_coefficient_value: Optional[torch.Tensor] = None
