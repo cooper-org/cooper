@@ -1,3 +1,17 @@
+"""
+The nuPI optimizer is a first-order optimization algorithm proposed in the paper
+"On PI controllers for updating Lagrange multipliers in constrained optimization." by
+Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
+Jose Gallego-Posada.
+
+nuPI generalizes various popular first-order optimization algorithms, including gradient
+descent, gradient descent with Polyak and Nesterov momentum, the optimistic gradient
+method, and PI controllers. It's benefits when updating Lagrange multipliers in
+Lagrangian constrained optimization are discussed in the paper.
+
+# TODO(juan43ramirez): add a link to arXiv once the paper is released.
+"""
+
 import warnings
 from enum import Enum
 from typing import Optional
