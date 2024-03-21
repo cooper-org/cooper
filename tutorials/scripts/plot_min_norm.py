@@ -39,7 +39,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
-from cooper import CMPState, ConstraintGroup, ConstraintState, ConstraintType, FormulationType
+from cooper import CMPState, Constraint, ConstraintState, ConstraintType, FormulationType
 
 style_utils.set_plot_style()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -112,14 +112,14 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
     """Min-norm problem with linear equality constraints."""
 
     def __init__(self, num_equations: int) -> None:
-        # Create a constraint group for the equality constraints. We use a sparse constraint
+        # Create a constraint for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
         constraint_type = ConstraintType.EQUALITY
         self.multiplier = cooper.multipliers.IndexedMultiplier(
             constraint_type=constraint_type, num_constraints=num_equations, device=DEVICE
         )
-        self.eq_constraint = ConstraintGroup(
+        self.eq_constraint = Constraint(
             constraint_type=constraint_type, formulation_type=FormulationType.LAGRANGIAN, multiplier=self.multiplier
         )
         super().__init__()
@@ -145,7 +145,7 @@ def run_experiment(
     linear_system_dataset = LinearConstraintDataset(A, b)
     constraint_loader = instantiate_dataloader(dataset=linear_system_dataset, batch_size=batch_size, seed=exp_seed)
 
-    # Define the problem with the constraint group
+    # Define the problem with the constraint
     cmp = MinNormWithLinearConstraints(num_equations=num_equations)
 
     # Randomly initialize the primal variable and instantiate the optimizers

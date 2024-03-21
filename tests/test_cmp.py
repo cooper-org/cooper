@@ -65,12 +65,12 @@ def test_pipeline_without_cmp(
         multiplier0 = cooper.multipliers.DenseMultiplier(
             constraint_type=constraint_type, num_constraints=1, device=device
         )
-        cg0 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier0)
+        cg0 = cooper.Constraint(**default_cg_kwargs, multiplier=multiplier0)
 
         multiplier1 = cooper.multipliers.DenseMultiplier(
             constraint_type=constraint_type, num_constraints=1, device=device
         )
-        cg1 = cooper.ConstraintGroup(**default_cg_kwargs, multiplier=multiplier1)
+        cg1 = cooper.Constraint(**default_cg_kwargs, multiplier=multiplier1)
 
         multipliers = [multiplier0, multiplier1]
     else:

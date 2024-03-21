@@ -8,8 +8,8 @@ from cooper.formulations import FormulationType
 from cooper.multipliers import IndexedMultiplier, Multiplier, PenaltyCoefficient
 
 
-class ConstraintGroup:
-    """Constraint Group."""
+class Constraint:
+    """Constraint."""
 
     # TODO(gallego-posada): Add documentation
 
@@ -50,7 +50,7 @@ class ConstraintGroup:
             if multiplier.constraint_type != constraint_type:
                 raise ValueError(
                     f"Constraint type of provided multiplier is {multiplier.constraint_type} \
-                    which is inconsistent with {constraint_type} set for the constraint group."
+                    which is inconsistent with {constraint_type} set for the constraint."
                 )
 
     def sanity_check_penalty_coefficient(self, penalty_coefficient: PenaltyCoefficient) -> None:
@@ -58,9 +58,9 @@ class ConstraintGroup:
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
     def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
-        """Update the penalty coefficient of the constraint group."""
+        """Update the penalty coefficient of the constraint."""
         if self.penalty_coefficient is None:
-            raise ValueError("Constraint group does not have a penalty coefficient.")
+            raise ValueError("Constraint does not have a penalty coefficient.")
         else:
             self.penalty_coefficient.update_value(
                 constraint_state=constraint_state,
@@ -112,32 +112,8 @@ class ConstraintGroup:
 
             self.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
-    def state_dict(self):
-        state_dict = {"constraint_type": self.constraint_type, "formulation": self.formulation.state_dict()}
-        for attr_name, attr in [("multiplier", self.multiplier), ("penalty_coefficient", self.penalty_coefficient)]:
-            state_dict[attr_name] = attr.state_dict() if attr is not None else None
-        return state_dict
-
-    def load_state_dict(self, state_dict):
-        self.constraint_type = state_dict["constraint_type"]
-        self.formulation.load_state_dict(state_dict["formulation"])
-
-        if state_dict["multiplier"] is not None and self.multiplier is None:
-            raise ValueError("Cannot load multiplier state dict since existing multiplier is `None`.")
-        elif state_dict["multiplier"] is None and self.multiplier is not None:
-            raise ValueError("Multiplier exists but state dict is `None`.")
-        elif state_dict["multiplier"] is not None and self.multiplier is not None:
-            self.multiplier.load_state_dict(state_dict["multiplier"])
-
-        if state_dict["penalty_coefficient"] is not None and self.penalty_coefficient is None:
-            raise ValueError("Cannot load penalty_coefficient state dict since existing penalty_coefficient is `None`.")
-        elif state_dict["penalty_coefficient"] is None and self.penalty_coefficient is not None:
-            raise ValueError("Penalty coefficient exists but state dict is `None`.")
-        elif state_dict["penalty_coefficient"] is not None and self.penalty_coefficient is not None:
-            self.penalty_coefficient.load_state_dict(state_dict["penalty_coefficient"])
-
     def __repr__(self):
-        repr = f"ConstraintGroup(constraint_type={self.constraint_type}, formulation={self.formulation}"
+        repr = f"Constraint(constraint_type={self.constraint_type}, formulation={self.formulation}"
         if self.multiplier is not None:
             repr += f", multiplier={self.multiplier}"
         if self.penalty_coefficient is not None:

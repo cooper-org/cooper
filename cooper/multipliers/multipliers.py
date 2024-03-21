@@ -28,12 +28,12 @@ class ExplicitMultiplier(Multiplier):
     """
     An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
     contains (explicitly) the value of the Lagrange multipliers associated with a
-    :py:class:`~cooper.constraints.ConstraintGroup` in a
+    :py:class:`~cooper.constraints.Constraint` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
     .. warning::
         When `restart_on_feasible=True`, the entries of the multiplier which correspond
-        to feasible constraints in the :py:class:`~cooper.constraints.ConstraintGroup`
+        to feasible constraints in the :py:class:`~cooper.constraints.Constraint`
         are reset to a default value (typically zero) by the
         :py:meth:`~cooper.multipliers.ExplicitMultiplier.post_step_` method. Note that
         we do **not** perform any modification to the dual optimizer associated with
@@ -163,10 +163,10 @@ class DenseMultiplier(ExplicitMultiplier):
     """Simplest kind of trainable Lagrange multiplier.
 
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
-    :py:class:`~cooper.constraints.ConstraintGroup`\\s for which all the constraints
+    :py:class:`~cooper.constraints.Constraint`\\s for which all the constraints
     in the group are measured constantly.
 
-    For large-scale :py:class:`~cooper.constraints.ConstraintGroup`\\s (for example,
+    For large-scale :py:class:`~cooper.constraints.Constraint`\\s (for example,
     one constraint per training example) you may consider using an
     :py:class:`~cooper.multipliers.IndexedMultiplier`.
     """
@@ -182,12 +182,12 @@ class DenseMultiplier(ExplicitMultiplier):
 class IndexedMultiplier(ExplicitMultiplier):
     """Indexed multipliers extend the functionality of
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
-    constraints in the :py:class:`~cooper.constraints.ConstraintGroup` is too large.
+    constraints in the :py:class:`~cooper.constraints.Constraint` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
     the training samples in a learning task.
 
     In such cases, it might be computationally prohibitive to measure the value for all
-    the constraints in the :py:class:`~cooper.constraints.ConstraintGroup` and one may
+    the constraints in the :py:class:`~cooper.constraints.Constraint` and one may
     typically resort to sampling. :py:class:`~cooper.multipliers.IndexedMultiplier`\\s
     enable time-efficient retrieval of the multipliers for the sampled constraints only,
     and memory-efficient sparse gradients (on GPU).
@@ -244,7 +244,7 @@ class IndexedMultiplier(ExplicitMultiplier):
 class ImplicitMultiplier(Multiplier):
     """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
-    :py:class:`~cooper.constraints.ConstraintGroup` based on "features" for each
+    :py:class:`~cooper.constraints.Constraint` based on "features" for each
     constraint. The multiplier is _implicitly_  represented by the features of its
     associated constraint as well as the computation that takes place in the
     :py:meth:`~cooper.multipliers.ImplicitMultiplier.forward` method.

@@ -109,7 +109,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
 
         constraint_type = constraint_type = cooper.ConstraintType.INEQUALITY
         self.multiplier = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
-        self.constraint_group = cooper.ConstraintGroup(
+        self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
             formulation_type=cooper.FormulationType.LAGRANGIAN,
             multiplier=self.multiplier,
@@ -139,7 +139,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
             strict_violation = self.constraint_level - prop_0
 
         constraint_state = cooper.ConstraintState(violation=differentiable_violation, strict_violation=strict_violation)
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint_group, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint, constraint_state)])
 
 
 def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_level=0.7):

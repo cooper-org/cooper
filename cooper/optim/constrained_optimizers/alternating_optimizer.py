@@ -64,17 +64,17 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         pass
 
     def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
-        """Update the penalty coefficients of the constraint groups. Only the penalty
+        """Update the penalty coefficients of the constraints. Only the penalty
         coefficients associated with the ``FormulationType.AUGMENTED_LAGRANGIAN`` and
         constraints that ``contributes_to_dual_update`` are updated.
         """
-        for constraint_group, constraint_state in cmp_state.observed_constraints:
-            if constraint_group.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
+        for constraint, constraint_state in cmp_state.observed_constraints:
+            if constraint.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
                 # We might reach this point via an AugmetedLagrangianOptimizer acting
                 # on some constraints that do not use an Augmented Lagrangian formulation,
                 # so we do _not_ apply penalty coefficient updates to those.
                 if constraint_state.contributes_to_dual_update:
-                    constraint_group.update_penalty_coefficient(constraint_state=constraint_state)
+                    constraint.update_penalty_coefficient(constraint_state=constraint_state)
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):

@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints import ConstraintGroup, ConstraintMeasurement, ConstraintState
+from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
 
 # Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -48,7 +48,7 @@ class CMPState:
     def __init__(
         self,
         loss: Optional[torch.Tensor] = None,
-        observed_constraints: Sequence[tuple[ConstraintGroup, ConstraintState]] = (),
+        observed_constraints: Sequence[tuple[Constraint, ConstraintState]] = (),
         misc: Optional[dict] = None,
     ):
         self.loss = loss
@@ -87,13 +87,13 @@ class CMPState:
         current_primal_lagrangian = 0.0 if self.loss is None else torch.clone(self.loss)
 
         current_primal_constraint_measurements = []
-        for constraint_group, constraint_state in contributing_constraints:
-            primal_constraint_contrib, primal_measurement = constraint_group.compute_constraint_primal_contribution(
+        for constraint, constraint_state in contributing_constraints:
+            primal_lagrangian_contribution, primal_measurement = constraint.compute_constraint_primal_contribution(
                 constraint_state
             )
             current_primal_constraint_measurements.append(primal_measurement)
-            if primal_constraint_contrib is not None:
-                current_primal_lagrangian = current_primal_lagrangian + primal_constraint_contrib
+            if primal_lagrangian_contribution is not None:
+                current_primal_lagrangian = current_primal_lagrangian + primal_lagrangian_contribution
 
         # Modify "private" attributes to accumulate Lagrangian values over successive
         # calls to `populate_primal_lagrangian`
@@ -136,19 +136,19 @@ class CMPState:
         current_dual_lagrangian = 0.0
 
         current_dual_constraint_measurements = []
-        for constraint_group, constraint_state in contributing_constraints:
-            dual_lagrangian_contrib, dual_measurement = constraint_group.compute_constraint_dual_contribution(
+        for constraint, constraint_state in contributing_constraints:
+            dual_lagrangian_contribution, dual_measurement = constraint.compute_constraint_dual_contribution(
                 constraint_state
             )
             current_dual_constraint_measurements.append(dual_measurement)
-            if dual_lagrangian_contrib is not None:
-                current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contrib
+            if dual_lagrangian_contribution is not None:
+                current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contribution
 
                 # Extracting the violation from the dual_constraint_measurement ensures that it is
                 # the "strict" violation, if available.
                 _, strict_constraint_features = constraint_state.extract_constraint_features()
-                constraint_group.update_strictly_feasible_indices_(
-                    strict_violation=dual_lagrangian_contrib.violation,
+                constraint.update_strictly_feasible_indices_(
+                    strict_violation=dual_measurement.violation,
                     strict_constraint_features=strict_constraint_features,
                 )
 
@@ -234,8 +234,8 @@ class CMPState:
 
     def __repr__(self) -> str:
         _string = f"CMPState(\n  loss={self.loss},\n  observed_constraints=["
-        for constraint_group, constraint_state in self.observed_constraints:
-            _string += f"\n\t{constraint_group} -> {constraint_state},"
+        for constraint, constraint_state in self.observed_constraints:
+            _string += f"\n\t{constraint} -> {constraint_state},"
         _string += f"\n  ]\n  misc={self.misc}\n)"
         return _string
 
