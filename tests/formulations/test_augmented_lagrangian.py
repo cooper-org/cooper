@@ -4,6 +4,7 @@ import testing_utils
 import torch
 
 import cooper
+from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
 
 
 @pytest.fixture(params=[cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL])
@@ -17,14 +18,14 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, devi
         cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device)),
     )
 
-    formulation_kwargs = dict(penalty_growth_factor=1.005, violation_tolerance=1e-4)
     cmp = cooper_test_utils.Toy2dCMP(
         use_ineq_constraints=True,
         formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
         penalty_coefficients=penalty_coefficients,
         device=device,
-        formulation_kwargs=formulation_kwargs,
     )
+
+    penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.005, violation_tolerance=1e-4)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
@@ -35,7 +36,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, devi
         alternation_type=alternation_type,
     )
 
-    return cmp, cooper_optimizer, penalty_coefficients, formulation_kwargs
+    return cmp, cooper_optimizer, penalty_coefficients, penalty_updater
 
 
 def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
@@ -51,11 +52,9 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     mktensor = testing_utils.mktensor(device=device)
 
     ALTERNATION_TYPE = cooper.optim.AlternationType.DUAL_PRIMAL
-    cmp, cooper_optimizer, penalty_coefficients, formulation_kwargs = setup_augmented_lagrangian_objects(
+    cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
         primal_optimizers=primal_optimizers, alternation_type=ALTERNATION_TYPE, device=device
     )
-    penalty_growth_factor = formulation_kwargs["penalty_growth_factor"]
-    violation_tolerance = formulation_kwargs["violation_tolerance"]
 
     roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
@@ -66,6 +65,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
 
     # ------------ First step of dual-primal updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    penalty_updater.step(_cmp_state.observed_constraints)
     violations0 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
     # Observed multipliers from the lagrangian_store should match the multipliers after
@@ -75,7 +75,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
 
     # Only the first constraint is violated, so the first coefficient grows. The second
     # stays the same.
-    rho1 = torch.where(violations0 > violation_tolerance, rho0 * penalty_growth_factor, rho0).detach()
+    rho1 = torch.where(violations0 > penalty_updater.violation_tolerance, rho0 * penalty_updater.growth_factor, rho0)
     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho1)
 
     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -90,12 +90,13 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
 
     # ------------ Second step of dual-primal updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    penalty_updater.step(_cmp_state.observed_constraints)
     violations1 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
     lmbda2 = torch.relu(lmbda1 + rho1 * violations1)
     assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_primal_constraints()), lmbda2)
 
-    rho2 = torch.where(violations1 > violation_tolerance, rho1 * penalty_growth_factor, rho1).detach()
+    rho2 = torch.where(violations1 > penalty_updater.violation_tolerance, rho1 * penalty_updater.growth_factor, rho1)
     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho2)
 
     grad_x1_y1 = cmp.analytical_gradients(x1_y1)
@@ -119,11 +120,9 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     mktensor = testing_utils.mktensor(device=device)
 
     ALTERNATION_TYPE = cooper.optim.AlternationType.PRIMAL_DUAL
-    cmp, cooper_optimizer, penalty_coefficients, formulation_kwargs = setup_augmented_lagrangian_objects(
+    cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
         primal_optimizers=primal_optimizers, alternation_type=ALTERNATION_TYPE, device=device
     )
-    penalty_growth_factor = formulation_kwargs["penalty_growth_factor"]
-    violation_tolerance = formulation_kwargs["violation_tolerance"]
 
     roll_kwargs = {
         "compute_cmp_state_kwargs": dict(params=params),
@@ -138,6 +137,7 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
 
     # ------------ First step of primal-dual updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    penalty_updater.step(_cmp_state.observed_constraints)
     violations1 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -158,11 +158,12 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     lmbda1 = torch.relu(lmbda0 + rho0 * violations1)
     assert torch.allclose(torch.cat([_() for _ in cooper_optimizer.multipliers]), lmbda1)
 
-    rho1 = torch.where(violations1 > violation_tolerance, rho0 * penalty_growth_factor, rho0)
+    rho1 = torch.where(violations1 > penalty_updater.violation_tolerance, rho0 * penalty_updater.growth_factor, rho0)
     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho1)
 
     # ------------ Second step of primal-dual updates ------------
     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+    penalty_updater.step(_cmp_state.observed_constraints)
     violations2 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
     grad_x1_y1 = cmp.analytical_gradients(x1_y1)
@@ -180,7 +181,7 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     lmbda2 = torch.relu(lmbda1 + rho1 * violations2)
     assert torch.allclose(torch.cat([_() for _ in cooper_optimizer.multipliers]), lmbda2)
 
-    rho2 = torch.where(violations2 > violation_tolerance, rho1 * penalty_growth_factor, rho1)
+    rho2 = torch.where(violations2 > penalty_updater.violation_tolerance, rho1 * penalty_updater.growth_factor, rho1)
     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho2)
 
 
@@ -197,7 +198,7 @@ def test_convergence_augmented_lagrangian(
         use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
     )
 
-    cmp, cooper_optimizer, penalty_coefficients, formulation_kwargs = setup_augmented_lagrangian_objects(
+    cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
         primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
     )
 
@@ -207,7 +208,8 @@ def test_convergence_augmented_lagrangian(
         roll_kwargs["compute_violations_fn"] = dict(params=params)
 
     for step_id in range(1500):
-        cooper_optimizer.roll(**roll_kwargs)
+        cmp_state, _ = cooper_optimizer.roll(**roll_kwargs)
+        penalty_updater.step(cmp_state.observed_constraints)
         if step_id % 100 == 0:
             # Increase the penalty coefficients
             penalty_coefficients[0].value = penalty_coefficients[0]() * 1.1
