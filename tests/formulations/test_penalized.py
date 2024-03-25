@@ -31,12 +31,13 @@ def test_manual_penalized(Toy2dCMP_params_init, device):
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     x0_y0 = mktensor([0.0, -1.0])
 

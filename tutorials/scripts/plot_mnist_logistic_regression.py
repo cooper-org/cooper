@@ -83,6 +83,7 @@ for epoch_num in range(7):
         # Create a CMPState object, which contains the loss and observed constraints
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=[(norm_constraint, constraint_state)])
 
+        # TODO(merajhashemi): Fix! How should we call populate_lagrangian without a cmp?
         cooper_optimizer.zero_grad()
         lagrangian_store = cmp_state.populate_lagrangian()
         cmp_state.backward()

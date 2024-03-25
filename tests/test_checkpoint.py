@@ -41,16 +41,15 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model)
-
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model))
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
@@ -68,7 +67,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 
     # ------------ Train for *another* 100 steps ------------
     for _ in range(100):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model))
 
     model_state_dict_200 = model.state_dict()
     constrained_optimizer_state_dict_200 = cooper_optimizer.state_dict()
@@ -96,9 +95,10 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     )
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
-    compute_cmp_state_fn = lambda: new_cmp.compute_cmp_state(loaded_model)
     for _ in range(100):
-        cmp_state, lagrangian_store = loaded_constrained_optimizer.roll(compute_cmp_state_fn)
+        cmp_state, lagrangian_store = loaded_constrained_optimizer.roll(
+            compute_cmp_state_kwargs=dict(loaded_model=loaded_model)
+        )
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts

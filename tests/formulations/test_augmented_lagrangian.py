@@ -28,6 +28,7 @@ def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, devi
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         augmented_lagrangian=True,
@@ -56,7 +57,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     penalty_growth_factor = formulation_kwargs["penalty_growth_factor"]
     violation_tolerance = formulation_kwargs["violation_tolerance"]
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])
@@ -125,8 +126,8 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     violation_tolerance = formulation_kwargs["violation_tolerance"]
 
     roll_kwargs = {
-        "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
-        "compute_violations_fn": lambda: cmp.compute_violations(params),
+        "compute_cmp_state_kwargs": dict(params=params),
+        "compute_violations_kwargs": dict(params=params),
     }
 
     x0_y0 = mktensor([0.0, -1.0])
@@ -200,11 +201,10 @@ def test_convergence_augmented_lagrangian(
         primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
     )
 
-    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-    roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
-        roll_kwargs["compute_violations_fn"] = lambda: cmp.compute_violations(params)
+        roll_kwargs["compute_violations_fn"] = dict(params=params)
 
     for step_id in range(1500):
         cooper_optimizer.roll(**roll_kwargs)

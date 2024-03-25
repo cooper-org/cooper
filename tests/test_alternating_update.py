@@ -30,6 +30,7 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
@@ -38,8 +39,8 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     )
 
     roll_kwargs = {
-        "compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params),
-        "compute_violations_fn": (lambda: cmp.compute_violations(params)) if use_violation_fn else None,
+        "compute_cmp_state_kwargs": dict(params=params),
+        "compute_violations_kwargs": dict(params=params) if use_violation_fn else {},
     }
 
     x0_y0 = mktensor([0.0, -1.0])  # noqa: F841
@@ -125,6 +126,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
@@ -132,7 +134,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
         dual_optimizer_kwargs={"lr": 1e-2},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     x0_y0 = mktensor([0.0, -1.0])
     lmbda0 = mktensor([0.0, 0.0])
@@ -213,17 +215,15 @@ def test_convergence_alternating(
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=alternation_type,
     )
 
-    compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-    compute_violations_fn = (lambda: cmp.compute_violations(params)) if use_defect_fn else None
-
-    roll_kwargs = {"compute_cmp_state_fn": compute_cmp_state_fn}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
     if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
-        roll_kwargs["compute_violations_fn"] = compute_violations_fn
+        roll_kwargs["compute_violations_kwargs"] = dict(params=params) if use_defect_fn else {}
 
     for step_id in range(1500):
         cooper_optimizer.roll(**roll_kwargs)

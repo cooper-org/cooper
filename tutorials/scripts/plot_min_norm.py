@@ -154,7 +154,7 @@ def run_experiment(
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
     dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multiplier
     )
 
     state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], max_abs_violation=[])
@@ -166,8 +166,13 @@ def run_experiment(
 
             sampled_equations, sampled_RHS = sampled_equations.to(DEVICE), sampled_RHS.to(DEVICE)
             indices = indices.to(DEVICE)
-            compute_cmp_state_fn = lambda: cmp.compute_cmp_state(x, sampled_equations, sampled_RHS, indices)
-            cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
+            compute_cmp_state_kwargs = {
+                "x": x,
+                "sampled_equations": sampled_equations,
+                "sampled_RHS": sampled_RHS,
+                "indices": indices,
+            }
+            cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
 
             with torch.no_grad():
                 full_violation = A @ x - b

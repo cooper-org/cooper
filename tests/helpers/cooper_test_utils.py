@@ -288,6 +288,7 @@ def build_dual_optimizers(
 
 def build_cooper_optimizer_for_Toy2dCMP(
     primal_optimizers,
+    cmp,
     multipliers,
     extrapolation: bool = False,
     augmented_lagrangian: bool = False,
@@ -308,6 +309,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
 
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         dual_optimizers=dual_optimizers,
         multipliers=multipliers,
         extrapolation=extrapolation,

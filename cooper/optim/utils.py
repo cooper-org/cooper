@@ -5,6 +5,7 @@ import torch
 from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence, ensure_sequence
 
+from .. import ConstrainedMinimizationProblem
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
 from .types import AlternationType
@@ -13,6 +14,7 @@ from .unconstrained_optimizer import UnconstrainedOptimizer
 
 def create_optimizer_from_kwargs(
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    cmp: ConstrainedMinimizationProblem,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
     extrapolation: bool = False,
@@ -26,10 +28,10 @@ def create_optimizer_from_kwargs(
     if dual_optimizers is None:
         assert not extrapolation
         assert not augmented_lagrangian
-        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers)
+        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers, cmp=cmp)
 
     optimizer_kwargs = dict(
-        primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, multipliers=multipliers
+        primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp, multipliers=multipliers
     )
 
     if extrapolation:
@@ -56,6 +58,7 @@ def create_optimizer_from_kwargs(
 def load_cooper_optimizer_from_state_dict(
     cooper_optimizer_state: CooperOptimizerState,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    cmp: ConstrainedMinimizationProblem,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     multipliers: Optional[OneOrSequence[Multiplier]] = None,
 ):
@@ -107,6 +110,7 @@ def load_cooper_optimizer_from_state_dict(
     # Since we have extracted the multiplier information above, we discard the constraints below
     return create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,
+        cmp=cmp,
         extrapolation=cooper_optimizer_state.extrapolation,
         alternation_type=cooper_optimizer_state.alternation_type,
         dual_optimizers=dual_optimizers,
