@@ -57,18 +57,6 @@ class Constraint:
         if torch.any(penalty_coefficient.value < 0):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
-    def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
-        """Update the penalty coefficient of the constraint."""
-        if self.penalty_coefficient is None:
-            raise ValueError("Constraint does not have a penalty coefficient.")
-        else:
-            self.penalty_coefficient.update_value(
-                constraint_state=constraint_state,
-                constraint_type=self.constraint_type,
-                growth_factor=self.formulation.penalty_growth_factor,
-                violation_tolerance=self.formulation.violation_tolerance,
-            )
-
     def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
         kwargs = {"constraint_state": constraint_state}
         if self.formulation.expects_multiplier:

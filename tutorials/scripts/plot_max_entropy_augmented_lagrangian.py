@@ -21,6 +21,7 @@ import style_utils
 import torch
 
 import cooper
+from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
 
 style_utils.set_plot_style()
 
@@ -93,11 +94,13 @@ dual_optimizer = torch.optim.SGD(dual_parameters, lr=1.0, maximize=True)
 cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multipliers.values()
 )
-
+# For the Augmented Lagrangian, we need to configure a penalty coefficient updater
+penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.01, violation_tolerance=1e-4)
 
 state_history = {}
 for i in range(3000):
     cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    penalty_updater.step(cmp_state.observed_constraints)
 
     observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
     observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]
