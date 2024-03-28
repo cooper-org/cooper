@@ -27,6 +27,36 @@ torch.manual_seed(0)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
+    def __init__(self, epsilon: float = 1.0):
+        super().__init__()
+        self.epsilon = epsilon
+
+        multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
+        )
+        self.constraint = cooper.Constraint(
+            constraint_type=cooper.ConstraintType.INEQUALITY,
+            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            multiplier=multiplier,
+        )
+
+    def compute_cmp_state(self, model, inputs, targets):
+        logits = model(inputs.view(inputs.shape[0], -1))
+        loss = torch.nn.functional.cross_entropy(logits, targets)
+        accuracy = (logits.argmax(dim=1) == targets).float().mean()
+
+        sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
+        # Constraint violations use convention “g - \epsilon ≤ 0”
+        constraint_state = cooper.ConstraintState(violation=sq_l2_norm - self.epsilon)
+
+        # Create a CMPState object, which contains the loss and observed constraints
+        return cooper.CMPState(
+            loss=loss, observed_constraints=[(self.constraint, constraint_state)], misc={"accuracy": accuracy}
+        )
+
+
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST("data", train=True, download=True, transform=data_transforms),
@@ -35,29 +65,22 @@ train_loader = torch.utils.data.DataLoader(
     pin_memory=torch.cuda.is_available(),
 )
 
-loss_fn = torch.nn.CrossEntropyLoss()
-
 # Create a Logistic Regression model
 model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
 model = model.to(DEVICE)
 
+# Instantiate the constrained optimization problem
+cmp = NormConstrainedLogisticRegression()
+
+# Instantiate Pytorch optimizer class for the primal variables
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
-# Define the constraint for the norm constraint
-multiplier = cooper.multipliers.DenseMultiplier(
-    constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
-)
-norm_constraint = cooper.Constraint(
-    constraint_type=cooper.ConstraintType.INEQUALITY,
-    formulation_type=cooper.FormulationType.LAGRANGIAN,
-    multiplier=multiplier,
-)
-
 # Instantiate Pytorch optimizer class for the dual variables
-dual_optimizer = torch.optim.SGD(multiplier.parameters(), lr=1e-3, maximize=True)
+dual_optimizer = torch.optim.SGD(cmp.constraint.multiplier.parameters(), lr=1e-3, maximize=True)
 
+# Instantiate the Cooper optimizer
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=multiplier
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.constraint.multiplier
 )
 
 
@@ -70,31 +93,18 @@ for epoch_num in range(7):
         batch_ix += 1
 
         if torch.cuda.is_available():
-            inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = inputs.cuda(non_blocking=True), targets.cuda(non_blocking=True)
 
-        logits = model.forward(inputs.view(inputs.shape[0], -1))
-        loss = loss_fn(logits, targets)
-        accuracy = (logits.argmax(dim=1) == targets).float().mean()
-
-        sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
-        # Constraint violations use convention “g - \epsilon ≤ 0”
-        constraint_state = cooper.ConstraintState(violation=sq_l2_norm - 1.0)
-
-        # Create a CMPState object, which contains the loss and observed constraints
-        cmp_state = cooper.CMPState(loss=loss, observed_constraints=[(norm_constraint, constraint_state)])
-
-        # TODO(merajhashemi): Fix! How should we call populate_lagrangian without a cmp?
-        cooper_optimizer.zero_grad()
-        lagrangian_store = cmp_state.populate_lagrangian()
-        cmp_state.backward()
-        cooper_optimizer.step()
+        cmp_state, lagrangian_store = cooper_optimizer.roll(
+            compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets)
+        )
 
         if batch_ix % 3 == 0:
             all_metrics["batch_ix"].append(batch_ix)
-            all_metrics["train_loss"].append(loss.item())
-            all_metrics["train_acc"].append(accuracy.item())
-            all_metrics["multiplier_value"].append(multiplier().item())
-            all_metrics["constraint_violation"].append(constraint_state.violation.item())
+            all_metrics["train_loss"].append(cmp_state.loss.item())
+            all_metrics["train_acc"].append(cmp_state.misc["accuracy"].item())
+            all_metrics["multiplier_value"].append(cmp.constraint.multiplier().item())
+            all_metrics["constraint_violation"].append(cmp_state.observed_constraints[0][1].violation.item())
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))
 
