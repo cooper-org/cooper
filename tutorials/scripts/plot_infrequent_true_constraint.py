@@ -89,12 +89,12 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         self.r = min(y.shape[0], z.shape[0])
         self.constraint_level = constraint_level
 
-        # Creating a constraint group with a single constraint
+        # Creating a constraint with a single constraint
         constraint_type = cooper.ConstraintType.EQUALITY
         self.multiplier = cooper.multipliers.DenseMultiplier(
             constraint_type=constraint_type, num_constraints=1, device=DEVICE
         )
-        self.constraint = cooper.ConstraintGroup(
+        self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
             formulation_type=cooper.LagrangianFormulation,
             multiplier=self.multiplier,

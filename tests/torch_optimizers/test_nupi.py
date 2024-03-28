@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.optim.nupi_optimizer import InitType, nuPI
+from cooper.optim.torch_optimizers.nupi_optimizer import InitType, nuPI
 
 # TODO(juan43ramirez): test with multiple parameter groups
 

@@ -43,7 +43,7 @@ class ConstrainedOptimizer:
         dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
             multipliers associated with the constraints). An iterable of
             ``torch.optim.Optimizer``\\s can be passed to handle the case of several
-            ``~cooper.constraints.ConstraintGroup``\\s. If dealing with an unconstrained
+            ``~cooper.constraints.Constraint``\\s. If dealing with an unconstrained
             problem, please use a
             :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
 

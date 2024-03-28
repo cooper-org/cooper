@@ -13,21 +13,21 @@ class ConstraintType(Enum):
 
 @dataclass
 class ConstraintState:
-    """State of a constraint group describing the current constraint violation.
+    """State of a constraint describing the current constraint violation.
 
     Args:
         violation: Measurement of the constraint violation at some value of the primal
             parameters. This is expected to be differentiable with respect to the
             primal parameters.
         constraint_features: The features of the (differentiable) constraint. This is
-            used to evaluate the Lagrange multiplier associated with a constraint group.
+            used to evaluate the Lagrange multiplier associated with a constraint.
             For example, an `IndexedMultiplier` expects the indices of the constraints
             whose Lagrange multipliers are to be retrieved; while an
             `ImplicitMultiplier` expects general tensor-valued features for the
             constraints. This field is not used for `DenseMultiplier`//s.
             This can be used in conjunction with an `IndexedMultiplier` to indicate the
             measurement of the violation for only a subset of the constraints within a
-            `ConstraintGroup`.
+            `Constraint`.
         strict_violation: Measurement of the constraint violation which may be
             non-differentiable with respect to the primal parameters. When provided,
             the (necessarily differentiable) `violation` is used to compute the gradient
@@ -87,7 +87,7 @@ class ConstraintState:
 
         return violation, strict_violation
 
-    def extract_constraint_features(self) -> torch.Tensor:
+    def extract_constraint_features(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Extracts the constraint features from the constraint state.
         If strict constraint features are not provided, attempts to patch them with the
         differentiable constraint features. Similarly, if differentiable constraint
@@ -102,33 +102,15 @@ class ConstraintState:
 
         return constraint_features, strict_constraint_features
 
-    def compute_strictly_feasible_constraints(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """Computes the strictly feasible constraints and their features."""
-
-        # FIXME(gallego-posada): This function is not being called
-        # There is `ConstraintGroup > update_strictly_feasible_indices_` which is actually called
-        # We should remove the current function.
-
-        _, strict_violation = self.extract_violations()
-        # When strict_violation is provided, we use it to determine the satisfaction of
-        # the constraints. Otherwise, `extract_violations` patches it with the
-        # differentiable violation.
-        strictly_feasible_constraints = strict_violation < 0
-
-        constraint_features = self.extract_constraint_features()
-
-        return strictly_feasible_constraints, constraint_features
-
 
 @dataclass
-class ConstraintStore:
-    # TODO: update docstring. Current ConstraintStore is agnostic to dual or primal
+class ConstraintMeasurement:
+    # TODO: update docstring. Current ConstraintMeasurement is agnostic to dual or primal
     # lagrangian.
     """Stores the value of the constraint factor (multiplier or penalty coefficient),
-    the contribution of the constraint to the primal-differentiable Lagrian, and the
+    the contribution of the constraint to the primal-differentiable Lagrangian, and the
     contribution of the constraint to the dual-differentiable Lagrangian."""
 
-    lagrangian_contribution: Optional[torch.Tensor] = None
     violation: Optional[torch.Tensor] = None
     multiplier_value: Optional[torch.Tensor] = None
     penalty_coefficient_value: Optional[torch.Tensor] = None

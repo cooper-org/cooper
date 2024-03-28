@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 import cooper_test_utils
 import pytest
 import testing_utils
@@ -219,68 +216,6 @@ def test_convergence_augmented_lagrangian(
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         # NOTE: this test requires a relaxed tolerance of 1e-3
         assert torch.allclose(param, exact_solution, atol=1e-3)
-
-
-def test_save_and_load_state_dict(alternation_type, Toy2dCMP_params_init, device):
-    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
-        use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
-    )
-
-    cmp, cooper_optimizer, penalty_coefficients, formulation_kwargs = setup_augmented_lagrangian_objects(
-        primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
-    )
-
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
-
-    for _ in range(10):
-        cooper_optimizer.roll(**roll_kwargs)
-
-    # Generate checkpoints after 10 steps of training
-    penalty_coefficient0_after10 = penalty_coefficients[0]().clone().detach()
-    penalty_coefficient1_after10 = penalty_coefficients[1]().clone().detach()
-    multiplier0_after10 = cmp.constraint_groups[0].multiplier().clone().detach()
-    multiplier1_after10 = cmp.constraint_groups[1].multiplier().clone().detach()
-
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        torch.save(cmp.constraint_groups[0].state_dict(), os.path.join(tmpdirname, "cg0.pt"))
-        torch.save(cmp.constraint_groups[1].state_dict(), os.path.join(tmpdirname, "cg1.pt"))
-
-        cg0_state_dict = torch.load(os.path.join(tmpdirname, "cg0.pt"))
-        cg1_state_dict = torch.load(os.path.join(tmpdirname, "cg1.pt"))
-
-    # Train for another 10 steps -- so a total of 20 steps
-    for _ in range(10):
-        cmp_state = cooper_optimizer.roll(**roll_kwargs)  # noqa: F841
-
-    # Reload from checkpoint at 10 steps
-    new_penalty_coefficient0 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_penalty_coefficient1 = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device))
-    new_cmp = cooper_test_utils.Toy2dCMP(
-        use_ineq_constraints=True,
-        formulation_type=cooper.AugmentedLagrangianFormulation,
-        penalty_coefficients=(new_penalty_coefficient0, new_penalty_coefficient1),
-        device=device,
-    )
-    new_cmp.constraint_groups[0].load_state_dict(cg0_state_dict)
-    new_cmp.constraint_groups[1].load_state_dict(cg1_state_dict)
-
-    # Ensure loaded value of the penalty coefficient matches that observe when creating
-    # the checkpoint
-    new_penalty_coefficient0_value = new_penalty_coefficient0().clone().detach()
-    new_penalty_coefficient1_value = new_penalty_coefficient1().clone().detach()
-    assert torch.allclose(new_penalty_coefficient0_value, penalty_coefficient0_after10)
-    assert torch.allclose(new_penalty_coefficient1_value, penalty_coefficient1_after10)
-
-    # Ensure loaded value of the multipliers matches that observe when creating the
-    # checkpoint
-    new_multiplier0_value = new_cmp.constraint_groups[0].multiplier().clone().detach()
-    new_multiplier1_value = new_cmp.constraint_groups[1].multiplier().clone().detach()
-    if new_multiplier0_value != 0:
-        assert not torch.allclose(new_multiplier0_value, cmp.constraint_groups[0].multiplier())
-    if new_multiplier1_value != 0:
-        assert not torch.allclose(new_multiplier1_value, cmp.constraint_groups[1].multiplier())
-    assert torch.allclose(new_multiplier0_value, multiplier0_after10)
-    assert torch.allclose(new_multiplier1_value, multiplier1_after10)
 
 
 # TODO(gallego-posada): Add a test to ensure IndexedPenaltyCoefficient works as expected

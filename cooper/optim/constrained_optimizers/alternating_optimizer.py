@@ -68,13 +68,13 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         coefficients associated with the ``AugmentedLagrangianFormulation`` and
         constraints that ``contributes_to_dual_update`` are updated.
         """
-        for constraint_group, constraint_state in cmp_state.observed_constraints:
-            if constraint_group.formulation_type == AugmentedLagrangianFormulation:
+        for constraint, constraint_state in cmp_state.observed_constraints:
+            if constraint.formulation_type == AugmentedLagrangianFormulation:
                 # We might reach this point via an AugmetedLagrangianOptimizer acting
                 # on some constraints that do not use an Augmented Lagrangian formulation,
                 # so we do _not_ apply penalty coefficient updates to those.
                 if constraint_state.contributes_to_dual_update:
-                    constraint_group.update_penalty_coefficient(constraint_state=constraint_state)
+                    constraint.update_penalty_coefficient(constraint_state=constraint_state)
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
@@ -188,8 +188,10 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             new_cmp_state.loss = cmp_state.loss
         assert lagrangian_store_for_dual.lagrangian is None
         lagrangian_store_for_dual.lagrangian = new_cmp_state.loss + lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_dual.primal_constraint_stores == []
-        lagrangian_store_for_dual.primal_constraint_stores = lagrangian_store_for_primal.primal_constraint_stores
+        assert lagrangian_store_for_dual.primal_constraint_measurements == []
+        lagrangian_store_for_dual.primal_constraint_measurements = (
+            lagrangian_store_for_primal.primal_constraint_measurements
+        )
 
         return new_cmp_state, lagrangian_store_for_dual
 
@@ -248,8 +250,10 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Lagrangian estimate. See the docstring for more details.
         assert lagrangian_store_for_primal.dual_lagrangian is None
         lagrangian_store_for_primal.dual_lagrangian = lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_primal.dual_constraint_stores == []
-        lagrangian_store_for_primal.dual_constraint_stores = lagrangian_store_for_dual.dual_constraint_stores
+        assert lagrangian_store_for_primal.dual_constraint_measurements == []
+        lagrangian_store_for_primal.dual_constraint_measurements = (
+            lagrangian_store_for_dual.dual_constraint_measurements
+        )
 
         return cmp_state, lagrangian_store_for_primal
 
