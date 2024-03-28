@@ -34,19 +34,14 @@ def all_indices(multiplier_shape):
     return torch.arange(0, multiplier_shape[0], dtype=torch.long)
 
 
-@pytest.fixture
-def feasible_indices(multiplier_shape, random_seed):
-    generator = testing_utils.frozen_rand_generator(random_seed)
-    return torch.randint(0, 2, multiplier_shape, dtype=torch.bool, generator=generator)
-
-
 def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier_shape, all_indices, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
 
     multiplier_init = torch.randn(*multiplier_shape, generator=generator)
-    if multiplier.constraint_type == cooper.ConstraintType.INEQUALITY:
+    if multiplier.enforce_positive:
         multiplier_init = multiplier_init.relu()
-    new_multiplier = explicit_multiplier_class(constraint_type=multiplier.constraint_type, init=multiplier_init)
+    new_multiplier = explicit_multiplier_class(init=multiplier_init)
+    new_multiplier.enforce_positive = multiplier.enforce_positive
 
     # Save to file to force reading from file so we can ensure correct loading
     with tempfile.TemporaryDirectory() as tmpdirname:

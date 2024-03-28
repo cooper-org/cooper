@@ -43,11 +43,9 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
+            # TODO(gallego-posada): Is this warning still accurate?
             UserWarning: The Augmented Lagrangian Method requires all dual optimizers to
                 be SGD(lr=1.0).
-            UserWarning: Using an AlternatingOptimizer together with multipliers that
-                have ``restart_on_feasible=True`` is untested.
-
         """
 
         if self.is_augmented_lagrangian_optimizer:
@@ -55,10 +53,6 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
                 if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
                     warnings.warn("The Augmented Lagrangian Method requires all dual optimizers to be SGD(lr=1.0).")
-
-        for multiplier in self.multipliers:
-            if getattr(multiplier, "restart_on_feasible", False):
-                warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
 
     def step(self):
         pass
@@ -69,7 +63,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         constraints that ``contributes_to_dual_update`` are updated.
         """
         for constraint, constraint_state in cmp_state.observed_constraints:
-            if constraint.formulation_type == AugmentedLagrangianFormulation:
+            if isinstance(constraint.formulation, AugmentedLagrangianFormulation):
                 # We might reach this point via an AugmetedLagrangianOptimizer acting
                 # on some constraints that do not use an Augmented Lagrangian formulation,
                 # so we do _not_ apply penalty coefficient updates to those.

@@ -3,11 +3,9 @@ import torch
 
 import cooper
 
-CONSTRAINT_TYPE = cooper.ConstraintType.EQUALITY
-
 
 def test_eq_multiplier_init_and_forward(multiplier_class, init_tensor, all_indices):
-    eq_multiplier = multiplier_class(constraint_type=CONSTRAINT_TYPE, init=init_tensor)
+    eq_multiplier = multiplier_class(init=init_tensor)
 
     is_indexed = isinstance(eq_multiplier, cooper.multipliers.IndexedMultiplier)
     multiplier_values = eq_multiplier(all_indices) if is_indexed else eq_multiplier()
@@ -15,9 +13,8 @@ def test_eq_multiplier_init_and_forward(multiplier_class, init_tensor, all_indic
     assert torch.allclose(multiplier_values, init_tensor.reshape_as(multiplier_values))
 
 
-def test_eq_post_step_(multiplier_class, init_tensor, all_indices, feasible_indices):
-    eq_multiplier = multiplier_class(constraint_type=CONSTRAINT_TYPE, init=init_tensor)
-    eq_multiplier.strictly_feasible_indices = feasible_indices
+def test_eq_post_step_(multiplier_class, init_tensor, all_indices):
+    eq_multiplier = multiplier_class(init=init_tensor)
     eq_multiplier.post_step_()
 
     is_indexed = isinstance(eq_multiplier, cooper.multipliers.IndexedMultiplier)
@@ -28,7 +25,7 @@ def test_eq_post_step_(multiplier_class, init_tensor, all_indices, feasible_indi
 
 
 def test_save_load_multipliers(multiplier_class, init_tensor, all_indices, multiplier_shape, random_seed):
-    eq_multiplier = multiplier_class(constraint_type=CONSTRAINT_TYPE, init=init_tensor)
+    eq_multiplier = multiplier_class(init=init_tensor)
     multiplier_test_utils.check_save_load_state_dict(
         eq_multiplier, multiplier_class, multiplier_shape, all_indices, random_seed
     )

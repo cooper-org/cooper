@@ -44,9 +44,7 @@ model = model.to(DEVICE)
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
 # Define the constraint for the norm constraint
-multiplier = cooper.multipliers.DenseMultiplier(
-    constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
-)
+multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
 norm_constraint = cooper.Constraint(
     constraint_type=cooper.ConstraintType.INEQUALITY,
     formulation_type=cooper.LagrangianFormulation,
