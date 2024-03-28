@@ -23,7 +23,7 @@ class Constraint:
 
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
-        self.formulation = formulation_type.value(constraint_type=self.constraint_type, **formulation_kwargs)
+        self.formulation = formulation_type(constraint_type=self.constraint_type, **formulation_kwargs)
 
         self.multiplier = multiplier
         if multiplier is not None:
