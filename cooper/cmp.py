@@ -123,10 +123,9 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         current_primal_constraint_measurements = []
         for constraint, constraint_state in contributing_constraints:
-            primal_lagrangian_contribution, primal_measurement = constraint.compute_constraint_primal_contribution(
-                constraint_state
-            )
-            current_primal_constraint_measurements.append(primal_measurement)
+            primal_constraint_contribution_out = constraint.compute_constraint_primal_contribution(constraint_state)
+            primal_lagrangian_contribution, primal_constraint_measurement = primal_constraint_contribution_out
+            current_primal_constraint_measurements.append(primal_constraint_measurement)
             if primal_lagrangian_contribution is not None:
                 current_primal_lagrangian = current_primal_lagrangian + primal_lagrangian_contribution
 
@@ -161,18 +160,17 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         current_dual_constraint_measurements = []
         for constraint, constraint_state in contributing_constraints:
-            dual_lagrangian_contribution, dual_measurement = constraint.compute_constraint_dual_contribution(
-                constraint_state
-            )
-            current_dual_constraint_measurements.append(dual_measurement)
+            dual_constraint_contribution_out = constraint.compute_constraint_dual_contribution(constraint_state)
+            dual_lagrangian_contribution, dual_constraint_measurement = dual_constraint_contribution_out
+            current_dual_constraint_measurements.append(dual_constraint_measurement)
             if dual_lagrangian_contribution is not None:
                 current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contribution
 
-                # Extracting the violation from the dual_measurement ensures that it is
+                # Extracting the violation from the dual_constraint_measurement ensures that it is
                 # the "strict" violation, if available.
                 _, strict_constraint_features = constraint_state.extract_constraint_features()
                 constraint.update_strictly_feasible_indices_(
-                    strict_violation=dual_measurement.violation,
+                    strict_violation=dual_constraint_measurement.violation,
                     strict_constraint_features=strict_constraint_features,
                 )
 
