@@ -44,7 +44,9 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
             formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
-            formulation_kwargs={"penalty_growth_factor": 1.001},
+            # FIXME: `formulation_kwargs` has been removed from the Constraint constructor
+            # These kwargs need to be passed to the coefficient updater.
+            # formulation_kwargs={"penalty_growth_factor": 1.001},
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,

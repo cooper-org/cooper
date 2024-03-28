@@ -15,15 +15,14 @@ class Constraint:
     def __init__(
         self,
         constraint_type: ConstraintType,
-        formulation_type: Optional[Formulation] = LagrangianFormulation,
         multiplier: Optional[Multiplier] = None,
+        formulation_type: Optional[Formulation] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
-        formulation_kwargs: Optional[dict] = {},
     ):
 
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
-        self.formulation = formulation_type(constraint_type=self.constraint_type, **formulation_kwargs)
+        self.formulation = formulation_type(constraint_type=self.constraint_type)
 
         self.multiplier = multiplier
         if multiplier is not None:

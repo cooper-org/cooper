@@ -93,9 +93,7 @@ class AugmentedLagrangianFormulation(Formulation):
     expects_multiplier = True
     expects_penalty_coefficient = True
 
-    def __init__(
-        self, constraint_type: ConstraintType, penalty_growth_factor: float = 1.01, violation_tolerance: float = 1e-4
-    ):
+    def __init__(self, constraint_type: ConstraintType):
         """Implements the Augmented Lagrangian formulation.
 
         .. warning::
@@ -107,22 +105,11 @@ class AugmentedLagrangianFormulation(Formulation):
 
         Args:
             constraint_type: Type of constraint that this formulation will be applied to.
-            penalty_growth_factor: The factor by which the penalty coefficient will be
-                multiplied when the constraint is violated beyond ``violation_tolerance``.
-            violation_tolerance: Tolerance for the constraint violation. If the
-                violation is smaller than this value, the penalty coefficient is not
-                updated. The comparison is done at the constraint-level (i.e., each
-                entry of the violation tensor). For equality constraints, the absolute
-                violation is compared to the tolerance. All constraint types use the
-                strict violation (when available) for the comparison.
         """
 
         self.constraint_type = constraint_type
         if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
-
-        self.penalty_growth_factor = penalty_growth_factor
-        self.violation_tolerance = violation_tolerance
 
     def compute_contribution_for_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient

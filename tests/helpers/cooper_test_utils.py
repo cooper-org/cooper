@@ -55,7 +55,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         formulation_type: cooper.Formulation = cooper.LagrangianFormulation,
         slack_variables: Optional[tuple[cooper.constraints.SlackVariable]] = None,
         penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
-        formulation_kwargs: Optional[dict] = {},
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
@@ -80,7 +79,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
-                    formulation_kwargs=formulation_kwargs,
                 )
                 self.constraints.append(constraint)
 
