@@ -42,7 +42,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
             multiplier=multiplier,
         )
 
-    def compute_cmp_state(self, model, inputs, targets):
+    def compute_cmp_state(self, model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor) -> cooper.CMPState:
         logits = model(inputs.view(inputs.shape[0], -1))
         loss = torch.nn.functional.cross_entropy(logits, targets)
         accuracy = (logits.argmax(dim=1) == targets).float().mean()
