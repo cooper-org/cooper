@@ -4,7 +4,7 @@ import torch
 
 from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState, ConstraintType
 from cooper.formulations import Formulation, LagrangianFormulation
-from cooper.multipliers import ExplicitMultiplier, IndexedMultiplier, Multiplier, PenaltyCoefficient
+from cooper.multipliers import IndexedMultiplier, Multiplier, PenaltyCoefficient
 
 
 class Constraint:
@@ -15,7 +15,7 @@ class Constraint:
     def __init__(
         self,
         constraint_type: ConstraintType,
-        multiplier: Optional[Multiplier] = None,
+        multiplier: Multiplier,
         formulation_type: Optional[Formulation] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
@@ -25,35 +25,23 @@ class Constraint:
         self.formulation = formulation_type(constraint_type=self.constraint_type)
 
         self.multiplier = multiplier
-        if multiplier is not None:
-            self.sanity_check_multiplier(multiplier=self.multiplier, constraint_type=self.constraint_type)
-            self.sanity_check_multiplier(multiplier=self.multiplier, constraint_type=self.constraint_type)
-            if not self.formulation.expects_multiplier:
-                ValueError(f"Formulation {self.formulation} does not admit multipliers.")
-        else:
-            if self.formulation.expects_multiplier:
-                ValueError(f"Formulation {self.formulation} expects a multiplier but none was provided.")
+        # Ensure that the multiplier is positive if the constraint is an inequality constraint
+        self.multiplier.set_enforce_positive_(self.constraint_type == ConstraintType.INEQUALITY)
+        self.multiplier.sanity_check()
 
         self.penalty_coefficient = penalty_coefficient
-        if penalty_coefficient is not None:
-            self.sanity_check_penalty_coefficient(penalty_coefficient=self.penalty_coefficient)
-            if not self.formulation.expects_penalty_coefficient:
-                ValueError(f"Formulation {self.formulation} does not admit penalty coefficients.")
-        else:
-            if self.formulation.expects_penalty_coefficient:
-                ValueError(f"Formulation {self.formulation} expects a penalty coefficient but none was provided.")
-
-    def sanity_check_multiplier(self, multiplier: Multiplier, constraint_type: ConstraintType) -> None:
-        if isinstance(multiplier, ExplicitMultiplier):
-            if multiplier.constraint_type != constraint_type:
-                raise ValueError(
-                    f"Constraint type of provided multiplier is {multiplier.constraint_type} \
-                    which is inconsistent with {constraint_type} set for the constraint."
-                )
+        self.sanity_check_penalty_coefficient(penalty_coefficient=self.penalty_coefficient)
 
     def sanity_check_penalty_coefficient(self, penalty_coefficient: PenaltyCoefficient) -> None:
-        if torch.any(penalty_coefficient.value < 0):
-            raise ValueError("All entries of the penalty coefficient must be non-negative.")
+        if self.formulation.expects_penalty_coefficient:
+            if self.penalty_coefficient is None:
+                raise ValueError(f"{self.formulation_type} expects a penalty coefficient but none was provided.")
+            else:
+                if torch.any(penalty_coefficient.value < 0):
+                    raise ValueError("All entries of the penalty coefficient must be non-negative.")
+        else:
+            if penalty_coefficient is not None:
+                raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
 
     def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
         """Update the penalty coefficient of the constraint."""
@@ -68,12 +56,9 @@ class Constraint:
             )
 
     def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
-        kwargs = {"constraint_state": constraint_state}
-        if self.formulation.expects_multiplier:
-            kwargs["multiplier"] = self.multiplier
+        kwargs = {"constraint_state": constraint_state, "multiplier": self.multiplier}
         if self.formulation.expects_penalty_coefficient:
             kwargs["penalty_coefficient"] = self.penalty_coefficient
-
         return kwargs
 
     def compute_constraint_primal_contribution(
@@ -83,6 +68,8 @@ class Constraint:
         kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
         return self.formulation.compute_contribution_for_primal_lagrangian(**kwargs)
 
+    # TODO(gallego-posada): Consider merging these two methods into a single one with
+    # a flag for dual/primal.
     def compute_constraint_dual_contribution(
         self, constraint_state: ConstraintState
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
@@ -111,10 +98,7 @@ class Constraint:
             self.multiplier.strictly_feasible_indices = strictly_feasible_indices
 
     def __repr__(self):
-        repr = f"Constraint(constraint_type={self.constraint_type}, formulation={self.formulation}"
-        if self.multiplier is not None:
-            repr += f", multiplier={self.multiplier}"
+        repr = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
         if self.penalty_coefficient is not None:
             repr += f", penalty_coefficient={self.penalty_coefficient}"
-        repr += ")"
-        return repr
+        return f"Constraint({repr})"
