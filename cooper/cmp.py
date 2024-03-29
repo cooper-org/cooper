@@ -85,13 +85,6 @@ class CMPState:
     observed_constraints: Sequence[tuple[Constraint, ConstraintState]] = ()
     misc: Optional[dict] = None
 
-    def __repr__(self) -> str:
-        _string = f"CMPState(\n  loss={self.loss},\n  observed_constraints=["
-        for constraint, constraint_state in self.observed_constraints:
-            _string += f"\n\t{constraint} -> {constraint_state},"
-        _string += f"\n  ]\n  misc={self.misc}\n)"
-        return _string
-
 
 class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems."""
