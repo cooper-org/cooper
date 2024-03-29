@@ -1,11 +1,13 @@
 import abc
+from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Iterator, Optional
 
 import torch
 
 from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
+from cooper.multipliers import Multiplier
 
 # Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -91,6 +93,36 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def __init__(self):
         self.lagrangian_store = LagrangianStore()
+        self._constrains = OrderedDict()
+
+    def _register_constraint(self, name: str, constraint: Constraint):
+        """Registers a constraint with the CMP.
+
+        Args:
+            name: Name of the constraint.
+            constraint: Constraint instance to be registered.
+        """
+
+        if not isinstance(constraint, Constraint):
+            raise ValueError(f"Expected a Constraint instance, got {type(constraint)}")
+        if name in self._constrains:
+            raise ValueError(f"Constraint with name {name} already exists")
+
+        self._constrains[name] = constraint
+
+    def constraints(self) -> Iterator[Constraint]:
+        """Return an iterator over the registered constraints of the CMP."""
+        yield from self._constrains.values()
+
+    def multipliers(self) -> Iterator[Multiplier]:
+        """Returns an iterator over the multipliers associated with the registered constraints of the CMP."""
+        for c in self._constrains.values():
+            yield c.multiplier
+
+    def __setattr__(self, key: str, value: Any):
+        if isinstance(value, Constraint):
+            self._register_constraint(key, value)
+        super().__setattr__(key, value)
 
     def populate_primal_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the primal-differentiable Lagrangian based on the
