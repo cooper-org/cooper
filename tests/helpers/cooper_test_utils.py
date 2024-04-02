@@ -57,30 +57,26 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
         device=None,
     ):
-        self.use_ineq_constraints = use_ineq_constraints
-        self.use_constraint_surrogate = use_constraint_surrogate
         super().__init__()
 
+        self.use_ineq_constraints = use_ineq_constraints
+        self.use_constraint_surrogate = use_constraint_surrogate
         self.slack_variables = slack_variables
 
-        self.constraints = []
         if self.use_ineq_constraints:
             for ix in range(2):
-
-                multiplier = None
-                if constraint_type in [cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY]:
-                    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=device)
-
+                multiplier = cooper.multipliers.DenseMultiplier(
+                    constraint_type=constraint_type, num_constraints=1, device=device
+                )
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
+
                 constraint = cooper.Constraint(
                     constraint_type=constraint_type,
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
                 )
-                self.constraints.append(constraint)
-
-        self.multipliers = [cg.multiplier for cg in self.constraints if cg.multiplier is not None]
+                setattr(self, f"constraint_{ix}", constraint)
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -141,7 +137,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             cg0_state = cooper.ConstraintState(violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_violation)
 
-        observed_constraints = [(self.constraints[0], cg0_state), (self.constraints[1], cg1_state)]
+        observed_constraints = [(getattr(self, "constraint_0"), cg0_state), (getattr(self, "constraint_1"), cg1_state)]
 
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 
@@ -254,7 +250,7 @@ def build_dual_optimizers(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
-    if len(multipliers) == 0:
+    if (multipliers is None) or len(multipliers) == 0:
         return None
 
     # Make copy of this fixture since we are modifying in-place
@@ -291,8 +287,6 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
 
-    multipliers = cooper.utils.ensure_sequence(multipliers) if multipliers is not None else []
-
     dual_optimizers = build_dual_optimizers(
         multipliers=multipliers,
         augmented_lagrangian=augmented_lagrangian,
@@ -305,7 +299,6 @@ def build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         dual_optimizers=dual_optimizers,
-        multipliers=multipliers,
         extrapolation=extrapolation,
         alternation_type=alternation_type,
         augmented_lagrangian=augmented_lagrangian,

@@ -32,11 +32,16 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
+        super().__init__()
         self.target_mean = target_mean
 
-        mean_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
+        mean_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
         mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
-        sum_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
+        sum_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
@@ -52,12 +57,6 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
             formulation_type=cooper.LagrangianFormulation,
             multiplier=sum_multiplier,
         )
-
-        self.multipliers = {"mean": mean_multiplier, "sum": sum_multiplier}
-        self.penalty_coefficients = {"mean": mean_penalty_coefficient}
-        self.all_constraints = [self.sum_constraint, self.mean_constraint]
-
-        super().__init__()
 
     def compute_cmp_state(self, log_probs: torch.Tensor) -> cooper.CMPState:
         probs = torch.exp(log_probs)
@@ -87,12 +86,12 @@ primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
 dual_parameters = []
-[dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers.values()]
+[dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers()]
 # For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
 dual_optimizer = torch.optim.SGD(dual_parameters, lr=1.0, maximize=True)
 
 cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multipliers.values()
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 
 
@@ -100,15 +99,21 @@ state_history = {}
 for i in range(3000):
     cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
-    observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
-    observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]
-    observed_penalty_coefficients = [pc().data for pc in cmp.penalty_coefficients.values()]
+    observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}
+    for constraint, constraint_state in cmp_state.observed_constraints:
+        observed["violations"].append(constraint_state.violation.data)
+        observed["multipliers"].append(constraint.multiplier().data)
+        if constraint.penalty_coefficient is not None:
+            observed["penalty_coefficients"].append(constraint.penalty_coefficient().data)
+    # observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
+    # observed_multipliers = [multiplier().data for multiplier in cmp.multipliers()]
+    # observed_penalty_coefficients = [pc().data for pc in cmp.penalty_coefficients()]
 
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
-        "multipliers": deepcopy(torch.stack(observed_multipliers)),
-        "violation": deepcopy(torch.stack(observed_violations)),
-        "penalty_coefficients": deepcopy(torch.stack(observed_penalty_coefficients)),
+        "multipliers": deepcopy(torch.stack(observed["multipliers"])),
+        "violation": deepcopy(torch.stack(observed["violations"])),
+        "penalty_coefficients": deepcopy(torch.stack(observed["penalty_coefficients"])),
     }
 
 

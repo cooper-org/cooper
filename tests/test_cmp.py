@@ -20,7 +20,7 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers, cmp=cmp, multipliers=cmp.multipliers
+        primal_optimizers, cmp=cmp, multipliers=list(cmp.multipliers())
     )
 
     for step_id in range(1500):

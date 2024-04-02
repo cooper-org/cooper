@@ -79,7 +79,7 @@ dual_parameters = []
 dual_optimizer = cooper.optim.nuPI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multipliers.values()
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 
 state_history = {}
