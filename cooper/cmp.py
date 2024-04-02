@@ -7,7 +7,7 @@ from typing import Any, Iterator, Optional
 import torch
 
 from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
-from cooper.multipliers import Multiplier
+from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 # Formulation, and some other classes below, are inspired by the design of the
 # TensorFlow Constrained Optimization (TFCO) library:
@@ -112,7 +112,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def named_constraints(self) -> Iterator[tuple[str, Constraint]]:
         """Return an iterator over the registered constraints of the CMP, yielding
-        tuples of the form (name, constraint).
+        tuples of the form `(constraint_name, constraint)`.
         """
         yield from self._constraints.items()
 
@@ -120,10 +120,37 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """Return an iterator over the registered constraints of the CMP."""
         yield from self._constraints.values()
 
+    def named_multipliers(self) -> Iterator[tuple[str, Multiplier]]:
+        """Returns an iterator over the multipliers associated with the registered
+        constraints of the CMP, yielding tuples of the form `(constraint_name, multiplier)`.
+        """
+        for constraint_name, constraint in self.named_constraints():
+            yield constraint_name, constraint.multiplier
+
     def multipliers(self) -> Iterator[Multiplier]:
-        """Returns an iterator over the multipliers associated with the registered constraints of the CMP."""
+        """Returns an iterator over the multipliers associated with the registered
+        constraints of the CMP."""
         for c in self.constraints():
             yield c.multiplier
+
+    def named_penalty_coefficients(self) -> Iterator[tuple[str, PenaltyCoefficient]]:
+        """Returns an iterator over the penalty coefficients associated with the
+        registered  constraints of the CMP, yielding tuples of the form
+        `(constraint_name, penalty_coefficient)`. Constraints without penalty
+        coefficients are skipped.
+        """
+        for constraint_name, constraint in self.named_constraints():
+            if constraint.penalty_coefficient is not None:
+                yield constraint_name, constraint.penalty_coefficient
+
+    def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
+        """Returns an iterator over the penalty coefficients associated with the
+        registered constraints of the CMP. Constraints without penalty coefficients
+        are skipped.
+        """
+        for constraint in self.constraints():
+            if constraint.penalty_coefficient is not None:
+                yield constraint.penalty_coefficient
 
     def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, Constraint):
