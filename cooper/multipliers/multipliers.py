@@ -100,12 +100,6 @@ class ExplicitMultiplier(Multiplier):
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
-    def state_dict(self):
-        return dict(weight=self.weight)
-
-    def load_state_dict(self, state_dict):
-        self.weight = state_dict["weight"]
-
 
 class DenseMultiplier(ExplicitMultiplier):
     """Simplest kind of trainable Lagrange multiplier.
