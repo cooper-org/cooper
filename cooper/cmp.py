@@ -219,14 +219,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
             if dual_lagrangian_contribution is not None:
                 current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contribution
 
-                # Extracting the violation from the dual_constraint_measurement ensures that it is
-                # the "strict" violation, if available.
-                _, strict_constraint_features = constraint_state.extract_constraint_features()
-                constraint.update_strictly_feasible_indices_(
-                    strict_violation=dual_constraint_measurement.violation,
-                    strict_constraint_features=strict_constraint_features,
-                )
-
         # Modify "private" attributes to accumulate Lagrangian values over successive
         # calls to `populate_dual_lagrangian`
         self.lagrangian_store.dual_lagrangian = previous_dual_lagrangian + current_dual_lagrangian
