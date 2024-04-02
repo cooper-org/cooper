@@ -5,6 +5,8 @@ from typing import Optional
 
 import torch
 
+from cooper.constraints.constraint_type import ConstraintType
+
 
 class Multiplier(torch.nn.Module, abc.ABC):
     @abc.abstractmethod
@@ -40,6 +42,7 @@ class ExplicitMultiplier(Multiplier):
 
     def __init__(
         self,
+        constraint_type: ConstraintType,
         num_constraints: Optional[int] = None,
         init: Optional[torch.Tensor] = None,
         device: Optional[torch.device] = None,
@@ -47,8 +50,14 @@ class ExplicitMultiplier(Multiplier):
     ):
         super().__init__()
 
-        self.enforce_positive: bool
+        self.constraint_type = constraint_type
         self.weight = self.initialize_weight(num_constraints=num_constraints, init=init, device=device, dtype=dtype)
+
+        self.sanity_check()
+
+    @property
+    def is_inequality(self):
+        return self.constraint_type == ConstraintType.INEQUALITY
 
     def initialize_weight(
         self,
@@ -77,16 +86,17 @@ class ExplicitMultiplier(Multiplier):
         return self.weight.device
 
     def sanity_check(self):
-        if self.enforce_positive and torch.any(self.weight.data < 0):
+        if self.is_inequality and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
+    @torch.no_grad()
     def post_step_(self):
         """
         Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative.
         """
-        if self.enforce_positive:
+        if self.is_inequality:
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
@@ -114,7 +124,7 @@ class DenseMultiplier(ExplicitMultiplier):
         return torch.clone(self.weight)
 
     def __repr__(self):
-        return f"DenseMultiplier(enforce_positive={self.enforce_positive}, shape={tuple(self.weight.shape)})"
+        return f"DenseMultiplier(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
 
 
 class IndexedMultiplier(ExplicitMultiplier):
@@ -154,7 +164,7 @@ class IndexedMultiplier(ExplicitMultiplier):
         return torch.flatten(multiplier_values)
 
     def __repr__(self):
-        return f"IndexedMultiplier({self.constraint_type}, shape={self.weight.shape})"
+        return f"IndexedMultiplier(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
 
 
 class ImplicitMultiplier(Multiplier):
