@@ -3,12 +3,9 @@
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Optional
-
 import torch
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
 from ..types import AlternationType
@@ -30,9 +27,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         cmp: ConstrainedMinimizationProblem,
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
     ):
-        super().__init__(primal_optimizers, dual_optimizers, cmp, multipliers)
+        super().__init__(primal_optimizers, dual_optimizers, cmp)
 
         self.base_sanity_checks()
 

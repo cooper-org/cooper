@@ -3,11 +3,8 @@
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """
 
-from typing import Optional
-
 import torch
 
-from cooper.multipliers import ExplicitMultiplier, Multiplier
 from cooper.optim.optimizer_state import CooperOptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
@@ -62,12 +59,10 @@ class ConstrainedOptimizer:
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         cmp: ConstrainedMinimizationProblem,
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
     ):
         self.primal_optimizers = ensure_sequence(primal_optimizers)
         self.dual_optimizers = ensure_sequence(dual_optimizers)
         self.cmp = cmp
-        self.multipliers = ensure_sequence(multipliers)
 
     def base_sanity_checks(self):
         """
@@ -122,10 +117,8 @@ class ConstrainedOptimizer:
         for dual_optimizer in self.dual_optimizers:
             getattr(dual_optimizer, call_method)()  # type: ignore
 
-        for multiplier in self.multipliers:
-            if isinstance(multiplier, ExplicitMultiplier):
-                # `post_step_` is a no-op for multiplier with `enforce_positive=False`
-                multiplier.post_step_()
+        for multiplier in self.cmp.multipliers():
+            multiplier.post_step_()
 
     def state_dict(self) -> CooperOptimizerState:
         """
@@ -135,12 +128,10 @@ class ConstrainedOptimizer:
 
         primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
         dual_optimizer_states = [_.state_dict() for _ in self.dual_optimizers]
-        multiplier_states = [_.state_dict() for _ in self.multipliers]
 
         return CooperOptimizerState(
             primal_optimizer_states=primal_optimizer_states,
             dual_optimizer_states=dual_optimizer_states,
-            multiplier_states=multiplier_states,
             extrapolation=self.extrapolation,
             alternation_type=self.alternation_type,
         )

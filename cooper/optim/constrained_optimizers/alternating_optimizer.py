@@ -7,13 +7,11 @@ Implementation of constrained optimizers based on alternation such as
 """
 
 import warnings
-from typing import Optional
 
 import torch
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.formulations import AugmentedLagrangianFormulation
-from cooper.multipliers import Multiplier
 from cooper.utils import OneOrSequence
 
 from ..types import AlternationType
@@ -31,9 +29,8 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
         cmp: ConstrainedMinimizationProblem,
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
     ):
-        super().__init__(primal_optimizers, dual_optimizers, cmp, multipliers)
+        super().__init__(primal_optimizers, dual_optimizers, cmp)
 
         self.base_sanity_checks()
 
