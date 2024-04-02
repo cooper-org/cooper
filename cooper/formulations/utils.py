@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints.constraint_state import ConstraintType
+from cooper.constraints.constraint_type import ConstraintType
 
 
 def compute_primal_weighted_violation(

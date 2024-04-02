@@ -2,9 +2,11 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState
 from cooper.formulations import Formulation, LagrangianFormulation
 from cooper.multipliers import Multiplier, PenaltyCoefficient
+
+from .constraint_type import ConstraintType
 
 
 class Constraint:

@@ -5,7 +5,8 @@ from typing import Optional
 import torch
 
 import cooper.formulations.utils as formulation_utils
-from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState
+from cooper.constraints.constraint_type import ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
 
 
