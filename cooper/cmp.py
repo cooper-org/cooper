@@ -91,11 +91,11 @@ class CMPState:
 class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.lagrangian_store = LagrangianStore()
-        self._constrains = OrderedDict()
+        self._constraints = OrderedDict()
 
-    def _register_constraint(self, name: str, constraint: Constraint):
+    def _register_constraint(self, name: str, constraint: Constraint) -> None:
         """Registers a constraint with the CMP.
 
         Args:
@@ -105,24 +105,52 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         if not isinstance(constraint, Constraint):
             raise ValueError(f"Expected a Constraint instance, got {type(constraint)}")
-        if name in self._constrains:
+        if name in self._constraints:
             raise ValueError(f"Constraint with name {name} already exists")
 
-        self._constrains[name] = constraint
+        self._constraints[name] = constraint
+
+    def named_constraints(self) -> Iterator[tuple[str, Constraint]]:
+        """Return an iterator over the registered constraints of the CMP, yielding
+        tuples of the form (name, constraint).
+        """
+        yield from self._constraints.items()
 
     def constraints(self) -> Iterator[Constraint]:
         """Return an iterator over the registered constraints of the CMP."""
-        yield from self._constrains.values()
+        yield from self._constraints.values()
 
     def multipliers(self) -> Iterator[Multiplier]:
         """Returns an iterator over the multipliers associated with the registered constraints of the CMP."""
-        for c in self._constrains.values():
+        for c in self.constraints():
             yield c.multiplier
 
-    def __setattr__(self, key: str, value: Any):
+    def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, Constraint):
-            self._register_constraint(key, value)
-        super().__setattr__(key, value)
+            self._register_constraint(name, value)
+        else:
+            super().__setattr__(name, value)
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._constraints:
+            return self._constraints[name]
+        else:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __delattr__(self, name: str) -> None:
+        if name in self._constraints:
+            del self._constraints[name]
+        else:
+            super().__delattr__(name)
+
+    def __repr__(self) -> str:
+        repr_str = f"{type(self).__name__}(\n\tconstraints=[\n"
+        for i, (name, constraint) in enumerate(self.named_constraints()):
+            repr_str += f"\t\t{name}: {constraint}"
+            if i < len(self._constraints) - 1:
+                repr_str += ",\n"
+        repr_str += "\t]\n)"
+        return repr_str
 
     def populate_primal_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the primal-differentiable Lagrangian based on the
