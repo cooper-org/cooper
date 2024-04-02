@@ -33,7 +33,7 @@ def test_manual_proxy(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device)
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers,
+        multipliers=cmp.multipliers(),
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_class=torch.optim.SGD,

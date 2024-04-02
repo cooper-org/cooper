@@ -31,7 +31,6 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
         dual_optimizer_class=torch.optim.SGD,
@@ -127,7 +126,6 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
         dual_optimizer_class=torch.optim.SGD,
@@ -214,11 +212,7 @@ def test_convergence_alternating(
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers=primal_optimizers,
-        cmp=cmp,
-        multipliers=cmp.multipliers,
-        extrapolation=False,
-        alternation_type=alternation_type,
+        primal_optimizers=primal_optimizers, cmp=cmp, extrapolation=False, alternation_type=alternation_type
     )
 
     roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}

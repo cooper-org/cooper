@@ -81,7 +81,7 @@ dual_optimizer = torch.optim.SGD(cmp.constraint.multiplier.parameters(), lr=1e-3
 
 # Instantiate the Cooper optimizer
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.constraint.multiplier
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 
 

@@ -107,12 +107,11 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
     def __init__(self, use_strict_constraints: bool = False, constraint_level: float = 0.7):
         super().__init__()
 
-        constraint_type = constraint_type = cooper.ConstraintType.INEQUALITY
-        self.multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
+        constraint_type = cooper.ConstraintType.INEQUALITY
         self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
             formulation_type=cooper.LagrangianFormulation,
-            multiplier=self.multiplier,
+            multiplier=cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1),
         )
 
         self.constraint_level = constraint_level
@@ -157,7 +156,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_lev
         cmp = MixtureSeparation(use_strict_constraints, constraint_level)
         dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=lr, momentum=0.7, maximize=True)
         cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer
         )
     else:
         cmp = UnconstrainedMixtureSeparation()

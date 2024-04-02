@@ -170,7 +170,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
     primal_optimizer = torch.optim.SGD([X], lr=primal_lr)
     dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
-        primal_optimizers=primal_optimizer, cmp=cmp, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+        primal_optimizers=primal_optimizer, cmp=cmp, dual_optimizers=dual_optimizer
     )
 
     # Initial values of the loss, trace and geometric mean
