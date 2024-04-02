@@ -108,10 +108,10 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         super().__init__()
 
         constraint_type = constraint_type = cooper.ConstraintType.INEQUALITY
-        self.multiplier = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
+        self.multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
         self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=self.multiplier,
         )
 

@@ -22,12 +22,9 @@ def evaluate_constraint_factor(
     if violation is None:
         return None
 
-    module_kwargs = {"constraint_features": constraint_features} if constraint_features is not None else {}
-    value = module(**module_kwargs)
-    # if constraint_features is None:
-    #     value = module()
-    # else:
-    #     value = module(constraint_features)
+    # TODO(gallego-posada): This way of calling the modules assumes either 0 or 1
+    # arguments. This should be generalized to allow for multiple arguments.
+    value = module() if constraint_features is None else module(constraint_features)
 
     if len(value.shape) == 0:
         value.unsqueeze_(0)

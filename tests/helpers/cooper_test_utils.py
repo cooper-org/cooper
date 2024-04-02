@@ -8,8 +8,6 @@ import pytest
 import torch
 
 import cooper
-from cooper.constraints import SlackVariable
-from cooper.multipliers import PenaltyCoefficient
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -54,10 +52,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
-        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        slack_variables: Optional[tuple[SlackVariable]] = None,
-        penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
-        formulation_kwargs: Optional[dict] = {},
+        formulation_type: cooper.Formulation = cooper.LagrangianFormulation,
+        slack_variables: Optional[tuple[cooper.constraints.SlackVariable]] = None,
+        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
         device=None,
     ):
         self.use_ineq_constraints = use_ineq_constraints
@@ -72,9 +69,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
                 multiplier = None
                 if constraint_type in [cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY]:
-                    multiplier = cooper.multipliers.DenseMultiplier(
-                        constraint_type=constraint_type, num_constraints=1, device=device
-                    )
+                    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=device)
 
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
                 constraint = cooper.Constraint(
@@ -82,7 +77,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
-                    formulation_kwargs=formulation_kwargs,
                 )
                 self.constraints.append(constraint)
 

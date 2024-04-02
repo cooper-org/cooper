@@ -91,12 +91,10 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
 
         # Creating a constraint with a single constraint
         constraint_type = cooper.ConstraintType.EQUALITY
-        self.multiplier = cooper.multipliers.DenseMultiplier(
-            constraint_type=constraint_type, num_constraints=1, device=DEVICE
-        )
+        self.multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
         self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=self.multiplier,
         )
         super().__init__()

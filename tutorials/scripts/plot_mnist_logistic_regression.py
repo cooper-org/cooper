@@ -33,12 +33,11 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
         super().__init__()
         self.epsilon = epsilon
 
-        multiplier = cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
-        )
+        multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
+
         self.constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=multiplier,
         )
 

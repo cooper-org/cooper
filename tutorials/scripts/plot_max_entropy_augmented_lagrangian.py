@@ -34,21 +34,22 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
         self.target_mean = target_mean
 
-        default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
-        mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
+        mean_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
         mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
-        sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
+        sum_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+            formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
-            formulation_kwargs={"penalty_growth_factor": 1.001},
+            # FIXME: `formulation_kwargs` has been removed from the Constraint constructor
+            # These kwargs need to be passed to the coefficient updater.
+            # formulation_kwargs={"penalty_growth_factor": 1.001},
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=sum_multiplier,
         )
 

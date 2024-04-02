@@ -4,7 +4,8 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints.constraint_state import ConstraintState, ConstraintType
+from cooper.constraints.constraint_state import ConstraintState
+from cooper.constraints.constraint_type import ConstraintType
 
 
 class PenaltyCoefficient(torch.nn.Module, abc.ABC):

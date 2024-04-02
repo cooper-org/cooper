@@ -163,6 +163,16 @@ class nuPI(torch.optim.Optimizer):
 
         return loss
 
+    def load_state_dict(self, state_dict):
+        super().load_state_dict(state_dict)
+        for group in self.param_groups:
+            for p in group["params"]:
+                state = self.state[p]
+                if "needs_error_initialization_mask" in state:
+                    # Need to convert to bool explicitly since torch might have loaded
+                    # it as a float tensor and the `torch.where` calls would fail
+                    state["needs_error_initialization_mask"] = state["needs_error_initialization_mask"].bool()
+
 
 def _nupi_zero_init(
     param: torch.Tensor,

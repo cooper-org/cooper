@@ -101,8 +101,7 @@ class ConstrainedOptimizer:
         dual optimizers which satisfy `maximize=True`.
 
         After being updated by the dual optimizer steps, the multipliers are
-        post-processed (e.g. to ensure feasibility for equality constraints, or to
-        apply dual restarts).
+        post-processed (e.g. to ensure non-negativity for inequality constraints).
 
         Args:
             call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as

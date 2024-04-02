@@ -4,8 +4,7 @@ Additional features
 -------------------
 
 In this section we provide details on using "advanced features" such as
-alternating updates, the Augmented Lagrangian method or dual restarts, in
-conjunction with a
+alternating updates, or the Augmented Lagrangian method, in conjunction with a
 :py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`.
 
 --------------------------------------------------------------------------------
@@ -54,11 +53,6 @@ dual parameters first.
     Providing a ``defect_fn`` in the call to :py:meth:`ConstrainedOptimizer.step`
     allows for updating the Lagrange multiplier without having to re-evaluate
     the loss function, but rather only the constraints.
-
-.. warning::
-
-    Combining alternating updates with :ref:`dual restarts<dual_restarts>` is untested. Use at your
-    own risk.
 
 --------------------------------------------------------------------------------
 
@@ -150,7 +144,6 @@ Example
         primal_optimizers=primal_optimizer,
         dual_optimizer=dual_optimizer,
         dual_scheduler=dual_scheduler,
-        dual_restarts=False,
         alternation_type=AlternationType.PRIMAL_DUAL, # Remember that ALM performs alternating updates
     )
 
@@ -181,59 +174,6 @@ Example
         coop.dual_scheduler.step()
 
 --------------------------------------------------------------------------------
-
-
-
-.. _dual_restarts:
-
-Dual restarts
-^^^^^^^^^^^^^
-
-``dual_restarts=True`` can be used to set the value of the dual variables
-associated with inequality constraints to zero whenever the respective
-constraints are being satisfied. We do not perform ``dual_restarts`` on
-multipliers for equality constraints.
-
-For simplicity, consider a CMP with two inequality constraints
-:math:`g_1(x) \le 0` and :math:`g_2(x) \le 0` and loss :math:`f(x)`. Suppose
-that the constraint on :math:`g_1` is strictly satisfied, while that on
-:math:`g_2` is violated at :math:`x`. Consider the Lagrangian at :math:`x`
-with (**non-negative**) multipliers :math:`\lambda_1` and :math:`\lambda_2`.
-
-.. math::
-    \mathcal{L}(x,\lambda_1, \lambda_2) = f(x) + \lambda_1 \, g_1(x) + \lambda_2 \, g_2(x)
-
-The `best response <https://en.wikipedia.org/wiki/Best_response>`_ for
-:math:`\lambda_1` and :math:`\lambda_2` at the current value of the primal
-parameters :math:`x` is :math:`(\lambda_1, \lambda_2) = (0, +\infty)`. This is
-due to the non-negativity constraints on the Lagrange multipliers, the sign of
-the constraint violations, and the fact that the :math:`\lambda`-player wants to
-maximize :math:`\mathcal{L}(x,\lambda_1, \lambda_2)`.
-
-"Playing a best response" for the Lagrange multiplier :math:`\lambda_2` of the
-violated constraint clearly leads to an impractical algorithm (due to numerical
-overflow). However, for the currently *feasible* constraint, performing a best
-response update on :math:`\lambda_1` is indeed implementable, and trivially so.
-This is exactly the effect of setting ``dual_restarts=True``!
-
-In practice, this prevents the optimization from over-focusing on a constraint
-(at the expense on improving on the loss function!) when said constraint **is
-already being satisfied**. This over-penalization arises from the accumulation
-of the (positive) defects in the value of the Lagrange multiplier while the
-constraint was being violated in the past.
-
-.. note::
-    We recommend setting ``dual_restarts=False`` when dealing with constraints
-    whose violations are estimated stochastically, for example Monte Carlo
-    estimates constraints described by expectations.  This is to avoid
-    restarting multipliers when a constraint is "being satisfied" for a single
-    estimate, since this can be a result of the stochasticity of the estimator.
-
-
-.. warning::
-    The behavior of dual restarts has only been tested using
-    :py:class:`~cooper.DenseMultiplier` objects.
-
 
 .. _multiple-primal_optimizers:
 

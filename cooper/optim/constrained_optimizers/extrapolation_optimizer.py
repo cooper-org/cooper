@@ -46,8 +46,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
                 some of the provided optimizers do not have an extrapolation method.
-            RuntimeError: Using an ExtrapolationConstrainedOptimizer together with
-                multipliers that have ``restart_on_feasible=True`` is not supported.
         """
 
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
@@ -58,13 +56,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 """Some of the provided optimizers do not have an extrapolation method.
                 Please ensure that all optimizers are extrapolation capable."""
             )
-
-        for multiplier in self.multipliers:
-            if getattr(multiplier, "restart_on_feasible", False):
-                raise RuntimeError(
-                    """Using restart on feasible for multipliers is not supported in
-                    conjunction with the ExtrapolationConstrainedOptimizer."""
-                )
 
     def step(self, call_extrapolation: bool = False):
         """Performs an extrapolation step or update step on both the primal and dual

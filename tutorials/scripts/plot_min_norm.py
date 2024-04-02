@@ -39,7 +39,6 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
-from cooper import CMPState, Constraint, ConstraintState, ConstraintType, FormulationType
 
 style_utils.set_plot_style()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -115,22 +114,20 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         # Create a constraint for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
-        constraint_type = ConstraintType.EQUALITY
-        self.multiplier = cooper.multipliers.IndexedMultiplier(
-            constraint_type=constraint_type, num_constraints=num_equations, device=DEVICE
-        )
-        self.eq_constraint = Constraint(
-            constraint_type=constraint_type, formulation_type=FormulationType.LAGRANGIAN, multiplier=self.multiplier
+        constraint_type = cooper.ConstraintType.EQUALITY
+        self.multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_equations, device=DEVICE)
+        self.eq_constraint = cooper.Constraint(
+            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=self.multiplier
         )
         super().__init__()
 
     def compute_cmp_state(
         self, x: torch.Tensor, sampled_equations: torch.Tensor, sampled_RHS: torch.Tensor, indices: torch.Tensor
-    ) -> CMPState:
+    ) -> cooper.CMPState:
         loss = torch.linalg.vector_norm(x) ** 2
         violation = (sampled_equations @ x - sampled_RHS).view(-1)
-        constraint_state = ConstraintState(violation=violation, constraint_features=indices)
-        return CMPState(loss=loss, observed_constraints=[(self.eq_constraint, constraint_state)])
+        constraint_state = cooper.ConstraintState(violation=violation, constraint_features=indices)
+        return cooper.CMPState(loss=loss, observed_constraints=[(self.eq_constraint, constraint_state)])
 
 
 def run_experiment(

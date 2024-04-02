@@ -1,14 +1,7 @@
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Optional
 
 import torch
-
-
-class ConstraintType(Enum):
-    EQUALITY = auto()
-    INEQUALITY = auto()
-    PENALTY = auto()
 
 
 @dataclass
