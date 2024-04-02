@@ -127,20 +127,18 @@ class AugmentedLagrangianFormulation(Formulation):
             module=penalty_coefficient, violation=violation, constraint_features=constraint_features
         )
 
-        lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
+        primal_lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
             multiplier_value=multiplier_value,
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
             constraint_type=self.constraint_type,
         )
 
-        primal_constraint_store = ConstraintMeasurement(
-            violation=violation,
-            multiplier_value=multiplier_value,
-            penalty_coefficient_value=penalty_coefficient_value,
+        primal_constraint_measurement = ConstraintMeasurement(
+            violation=violation, multiplier_value=multiplier_value, penalty_coefficient_value=penalty_coefficient_value
         )
 
-        return lagrangian_contribution, primal_constraint_store
+        return primal_lagrangian_contribution, primal_constraint_measurement
 
     def compute_contribution_for_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
@@ -159,17 +157,16 @@ class AugmentedLagrangianFormulation(Formulation):
         penalty_coefficient_value = evaluate_constraint_factor(
             module=penalty_coefficient, violation=violation, constraint_features=constraint_features
         )
-        lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
+        dual_lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             constraint_factor_value=multiplier_value,
             violation=strict_violation,
             penalty_coefficient_value=penalty_coefficient_value,
         )
-        dual_constraint_store = ConstraintMeasurement(
-            violation=strict_violation,
-            multiplier_value=multiplier_value,
+        dual_constraint_measurement = ConstraintMeasurement(
+            violation=strict_violation, multiplier_value=multiplier_value
         )
 
-        return lagrangian_contribution, dual_constraint_store
+        return dual_lagrangian_contribution, dual_constraint_measurement
 
     def __repr__(self):
         return f"AugmentedLagrangianFormulation(constraint_type={self.constraint_type})"
