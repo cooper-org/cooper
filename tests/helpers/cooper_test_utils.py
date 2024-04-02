@@ -2,7 +2,7 @@
 
 import itertools
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Optional, Type, Union
 
 import pytest
 import torch
@@ -52,7 +52,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
-        formulation_type: cooper.Formulation = cooper.LagrangianFormulation,
+        formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
         slack_variables: Optional[tuple[cooper.constraints.SlackVariable]] = None,
         penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
         device=None,

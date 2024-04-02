@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Type
 
 import torch
 
@@ -18,7 +18,7 @@ class Constraint:
         self,
         constraint_type: ConstraintType,
         multiplier: Multiplier,
-        formulation_type: Optional[Formulation] = LagrangianFormulation,
+        formulation_type: Optional[Type[Formulation]] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
 

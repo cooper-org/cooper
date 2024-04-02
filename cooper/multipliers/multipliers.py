@@ -10,7 +10,7 @@ from cooper.constraints.constraint_type import ConstraintType
 
 class Multiplier(torch.nn.Module, abc.ABC):
     @abc.abstractmethod
-    def forward(self):
+    def forward(self, *args, **kwargs):
         """Return the current value of the multiplier."""
         pass
 
