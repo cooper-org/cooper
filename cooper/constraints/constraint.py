@@ -27,8 +27,10 @@ class Constraint:
         self.formulation = formulation_type(constraint_type=self.constraint_type)
 
         self.multiplier = multiplier
-        # Ensure that the multiplier is positive if the constraint is an inequality constraint
-        self.multiplier.set_enforce_positive_(self.constraint_type == ConstraintType.INEQUALITY)
+        if multiplier.constraint_type != self.constraint_type:
+            raise ValueError(
+                f"Attempted to pair {self.constraint_type} constraint, with {multiplier.constraint_type} multiplier."
+            )
         self.multiplier.sanity_check()
 
         self.penalty_coefficient = penalty_coefficient
