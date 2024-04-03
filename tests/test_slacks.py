@@ -32,7 +32,7 @@
 
 #     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
 #         primal_optimizers=primal_optimizers,
-#         multipliers=cmp.multipliers,
+#         cmp=cmp,
 #         extrapolation=False,
 #         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
 #         dual_optimizer_class=torch.optim.SGD,

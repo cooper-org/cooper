@@ -36,7 +36,6 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers(),
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
     )
@@ -48,7 +47,6 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers(),
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
         dual_optimizer_class=torch.optim.SGD,
@@ -142,7 +140,6 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
     )
@@ -154,7 +151,6 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multipliers,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
         dual_optimizer_class=torch.optim.SGD,

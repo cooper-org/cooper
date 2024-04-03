@@ -148,7 +148,6 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
         cmp=cmp,
-        multipliers=cmp.multiplier,
         extrapolation=False,
         alternation_type=cooper.optim.AlternationType.FALSE,
         dual_optimizer_class=torch.optim.SGD,
@@ -227,7 +226,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
 #         device=device, use_constraint_surrogate=use_constraint_surrogate, observe_probability=observe_probability
 #     )
 
-#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=cmp.multipliers)
+#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp=cmp)
 
 #     for step_id in range(1500):
 #         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)

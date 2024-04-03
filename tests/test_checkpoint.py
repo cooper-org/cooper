@@ -81,11 +81,12 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     if len(new_cmp.multipliers) == 0:
         loaded_dual_optimizers = None
     else:
-        loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers)
+        loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers())
 
     loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
         cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
+        cmp=new_cmp,
         dual_optimizers=loaded_dual_optimizers,
     )
 
