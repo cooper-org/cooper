@@ -152,6 +152,24 @@ class ConstrainedMinimizationProblem(abc.ABC):
             if constraint.penalty_coefficient is not None:
                 yield constraint.penalty_coefficient
 
+    def state_dict(self) -> dict:
+        """Returns the state of the CMP. This includes the state of the multipliers, and penalty coefficients."""
+        state_dict = {
+            "multipliers": {name: multiplier.state_dict() for name, multiplier in self.named_multipliers()},
+            "penalty_coefficients": {
+                name: penalty_coefficient.state_dict()
+                for name, penalty_coefficient in self.named_penalty_coefficients()
+            },
+        }
+        return state_dict
+
+    def load_state_dict(self, state_dict: dict):
+        """Loads the state of the CMP. This includes the state of the multipliers, and penalty coefficients."""
+        for name, multiplier_state_dict in state_dict["multipliers"].items():
+            self._constraints[name].multiplier.load_state_dict(multiplier_state_dict)
+        for name, penalty_coefficient_state_dict in state_dict["penalty_coefficients"].items():
+            self._constraints[name].penalty_coefficient.load_state_dict(penalty_coefficient_state_dict)
+
     def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, Constraint):
             self._register_constraint(name, value)
