@@ -250,8 +250,6 @@ def build_dual_optimizers(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
-    if (multipliers is None) or len(multipliers) == 0:
-        return None
 
     # Make copy of this fixture since we are modifying in-place
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
@@ -286,13 +284,15 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
 
-    dual_optimizers = build_dual_optimizers(
-        multipliers=cmp.multipliers(),
-        augmented_lagrangian=augmented_lagrangian,
-        extrapolation=extrapolation,
-        dual_optimizer_class=dual_optimizer_class,
-        dual_optimizer_kwargs=dual_optimizer_kwargs,
-    )
+    dual_optimizers = None
+    if len(list(cmp.constraints())) != 0:
+        dual_optimizers = build_dual_optimizers(
+            multipliers=cmp.multipliers(),
+            augmented_lagrangian=augmented_lagrangian,
+            extrapolation=extrapolation,
+            dual_optimizer_class=dual_optimizer_class,
+            dual_optimizer_kwargs=dual_optimizer_kwargs,
+        )
 
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
         primal_optimizers=primal_optimizers,

@@ -76,7 +76,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
 
     assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
-    multiplier_values = [constraint.multiplier() for constraint in cmp.constraints]
+    multiplier_values = [constraint.multiplier() for constraint in cmp.constraints()]
     for multiplier, target_value in zip(multiplier_values, [0.0388, 0.0]):
         if not torch.allclose(multiplier, mktensor([target_value]), atol=1e-4):
             breakpoint()

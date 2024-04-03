@@ -45,7 +45,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model))
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=model))
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
@@ -63,7 +63,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 
     # ------------ Train for *another* 100 steps ------------
     for _ in range(100):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model))
+        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=model))
 
     model_state_dict_200 = model.state_dict()
     constrained_optimizer_state_dict_200 = cooper_optimizer.state_dict()
@@ -78,7 +78,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device)
 
-    if len(new_cmp.multipliers) == 0:
+    if len(list(new_cmp.constraints())) == 0:
         loaded_dual_optimizers = None
     else:
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers())
@@ -93,7 +93,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     # Train checkpointed model for 100 steps to reach overall 200 steps
     for _ in range(100):
         cmp_state, lagrangian_store = loaded_constrained_optimizer.roll(
-            compute_cmp_state_kwargs=dict(loaded_model=loaded_model)
+            compute_cmp_state_kwargs=dict(params=loaded_model)
         )
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
