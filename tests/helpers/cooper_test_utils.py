@@ -194,9 +194,9 @@ def use_multiple_primal_optimizers(request):
 
 def build_params(use_multiple_primal_optimizers, params_init):
     if use_multiple_primal_optimizers:
-        params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
+        params = [torch.nn.Parameter(params_init[0].clone()), torch.nn.Parameter(params_init[1].clone())]
     else:
-        params = torch.nn.Parameter(params_init)
+        params = torch.nn.Parameter(params_init.clone())
 
     return params
 
