@@ -12,7 +12,7 @@ for the faces?*
 
 This tutorial shows how to use the Augmented Lagrangian  in **Cooper**.
 """
-
+import itertools
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -85,10 +85,9 @@ log_probs = torch.nn.Parameter(torch.log(torch.ones(6, device=DEVICE) / 6))
 primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
-dual_parameters = []
-[dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers()]
+dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
 # For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
-dual_optimizer = torch.optim.SGD(dual_parameters, lr=1.0, maximize=True)
+dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
 
 cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp

@@ -40,7 +40,7 @@ constraint which is only observed sporadically. Note how the multiplier value re
 constant in-between measurements of the true constraint.
 
 """
-
+import itertools
 import random
 
 import matplotlib.pyplot as plt
@@ -85,19 +85,22 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
     the geometric mean of the singular values of X."""
 
     def __init__(self, y: torch.Tensor, z: torch.Tensor, constraint_level: float = 1.0):
+        super().__init__()
+
         self.y, self.z = y, z
         self.r = min(y.shape[0], z.shape[0])
         self.constraint_level = constraint_level
 
         # Creating a constraint with a single constraint
         constraint_type = cooper.ConstraintType.EQUALITY
-        self.multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
+        multiplier = cooper.multipliers.DenseMultiplier(
+            num_constraints=1, constraint_type=constraint_type, device=DEVICE
+        )
         self.constraint = cooper.Constraint(
             constraint_type=constraint_type,
             formulation_type=cooper.LagrangianFormulation,
-            multiplier=self.multiplier,
+            multiplier=multiplier,
         )
-        super().__init__()
 
     def loss_fn(self, X: torch.Tensor) -> torch.Tensor:
         """Compute the MSE loss function for a given X."""
@@ -168,7 +171,8 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
 
     cmp = MinNormWithSingularValueConstraints(y=y, z=z, constraint_level=constraint_level)
     primal_optimizer = torch.optim.SGD([X], lr=primal_lr)
-    dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
+    dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+    dual_optimizer = torch.optim.SGD(dual_params, lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
         primal_optimizers=primal_optimizer, cmp=cmp, dual_optimizers=dual_optimizer
     )
@@ -179,7 +183,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
             loss=[cmp.loss_fn(X).item()],
             arithmetic_mean=[cmp.compute_arithmetic_mean(X).item()],
             geometric_mean=[cmp.compute_geometric_mean(X).item()],
-            multiplier_values=[cmp.multiplier.weight.item()],
+            multiplier_values=[cmp.constraint.multiplier.weight.item()],
         )
 
     for iter in range(max_iter):

@@ -30,6 +30,7 @@ equations and :math:`0` everywhere else.
 The results below illustrate the influence of the number of observed equations on the
 convergence of the algorithm.
 """
+import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -111,15 +112,17 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
     """Min-norm problem with linear equality constraints."""
 
     def __init__(self, num_equations: int) -> None:
+        super().__init__()
         # Create a constraint for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
         constraint_type = cooper.ConstraintType.EQUALITY
-        self.multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_equations, device=DEVICE)
-        self.eq_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=self.multiplier
+        multiplier = cooper.multipliers.IndexedMultiplier(
+            num_constraints=num_equations, constraint_type=constraint_type, device=DEVICE
         )
-        super().__init__()
+        self.eq_constraint = cooper.Constraint(
+            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+        )
 
     def compute_cmp_state(
         self, x: torch.Tensor, sampled_equations: torch.Tensor, sampled_RHS: torch.Tensor, indices: torch.Tensor
@@ -149,9 +152,10 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
+    dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+    dual_optimizer = torch.optim.SGD(dual_params, lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp, multipliers=cmp.multiplier
+        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
     )
 
     state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], max_abs_violation=[])
@@ -177,7 +181,7 @@ def run_experiment(
 
             state_history["step"].append(step_ix)
             state_history["relative_norm"].append(cmp_state.loss.item() / optimal_sq_norm)
-            state_history["multipliers"].append(cmp.multiplier(all_indices).cpu().tolist())
+            state_history["multipliers"].append(cmp.eq_constraint.multiplier(all_indices).cpu().tolist())
             state_history["x_gap"].append(torch.linalg.vector_norm(x - x_optim, ord=np.inf).cpu().item())
             state_history["max_abs_violation"].append(max_abs_violation.cpu().item())
 
