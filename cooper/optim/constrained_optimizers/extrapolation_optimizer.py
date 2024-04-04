@@ -84,8 +84,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             self.zero_grad()
             cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-            primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
-            dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
+            primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+            dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
 
             primal_lagrangian_store.backward()
             dual_lagrangian_store.backward()

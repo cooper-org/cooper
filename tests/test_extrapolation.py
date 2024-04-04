@@ -38,8 +38,8 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # -------------------- First full extra-gradient step  --------------------
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    primal_lagrangian_store = cmp.compute_primal_lagrangian(cmp_state)
-    dual_lagrangian_store = cmp.compute_dual_lagrangian(cmp_state)
+    primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+    dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
     lagrangian = primal_lagrangian_store.lagrangian
     observed_multiplier_values = primal_lagrangian_store.multiplier_values()
 
@@ -66,8 +66,8 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     # Perform the actual update step
     cooper_optimizer.zero_grad()
     cmp_state = cmp.compute_cmp_state(params)
-    primal_lagrangian_store = cmp.compute_primal_lagrangian(cmp_state)
-    dual_lagrangian_store = cmp.compute_dual_lagrangian(cmp_state)
+    primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+    dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
     primal_lagrangian_store.backward()
     dual_lagrangian_store.backward()
     cooper_optimizer.step(call_extrapolation=False)
@@ -82,8 +82,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     assert torch.allclose(params, mktensor([5.8428e-04, -9.2410e-01]))
     multiplier_values = [constraint.multiplier() for constraint in cmp.constraints()]
     for multiplier, target_value in zip(multiplier_values, [0.0388, 0.0]):
-        if not torch.allclose(multiplier, mktensor([target_value]), atol=1e-4):
-            breakpoint()
+        assert torch.allclose(multiplier, mktensor([target_value]), atol=1e-4)
 
 
 @pytest.mark.parametrize("optimizer_name", ["ExtraSGD", "ExtraAdam"])

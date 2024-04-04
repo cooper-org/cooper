@@ -136,7 +136,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update primal variables only
-        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
         primal_lagrangian_store.backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
@@ -160,7 +160,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             except NotImplementedError:
                 new_cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(new_cmp_state)
+        dual_lagrangian_store = new_cmp_state.compute_dual_lagrangian()
         dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
 
@@ -206,7 +206,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update dual variables only
-        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
+        dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
         dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
 
@@ -216,7 +216,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
-        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
         primal_lagrangian_store.backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()

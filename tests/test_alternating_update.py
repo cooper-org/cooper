@@ -116,7 +116,7 @@ def test_manual_dual_primal(Toy2dCMP_problem_properties, Toy2dCMP_params_init, d
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
-    # Only perfoming this test for the case of a single primal optimizer
+    # Only performing this test for the case of a single primal optimizer
     assert isinstance(params, torch.nn.Parameter)
 
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)

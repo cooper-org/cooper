@@ -53,8 +53,8 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
 
         # TODO: The current design goes over the constraints twice. We could reduce
         #  overhead by writing a dedicated compute_lagrangian function for the simultaneous updates
-        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
-        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+        dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
 
         # The order of the following operations is not important
         primal_lagrangian_store.backward()
