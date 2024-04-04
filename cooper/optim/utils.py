@@ -11,7 +11,9 @@ from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def create_optimizer_from_kwargs(
-    constrained_optimizers_class: Type[constrained_optimizers.ConstrainedOptimizer] | Type[UnconstrainedOptimizer],
+    constrained_optimizers_class: Union[
+        Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]
+    ],
     cmp: ConstrainedMinimizationProblem,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
@@ -29,7 +31,9 @@ def create_optimizer_from_kwargs(
 
 
 def load_cooper_optimizer_from_state_dict(
-    constrained_optimizers_class: Type[constrained_optimizers.ConstrainedOptimizer] | Type[UnconstrainedOptimizer],
+    constrained_optimizers_class: Union[
+        Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]
+    ],
     cmp: ConstrainedMinimizationProblem,
     cooper_optimizer_state: CooperOptimizerState,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
