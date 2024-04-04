@@ -35,7 +35,9 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
         self.use_constraint_surrogate = use_constraint_surrogate
         self.observe_probability = observe_probability
 
-        multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=2, device=device)
+        multiplier = cooper.multipliers.IndexedMultiplier(
+            num_constraints=2, constraint_type=cooper.ConstraintType.INEQUALITY, device=device
+        )
         self.constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
             formulation_type=cooper.LagrangianFormulation,

@@ -211,7 +211,9 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     assert torch.allclose(params, x1_y1, atol=1e-4)
 
     # ----------------------- Second iteration -----------------------
-    cmp_state, primal_lagrangian_store_after_roll = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
+    cmp_state, primal_lagrangian_store_after_roll, dual_lagrangian_store_after_roll = cooper_optimizer.roll(
+        compute_cmp_state_kwargs=dict(params=params)
+    )
     violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     strict_violations = mktensor([_[1].strict_violation for _ in cmp_state.observed_constraints])
 
