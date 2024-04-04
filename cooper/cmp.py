@@ -175,14 +175,15 @@ class ConstrainedMinimizationProblem(abc.ABC):
         contributing_constraints = [(cg, cs) for cg, cs in cmp_state.observed_constraints if check_contributes_fn(cs)]
 
         if cmp_state.loss is None and len(contributing_constraints) == 0:
-            # No loss provided, and no observed constraints will contribute to the
-            # primal Lagrangian.
-            # We return any existent values for the private attributes, unmodified.
+            # No loss provided, and no observed constraints will contribute to Lagrangian.
             return LagrangianStore()
 
-        # Either a loss was provided, or at least one observed constraint contributes to
-        # the primal Lagrangian.
-        lagrangian = 0.0 if cmp_state.loss is None else torch.clone(cmp_state.loss)
+        if (cmp_state.loss is None) or (primal_or_dual == "dual"):
+            # We don't count the loss towards the dual Lagrangian since the objective
+            # function does not depend on the dual variables.
+            lagrangian = 0.0
+        else:
+            lagrangian = cmp_state.loss.clone()
 
         constraint_measurements = []
         for constraint, constraint_state in contributing_constraints:
