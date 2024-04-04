@@ -107,7 +107,7 @@ class ConstrainedOptimizer:
         """
 
         if call_extrapolation:
-            if not all([hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers]):
+            if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
                 raise ValueError("All dual optimizers must implement an `extrapolation` method.")
             call_method = "extrapolation"
         else:
@@ -133,6 +133,4 @@ class ConstrainedOptimizer:
         return CooperOptimizerState(
             primal_optimizer_states=primal_optimizer_states,
             dual_optimizer_states=dual_optimizer_states,
-            extrapolation=self.extrapolation,
-            alternation_type=self.alternation_type,
         )

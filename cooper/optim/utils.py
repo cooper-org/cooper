@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Type, Union
 
 import torch
 
@@ -7,54 +7,32 @@ from cooper.utils import OneOrSequence, ensure_sequence
 from .. import ConstrainedMinimizationProblem
 from . import constrained_optimizers
 from .optimizer_state import CooperOptimizerState
-from .types import AlternationType
 from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def create_optimizer_from_kwargs(
-    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    constrained_optimizers_class: Type[constrained_optimizers.ConstrainedOptimizer] | Type[UnconstrainedOptimizer],
     cmp: ConstrainedMinimizationProblem,
+    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-    extrapolation: bool = False,
-    alternation_type: AlternationType = AlternationType.FALSE,
-    augmented_lagrangian: bool = False,
 ) -> Union[UnconstrainedOptimizer, constrained_optimizers.ConstrainedOptimizer]:
-    """Creates a constrained or unconstrained optimizer from a set of keyword arguments.
-    This method disambiguates the appropriate optimizer class to instantiate.
-    """
+    """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
 
     if dual_optimizers is None:
-        assert not extrapolation
-        assert not augmented_lagrangian
-        return UnconstrainedOptimizer(primal_optimizers=primal_optimizers, cmp=cmp)
-
-    optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
-
-    if extrapolation:
-        constrained_optimizers_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+        if constrained_optimizers_class != UnconstrainedOptimizer:
+            raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
     else:
-        if augmented_lagrangian:
-            if alternation_type == AlternationType.DUAL_PRIMAL:
-                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianDualPrimalOptimizer
-            elif alternation_type == AlternationType.PRIMAL_DUAL:
-                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianPrimalDualOptimizer
-            else:
-                raise ValueError(f"Alternation type {alternation_type} not supported for Augmented Lagrangian.")
-        else:
-            if alternation_type == AlternationType.DUAL_PRIMAL:
-                constrained_optimizers_class = constrained_optimizers.AlternatingDualPrimalOptimizer
-            elif alternation_type == AlternationType.PRIMAL_DUAL:
-                constrained_optimizers_class = constrained_optimizers.AlternatingPrimalDualOptimizer
-            else:
-                constrained_optimizers_class = constrained_optimizers.SimultaneousOptimizer
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
 
     return constrained_optimizers_class(**optimizer_kwargs)
 
 
 def load_cooper_optimizer_from_state_dict(
+    constrained_optimizers_class: Type[constrained_optimizers.ConstrainedOptimizer] | Type[UnconstrainedOptimizer],
+    cmp: ConstrainedMinimizationProblem,
     cooper_optimizer_state: CooperOptimizerState,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-    cmp: ConstrainedMinimizationProblem,
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
 ):
     """Creates a Cooper optimizer and loads the state_dicts contained in a
@@ -89,11 +67,9 @@ def load_cooper_optimizer_from_state_dict(
         for dual_optimizer, dual_state in zip(dual_optimizers, dual_optimizer_states):
             dual_optimizer.load_state_dict(dual_state)
 
-    # Since we have extracted the multiplier information above, we discard the constraints below
     return create_optimizer_from_kwargs(
-        primal_optimizers=primal_optimizers,
+        constrained_optimizers_class=constrained_optimizers_class,
         cmp=cmp,
-        extrapolation=cooper_optimizer_state.extrapolation,
-        alternation_type=cooper_optimizer_state.alternation_type,
+        primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,
     )

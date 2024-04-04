@@ -69,8 +69,4 @@ class UnconstrainedOptimizer:
         """
 
         primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
-        return CooperOptimizerState(
-            primal_optimizer_states=primal_optimizer_states,
-            extrapolation=self.extrapolation,
-            alternation_type=self.alternation_type,
-        )
+        return CooperOptimizerState(primal_optimizer_states=primal_optimizer_states)

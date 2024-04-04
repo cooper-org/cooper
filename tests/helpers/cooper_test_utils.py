@@ -8,6 +8,7 @@ import pytest
 import torch
 
 import cooper
+from cooper.optim import AlternationType, constrained_optimizers
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -275,8 +276,8 @@ def build_dual_optimizers(
 
 
 def build_cooper_optimizer_for_Toy2dCMP(
-    primal_optimizers,
     cmp,
+    primal_optimizers,
     extrapolation: bool = False,
     augmented_lagrangian: bool = False,
     alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
@@ -294,13 +295,29 @@ def build_cooper_optimizer_for_Toy2dCMP(
             dual_optimizer_kwargs=dual_optimizer_kwargs,
         )
 
+    if extrapolation:
+        constrained_optimizers_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+    else:
+        if augmented_lagrangian:
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianDualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                constrained_optimizers_class = constrained_optimizers.AugmentedLagrangianPrimalDualOptimizer
+            else:
+                raise ValueError(f"Alternation type {alternation_type} not supported for Augmented Lagrangian.")
+        else:
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                constrained_optimizers_class = constrained_optimizers.AlternatingDualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                constrained_optimizers_class = constrained_optimizers.AlternatingPrimalDualOptimizer
+            else:
+                constrained_optimizers_class = constrained_optimizers.SimultaneousOptimizer
+
     cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
-        primal_optimizers=primal_optimizers,
+        constrained_optimizers_class=constrained_optimizers_class,
         cmp=cmp,
+        primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,
-        extrapolation=extrapolation,
-        alternation_type=alternation_type,
-        augmented_lagrangian=augmented_lagrangian,
     )
 
     return cooper_optimizer

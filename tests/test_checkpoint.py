@@ -5,8 +5,8 @@
 import os
 import tempfile
 
-# Import basic closure example from helpers
 import cooper_test_utils
+import testing_utils
 import torch
 
 import cooper
@@ -40,8 +40,12 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
-        primal_optimizers, cmp=cmp, dual_optimizer_class=torch.optim.SGD, dual_optimizer_kwargs={"lr": 1e-2}
+        cmp=cmp,
+        primal_optimizers=primal_optimizers,
+        dual_optimizer_class=torch.optim.SGD,
+        dual_optimizer_kwargs={"lr": 1e-2},
     )
+    constrained_optimizers_class = type(cooper_optimizer)
 
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
@@ -89,9 +93,10 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers())
 
     loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
+        constrained_optimizers_class=constrained_optimizers_class,
+        cmp=new_cmp,
         cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
-        cmp=new_cmp,
         dual_optimizers=loaded_dual_optimizers,
     )
 
@@ -101,6 +106,10 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
-    assert cooper.utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
+    assert testing_utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
     # These are ConstrainedOptimizerState objects and not dicts
-    assert loaded_constrained_optimizer.state_dict() == constrained_optimizer_state_dict_200
+    for state_dict_name in {"primal_optimizer_states", "dual_optimizer_states"}:
+        assert testing_utils.validate_state_dicts(
+            getattr(loaded_constrained_optimizer.state_dict(), state_dict_name),
+            getattr(constrained_optimizer_state_dict_200, state_dict_name),
+        )
