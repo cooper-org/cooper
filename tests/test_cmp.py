@@ -22,7 +22,7 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp=cmp)
 
     for step_id in range(1500):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
+        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))
 
     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
         assert torch.allclose(param, exact_solution)

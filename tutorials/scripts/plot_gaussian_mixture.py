@@ -164,9 +164,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_lev
         cooper_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer, cmp=cmp)
 
     for _ in range(num_iters):
-        cmp_state, lagrangian_store = cooper_optimizer.roll(
-            compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets)
-        )
+        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets))
 
     # Number of elements predicted as class 0 in the train set after training
     logits = model(inputs)

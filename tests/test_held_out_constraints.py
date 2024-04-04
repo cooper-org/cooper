@@ -31,14 +31,15 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
     """
 
     def __init__(self, use_constraint_surrogate=False, device=None, observe_probability=1.0):
+        super().__init__()
         self.use_constraint_surrogate = use_constraint_surrogate
         self.observe_probability = observe_probability
 
-        self.multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=2, device=device)
+        multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=2, device=device)
         self.constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
             formulation_type=cooper.LagrangianFormulation,
-            multiplier=self.multiplier,
+            multiplier=multiplier,
         )
 
     def analytical_gradients(self, params):
@@ -181,7 +182,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     lmbda = mktensor([0.0, 0.0])
 
     for i in range(10):
-        _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+        _cmp_state, _, _ = cooper_optimizer.roll(**roll_kwargs)
 
         constraint_features = _cmp_state.observed_constraints[0][1].constraint_features
         new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_features)

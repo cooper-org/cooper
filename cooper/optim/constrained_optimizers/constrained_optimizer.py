@@ -89,6 +89,7 @@ class ConstrainedOptimizer:
         for dual_optimizer in self.dual_optimizers:
             dual_optimizer.zero_grad()
 
+    @torch.no_grad()
     def dual_step(self, call_extrapolation: bool = False):
         """
         Perform a gradient step on the parameters associated with the dual variables.

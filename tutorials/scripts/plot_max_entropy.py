@@ -80,7 +80,7 @@ cooper_optimizer = cooper.optim.SimultaneousOptimizer(
 
 state_history = {}
 for i in range(3000):
-    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
     observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
     observed_multipliers = [multiplier().data for multiplier in cmp.multipliers()]

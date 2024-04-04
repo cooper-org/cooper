@@ -30,6 +30,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
 
         self.base_sanity_checks()
 
+    @torch.no_grad()
     def step(self):
         """Performs a single optimization step on both the primal and dual variables."""
 
@@ -38,7 +39,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
 
         self.dual_step(call_extrapolation=False)
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
         dual variables.
 
@@ -47,9 +48,18 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         """
 
         self.zero_grad()
+
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store = self.cmp.populate_lagrangian_(cmp_state)
-        lagrangian_store.backward()
+
+        # TODO: The current design goes over the constraints twice. We could reduce
+        #  overhead by writing a dedicated compute_lagrangian function for the simultaneous updates
+        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
+
+        # The order of the following operations is not important
+        primal_lagrangian_store.backward()
+        dual_lagrangian_store.backward()
+
         self.step()
 
-        return cmp_state, lagrangian_store
+        return cmp_state, primal_lagrangian_store, dual_lagrangian_store

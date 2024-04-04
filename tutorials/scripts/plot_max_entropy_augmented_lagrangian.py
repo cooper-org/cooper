@@ -96,7 +96,7 @@ cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
 
 state_history = {}
 for i in range(3000):
-    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
     observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}
     for constraint, constraint_state in cmp_state.observed_constraints:

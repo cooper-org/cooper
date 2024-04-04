@@ -41,7 +41,7 @@ class UnconstrainedOptimizer:
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Evaluates the objective function and performs a gradient update on the
         parameters.
 
@@ -52,7 +52,8 @@ class UnconstrainedOptimizer:
 
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store = self.cmp.populate_lagrangian_(cmp_state)
+        lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        dual_lagrangian_store = LagrangianStore()
         # For unconstrained problems, the Lagrangian simply corresponds to the loss
         # loss = lagrangian_store.lagrangian
         # loss.backward()
@@ -60,7 +61,7 @@ class UnconstrainedOptimizer:
         lagrangian_store.backward()
         self.step()
 
-        return cmp_state, lagrangian_store
+        return cmp_state, lagrangian_store, dual_lagrangian_store
 
     def state_dict(self) -> CooperOptimizerState:
         """Collects the state dicts of the primal optimizers and wraps them in a

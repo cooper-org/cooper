@@ -2,7 +2,7 @@ import abc
 from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator, Literal, Optional
 
 import torch
 
@@ -16,54 +16,21 @@ from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 @dataclass
 class LagrangianStore:
-    """Stores the value of the (primal) Lagrangian, the dual Lagrangian, as well as
-    ``ConstraintMeasurement``s for the primal-contributing and dual-contributing
-    constraints."""
+    """Stores the value of the (primal or dual) Lagrangian, as well as
+    ``ConstraintMeasurement``s for the contributing constraints.
+    """
 
     lagrangian: Optional[torch.Tensor] = None
-    dual_lagrangian: Optional[torch.Tensor] = None
-    primal_constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
-    dual_constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
+    constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
 
-    def primal_backward(self) -> None:
+    def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the primal variables."""
         if self.lagrangian is not None and isinstance(self.lagrangian, torch.Tensor):
             self.lagrangian.backward()
 
-        # After completing the backward call, we purge the accumulated lagrangian
-        self._purge_primal_lagrangian()
-
-    def dual_backward(self) -> None:
-        """Triggers backward calls to compute the gradient of the Lagrangian with
-        respect to the dual variables."""
-        if self.dual_lagrangian is not None and isinstance(self.dual_lagrangian, torch.Tensor):
-            self.dual_lagrangian.backward()
-
-        # After completing the backward call, we purge the accumulated dual_lagrangian
-        self._purge_dual_lagrangian()
-
-    def backward(self) -> None:
-        """Computes the gradient of the Lagrangian with respect to both the primal and
-        dual parameters."""
-        self.primal_backward()
-        self.dual_backward()
-
-    def _purge_primal_lagrangian(self) -> None:
-        """Purge the accumulated primal Lagrangian contributions."""
-        self.lagrangian = None
-        self.primal_constraint_measurements = []
-
-    def _purge_dual_lagrangian(self) -> None:
-        """Purge the accumulated dual Lagrangian contributions."""
-        self.dual_lagrangian = None
-        self.dual_constraint_measurements = []
-
-    def multiplier_values_for_primal_constraints(self):
-        return [_.multiplier_value for _ in self.primal_constraint_measurements]
-
-    def multiplier_values_for_dual_constraints(self):
-        return [_.multiplier_value for _ in self.dual_constraint_measurements]
+    def multiplier_values(self):
+        return [_.multiplier_value for _ in self.constraint_measurements]
 
 
 @dataclass
@@ -92,7 +59,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems."""
 
     def __init__(self) -> None:
-        self.lagrangian_store = LagrangianStore()
         self._constraints = OrderedDict()
 
     def _register_constraint(self, name: str, constraint: Constraint) -> None:
@@ -167,6 +133,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """Loads the state of the CMP. This includes the state of the multipliers, and penalty coefficients."""
         for name, multiplier_state_dict in state_dict["multipliers"].items():
             self._constraints[name].multiplier.load_state_dict(multiplier_state_dict)
+            self._constraints[name].multiplier.sanity_check()
         for name, penalty_coefficient_state_dict in state_dict["penalty_coefficients"].items():
             self._constraints[name].penalty_coefficient.load_state_dict(penalty_coefficient_state_dict)
 
@@ -197,106 +164,44 @@ class ConstrainedMinimizationProblem(abc.ABC):
         repr_str += "\t]\n)"
         return repr_str
 
-    def populate_primal_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
-        """Computes and accumulates the primal-differentiable Lagrangian based on the
+    def compute_primal_or_dual_lagrangian(
+        self, cmp_state: CMPState, primal_or_dual: Literal["primal", "dual"]
+    ) -> LagrangianStore:
+        """Computes the primal or dual Lagrangian based on the
         loss and the contribution of the observed constraints.
         """
 
-        contributing_constraints = [
-            (cg, cs) for cg, cs in cmp_state.observed_constraints if cs.contributes_to_primal_update
-        ]
+        check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
+        contributing_constraints = [(cg, cs) for cg, cs in cmp_state.observed_constraints if check_contributes_fn(cs)]
 
         if cmp_state.loss is None and len(contributing_constraints) == 0:
             # No loss provided, and no observed constraints will contribute to the
             # primal Lagrangian.
             # We return any existent values for the private attributes, unmodified.
-            return self.lagrangian_store
+            return LagrangianStore()
 
         # Either a loss was provided, or at least one observed constraint contributes to
         # the primal Lagrangian.
-        previous_primal_lagrangian = (
-            0.0 if self.lagrangian_store.lagrangian is None else self.lagrangian_store.lagrangian
-        )
-        current_primal_lagrangian = 0.0 if cmp_state.loss is None else torch.clone(cmp_state.loss)
+        lagrangian = 0.0 if cmp_state.loss is None else torch.clone(cmp_state.loss)
 
-        current_primal_constraint_measurements = []
+        constraint_measurements = []
         for constraint, constraint_state in contributing_constraints:
-            primal_constraint_contribution_out = constraint.compute_constraint_primal_contribution(constraint_state)
-            primal_lagrangian_contribution, primal_constraint_measurement = primal_constraint_contribution_out
-            current_primal_constraint_measurements.append(primal_constraint_measurement)
-            if primal_lagrangian_contribution is not None:
-                current_primal_lagrangian = current_primal_lagrangian + primal_lagrangian_contribution
+            compute_contribution_fn = getattr(constraint, f"compute_constraint_{primal_or_dual}_contribution")
+            lagrangian_contribution, constraint_measurement = compute_contribution_fn(constraint_state)
+            constraint_measurements.append(constraint_measurement)
+            if lagrangian_contribution is not None:
+                lagrangian = lagrangian + lagrangian_contribution
 
-        # Modify "private" attributes to accumulate Lagrangian values over successive
-        # calls to `populate_primal_lagrangian`
-        self.lagrangian_store.lagrangian = previous_primal_lagrangian + current_primal_lagrangian
-        self.lagrangian_store.primal_constraint_measurements.extend(current_primal_constraint_measurements)
+        return LagrangianStore(lagrangian=lagrangian, constraint_measurements=constraint_measurements)
 
-        # We return any existent values for the _dual_lagrangian, and the
-        # _dual_constraint_measurements. The _primal_lagrangian and _primal_constraint_measurements
-        # attributes have been modified earlier, so their updated values are returned.
-        return self.lagrangian_store
+    def compute_primal_lagrangian(self, cmp_state: CMPState) -> LagrangianStore:
+        return self.compute_primal_or_dual_lagrangian(cmp_state, primal_or_dual="primal")
 
-    def populate_dual_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
+    def compute_dual_lagrangian(self, cmp_state: CMPState) -> LagrangianStore:
         """Computes and accumulates the dual-differentiable Lagrangian based on the
         loss and the contribution of the observed constraints.
         """
-        contributing_constraints = [
-            (cg, cs) for cg, cs in cmp_state.observed_constraints if cs.contributes_to_dual_update
-        ]
-
-        if len(contributing_constraints) == 0:
-            # No observed constraints will contribute to the dual Lagrangian.
-            # We return any existent values for the private attributes, unmodified.
-            return self.lagrangian_store
-
-        # At least one observed constraint contributes to the dual Lagrangian.
-        previous_dual_lagrangian = (
-            0.0 if self.lagrangian_store.dual_lagrangian is None else self.lagrangian_store.dual_lagrangian
-        )
-        current_dual_lagrangian = 0.0
-
-        current_dual_constraint_measurements = []
-        for constraint, constraint_state in contributing_constraints:
-            dual_constraint_contribution_out = constraint.compute_constraint_dual_contribution(constraint_state)
-            dual_lagrangian_contribution, dual_constraint_measurement = dual_constraint_contribution_out
-            current_dual_constraint_measurements.append(dual_constraint_measurement)
-            if dual_lagrangian_contribution is not None:
-                current_dual_lagrangian = current_dual_lagrangian + dual_lagrangian_contribution
-
-        # Modify "private" attributes to accumulate Lagrangian values over successive
-        # calls to `populate_dual_lagrangian`
-        self.lagrangian_store.dual_lagrangian = previous_dual_lagrangian + current_dual_lagrangian
-        self.lagrangian_store.dual_constraint_measurements.extend(current_dual_constraint_measurements)
-
-        # We return any existent values for the _primal_lagrangian, and the
-        # _primal_constraint_measurements. The _dual_lagrangian and _dual_constraint_measurements
-        # attributes have been modified earlier, so their updated values are returned.
-        return self.lagrangian_store
-
-    def populate_lagrangian_(self, cmp_state: CMPState) -> LagrangianStore:
-        """Computes and accumulates the Lagrangian based on the loss and the
-        contributions to the "primal" and "dual" Lagrangians resulting from each of the
-        observed constraints.
-
-        The Lagrangian contributions correspond to disjoint computational graphs from
-        the point of view of gradient propagation: there is no gradient connection
-        between the primal (resp. dual) Lagrangian contribution and the dual (resp.
-        primal) variables.
-
-        Returns:
-            lagrangian_store: LagrangianStore containing the value of the
-            primal-differentiable Lagrangian, the dual-differentiable Lagrangian,
-            as well as the ConstraintStores for the primal- and dual-contributing
-            constraints.
-        """
-
-        # The attributes of the lagrangian_store returned by this function are populated
-        # _sequentially_ and disjointly by each of the function calls below. The order
-        # of the calls is not important.
-        _ = self.populate_primal_lagrangian_(cmp_state)
-        lagrangian_store = self.populate_dual_lagrangian_(cmp_state)
-        return lagrangian_store
+        return self.compute_primal_or_dual_lagrangian(cmp_state, primal_or_dual="dual")
 
     @abc.abstractmethod
     def compute_cmp_state(self, *args, **kwargs) -> CMPState:

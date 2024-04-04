@@ -83,7 +83,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         self,
         compute_cmp_state_kwargs: dict = {},
         compute_violations_kwargs: dict = {},
-    ) -> tuple[CMPState, LagrangianStore]:
+    ) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
         (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
@@ -136,8 +136,8 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update primal variables only
-        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian_(cmp_state)
-        lagrangian_store_for_primal.primal_backward()
+        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        primal_lagrangian_store.backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
@@ -160,30 +160,15 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             except NotImplementedError:
                 new_cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-            if self.cmp.lagrangian_store.dual_lagrangian is not None:
-                raise RuntimeError("Expected a LagrangianStore with no dual_lagrangian populated.")
-
-        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian_(new_cmp_state)
-        lagrangian_store_for_dual.dual_backward()
+        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(new_cmp_state)
+        dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
 
         if self.is_augmented_lagrangian_optimizer:
             self.update_penalty_coefficients(cmp_state=new_cmp_state)
 
-        # Patch the CMPState and LagrangianStore with the latest available loss and
-        # Lagrangian estimate. See the docstring for more details.
-        if new_cmp_state.loss is None:
-            # If the loss was not populated by the `compute_violations_fn`, we copy the
-            # loss evaluated during the primal update so users can access it for logging
-            new_cmp_state.loss = cmp_state.loss
-        assert lagrangian_store_for_dual.lagrangian is None
-        lagrangian_store_for_dual.lagrangian = new_cmp_state.loss + lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_dual.primal_constraint_measurements == []
-        lagrangian_store_for_dual.primal_constraint_measurements = (
-            lagrangian_store_for_primal.primal_constraint_measurements
-        )
-
-        return new_cmp_state, lagrangian_store_for_dual
+        # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
+        return new_cmp_state, primal_lagrangian_store, dual_lagrangian_store
 
 
 class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
@@ -196,7 +181,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     alternation_type = AlternationType.DUAL_PRIMAL
     is_augmented_lagrangian_optimizer = False
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -221,8 +206,8 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update dual variables only
-        lagrangian_store_for_dual = self.cmp.populate_dual_lagrangian_(cmp_state)
-        lagrangian_store_for_dual.dual_backward()
+        dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
+        dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
 
         if self.is_augmented_lagrangian_optimizer:
@@ -231,21 +216,12 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
-        lagrangian_store_for_primal = self.cmp.populate_primal_lagrangian_(cmp_state)
-        lagrangian_store_for_primal.primal_backward()
+        primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+        primal_lagrangian_store.backward()
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        # Patch the CMPState and LagrangianStore with the latest available loss and
-        # Lagrangian estimate. See the docstring for more details.
-        assert lagrangian_store_for_primal.dual_lagrangian is None
-        lagrangian_store_for_primal.dual_lagrangian = lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_primal.dual_constraint_measurements == []
-        lagrangian_store_for_primal.dual_constraint_measurements = (
-            lagrangian_store_for_dual.dual_constraint_measurements
-        )
-
-        return cmp_state, lagrangian_store_for_primal
+        return cmp_state, primal_lagrangian_store, dual_lagrangian_store
 
 
 class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):

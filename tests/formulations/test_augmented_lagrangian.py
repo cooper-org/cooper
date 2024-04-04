@@ -68,13 +68,13 @@
 #     initial_cmp_state = cmp.compute_cmp_state(params)  # noqa: F841
 
 #     # ------------ First step of dual-primal updates ------------
-#     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+#     _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
 #     violations0 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
 #     # Observed multipliers from the lagrangian_store should match the multipliers after
 #     # the first update -- roll returns the violations measured at x0_y0
 #     lmbda1 = torch.relu(lmbda0 + rho0 * violations0)
-#     assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_primal_constraints()), lmbda1)
+#     assert torch.allclose(torch.cat(primal_lagrangian_store.multiplier_values()), lmbda1)
 
 #     # Only the first constraint is violated, so the first coefficient grows. The second
 #     # stays the same.
@@ -92,11 +92,11 @@
 #     assert torch.allclose(params, x1_y1)
 
 #     # ------------ Second step of dual-primal updates ------------
-#     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+#     _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
 #     violations1 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
 #     lmbda2 = torch.relu(lmbda1 + rho1 * violations1)
-#     assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_primal_constraints()), lmbda2)
+#     assert torch.allclose(torch.cat(primal_lagrangian_store.multiplier_values()), lmbda2)
 
 #     rho2 = torch.where(violations1 > violation_tolerance, rho1 * penalty_growth_factor, rho1).detach()
 #     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho2)
@@ -140,7 +140,7 @@
 #     violations0 = mktensor([_[1].violation for _ in initial_cmp_state.observed_constraints])
 
 #     # ------------ First step of primal-dual updates ------------
-#     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+#     _cmp_state, primal_lagrangian_store, dual_lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
 #     violations1 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
 #     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -155,7 +155,7 @@
 
 #     # The reported multipliers from the lagrangian_store should match the multipliers
 #     # _before_ their update, since then is when the CMPState is measured inside roll.
-#     assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_dual_constraints()), lmbda0)
+#     assert torch.allclose(torch.cat(dual_lagrangian_store.multiplier_values()), lmbda0)
 
 #     # Check that the _current_ value of the multipliers matches
 #     lmbda1 = torch.relu(lmbda0 + rho0 * violations1)
@@ -165,7 +165,7 @@
 #     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho1)
 
 #     # ------------ Second step of primal-dual updates ------------
-#     _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+#     _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
 #     violations2 = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
 
 #     grad_x1_y1 = cmp.analytical_gradients(x1_y1)
@@ -177,7 +177,7 @@
 
 #     # The reported multipliers from the lagrangian_store should match the multipliers
 #     # _before_ their update, since then is when the CMPState is measured inside roll.
-#     assert torch.allclose(torch.cat(lagrangian_store.multiplier_values_for_dual_constraints()), lmbda1)
+#     assert torch.allclose(torch.cat(dual_lagrangian_store.multiplier_values()), lmbda1)
 
 #     # Check that the _current_ value of the multipliers matches
 #     lmbda2 = torch.relu(lmbda1 + rho1 * violations2)

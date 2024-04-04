@@ -70,7 +70,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             # FIXME(gallego-posada): This line should not be indented inside the loop!
             self.dual_step(call_extrapolation=call_extrapolation)
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -80,17 +80,16 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
-        self.zero_grad()
-        cmp_state_pre_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store_pre_extrapolation = self.cmp.populate_lagrangian_(cmp_state_pre_extrapolation)
-        lagrangian_store_pre_extrapolation.backward()
-        self.step(call_extrapolation=True)
+        for call_extrapolation in [True, False]:
+            self.zero_grad()
+            cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-        # Perform an update step
-        self.zero_grad()
-        cmp_state_post_extrapolation = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
-        lagrangian_store_post_extrapolation = self.cmp.populate_lagrangian_(cmp_state_post_extrapolation)
-        lagrangian_store_pre_extrapolation.backward()
-        self.step(call_extrapolation=False)
+            primal_lagrangian_store = self.cmp.compute_primal_lagrangian(cmp_state)
+            dual_lagrangian_store = self.cmp.compute_dual_lagrangian(cmp_state)
 
-        return cmp_state_post_extrapolation, lagrangian_store_post_extrapolation
+            primal_lagrangian_store.backward()
+            dual_lagrangian_store.backward()
+
+            self.step(call_extrapolation=call_extrapolation)
+
+        return cmp_state, primal_lagrangian_store, dual_lagrangian_store

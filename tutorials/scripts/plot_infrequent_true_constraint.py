@@ -198,7 +198,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
         else:
             compute_cmp_state_fn = lambda: cmp.compute_surrogate_cmp_state(X)
 
-        lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)  # noqa: F841
+        cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)  # noqa: F841
 
         if prev_X.allclose(X, atol=tolerance):
             break
