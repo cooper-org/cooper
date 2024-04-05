@@ -54,6 +54,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
     def step(self):
         pass
 
+
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing primal-dual alternating updates to the primal and dual variables.

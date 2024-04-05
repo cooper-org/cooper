@@ -4,11 +4,7 @@ from typing import Union
 import torch
 
 from .multipliers import DenseMultiplier, ExplicitMultiplier, ImplicitMultiplier, IndexedMultiplier, Multiplier
-from .penalty_coefficients import (
-    DensePenaltyCoefficient,
-    IndexedPenaltyCoefficient,
-    PenaltyCoefficient,
-)
+from .penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient, PenaltyCoefficient
 
 ConstraintFactor = Union[Multiplier, PenaltyCoefficient]
 

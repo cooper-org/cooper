@@ -5,7 +5,6 @@ from typing import Optional
 import torch
 
 
-
 class PenaltyCoefficient(abc.ABC):
     """Abstract class for constant (non-trainable) coefficients used in Augmented Lagrangian formulation.
 

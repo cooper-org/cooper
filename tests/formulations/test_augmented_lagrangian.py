@@ -107,7 +107,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     const_contrib1 = (lmbda2[1] + rho2[1] * violations1[1]).relu() * grad_x1_y1[1][1]
     x2_y2 = x1_y1 - 0.01 * (grad_x1_y1[0] + const_contrib0 + const_contrib1)
 
-   # TODO(merajhashemi): Tolerance is relaxed to pass the test. Investigate why.
+    # TODO(merajhashemi): Tolerance is relaxed to pass the test. Investigate why.
     assert torch.allclose(params, x2_y2, atol=1e-3)
 
 
