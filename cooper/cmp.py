@@ -119,8 +119,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def named_constraints(self) -> Iterator[tuple[str, Constraint]]:
         """Return an iterator over the registered constraints of the CMP, yielding
-        tuples of the form `(constraint_name, constraint)`."""
-``
+        tuples of the form `(constraint_name, constraint)`.
+        """
         yield from self._constraints.items()
 
     def constraints(self) -> Iterator[Constraint]:
