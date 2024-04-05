@@ -18,7 +18,7 @@ class Constraint:
         self,
         constraint_type: ConstraintType,
         multiplier: Multiplier,
-        formulation_type: Optional[Type[Formulation]] = LagrangianFormulation,
+        formulation_type: Type[Formulation] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
 
