@@ -60,7 +60,7 @@ class PenaltyCoefficient(abc.ABC):
 class DensePenaltyCoefficient(PenaltyCoefficient):
     """Constant (non-trainable) coefficient class used for Augmented Lagrangian formulation."""
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def __call__(self):
         """Return the current value of the penalty coefficient."""
         return self.value.clone()
@@ -72,7 +72,7 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
     value of the penalty for a subset of constraints.
     """
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def __call__(self, indices: torch.Tensor):
         """Return the current value of the penalty coefficient at the provided indices.
 
