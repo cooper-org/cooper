@@ -21,7 +21,7 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         use_multiple_primal_optimizers=False, params_init=Toy2dCMP_params_init
     )
 
-    # Only perfoming this test for the case of a single primal optimizer
+    # Only performing this test for the case of a single primal optimizer
     assert isinstance(params, torch.nn.Parameter)
 
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
@@ -46,41 +46,38 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
     lmbda0 = mktensor([0.0, 0.0])
 
     # ------------ First step of alternating updates ------------
-    _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    _cmp_state = cmp.compute_cmp_state(x0_y0)
 
     x1_y1 = mktensor([0.0, -0.96])
     assert torch.allclose(params, x1_y1)
 
-    cmp_state = cmp.compute_cmp_state(x1_y1)
-
+    _violations = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
     violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     lmbda1 = torch.relu(lmbda0 + 1e-2 * violations)
 
-    multiplier_values = [constraint.multiplier() for constraint, _ in cmp_state.observed_constraints]
+    multiplier_values = [constraint.multiplier() for constraint, _ in _cmp_state.observed_constraints]
     for multiplier_value, target_value in zip(multiplier_values, lmbda1):
         assert torch.allclose(multiplier_value, mktensor([target_value]))
 
     if use_violation_fn:
-        # Use the loss in the CMP state before the primal update, but the violations
-        # after the primal update
-        lagrangian1 = _cmp_state.loss + torch.sum(violations * lmbda0)
+        # Use the loss and the violations in the CMP state before the primal update
+        lagrangian1 = _cmp_state.loss + torch.sum(_violations * lmbda0)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
         assert torch.allclose(primal_lagrangian_store.lagrangian, lagrangian1)
     else:
-        lagrangian1 = cmp_state.loss + torch.sum(violations * lmbda0)
-        # Since the multipliers are still zero, the Lagrangian matches the loss at
-        # the updated primal point
+        lagrangian1 = _cmp_state.loss + torch.sum(_violations * lmbda0)
         assert torch.allclose(primal_lagrangian_store.lagrangian, lagrangian1)
 
     # ------------ Second step of alternating updates ------------
-    _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    _cmp_state = cmp.compute_cmp_state(x1_y1)
 
     x2_y2 = mktensor([0.0196 * 0.01, -0.96 + 3.8596 * 1e-2])
     assert torch.allclose(params, x2_y2)
 
-    cmp_state = cmp.compute_cmp_state(x2_y2)
-
+    _violations = mktensor([_[1].violation for _ in _cmp_state.observed_constraints])
     violations = mktensor([_[1].violation for _ in cmp_state.observed_constraints])
     lmbda2 = torch.relu(lmbda1 + 1e-2 * violations)
 
@@ -89,16 +86,13 @@ def test_manual_primal_dual(use_violation_fn, Toy2dCMP_problem_properties, Toy2d
         assert torch.allclose(multiplier, mktensor([target_value]))
 
     if use_violation_fn:
-        # Use the loss in the CMP state before the primal update, but the violations
-        # after the primal update
-        lagrangian2 = _cmp_state.loss + torch.sum(violations * lmbda1)
+        # Use the loss and the violations in the CMP state before the primal update
+        lagrangian2 = _cmp_state.loss + torch.sum(_violations * lmbda1)
         # When the final Lagrangian is evaluated, the primal variables have changed,
         # but the multipliers are still zero (not yet updated)
         assert torch.allclose(primal_lagrangian_store.lagrangian, lagrangian2)
     else:
-        lagrangian2 = cmp_state.loss + torch.sum(violations * lmbda1)
-        # Since the multipliers are still zero, the Lagrangian matches the loss at
-        # the updated primal point
+        lagrangian2 = _cmp_state.loss + torch.sum(_violations * lmbda1)
         assert torch.allclose(primal_lagrangian_store.lagrangian, lagrangian2)
 
 
