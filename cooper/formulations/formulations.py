@@ -154,9 +154,8 @@ class AugmentedLagrangianFormulation(Formulation):
             module=multiplier, violation=strict_violation, constraint_features=strict_constraint_features
         )
 
-        # TODO(merajhashemi): why does evaluate_constraint_factor use violation instead of strict_violation?
         penalty_coefficient_value = evaluate_constraint_factor(
-            module=penalty_coefficient, violation=violation, constraint_features=constraint_features
+            module=penalty_coefficient, violation=strict_violation, constraint_features=strict_constraint_features
         )
         dual_lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             constraint_factor_value=multiplier_value,
