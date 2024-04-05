@@ -137,8 +137,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def multipliers(self) -> Iterator[Multiplier]:
         """Returns an iterator over the multipliers associated with the registered
         constraints of the CMP."""
-        for c in self.constraints():
-            yield c.multiplier
+        for constraint in self.constraints():
+            yield constraint.multiplier
 
     def named_penalty_coefficients(self) -> Iterator[tuple[str, PenaltyCoefficient]]:
         """Returns an iterator over the penalty coefficients associated with the
