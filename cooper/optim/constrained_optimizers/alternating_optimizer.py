@@ -11,7 +11,6 @@ import warnings
 import torch
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.formulations import AugmentedLagrangianFormulation
 from cooper.utils import OneOrSequence
 
 from ..types import AlternationType
@@ -54,19 +53,6 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
     def step(self):
         pass
-
-    def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
-        """Update the penalty coefficients of the constraint groups. Only the penalty
-        coefficients associated with the ``AugmentedLagrangianFormulation`` and
-        constraints that ``contributes_to_dual_update`` are updated.
-        """
-        for constraint, constraint_state in cmp_state.observed_constraints:
-            if isinstance(constraint.formulation, AugmentedLagrangianFormulation):
-                # We might reach this point via an AugmetedLagrangianOptimizer acting
-                # on some constraints that do not use an Augmented Lagrangian formulation,
-                # so we do _not_ apply penalty coefficient updates to those.
-                if constraint_state.contributes_to_dual_update:
-                    constraint.update_penalty_coefficient(constraint_state=constraint_state)
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
@@ -164,9 +150,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
 
-        if self.is_augmented_lagrangian_optimizer:
-            self.update_penalty_coefficients(cmp_state=new_cmp_state)
-
         # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
         return new_cmp_state, primal_lagrangian_store, dual_lagrangian_store
 
@@ -209,9 +192,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
         dual_lagrangian_store.backward()
         self.dual_step(call_extrapolation=False)
-
-        if self.is_augmented_lagrangian_optimizer:
-            self.update_penalty_coefficients(cmp_state=cmp_state)
 
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.

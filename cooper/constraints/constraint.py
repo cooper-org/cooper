@@ -47,18 +47,6 @@ class Constraint:
             if penalty_coefficient is not None:
                 raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
 
-    def update_penalty_coefficient(self, constraint_state: ConstraintState) -> None:
-        """Update the penalty coefficient of the constraint."""
-        if self.penalty_coefficient is None:
-            raise ValueError("Constraint does not have a penalty coefficient.")
-        else:
-            self.penalty_coefficient.update_value(
-                constraint_state=constraint_state,
-                constraint_type=self.constraint_type,
-                growth_factor=self.formulation.penalty_growth_factor,
-                violation_tolerance=self.formulation.violation_tolerance,
-            )
-
     def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
         kwargs = {"constraint_state": constraint_state, "multiplier": self.multiplier}
         if self.formulation.expects_penalty_coefficient:
