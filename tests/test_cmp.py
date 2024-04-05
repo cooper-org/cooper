@@ -19,7 +19,7 @@ def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, us
     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
     cmp = cooper_test_utils.Toy2dCMP(use_ineq_constraints=use_ineq_constraints, device=device)
 
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp=cmp)
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(cmp, primal_optimizers=primal_optimizers)
 
     for step_id in range(1500):
         cooper_optimizer.roll(compute_cmp_state_kwargs=dict(params=params))

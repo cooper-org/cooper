@@ -11,9 +11,7 @@ from .unconstrained_optimizer import UnconstrainedOptimizer
 
 
 def create_optimizer_from_kwargs(
-    constrained_optimizers_class: Union[
-        Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]
-    ],
+    cooper_optimizer_class: Union[Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]],
     cmp: ConstrainedMinimizationProblem,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
@@ -21,19 +19,17 @@ def create_optimizer_from_kwargs(
     """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
 
     if dual_optimizers is None:
-        if constrained_optimizers_class != UnconstrainedOptimizer:
+        if cooper_optimizer_class != UnconstrainedOptimizer:
             raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
         optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
     else:
         optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
 
-    return constrained_optimizers_class(**optimizer_kwargs)
+    return cooper_optimizer_class(**optimizer_kwargs)
 
 
 def load_cooper_optimizer_from_state_dict(
-    constrained_optimizers_class: Union[
-        Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]
-    ],
+    cooper_optimizer_class: Union[Type[constrained_optimizers.ConstrainedOptimizer], Type[UnconstrainedOptimizer]],
     cmp: ConstrainedMinimizationProblem,
     cooper_optimizer_state: CooperOptimizerState,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
@@ -72,7 +68,7 @@ def load_cooper_optimizer_from_state_dict(
             dual_optimizer.load_state_dict(dual_state)
 
     return create_optimizer_from_kwargs(
-        constrained_optimizers_class=constrained_optimizers_class,
+        cooper_optimizer_class=cooper_optimizer_class,
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,

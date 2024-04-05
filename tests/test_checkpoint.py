@@ -45,7 +45,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": 1e-2},
     )
-    constrained_optimizers_class = type(cooper_optimizer)
+    cooper_optimizer_class = type(cooper_optimizer)
 
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
@@ -93,7 +93,7 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(multipliers=new_cmp.multipliers())
 
     loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
-        constrained_optimizers_class=constrained_optimizers_class,
+        cooper_optimizer_class=cooper_optimizer_class,
         cmp=new_cmp,
         cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
