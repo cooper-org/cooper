@@ -7,7 +7,7 @@ import testing_utils
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
+from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 
 
 @pytest.fixture(params=[cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL])

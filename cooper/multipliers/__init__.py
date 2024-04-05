@@ -7,9 +7,7 @@ from .multipliers import DenseMultiplier, ExplicitMultiplier, ImplicitMultiplier
 from .penalty_coefficients import (
     DensePenaltyCoefficient,
     IndexedPenaltyCoefficient,
-    MultiplicativePenaltyCoefficientUpdater,
     PenaltyCoefficient,
-    PenaltyCoefficientUpdater,
 )
 
 ConstraintFactor = Union[Multiplier, PenaltyCoefficient]

@@ -21,7 +21,7 @@ import style_utils
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
+from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 
 style_utils.set_plot_style()
 

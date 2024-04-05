@@ -19,4 +19,4 @@ from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.constraints import Constraint, ConstraintState, ConstraintType
 from cooper.formulations import AugmentedLagrangianFormulation, Formulation, LagrangianFormulation
 
-from . import formulations, multipliers, optim, utils
+from . import formulations, multipliers, optim, utils, penalty_coefficient_updaters
