@@ -140,6 +140,15 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint in self.constraints():
             yield constraint.multiplier
 
+    def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
+        """Returns an iterator over the penalty coefficients associated with the
+        registered constraints of the CMP. Constraints without penalty coefficients
+        are skipped.
+        """
+        for constraint in self.constraints():
+            if constraint.penalty_coefficient is not None:
+                yield constraint.penalty_coefficient
+
     def named_penalty_coefficients(self) -> Iterator[tuple[str, PenaltyCoefficient]]:
         """Returns an iterator over the penalty coefficients associated with the
         registered  constraints of the CMP, yielding tuples of the form
@@ -149,15 +158,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint_name, constraint in self.named_constraints():
             if constraint.penalty_coefficient is not None:
                 yield constraint_name, constraint.penalty_coefficient
-
-    def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
-        """Returns an iterator over the penalty coefficients associated with the
-        registered constraints of the CMP. Constraints without penalty coefficients
-        are skipped.
-        """
-        for constraint in self.constraints():
-            if constraint.penalty_coefficient is not None:
-                yield constraint.penalty_coefficient
 
     def state_dict(self) -> dict:
         """Returns the state of the CMP. This includes the state of the multipliers and penalty coefficients."""
