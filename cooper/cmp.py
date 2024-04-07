@@ -24,12 +24,14 @@ class LagrangianStore:
         if self.lagrangian is not None and isinstance(self.lagrangian, torch.Tensor):
             self.lagrangian.backward()
 
-    def multiplier_values(self):
-        return {c: cs.multiplier_value for c, cs in self.constraint_measurements.items()}
+    def observed_multiplier_values(self):
+        for constraint_state in self.constraint_measurements.values():
+            yield constraint_state.multiplier_value
 
 
 @dataclass
 class CMPState:
+    # TODO(gallego-posada): consider adding utilities for fetching constraint features
     """Represents the state of a Constrained Minimization Problem in terms of the value
     of its loss and constraint violations/defects.
 
@@ -50,8 +52,8 @@ class CMPState:
     misc: Optional[dict] = None
 
     def _compute_primal_or_dual_lagrangian(self, primal_or_dual: Literal["primal", "dual"]) -> LagrangianStore:
-        """Computes the primal or dual Lagrangian based on the
-        loss and the contribution of the observed constraints.
+        """Computes the primal or dual Lagrangian based on the loss and the
+        contribution of the observed constraints.
         """
 
         check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
@@ -87,8 +89,21 @@ class CMPState:
     def compute_dual_lagrangian(self) -> LagrangianStore:
         """Computes and accumulates the dual-differentiable Lagrangian based on the
         contribution of the observed constraints.
+
+        Note: The dual Lagrangian contained in `LagrangianStore.lagrangian` ignores the
+        contribution of the loss, since the objective function does not depend on the
+        dual variables. Therefore, `LagrangianStore.lagrangian == 0` regardless of
+        the value of `self.loss`.
         """
         return self._compute_primal_or_dual_lagrangian(primal_or_dual="dual")
+
+    def observed_violations(self):
+        for constraint_state in self.observed_constraints.values():
+            yield constraint_state.violation
+
+    def observed_strict_violations(self):
+        for constraint_state in self.observed_constraints.values():
+            yield constraint_state.strict_violation
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
@@ -196,12 +211,13 @@ class ConstrainedMinimizationProblem(abc.ABC):
             super().__delattr__(name)
 
     def __repr__(self) -> str:
-        repr_str = f"{type(self).__name__}(\n\tconstraints=[\n"
-        for i, (name, constraint) in enumerate(self.named_constraints()):
-            repr_str += f"\t\t{name}: {constraint}"
-            if i < len(self._constraints) - 1:
-                repr_str += ",\n"
-        repr_str += "\t]\n)"
+        repr_str = f"{type(self).__name__}"
+        if len(self._constraints) < 5:
+            repr_str += "\n\t(constraints=[\n"
+            for i, (name, constraint) in enumerate(self.named_constraints()):
+                suffix = ",\n" if i < len(self._constraints) - 1 else "\n"
+                repr_str += f"\t\t{name}: {constraint}{suffix}"
+            repr_str += "\t\t]\n\t)"
         return repr_str
 
     @abc.abstractmethod
