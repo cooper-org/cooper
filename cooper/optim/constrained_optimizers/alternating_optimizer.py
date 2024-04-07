@@ -142,7 +142,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
                         "Expected `compute_violations` to not populate the loss. "
                         "Please provide this value for the `compute_cmp_state` instead."
                     )
-                new_cmp_state.loss = cmp_state.loss
 
             except (NotImplementedError, TypeError):
                 # TODO(merajhashemi): This is a temporary fix to avoid breaking the tests
