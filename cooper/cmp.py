@@ -9,10 +9,6 @@ import torch
 from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
-# Formulation, and some other classes below, are inspired by the design of the
-# TensorFlow Constrained Optimization (TFCO) library:
-# https://github.com/google-research/tensorflow_constrained_optimization
-
 
 @dataclass
 class LagrangianStore:
