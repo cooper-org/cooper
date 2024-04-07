@@ -13,7 +13,7 @@ class PenaltyCoefficientUpdater(abc.ABC):
         for constraint, constraint_state in observed_constraints.items():
             # If a constraint does not contribute to the dual update, we do not update
             # its penalty coefficient.
-            if constraint_state.contributes_to_dual_update:
+            if (constraint.penalty_coefficient is not None) and constraint_state.contributes_to_dual_update:
                 self.update_penalty_coefficient_(constraint, constraint_state)
 
     @abc.abstractmethod
@@ -51,6 +51,7 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
         penalty_coefficient = constraint.penalty_coefficient
 
+        # TODO(merajhashemi): Make this block more readable
         values_for_observed = (
             penalty_coefficient.value
             if isinstance(penalty_coefficient, DensePenaltyCoefficient)
