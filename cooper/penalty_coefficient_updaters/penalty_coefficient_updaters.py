@@ -1,5 +1,4 @@
 import abc
-from typing import Sequence
 
 import torch
 
@@ -10,8 +9,8 @@ from cooper.multipliers import DensePenaltyCoefficient
 class PenaltyCoefficientUpdater(abc.ABC):
     """Abstract class for updating the penalty coefficient of a constraint."""
 
-    def step(self, observed_constraints: Sequence[tuple[Constraint, ConstraintState]]):
-        for constraint, constraint_state in observed_constraints:
+    def step(self, observed_constraints: dict[Constraint, ConstraintState]):
+        for constraint, constraint_state in observed_constraints.items():
             # If a constraint does not contribute to the dual update, we do not update
             # its penalty coefficient.
             if constraint_state.contributes_to_dual_update:

@@ -1,6 +1,5 @@
 import abc
 from collections import OrderedDict
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Iterator, Literal, Optional
 
@@ -17,7 +16,7 @@ class LagrangianStore:
     """
 
     lagrangian: Optional[torch.Tensor] = None
-    constraint_measurements: list[ConstraintMeasurement] = field(default_factory=list)
+    constraint_measurements: dict[Constraint, ConstraintMeasurement] = field(default_factory=dict)
 
     def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -26,7 +25,7 @@ class LagrangianStore:
             self.lagrangian.backward()
 
     def multiplier_values(self):
-        return [_.multiplier_value for _ in self.constraint_measurements]
+        return {c: cs.multiplier_value for c, cs in self.constraint_measurements.items()}
 
 
 @dataclass
@@ -36,8 +35,8 @@ class CMPState:
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
-        observed_constraints: List of tuples containing the observed/measured constraint
-            groups along with their states.
+        observed_constraints: Dictionary with :py:class:`~.Constraint` instances as keys
+            and :py:class:`~.ConstraintState` instances as values.
         misc: Optional storage space for additional information relevant to the state of
             the CMP. This dict enables persisting the results of certain computations
             for post-processing. For example, one may want to retain the value of the
@@ -47,7 +46,7 @@ class CMPState:
     """
 
     loss: Optional[torch.Tensor] = None
-    observed_constraints: Sequence[tuple[Constraint, ConstraintState]] = ()
+    observed_constraints: dict[Constraint, ConstraintState] = field(default_factory=dict)
     misc: Optional[dict] = None
 
     def _compute_primal_or_dual_lagrangian(self, primal_or_dual: Literal["primal", "dual"]) -> LagrangianStore:
@@ -56,7 +55,7 @@ class CMPState:
         """
 
         check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
-        contributing_constraints = [(cg, cs) for cg, cs in self.observed_constraints if check_contributes_fn(cs)]
+        contributing_constraints = {c: cs for c, cs in self.observed_constraints.items() if check_contributes_fn(cs)}
 
         if self.loss is None and len(contributing_constraints) == 0:
             # No loss provided, and no observed constraints will contribute to Lagrangian.
@@ -69,11 +68,11 @@ class CMPState:
         else:
             lagrangian = self.loss.clone()
 
-        constraint_measurements = []
-        for constraint, constraint_state in contributing_constraints:
+        constraint_measurements = {}
+        for constraint, constraint_state in contributing_constraints.items():
             compute_contribution_fn = getattr(constraint, f"compute_constraint_{primal_or_dual}_contribution")
             lagrangian_contribution, constraint_measurement = compute_contribution_fn(constraint_state)
-            constraint_measurements.append(constraint_measurement)
+            constraint_measurements[constraint] = constraint_measurement
             if lagrangian_contribution is not None:
                 lagrangian = lagrangian + lagrangian_contribution
 
