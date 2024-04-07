@@ -143,9 +143,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
                         "Please provide this value for the `compute_cmp_state` instead."
                     )
 
-            except (NotImplementedError, TypeError):
-                # TODO(merajhashemi): This is a temporary fix to avoid breaking the tests
-                #  when `use_violation_fn=False`. Only NotImplementedError should be caught.
+            except NotImplementedError:
                 new_cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         dual_lagrangian_store = new_cmp_state.compute_dual_lagrangian()
