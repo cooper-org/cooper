@@ -37,7 +37,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
             constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
         )
 
-        self.constraint = cooper.Constraint(
+        self.norm_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
             formulation_type=cooper.LagrangianFormulation,
             multiplier=multiplier,
@@ -54,7 +54,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
         # Create a CMPState object, which contains the loss and observed constraints
         return cooper.CMPState(
-            loss=loss, observed_constraints=[(self.constraint, constraint_state)], misc={"accuracy": accuracy}
+            loss=loss, observed_constraints={self.norm_constraint: constraint_state}, misc={"accuracy": accuracy}
         )
 
 
@@ -77,7 +77,8 @@ cmp = NormConstrainedLogisticRegression()
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
 # Instantiate Pytorch optimizer class for the dual variables
-dual_optimizer = torch.optim.SGD(cmp.constraint.multiplier.parameters(), lr=1e-3, maximize=True)
+# TODO(gallego-posada): Update optimizer instantiation to use utils to extract multiplier parameters
+dual_optimizer = torch.optim.SGD(cmp.norm_constraint.multiplier.parameters(), lr=1e-3, maximize=True)
 
 # Instantiate the Cooper optimizer
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
@@ -96,7 +97,7 @@ for epoch_num in range(7):
         if torch.cuda.is_available():
             inputs, targets = inputs.cuda(non_blocking=True), targets.cuda(non_blocking=True)
 
-        cmp_state, _, _ = cooper_optimizer.roll(
+        cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(
             compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets)
         )
 
@@ -104,8 +105,10 @@ for epoch_num in range(7):
             all_metrics["batch_ix"].append(batch_ix)
             all_metrics["train_loss"].append(cmp_state.loss.item())
             all_metrics["train_acc"].append(cmp_state.misc["accuracy"].item())
-            all_metrics["multiplier_value"].append(cmp.constraint.multiplier().item())
-            all_metrics["constraint_violation"].append(cmp_state.observed_constraints[0][1].violation.item())
+            # TODO(gallego-posada): extract multiplier value from primal_lagrangian_store
+            all_metrics["multiplier_value"].append(cmp.norm_constraint.multiplier().item())
+            constraint_violation = cmp_state.observed_constraints[cmp.norm_constraint].violation
+            all_metrics["constraint_violation"].append(constraint_violation.item())
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))
 

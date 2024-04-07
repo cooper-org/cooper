@@ -130,7 +130,7 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         loss = torch.linalg.vector_norm(x) ** 2
         violation = (sampled_equations @ x - sampled_RHS).view(-1)
         constraint_state = cooper.ConstraintState(violation=violation, constraint_features=indices)
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.eq_constraint, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints={self.eq_constraint: constraint_state})
 
 
 def run_experiment(
@@ -209,7 +209,7 @@ def plot_results(state_histories) -> None:
         ax[exp_id, 3].set_yscale("log")
         ax[exp_id, 3].axhline(0, color="red", linestyle="--", alpha=0.3)
 
-    ax[0, 0].set_title(r"$\|x\|^2_2 $ vs $\|x^*\|^2_2$")
+    ax[0, 0].set_title(r"$\|x\|^2_2 $ / $\|x^*\|^2_2$")
     ax[0, 1].set_title("Multipliers")
     ax[0, 2].set_title(r"$\|x - x^*\|_\infty$")
     ax[0, 3].set_title(r"$\|Ax - b\|_\infty$")

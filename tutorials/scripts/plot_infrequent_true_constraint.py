@@ -96,7 +96,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         multiplier = cooper.multipliers.DenseMultiplier(
             num_constraints=1, constraint_type=constraint_type, device=DEVICE
         )
-        self.constraint = cooper.Constraint(
+        self.sv_constraint = cooper.Constraint(
             constraint_type=constraint_type,
             formulation_type=cooper.LagrangianFormulation,
             multiplier=multiplier,
@@ -132,7 +132,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
             contributes_to_dual_update=False,
         )
 
-        return cooper.CMPState(loss=objective, observed_constraints=[(self.constraint, constraint_state)])
+        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
 
     @torch.no_grad()
     def compute_geometric_mean(self, X: torch.Tensor) -> torch.Tensor:
@@ -158,7 +158,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
             contributes_to_dual_update=True,
         )
 
-        return cooper.CMPState(loss=objective, observed_constraints=[(self.constraint, constraint_state)])
+        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint, constraint_state})
 
 
 def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for_dual_update, primal_lr, dual_lr):

@@ -113,7 +113,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
             strict_constraint_features=strict_constraint_features,
         )
 
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints={self.constraint: constraint_state})
 
 
 @pytest.fixture(params=[0.1, 0.5, 0.7, 1.0])
@@ -186,12 +186,11 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     for i in range(10):
         _cmp_state, _, _ = cooper_optimizer.roll(**roll_kwargs)
 
-        constraint_features = _cmp_state.observed_constraints[0][1].constraint_features
-        new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_features)
-
-        strict_violation = _cmp_state.observed_constraints[0][1].strict_violation
-        strict_constraint_features = _cmp_state.observed_constraints[0][1].strict_constraint_features
-        new_lmbda = manual_update_on_dual(lmbda, strict_violation, strict_constraint_features)
+        constraint_state = _cmp_state.observed_constraints[cmp.constraint]
+        new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_state.constraint_features)
+        new_lmbda = manual_update_on_dual(
+            lmbda, constraint_state.strict_violation, constraint_state.strict_constraint_features
+        )
 
         assert torch.allclose(params, new_xy, atol=1e-3)
         assert torch.allclose(multipliers.weight.flatten(), new_lmbda)

@@ -54,10 +54,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
         mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = [
-            (self.sum_constraint, sum_constraint_state),
-            (self.mean_constraint, mean_constraint_state),
-        ]
+        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
@@ -80,10 +77,10 @@ cooper_optimizer = cooper.optim.SimultaneousOptimizer(
 
 state_history = {}
 for i in range(3000):
-    cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
-    observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
-    observed_multipliers = [multiplier().data for multiplier in cmp.multipliers()]
+    observed_violations = [cs.violation.data for c, cs in cmp_state.observed_constraints.items()]
+    observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
         "multipliers": deepcopy(torch.stack(observed_multipliers)),

@@ -69,14 +69,14 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
         mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = [
-            (self.sum_constraint, sum_constraint_state),
-            (self.mean_constraint, mean_constraint_state),
-        ]
+        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
+
+# FIXME(gallego-posada): This tutorial is broken. Currently not solving the problem.
+# Likely due to the changes in the PenaltyCoefficientUpdater.
 
 # Define the problem with the constraints
 cmp = MaximumEntropy(target_mean=4.5)
@@ -102,14 +102,11 @@ for i in range(3000):
     penalty_updater.step(cmp_state.observed_constraints)
 
     observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}
-    for constraint, constraint_state in cmp_state.observed_constraints:
+    for constraint, constraint_state in cmp_state.observed_constraints.items():
         observed["violations"].append(constraint_state.violation.data)
         observed["multipliers"].append(constraint.multiplier().data)
         if constraint.penalty_coefficient is not None:
             observed["penalty_coefficients"].append(constraint.penalty_coefficient().data)
-    # observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
-    # observed_multipliers = [multiplier().data for multiplier in cmp.multipliers()]
-    # observed_penalty_coefficients = [pc().data for pc in cmp.penalty_coefficients()]
 
     state_history[i] = {
         "loss": -cmp_state.loss.item(),

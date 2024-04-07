@@ -107,7 +107,9 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         return loss_grad, torch.stack([cg0_grad, cg1_grad])
 
     def compute_violations(self, params) -> cooper.CMPState:
-        """Evaluates the constraint violations for this CMP."""
+        """Evaluates only the constraint violations for this CMP."""
+        if params is None:
+            raise NotImplementedError()
 
         param_x, param_y = params() if callable(params) else params
 
@@ -138,7 +140,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             cg0_state = cooper.ConstraintState(violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_violation)
 
-        observed_constraints = [(getattr(self, "constraint_0"), cg0_state), (getattr(self, "constraint_1"), cg1_state)]
+        observed_constraints = {self.constraint_0: cg0_state, self.constraint_1: cg1_state}
 
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 
