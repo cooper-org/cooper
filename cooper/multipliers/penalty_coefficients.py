@@ -15,6 +15,8 @@ class PenaltyCoefficient(abc.ABC):
     def __init__(self, init: torch.Tensor):
         if init.requires_grad:
             raise ValueError("PenaltyCoefficient should not require gradients.")
+        if init.dim() != 1:
+            raise ValueError("init must be a 1D tensor of shape `(num_constraints,)`.")
         self._value = init.clone()
 
     @property
@@ -84,7 +86,7 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
             # torch.nn.functional.embedding and *not* as masks.
             raise ValueError("Indices must be of type torch.long.")
 
-        coefficient_values = torch.nn.functional.embedding(indices, self._value, sparse=False)
+        coefficient_values = torch.nn.functional.embedding(indices, self._value.unsqueeze(1), sparse=False)
 
         # Flatten coefficient values to 1D since Embedding works with 2D tensors.
         return torch.flatten(coefficient_values)
