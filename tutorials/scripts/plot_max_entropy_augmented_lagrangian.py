@@ -39,7 +39,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         mean_multiplier = cooper.multipliers.DenseMultiplier(
             constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
         )
-        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
+        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor([1.0], device=DEVICE))
         sum_multiplier = cooper.multipliers.DenseMultiplier(
             constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
         )
@@ -49,9 +49,6 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
             formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
-            # FIXME: `formulation_kwargs` has been removed from the Constraint constructor
-            # These kwargs need to be passed to the coefficient updater.
-            # formulation_kwargs={"penalty_growth_factor": 1.001},
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
@@ -94,7 +91,7 @@ cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 # For the Augmented Lagrangian, we need to configure a penalty coefficient updater
-penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.01, violation_tolerance=1e-4)
+penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.001, violation_tolerance=1e-4)
 
 state_history = {}
 for i in range(3000):
