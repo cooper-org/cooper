@@ -17,8 +17,8 @@ def alternation_type(request):
 
 def setup_augmented_lagrangian_objects(primal_optimizers, alternation_type, device):
     penalty_coefficients = (
-        cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device)),
-        cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=device)),
+        cooper.multipliers.DensePenaltyCoefficient(torch.tensor([1.0], device=device)),
+        cooper.multipliers.DensePenaltyCoefficient(torch.tensor([1.0], device=device)),
     )
 
     cmp = cooper_test_utils.Toy2dCMP(
