@@ -150,6 +150,15 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint in self.constraints():
             yield constraint.multiplier
 
+    def dual_parameters(self) -> Iterator[Multiplier]:
+        """Return an iterator over the parameters of the multipliers associated with the
+        registered constraints of the CMP. This method is useful for instantiating the
+        dual optimizers. If a multiplier is shared by several constraints, we only
+        return its parameters once.
+        """
+        for multiplier in set(constraint.multiplier for constraint in self.constraints()):
+            yield from multiplier.parameters()
+
     def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
         """Returns an iterator over the penalty coefficients associated with the
         registered constraints of the CMP. Constraints without penalty coefficients
@@ -173,10 +182,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """Returns the state of the CMP. This includes the state of the multipliers and penalty coefficients."""
         state_dict = {
             "multipliers": {name: multiplier.state_dict() for name, multiplier in self.named_multipliers()},
-            "penalty_coefficients": {
-                name: penalty_coefficient.state_dict()
-                for name, penalty_coefficient in self.named_penalty_coefficients()
-            },
+            "penalty_coefficients": {name: pc.state_dict() for name, pc in self.named_penalty_coefficients()},
         }
         return state_dict
 
