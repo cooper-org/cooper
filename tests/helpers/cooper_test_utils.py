@@ -247,8 +247,7 @@ def build_params_and_primal_optimizers(
 
 
 def build_dual_optimizers(
-    multipliers,
-    extrapolation=False,
+    dual_parameters,
     augmented_lagrangian=False,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
@@ -258,23 +257,16 @@ def build_dual_optimizers(
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
 
-    dual_params = [{"params": _.parameters()} for _ in multipliers]
-    if extrapolation:
-        # Extrapolation optimizers are part of the `cooper.optim` module
-        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
-    else:
-        if augmented_lagrangian:
-            assert dual_optimizer_class == torch.optim.SGD
-            dual_optimizer_kwargs["lr"] = 1.0
+    if augmented_lagrangian:
+        assert dual_optimizer_class == torch.optim.SGD
+        dual_optimizer_kwargs["lr"] = 1.0
 
-        if dual_optimizer_class == torch.optim.SGD:
-            # SGD does not support `foreach=True` (the default for 2.0.0) when the
-            # parameters use sparse gradients. Disabling foreach.
-            dual_optimizer_kwargs["foreach"] = False
+    if dual_optimizer_class == torch.optim.SGD:
+        # SGD does not support `foreach=True` (the default for 2.0.0) when the
+        # parameters use sparse gradients. Disabling foreach.
+        dual_optimizer_kwargs["foreach"] = False
 
-        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
-
-    return dual_optimizers
+    return dual_optimizer_class(dual_parameters, **dual_optimizer_kwargs)
 
 
 def build_cooper_optimizer_for_Toy2dCMP(
@@ -290,16 +282,14 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizers = None
     if len(list(cmp.constraints())) != 0:
         dual_optimizers = build_dual_optimizers(
-            multipliers=cmp.multipliers(),
+            dual_parameters=cmp.dual_parameters(),
             augmented_lagrangian=augmented_lagrangian,
-            extrapolation=extrapolation,
             dual_optimizer_class=dual_optimizer_class,
             dual_optimizer_kwargs=dual_optimizer_kwargs,
         )
 
     if dual_optimizers is None:
         cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
-
     else:
         if extrapolation:
             cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
