@@ -72,8 +72,8 @@ class CMPState:
 
         measured_constraints = {}
         for constraint, constraint_state in contributing_constraints.items():
-            compute_contribution_fn = getattr(constraint, f"compute_constraint_{primal_or_dual}_contribution")
-            lagrangian_contribution, constraint_measurement = compute_contribution_fn(constraint_state)
+            contribution_out = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
+            lagrangian_contribution, constraint_measurement = contribution_out
             measured_constraints[constraint] = constraint_measurement
             if lagrangian_contribution is not None:
                 lagrangian = lagrangian + lagrangian_contribution

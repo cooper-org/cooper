@@ -24,11 +24,11 @@ class Formulation(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def compute_contribution_for_primal_lagrangian(self, *args, **kwargs):
+    def compute_contribution_to_primal_lagrangian(self, *args, **kwargs):
         pass
 
     @abc.abstractmethod
-    def compute_contribution_for_dual_lagrangian(self, *args, **kwargs):
+    def compute_contribution_to_dual_lagrangian(self, *args, **kwargs):
         pass
 
 
@@ -41,7 +41,7 @@ class LagrangianFormulation(Formulation):
             raise ValueError("LagrangianFormulation requires an equality or inequality constraint.")
         self.constraint_type = constraint_type
 
-    def compute_contribution_for_primal_lagrangian(
+    def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
 
@@ -60,7 +60,7 @@ class LagrangianFormulation(Formulation):
 
         return lagrangian_contribution, primal_constraint_store
 
-    def compute_contribution_for_dual_lagrangian(
+    def compute_contribution_to_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
 
@@ -105,7 +105,7 @@ class AugmentedLagrangianFormulation(Formulation):
         if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
             raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
 
-    def compute_contribution_for_primal_lagrangian(
+    def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
 
@@ -134,7 +134,7 @@ class AugmentedLagrangianFormulation(Formulation):
 
         return primal_lagrangian_contribution, primal_constraint_measurement
 
-    def compute_contribution_for_dual_lagrangian(
+    def compute_contribution_to_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
 

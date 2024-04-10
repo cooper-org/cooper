@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Literal, Optional, Type
 
 import torch
 
@@ -53,21 +53,13 @@ class Constraint:
             kwargs["penalty_coefficient"] = self.penalty_coefficient
         return kwargs
 
-    def compute_constraint_primal_contribution(
-        self, constraint_state: ConstraintState
+    def compute_contribution_to_lagrangian(
+        self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
     ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
-        """Compute the contribution of the current constraint to the primal Lagrangian."""
+        """Compute the contribution of the current constraint to the primal or dual Lagrangian."""
         kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
-        return self.formulation.compute_contribution_for_primal_lagrangian(**kwargs)
-
-    # TODO(gallego-posada): Consider merging these two methods into a single one with
-    # a flag for dual/primal.
-    def compute_constraint_dual_contribution(
-        self, constraint_state: ConstraintState
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
-        """Compute the contribution of the current constraint to the dual Lagrangian."""
-        kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
-        return self.formulation.compute_contribution_for_dual_lagrangian(**kwargs)
+        compute_contribution_fn = getattr(self.formulation, f"compute_contribution_to_{primal_or_dual}_lagrangian")
+        return compute_contribution_fn(**kwargs)
 
     def __repr__(self):
         repr = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
