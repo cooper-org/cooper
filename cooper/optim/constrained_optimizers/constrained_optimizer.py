@@ -131,6 +131,5 @@ class ConstrainedOptimizer:
         dual_optimizer_states = [_.state_dict() for _ in self.dual_optimizers]
 
         return CooperOptimizerState(
-            primal_optimizer_states=primal_optimizer_states,
-            dual_optimizer_states=dual_optimizer_states,
+            primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
         )
