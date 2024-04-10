@@ -67,8 +67,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for primal_optimizer in self.primal_optimizers:
             getattr(primal_optimizer, call_method)()  # type: ignore
 
-            # FIXME(gallego-posada): This line should not be indented inside the loop!
-            self.dual_step(call_extrapolation=call_extrapolation)
+        self.dual_step(call_extrapolation=call_extrapolation)
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
