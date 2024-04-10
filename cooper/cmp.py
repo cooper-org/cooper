@@ -16,7 +16,7 @@ class LagrangianStore:
     """
 
     lagrangian: Optional[torch.Tensor] = None
-    constraint_measurements: dict[Constraint, ConstraintMeasurement] = field(default_factory=dict)
+    measured_constraints: dict[Constraint, ConstraintMeasurement] = field(default_factory=dict)
 
     def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
@@ -25,7 +25,7 @@ class LagrangianStore:
             self.lagrangian.backward()
 
     def observed_multiplier_values(self):
-        for constraint_state in self.constraint_measurements.values():
+        for constraint_state in self.measured_constraints.values():
             yield constraint_state.multiplier_value
 
 
@@ -70,15 +70,15 @@ class CMPState:
         else:
             lagrangian = self.loss.clone()
 
-        constraint_measurements = {}
+        measured_constraints = {}
         for constraint, constraint_state in contributing_constraints.items():
             compute_contribution_fn = getattr(constraint, f"compute_constraint_{primal_or_dual}_contribution")
             lagrangian_contribution, constraint_measurement = compute_contribution_fn(constraint_state)
-            constraint_measurements[constraint] = constraint_measurement
+            measured_constraints[constraint] = constraint_measurement
             if lagrangian_contribution is not None:
                 lagrangian = lagrangian + lagrangian_contribution
 
-        return LagrangianStore(lagrangian=lagrangian, constraint_measurements=constraint_measurements)
+        return LagrangianStore(lagrangian=lagrangian, measured_constraints=measured_constraints)
 
     def compute_primal_lagrangian(self) -> LagrangianStore:
         """Computes and accumulates the primal-differentiable Lagrangian based on the
