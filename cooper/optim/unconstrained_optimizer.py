@@ -2,6 +2,7 @@
 """
 Implementation of the :py:class:`UnconstrainedOptimizer` class.
 """
+import torch
 
 from cooper.cmp import CMPState, LagrangianStore
 from cooper.optim.optimizer import Optimizer
@@ -24,7 +25,9 @@ class UnconstrainedOptimizer(Optimizer):
     extrapolation = False
     alternation_type = AlternationType.FALSE
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
+    def roll(
+        self, compute_cmp_state_kwargs: dict = {}
+    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
         """Evaluates the objective function and performs a gradient update on the
         parameters.
 
@@ -43,4 +46,4 @@ class UnconstrainedOptimizer(Optimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        return cmp_state, lagrangian_store, dual_lagrangian_store
+        return cmp_state, cmp_state.loss, lagrangian_store, dual_lagrangian_store

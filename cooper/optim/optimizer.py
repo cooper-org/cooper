@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore, ConstrainedMinimizationProblem
+from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.optim.optimizer_state import OptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
@@ -59,15 +59,14 @@ class Optimizer(abc.ABC):
             if len(state.dual_optimizer_states) != len(self.dual_optimizers):
                 raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 
-
         for primal_optimizer, primal_optimizer_state in zip(self.primal_optimizers, state.primal_optimizer_states):
             primal_optimizer.load_state_dict(primal_optimizer_state)
 
-        if self.dual_optimizers is not None :
+        if self.dual_optimizers is not None:
             for dual_optimizer, dual_optimizer_state in zip(self.dual_optimizers, state.dual_optimizer_states):
                 dual_optimizer.load_state_dict(dual_optimizer_state)
 
     @abc.abstractmethod
-    def roll(self, *args, **kwargs) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
+    def roll(self, *args, **kwargs) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
         """Evaluates the objective function and performs a gradient update on the parameters."""
         raise NotImplementedError

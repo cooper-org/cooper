@@ -173,7 +173,7 @@ def run_experiment(
                 "sampled_RHS": sampled_RHS,
                 "indices": indices,
             }
-            cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
+            cmp_state, _, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
 
             with torch.no_grad():
                 full_violation = A @ x - b

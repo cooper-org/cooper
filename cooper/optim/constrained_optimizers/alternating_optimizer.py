@@ -52,7 +52,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         self,
         compute_cmp_state_kwargs: dict = {},
         compute_violations_kwargs: dict = {},
-    ) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
+    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
         (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
@@ -133,8 +133,9 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         dual_lagrangian_store.backward()
         self.dual_step()
 
+        loss = new_cmp_state.loss if new_cmp_state.loss is not None else cmp_state.loss
         # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
-        return new_cmp_state, primal_lagrangian_store, dual_lagrangian_store
+        return new_cmp_state, loss, primal_lagrangian_store, dual_lagrangian_store
 
 
 class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
@@ -147,7 +148,9 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     alternation_type = AlternationType.DUAL_PRIMAL
     is_augmented_lagrangian_optimizer = False
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
+    def roll(
+        self, compute_cmp_state_kwargs: dict = {}
+    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -184,7 +187,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        return cmp_state, primal_lagrangian_store, dual_lagrangian_store
+        return cmp_state, cmp_state.loss, primal_lagrangian_store, dual_lagrangian_store
 
 
 class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):

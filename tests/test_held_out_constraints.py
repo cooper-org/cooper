@@ -184,7 +184,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     lmbda = mktensor([0.0, 0.0])
 
     for i in range(10):
-        _cmp_state, _, _ = cooper_optimizer.roll(**roll_kwargs)
+        _cmp_state, _, _, _ = cooper_optimizer.roll(**roll_kwargs)
 
         constraint_state = _cmp_state.observed_constraints[cmp.constraint]
         new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_state.constraint_features)

@@ -95,7 +95,7 @@ penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.001, v
 
 state_history = {}
 for i in range(3000):
-    cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    cmp_state, _, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
     penalty_updater.step(cmp_state.observed_constraints)
 
     observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}

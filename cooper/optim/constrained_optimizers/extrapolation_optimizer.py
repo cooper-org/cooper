@@ -69,7 +69,9 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
+    def roll(
+        self, compute_cmp_state_kwargs: dict = {}
+    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -94,4 +96,4 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 getattr(primal_optimizer, call_method)()  # type: ignore
             self.dual_step(call_extrapolation=call_extrapolation)
 
-        return cmp_state, primal_lagrangian_store, dual_lagrangian_store
+        return cmp_state, cmp_state.loss, primal_lagrangian_store, dual_lagrangian_store
