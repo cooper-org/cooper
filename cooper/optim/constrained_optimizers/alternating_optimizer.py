@@ -10,11 +10,9 @@ import warnings
 
 import torch
 
-from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.cmp import CMPState, LagrangianStore
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.types import AlternationType
 
 
 class BaseAlternatingOptimizer(ConstrainedOptimizer):
@@ -22,18 +20,6 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
     extrapolation = False
     alternation_type: AlternationType
     is_augmented_lagrangian_optimizer: bool
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        cmp: ConstrainedMinimizationProblem,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, cmp)
-
-        self.base_sanity_checks()
-
-        self.custom_sanity_checks()
 
     def custom_sanity_checks(self):
         """
@@ -50,9 +36,6 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
                 if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
                     warnings.warn("The Augmented Lagrangian Method requires all dual optimizers to be SGD(lr=1.0).")
-
-    def step(self):
-        pass
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
@@ -148,7 +131,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
         dual_lagrangian_store = new_cmp_state.compute_dual_lagrangian()
         dual_lagrangian_store.backward()
-        self.dual_step(call_extrapolation=False)
+        self.dual_step()
 
         # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
         return new_cmp_state, primal_lagrangian_store, dual_lagrangian_store
@@ -191,7 +174,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         # Update dual variables only
         dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
         dual_lagrangian_store.backward()
-        self.dual_step(call_extrapolation=False)
+        self.dual_step()
 
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.

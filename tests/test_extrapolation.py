@@ -61,7 +61,9 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     for constraint, constraint_state in cmp_state.observed_constraints.items():
         assert torch.allclose(constraint.multiplier.weight.grad, constraint_state.violation)
 
-    cooper_optimizer.step(call_extrapolation=True)
+    for primal_optimizer in cooper_optimizer.primal_optimizers:
+        primal_optimizer.extrapolation()
+    cooper_optimizer.dual_step(call_extrapolation=True)
 
     # Perform the actual update step
     cooper_optimizer.zero_grad()
@@ -70,7 +72,9 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
     primal_lagrangian_store.backward()
     dual_lagrangian_store.backward()
-    cooper_optimizer.step(call_extrapolation=False)
+    for primal_optimizer in cooper_optimizer.primal_optimizers:
+        primal_optimizer.step()
+    cooper_optimizer.dual_step(call_extrapolation=False)
 
     # After performing the update
     assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))

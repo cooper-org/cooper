@@ -5,11 +5,9 @@ Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 
 import torch
 
-from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.cmp import CMPState, LagrangianStore
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.types import AlternationType
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
@@ -21,18 +19,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     extrapolation = True
     alternation_type = AlternationType.FALSE
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        cmp: ConstrainedMinimizationProblem,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, cmp)
-
-        self.base_sanity_checks()
-
-        self.custom_sanity_checks()
 
     def custom_sanity_checks(self):
         """
@@ -53,21 +39,35 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 Please ensure that all optimizers are extrapolation capable."""
             )
 
-    def step(self, call_extrapolation: bool = False):
-        """Performs an extrapolation step or update step on both the primal and dual
-        variables.
+    @torch.no_grad()
+    def dual_step(self, call_extrapolation: bool = False):
+        """
+        Perform a gradient step on the parameters associated with the dual variables.
+        Since the dual problem involves *maximizing* over the dual variables, we require
+        dual optimizers which satisfy `maximize=True`.
+
+        After being updated by the dual optimizer steps, the multipliers are
+        post-processed (e.g. to ensure non-negativity for inequality constraints).
 
         Args:
-            call_extrapolation: Whether to call ``primal_optimizer.extrapolation()`` as
-                opposed to ``primal_optimizer.step()``. Defaults to False.
+            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
+                opposed to ``dual_optimizer.step()``.
         """
 
-        call_method = "extrapolation" if call_extrapolation else "step"
+        if call_extrapolation:
+            if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
+                raise ValueError("All dual optimizers must implement an `extrapolation` method.")
+            call_method = "extrapolation"
+        else:
+            call_method = "step"
 
-        for primal_optimizer in self.primal_optimizers:
-            getattr(primal_optimizer, call_method)()  # type: ignore
+        # Update multipliers based on current constraint violations (gradients)
+        # For unobserved constraints the gradient is None, so this is a no-op.
+        for dual_optimizer in self.dual_optimizers:
+            getattr(dual_optimizer, call_method)()  # type: ignore
 
-        self.dual_step(call_extrapolation=call_extrapolation)
+        for multiplier in self.cmp.multipliers():
+            multiplier.post_step_()
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Performs a full extrapolation step on the primal and dual variables.
@@ -89,6 +89,9 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             primal_lagrangian_store.backward()
             dual_lagrangian_store.backward()
 
-            self.step(call_extrapolation=call_extrapolation)
+            call_method = "extrapolation" if call_extrapolation else "step"
+            for primal_optimizer in self.primal_optimizers:
+                getattr(primal_optimizer, call_method)()  # type: ignore
+            self.dual_step(call_extrapolation=call_extrapolation)
 
         return cmp_state, primal_lagrangian_store, dual_lagrangian_store

@@ -2,13 +2,14 @@
 
 import itertools
 from copy import deepcopy
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
 import pytest
 import torch
 
 import cooper
-from cooper.optim import AlternationType, constrained_optimizers
+from cooper.optim import AlternationType, UnconstrainedOptimizer, constrained_optimizers
+from cooper.utils import OneOrSequence
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -269,6 +270,24 @@ def build_dual_optimizers(
     return dual_optimizer_class(dual_parameters, **dual_optimizer_kwargs)
 
 
+def create_optimizer_from_kwargs(
+    cooper_optimizer_class: Type[cooper.optim.Optimizer],
+    cmp: cooper.ConstrainedMinimizationProblem,
+    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
+) -> cooper.optim.Optimizer:
+    """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
+
+    if dual_optimizers is None:
+        if cooper_optimizer_class != UnconstrainedOptimizer:
+            raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
+    else:
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
+
+    return cooper_optimizer_class(**optimizer_kwargs)
+
+
 def build_cooper_optimizer_for_Toy2dCMP(
     cmp,
     primal_optimizers,
@@ -277,7 +296,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
     alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
-) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+) -> cooper.optim.Optimizer:
 
     dual_optimizers = None
     if len(list(cmp.constraints())) != 0:
@@ -309,7 +328,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
                 else:
                     cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
 
-    cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
+    cooper_optimizer = create_optimizer_from_kwargs(
         cooper_optimizer_class=cooper_optimizer_class,
         cmp=cmp,
         primal_optimizers=primal_optimizers,

@@ -3,13 +3,9 @@
 Implementation of the :py:class:`SimultaneousOptimizer` class.
 """
 
-import torch
-
-from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.cmp import CMPState, LagrangianStore
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.types import AlternationType
 
 
 class SimultaneousOptimizer(ConstrainedOptimizer):
@@ -19,25 +15,6 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
 
     extrapolation = False
     alternation_type = AlternationType.FALSE
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        cmp: ConstrainedMinimizationProblem,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, cmp)
-
-        self.base_sanity_checks()
-
-    @torch.no_grad()
-    def step(self):
-        """Performs a single optimization step on both the primal and dual variables."""
-
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
-
-        self.dual_step(call_extrapolation=False)
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> tuple[CMPState, LagrangianStore, LagrangianStore]:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
@@ -60,6 +37,8 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         primal_lagrangian_store.backward()
         dual_lagrangian_store.backward()
 
-        self.step()
+        for primal_optimizer in self.primal_optimizers:
+            primal_optimizer.step()
+        self.dual_step()
 
         return cmp_state, primal_lagrangian_store, dual_lagrangian_store

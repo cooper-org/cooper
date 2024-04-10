@@ -9,8 +9,6 @@ import cooper_test_utils
 import testing_utils
 import torch
 
-import cooper
-
 
 class Model(torch.nn.Module):
     def __init__(self, params: list):
@@ -92,13 +90,13 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     else:
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(dual_parameters=new_cmp.dual_parameters())
 
-    loaded_constrained_optimizer = cooper.optim.utils.load_cooper_optimizer_from_state_dict(
+    loaded_constrained_optimizer = cooper_test_utils.create_optimizer_from_kwargs(
         cooper_optimizer_class=cooper_optimizer_class,
         cmp=new_cmp,
-        cooper_optimizer_state=constrained_optimizer_state_dict_100,
         primal_optimizers=loaded_primal_optimizers,
         dual_optimizers=loaded_dual_optimizers,
     )
+    loaded_constrained_optimizer.load_state_dict(constrained_optimizer_state_dict_100)
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
     for _ in range(100):
