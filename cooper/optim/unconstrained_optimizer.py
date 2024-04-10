@@ -53,11 +53,8 @@ class UnconstrainedOptimizer:
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
         lagrangian_store = cmp_state.compute_primal_lagrangian()
+        # The dual lagrangian store is empty for unconstrained problems
         dual_lagrangian_store = LagrangianStore()
-        # For unconstrained problems, the Lagrangian simply corresponds to the loss
-        # loss = lagrangian_store.lagrangian
-        # loss.backward()
-        # TODO(merajhashemi): The previous two lines do not call lagrangian_purge. I am not sure if it is necessary.
         lagrangian_store.backward()
         self.step()
 
