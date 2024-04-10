@@ -56,10 +56,7 @@ class LagrangianFormulation(Formulation):
         lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
             constraint_factor_value=multiplier_value, violation=violation
         )
-        primal_constraint_store = ConstraintMeasurement(
-            multiplier_value=multiplier_value,
-            violation=violation,
-        )
+        primal_constraint_store = ConstraintMeasurement(multiplier_value=multiplier_value, violation=violation)
 
         return lagrangian_contribution, primal_constraint_store
 
@@ -78,10 +75,7 @@ class LagrangianFormulation(Formulation):
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             constraint_factor_value=multiplier_value, violation=strict_violation
         )
-        dual_constraint_store = ConstraintMeasurement(
-            multiplier_value=multiplier_value,
-            violation=strict_violation,
-        )
+        dual_constraint_store = ConstraintMeasurement(multiplier_value=multiplier_value, violation=strict_violation)
 
         return lagrangian_contribution, dual_constraint_store
 
