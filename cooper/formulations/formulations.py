@@ -1,12 +1,15 @@
 import abc
+from collections import namedtuple
 from typing import Optional
 
-import torch
-
 import cooper.formulations.utils as formulation_utils
-from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState
+from cooper.constraints.constraint_state import ConstraintState
 from cooper.constraints.constraint_type import ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
+
+ContributionStore = namedtuple(
+    "ContributionStore", ["lagrangian_contribution", "multiplier_value", "penalty_coefficient_value"]
+)
 
 
 class Formulation(abc.ABC):
@@ -43,10 +46,10 @@ class LagrangianFormulation(Formulation):
 
     def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
+    ) -> Optional[ContributionStore]:
 
         if not constraint_state.contributes_to_primal_update:
-            return None, None
+            return None
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
@@ -57,16 +60,15 @@ class LagrangianFormulation(Formulation):
         lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
             constraint_factor_value=multiplier_value, violation=violation
         )
-        primal_constraint_store = ConstraintMeasurement(multiplier_value=multiplier_value, violation=violation)
 
-        return lagrangian_contribution, primal_constraint_store
+        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value=None)
 
     def compute_contribution_to_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
+    ) -> Optional[ContributionStore]:
 
         if not constraint_state.contributes_to_dual_update:
-            return None, None
+            return None
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
@@ -75,11 +77,10 @@ class LagrangianFormulation(Formulation):
         multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
 
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
-            constraint_factor_value=multiplier_value, violation=strict_violation
+            multiplier_value=multiplier_value, violation=strict_violation
         )
-        dual_constraint_store = ConstraintMeasurement(multiplier_value=multiplier_value, violation=strict_violation)
 
-        return lagrangian_contribution, dual_constraint_store
+        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value=None)
 
     def __repr__(self):
         return f"LagrangianFormulation(constraint_type={self.constraint_type})"
@@ -109,10 +110,10 @@ class AugmentedLagrangianFormulation(Formulation):
 
     def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
+    ) -> Optional[ContributionStore]:
 
         if not constraint_state.contributes_to_primal_update:
-            return None, None
+            return None
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
@@ -121,25 +122,21 @@ class AugmentedLagrangianFormulation(Formulation):
         multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
         penalty_coefficient_value = evaluate_constraint_factor(module=penalty_coefficient, **eval_factor_kwargs)
 
-        primal_lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
+        lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
             multiplier_value=multiplier_value,
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
             constraint_type=self.constraint_type,
         )
 
-        primal_constraint_measurement = ConstraintMeasurement(
-            violation=violation, multiplier_value=multiplier_value, penalty_coefficient_value=penalty_coefficient_value
-        )
-
-        return primal_lagrangian_contribution, primal_constraint_measurement
+        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
     def compute_contribution_to_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
+    ) -> Optional[ContributionStore]:
 
         if not constraint_state.contributes_to_dual_update:
-            return None, None
+            return None
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
@@ -148,16 +145,13 @@ class AugmentedLagrangianFormulation(Formulation):
         multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
         penalty_coefficient_value = evaluate_constraint_factor(module=penalty_coefficient, **eval_factor_kwargs)
 
-        dual_lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
-            constraint_factor_value=multiplier_value,
+        lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
+            multiplier_value=multiplier_value,
             violation=strict_violation,
             penalty_coefficient_value=penalty_coefficient_value,
         )
-        dual_constraint_measurement = ConstraintMeasurement(
-            violation=strict_violation, multiplier_value=multiplier_value
-        )
 
-        return dual_lagrangian_contribution, dual_constraint_measurement
+        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
     def __repr__(self):
         return f"AugmentedLagrangianFormulation(constraint_type={self.constraint_type})"

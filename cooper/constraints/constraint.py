@@ -2,8 +2,8 @@ from typing import Literal, Optional, Type
 
 import torch
 
-from cooper.constraints.constraint_state import ConstraintMeasurement, ConstraintState
-from cooper.formulations import Formulation, LagrangianFormulation
+from cooper.constraints.constraint_state import ConstraintState
+from cooper.formulations import ContributionStore, Formulation, LagrangianFormulation
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 from .constraint_type import ConstraintType
@@ -55,7 +55,7 @@ class Constraint:
 
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
-    ) -> tuple[Optional[torch.Tensor], Optional[ConstraintMeasurement]]:
+    ) -> Optional[ContributionStore]:
         """Compute the contribution of the current constraint to the primal or dual Lagrangian."""
         kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
         compute_contribution_fn = getattr(self.formulation, f"compute_contribution_to_{primal_or_dual}_lagrangian")

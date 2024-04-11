@@ -13,8 +13,8 @@ def compute_primal_weighted_violation(
     primal variables.
 
     Args:
-        constraint_factor_value: The value of the multiplier or penalty coefficient for the
-            constraint.
+        constraint_factor_value: The value of the multiplier or penalty coefficient for
+            the constraint.
         violation: Tensor of constraint violations.
     """
 
@@ -26,7 +26,7 @@ def compute_primal_weighted_violation(
 
 
 def compute_dual_weighted_violation(
-    constraint_factor_value: torch.Tensor,
+    multiplier_value: torch.Tensor,
     violation: torch.Tensor,
     penalty_coefficient_value: Optional[torch.Tensor] = None,
 ) -> Optional[torch.Tensor]:
@@ -57,22 +57,14 @@ def compute_dual_weighted_violation(
         penalty_coefficient_value: Tensor of penalty coefficient values.
     """
 
-    if not constraint_factor_value.requires_grad:
-        # If the constraint factor corresponds to a penalty coefficient, we can skip
-        # the computation of the dual contribution since the penalty coefficient is not
-        # trainable.
-        return None
-    else:
-        multiplier_value = constraint_factor_value
-        detached_violation = violation.detach()
+    args = [multiplier_value, violation.detach()]
+    einsum_str = "i...,i..."
 
-        if penalty_coefficient_value is None:
-            return torch.einsum("i...,i...->", multiplier_value, detached_violation)
-        else:
-            # TODO: add comment pointing back to the docstring
-            return torch.einsum(
-                "i...,i...,i...->", multiplier_value, penalty_coefficient_value.detach(), detached_violation
-            )
+    if penalty_coefficient_value is not None:
+        args.append(penalty_coefficient_value.detach())
+        einsum_str += ",i..."
+
+    return torch.einsum(f"{einsum_str}->", *args)
 
 
 def compute_quadratic_penalty(
