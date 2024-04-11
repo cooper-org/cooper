@@ -1,14 +1,16 @@
 import abc
+from collections import namedtuple
 from typing import Optional
 
 import torch
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from cooper.optim.optimizer_state import OptimizerState
 from cooper.utils import OneOrSequence, ensure_sequence
 
+CooperOptimizerState = namedtuple("CooperOptimizerState", ["primal_optimizer_states", "dual_optimizer_states"])
 
-class Optimizer(abc.ABC):
+
+class CooperOptimizer(abc.ABC):
     def __init__(
         self,
         cmp: ConstrainedMinimizationProblem,
@@ -31,24 +33,18 @@ class Optimizer(abc.ABC):
             for dual_optimizer in self.dual_optimizers:
                 dual_optimizer.zero_grad()
 
-    def state_dict(self) -> OptimizerState:
-        """
-        Returns the state of the Optimizer. See
-        :py:class:`~cooper.optim.constrained_optimizers.cooper_optimizer.OptimizerState`.
-        """
-
-        primal_optimizer_states = [primal_optimizer.state_dict() for primal_optimizer in self.primal_optimizers]
+    def state_dict(self) -> CooperOptimizerState:
+        primal_optimizer_states = [optimizer.state_dict() for optimizer in self.primal_optimizers]
 
         dual_optimizer_states = None
         if self.dual_optimizers is not None:
-            dual_optimizer_states = [dual_optimizer.state_dict() for dual_optimizer in self.dual_optimizers]
+            dual_optimizer_states = [optimizer.state_dict() for optimizer in self.dual_optimizers]
 
-        return OptimizerState(
+        return CooperOptimizerState(
             primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
         )
 
-    def load_state_dict(self, state: OptimizerState):
-        """Loads the state of the Optimizer."""
+    def load_state_dict(self, state: CooperOptimizerState):
         if len(state.primal_optimizer_states) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 

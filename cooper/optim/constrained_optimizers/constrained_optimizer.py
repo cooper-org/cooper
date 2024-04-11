@@ -6,12 +6,12 @@ Implementation of the :py:class:`ConstrainedOptimizer` class.
 import torch
 
 from cooper.cmp import ConstrainedMinimizationProblem
-from cooper.optim.optimizer import Optimizer
+from cooper.optim.optimizer import CooperOptimizer
 from cooper.optim.types import AlternationType
 from cooper.utils import OneOrSequence
 
 
-class ConstrainedOptimizer(Optimizer):
+class ConstrainedOptimizer(CooperOptimizer):
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given a provided :py:class:`~cooper.formulation.Formulation`.

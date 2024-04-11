@@ -5,11 +5,11 @@ Implementation of the :py:class:`UnconstrainedOptimizer` class.
 import torch
 
 from cooper.cmp import CMPState, LagrangianStore
-from cooper.optim.optimizer import Optimizer
+from cooper.optim.optimizer import CooperOptimizer
 from cooper.optim.types import AlternationType
 
 
-class UnconstrainedOptimizer(Optimizer):
+class UnconstrainedOptimizer(CooperOptimizer):
     """Wraps a (sequence of) ``torch.optim.Optimizer``\\s to enable handling
     unconstrained problems in a way that is consistent with the
     :py:class:`~cooper.optim.ConstrainedOptimizer`\\s.

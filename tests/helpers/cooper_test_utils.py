@@ -8,7 +8,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.optim import AlternationType, UnconstrainedOptimizer, constrained_optimizers
+from cooper.optim import AlternationType, CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
 from cooper.utils import OneOrSequence
 
 
@@ -271,11 +271,11 @@ def build_dual_optimizers(
 
 
 def create_optimizer_from_kwargs(
-    cooper_optimizer_class: Type[cooper.optim.Optimizer],
+    cooper_optimizer_class: Type[CooperOptimizer],
     cmp: cooper.ConstrainedMinimizationProblem,
     primal_optimizers: OneOrSequence[torch.optim.Optimizer],
     dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-) -> cooper.optim.Optimizer:
+) -> CooperOptimizer:
     """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
 
     if dual_optimizers is None:
@@ -296,7 +296,7 @@ def build_cooper_optimizer_for_Toy2dCMP(
     alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
-) -> cooper.optim.Optimizer:
+) -> CooperOptimizer:
 
     dual_optimizers = None
     if len(list(cmp.constraints())) != 0:
