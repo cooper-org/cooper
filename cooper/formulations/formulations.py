@@ -50,9 +50,10 @@ class LagrangianFormulation(Formulation):
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
-        multiplier_value = evaluate_constraint_factor(
-            module=multiplier, violation=violation, constraint_features=constraint_features
-        )
+
+        eval_factor_kwargs = dict(constraint_features=constraint_features, expand_shape=violation.shape)
+        multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+
         lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
             constraint_factor_value=multiplier_value, violation=violation
         )
@@ -69,9 +70,10 @@ class LagrangianFormulation(Formulation):
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
-        multiplier_value = evaluate_constraint_factor(
-            module=multiplier, violation=strict_violation, constraint_features=strict_constraint_features
-        )
+
+        eval_factor_kwargs = dict(constraint_features=strict_constraint_features, expand_shape=strict_violation.shape)
+        multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             constraint_factor_value=multiplier_value, violation=strict_violation
         )
@@ -114,12 +116,10 @@ class AugmentedLagrangianFormulation(Formulation):
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
-        multiplier_value = evaluate_constraint_factor(
-            module=multiplier, violation=violation, constraint_features=constraint_features
-        )
-        penalty_coefficient_value = evaluate_constraint_factor(
-            module=penalty_coefficient, violation=violation, constraint_features=constraint_features
-        )
+
+        eval_factor_kwargs = dict(constraint_features=constraint_features, expand_shape=violation.shape)
+        multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+        penalty_coefficient_value = evaluate_constraint_factor(module=penalty_coefficient, **eval_factor_kwargs)
 
         primal_lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
             multiplier_value=multiplier_value,
@@ -143,13 +143,11 @@ class AugmentedLagrangianFormulation(Formulation):
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
-        multiplier_value = evaluate_constraint_factor(
-            module=multiplier, violation=strict_violation, constraint_features=strict_constraint_features
-        )
 
-        penalty_coefficient_value = evaluate_constraint_factor(
-            module=penalty_coefficient, violation=strict_violation, constraint_features=strict_constraint_features
-        )
+        eval_factor_kwargs = dict(constraint_features=strict_constraint_features, expand_shape=strict_violation.shape)
+        multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+        penalty_coefficient_value = evaluate_constraint_factor(module=penalty_coefficient, **eval_factor_kwargs)
+
         dual_lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             constraint_factor_value=multiplier_value,
             violation=strict_violation,
