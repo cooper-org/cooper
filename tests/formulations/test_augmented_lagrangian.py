@@ -66,7 +66,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     initial_cmp_state = cmp.compute_cmp_state(params)  # noqa: F841
 
     # ------------ First step of dual-primal updates ------------
-    _cmp_state, _, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    loss, _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
     penalty_updater.step(_cmp_state.observed_constraints)
     violations0 = mktensor(list(_cmp_state.observed_violations()))
 
@@ -92,7 +92,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
     assert torch.allclose(params, x1_y1, atol=1e-4)
 
     # ------------ Second step of dual-primal updates ------------
-    _cmp_state, _, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    loss, _cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
     penalty_updater.step(_cmp_state.observed_constraints)
     violations1 = mktensor(list(_cmp_state.observed_violations()))
 
@@ -140,7 +140,7 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     violations0 = mktensor(list(initial_cmp_state.observed_violations()))
 
     # ------------ First step of primal-dual updates ------------
-    cmp_state, _, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
     penalty_updater.step(cmp_state.observed_constraints)
 
     grad_x0_y0 = cmp.analytical_gradients(x0_y0)
@@ -163,7 +163,7 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     assert torch.allclose(torch.cat([penalty_coefficients[0](), penalty_coefficients[1]()]), rho1)
 
     # ------------ Second step of primal-dual updates ------------
-    cmp_state, _, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(**roll_kwargs)
     penalty_updater.step(cmp_state.observed_constraints)
 
     # Check that the value of the multipliers matches
@@ -217,8 +217,8 @@ def test_convergence_augmented_lagrangian(
         roll_kwargs["compute_violations_kwargs"] = dict(params=params)
 
     for step_id in range(1500):
-        cmp_state, _, _, _ = cooper_optimizer.roll(**roll_kwargs)
-        penalty_updater.step(cmp_state.observed_constraints)
+        roll_out = cooper_optimizer.roll(**roll_kwargs)
+        penalty_updater.step(roll_out.cmp_state.observed_constraints)
         if step_id % 100 == 0:
             # Increase the penalty coefficients
             penalty_coefficients[0].value = penalty_coefficients[0]() * 1.1

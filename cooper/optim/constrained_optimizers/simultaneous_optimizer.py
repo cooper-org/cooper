@@ -1,11 +1,8 @@
-# coding: utf8
 """
 Implementation of the :py:class:`SimultaneousOptimizer` class.
 """
-import torch
-
-from cooper.cmp import CMPState, LagrangianStore
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 from cooper.optim.types import AlternationType
 
 
@@ -17,9 +14,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
     extrapolation = False
     alternation_type = AlternationType.FALSE
 
-    def roll(
-        self, compute_cmp_state_kwargs: dict = {}
-    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
         dual variables.
 
@@ -44,4 +39,4 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
             primal_optimizer.step()
         self.dual_step()
 
-        return cmp_state, cmp_state.loss, primal_lagrangian_store, dual_lagrangian_store
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)

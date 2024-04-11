@@ -55,7 +55,7 @@ def test_manual_PrimalDual(use_violation_fn, Toy2dCMP_problem_properties, Toy2dC
     # ----------------------- First iteration -----------------------
     # The returned CMPState when using PrimalDual updates is measured _after_ performing
     # the primal update.
-    cmp_state, _, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x0_y0)
 
     # No dual update yet, so the observed multipliers should be zero, matching lmdba0
@@ -83,7 +83,7 @@ def test_manual_PrimalDual(use_violation_fn, Toy2dCMP_problem_properties, Toy2dC
     lmbda1 = torch.relu(lmbda0 + DUAL_LR * violations_after_primal_update)
 
     # ----------------------- Second iteration -----------------------
-    cmp_state, _, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x1_y1)
 
     # At this stage we have carried out [primal_update, dual_update, primal_update], so
@@ -152,7 +152,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
     # ----------------------- First iteration -----------------------
     # The CMPState returned when using DualPrimal is measured _before both_ updates
-    cmp_state, _, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x0_y0)
 
     violations_before_primal_update = mktensor(list(cmp_state.observed_violations()))
@@ -180,7 +180,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     assert torch.allclose(primal_ls.lagrangian, _cmp_state.loss + torch.sum(violations_before_primal_update * lmbda1))
 
     # ----------------------- Second iteration -----------------------
-    cmp_state, _, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x1_y1)
 
     violations_before_primal_update = mktensor(list(cmp_state.observed_violations()))

@@ -1,4 +1,3 @@
-# coding: utf8
 """
 Implementation of constrained optimizers based on alternation such as
 :py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`,
@@ -10,8 +9,8 @@ import warnings
 
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 from cooper.optim.types import AlternationType
 
 
@@ -48,11 +47,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     alternation_type = AlternationType.PRIMAL_DUAL
     is_augmented_lagrangian_optimizer = False
 
-    def roll(
-        self,
-        compute_cmp_state_kwargs: dict = {},
-        compute_violations_kwargs: dict = {},
-    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}, compute_violations_kwargs: dict = {}) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
         (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
@@ -134,8 +129,9 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         self.dual_step()
 
         loss = new_cmp_state.loss if new_cmp_state.loss is not None else cmp_state.loss
+
         # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
-        return new_cmp_state, loss, primal_lagrangian_store, dual_lagrangian_store
+        return RollOut(loss, new_cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 
 
 class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
@@ -148,9 +144,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     alternation_type = AlternationType.DUAL_PRIMAL
     is_augmented_lagrangian_optimizer = False
 
-    def roll(
-        self, compute_cmp_state_kwargs: dict = {}
-    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -187,7 +181,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
-        return cmp_state, cmp_state.loss, primal_lagrangian_store, dual_lagrangian_store
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 
 
 class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):

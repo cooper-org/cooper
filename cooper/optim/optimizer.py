@@ -1,5 +1,5 @@
 import abc
-from collections import namedtuple
+from dataclasses import dataclass
 from typing import Optional
 
 import torch
@@ -7,7 +7,24 @@ import torch
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.utils import OneOrSequence, ensure_sequence
 
-CooperOptimizerState = namedtuple("CooperOptimizerState", ["primal_optimizer_states", "dual_optimizer_states"])
+
+@dataclass
+class CooperOptimizerState:
+    primal_optimizer_states: list
+    dual_optimizer_states: Optional[list]
+
+
+@dataclass
+class RollOut:
+    """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`."""
+
+    loss: torch.Tensor
+    cmp_state: CMPState
+    primal_lagrangian_store: LagrangianStore
+    dual_lagrangian_store: LagrangianStore
+
+    def __iter__(self):
+        return iter((self.loss, self.cmp_state, self.primal_lagrangian_store, self.dual_lagrangian_store))
 
 
 class CooperOptimizer(abc.ABC):
@@ -40,9 +57,7 @@ class CooperOptimizer(abc.ABC):
         if self.dual_optimizers is not None:
             dual_optimizer_states = [optimizer.state_dict() for optimizer in self.dual_optimizers]
 
-        return CooperOptimizerState(
-            primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
-        )
+        return CooperOptimizerState(primal_optimizer_states, dual_optimizer_states)
 
     def load_state_dict(self, state: CooperOptimizerState):
         if len(state.primal_optimizer_states) != len(self.primal_optimizers):
@@ -63,6 +78,6 @@ class CooperOptimizer(abc.ABC):
                 dual_optimizer.load_state_dict(dual_optimizer_state)
 
     @abc.abstractmethod
-    def roll(self, *args, **kwargs) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
+    def roll(self, *args, **kwargs) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the parameters."""
         raise NotImplementedError
