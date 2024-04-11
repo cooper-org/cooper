@@ -1,15 +1,20 @@
 import abc
-from collections import namedtuple
+from dataclasses import dataclass
 from typing import Optional
+
+import torch
 
 import cooper.formulations.utils as formulation_utils
 from cooper.constraints.constraint_state import ConstraintState
 from cooper.constraints.constraint_type import ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
 
-ContributionStore = namedtuple(
-    "ContributionStore", ["lagrangian_contribution", "multiplier_value", "penalty_coefficient_value"]
-)
+
+@dataclass
+class ContributionStore:
+    lagrangian_contribution: torch.Tensor
+    multiplier_value: torch.Tensor
+    penalty_coefficient_value: Optional[torch.Tensor] = None
 
 
 class Formulation(abc.ABC):
@@ -61,7 +66,7 @@ class LagrangianFormulation(Formulation):
             constraint_factor_value=multiplier_value, violation=violation
         )
 
-        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value=None)
+        return ContributionStore(lagrangian_contribution, multiplier_value)
 
     def compute_contribution_to_dual_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
@@ -80,7 +85,7 @@ class LagrangianFormulation(Formulation):
             multiplier_value=multiplier_value, violation=strict_violation
         )
 
-        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value=None)
+        return ContributionStore(lagrangian_contribution, multiplier_value)
 
     def __repr__(self):
         return f"LagrangianFormulation(constraint_type={self.constraint_type})"
