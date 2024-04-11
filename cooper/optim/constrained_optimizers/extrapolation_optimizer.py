@@ -1,12 +1,11 @@
-# coding: utf8
 """
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 from cooper.optim.types import AlternationType
 
 
@@ -69,9 +68,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
 
-    def roll(
-        self, compute_cmp_state_kwargs: dict = {}
-    ) -> tuple[CMPState, torch.Tensor, LagrangianStore, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -81,7 +78,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
-        for call_extrapolation in [True, False]:
+        for call_extrapolation in (True, False):
             self.zero_grad()
             cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
@@ -96,4 +93,4 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 getattr(primal_optimizer, call_method)()  # type: ignore
             self.dual_step(call_extrapolation=call_extrapolation)
 
-        return cmp_state, cmp_state.loss, primal_lagrangian_store, dual_lagrangian_store
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
