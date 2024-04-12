@@ -50,6 +50,10 @@ class CooperOptimizer(abc.ABC):
             for dual_optimizer in self.dual_optimizers:
                 dual_optimizer.zero_grad()
 
+    def primal_step(self):
+        for primal_optimizer in self.primal_optimizers:
+            primal_optimizer.step()
+
     def state_dict(self) -> CooperOptimizerState:
         primal_optimizer_states = [optimizer.state_dict() for optimizer in self.primal_optimizers]
 

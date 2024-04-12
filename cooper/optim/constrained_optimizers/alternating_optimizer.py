@@ -102,8 +102,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         # Update primal variables only
         primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
         primal_lagrangian_store.backward()
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
+        self.primal_step()
 
         # Update dual variables based on constraint violations at new primal point
         self.zero_grad()
@@ -178,8 +177,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         self.zero_grad()
         primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
         primal_lagrangian_store.backward()
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
+        self.primal_step()
 
         return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 

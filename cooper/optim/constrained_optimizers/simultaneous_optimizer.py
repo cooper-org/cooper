@@ -35,8 +35,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         primal_lagrangian_store.backward()
         dual_lagrangian_store.backward()
 
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
+        self.primal_step()
         self.dual_step()
 
         return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)

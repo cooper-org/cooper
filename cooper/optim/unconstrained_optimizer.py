@@ -35,11 +35,9 @@ class UnconstrainedOptimizer(CooperOptimizer):
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
         lagrangian_store = cmp_state.compute_primal_lagrangian()
         lagrangian_store.backward()
+        self.primal_step()
 
         # The dual lagrangian store is empty for unconstrained problems
         dual_lagrangian_store = LagrangianStore()
-
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
 
         return RollOut(cmp_state.loss, cmp_state, lagrangian_store, dual_lagrangian_store)

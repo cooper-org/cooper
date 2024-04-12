@@ -72,8 +72,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
     primal_lagrangian_store.backward()
     dual_lagrangian_store.backward()
-    for primal_optimizer in cooper_optimizer.primal_optimizers:
-        primal_optimizer.step()
+    cooper_optimizer.primal_step()
     cooper_optimizer.dual_step(call_extrapolation=False)
 
     # After performing the update
