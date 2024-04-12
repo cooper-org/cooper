@@ -105,9 +105,6 @@ def test_checkpoint(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multi
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
     assert testing_utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
-    # These are ConstrainedOptimizerState objects and not dicts
-    for state_dict_name in {"primal_optimizer_states", "dual_optimizer_states"}:
-        assert testing_utils.validate_state_dicts(
-            getattr(loaded_constrained_optimizer.state_dict(), state_dict_name),
-            getattr(constrained_optimizer_state_dict_200, state_dict_name),
-        )
+    assert testing_utils.validate_state_dicts(
+        loaded_constrained_optimizer.state_dict(), constrained_optimizer_state_dict_200
+    )

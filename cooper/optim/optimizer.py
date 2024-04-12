@@ -1,6 +1,5 @@
 import abc
-from dataclasses import dataclass
-from typing import Optional
+from typing import NamedTuple, Optional, TypedDict
 
 import torch
 
@@ -8,23 +7,18 @@ from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.utils import OneOrSequence, ensure_sequence
 
 
-@dataclass
-class CooperOptimizerState:
-    primal_optimizer_states: list
-    dual_optimizer_states: Optional[list]
+class CooperOptimizerState(TypedDict):
+    primal_optimizer_states: list[dict]
+    dual_optimizer_states: Optional[list[dict]]
 
 
-@dataclass
-class RollOut:
+class RollOut(NamedTuple):
     """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`."""
 
     loss: torch.Tensor
     cmp_state: CMPState
     primal_lagrangian_store: LagrangianStore
     dual_lagrangian_store: LagrangianStore
-
-    def __iter__(self):
-        return iter((self.loss, self.cmp_state, self.primal_lagrangian_store, self.dual_lagrangian_store))
 
 
 class CooperOptimizer(abc.ABC):
@@ -61,24 +55,26 @@ class CooperOptimizer(abc.ABC):
         if self.dual_optimizers is not None:
             dual_optimizer_states = [optimizer.state_dict() for optimizer in self.dual_optimizers]
 
-        return CooperOptimizerState(primal_optimizer_states, dual_optimizer_states)
+        return CooperOptimizerState(
+            primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
+        )
 
     def load_state_dict(self, state: CooperOptimizerState):
-        if len(state.primal_optimizer_states) != len(self.primal_optimizers):
+        if len(state["primal_optimizer_states"]) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 
         if self.dual_optimizers is None:
-            if state.dual_optimizer_states is not None:
+            if state["dual_optimizer_states"] is not None:
                 raise ValueError("Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None.")
         else:
-            if len(state.dual_optimizer_states) != len(self.dual_optimizers):
+            if len(state["dual_optimizer_states"]) != len(self.dual_optimizers):
                 raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 
-        for primal_optimizer, primal_optimizer_state in zip(self.primal_optimizers, state.primal_optimizer_states):
+        for primal_optimizer, primal_optimizer_state in zip(self.primal_optimizers, state["primal_optimizer_states"]):
             primal_optimizer.load_state_dict(primal_optimizer_state)
 
         if self.dual_optimizers is not None:
-            for dual_optimizer, dual_optimizer_state in zip(self.dual_optimizers, state.dual_optimizer_states):
+            for dual_optimizer, dual_optimizer_state in zip(self.dual_optimizers, state["dual_optimizer_states"]):
                 dual_optimizer.load_state_dict(dual_optimizer_state)
 
     @abc.abstractmethod

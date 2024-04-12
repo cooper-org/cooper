@@ -1,6 +1,5 @@
 import abc
-from dataclasses import dataclass
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import torch
 
@@ -10,8 +9,7 @@ from cooper.constraints.constraint_type import ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
 
 
-@dataclass
-class ContributionStore:
+class ContributionStore(NamedTuple):
     lagrangian_contribution: torch.Tensor
     multiplier_value: torch.Tensor
     penalty_coefficient_value: Optional[torch.Tensor] = None
@@ -24,7 +22,6 @@ class Formulation(abc.ABC):
     affect the gradients of the Lagrangian with respect to the primal and dual variables.
     """
 
-    expects_multiplier: bool
     expects_penalty_coefficient: bool
 
     def __init__(self, constraint_type: ConstraintType):
@@ -42,7 +39,6 @@ class Formulation(abc.ABC):
 
 
 class LagrangianFormulation(Formulation):
-    expects_multiplier = True
     expects_penalty_coefficient = False
 
     def compute_contribution_to_primal_lagrangian(
@@ -94,7 +90,6 @@ class AugmentedLagrangianFormulation(Formulation):
         The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
     """
 
-    expects_multiplier = True
     expects_penalty_coefficient = True
 
     def compute_contribution_to_primal_lagrangian(
