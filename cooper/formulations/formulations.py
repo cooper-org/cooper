@@ -27,9 +27,10 @@ class Formulation(abc.ABC):
     expects_multiplier: bool
     expects_penalty_coefficient: bool
 
-    @abc.abstractmethod
     def __init__(self, constraint_type: ConstraintType):
-        pass
+        if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
+            raise ValueError(f"{type(self).__name__} requires either an equality or inequality constraint.")
+        self.constraint_type = constraint_type
 
     @abc.abstractmethod
     def compute_contribution_to_primal_lagrangian(self, *args, **kwargs):
@@ -43,11 +44,6 @@ class Formulation(abc.ABC):
 class LagrangianFormulation(Formulation):
     expects_multiplier = True
     expects_penalty_coefficient = False
-
-    def __init__(self, constraint_type: ConstraintType):
-        if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
-            raise ValueError("LagrangianFormulation requires an equality or inequality constraint.")
-        self.constraint_type = constraint_type
 
     def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier
@@ -92,22 +88,14 @@ class LagrangianFormulation(Formulation):
 
 
 class AugmentedLagrangianFormulation(Formulation):
+    """Implements the Augmented Lagrangian formulation.
+
+    .. warning::
+        The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
+    """
+
     expects_multiplier = True
     expects_penalty_coefficient = True
-
-    def __init__(self, constraint_type: ConstraintType):
-        """Implements the Augmented Lagrangian formulation.
-
-        .. warning::
-            The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
-
-        Args:
-            constraint_type: Type of constraint that this formulation will be applied to.
-        """
-
-        self.constraint_type = constraint_type
-        if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
-            raise ValueError("AugmentedLagrangianFormulation requires either an equality or inequality constraint.")
 
     def compute_contribution_to_primal_lagrangian(
         self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
