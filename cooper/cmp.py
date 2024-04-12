@@ -66,12 +66,9 @@ class CMPState:
             # No loss provided, and no observed constraints will contribute to Lagrangian.
             return LagrangianStore()
 
-        if (self.loss is None) or (primal_or_dual == "dual"):
-            # We don't count the loss towards the dual Lagrangian since the objective
-            # function does not depend on the dual variables.
-            lagrangian = 0.0
-        else:
-            lagrangian = self.loss.clone()
+        # We don't count the loss towards the dual Lagrangian since the objective
+        # function does not depend on the dual variables.
+        lagrangian = self.loss.clone() if self.loss is not None and primal_or_dual == "primal" else 0.0
 
         multiplier_values = dict()
         penalty_coefficient_values = dict()
