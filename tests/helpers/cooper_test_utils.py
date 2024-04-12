@@ -313,20 +313,12 @@ def build_cooper_optimizer_for_Toy2dCMP(
         if extrapolation:
             cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
         else:
-            if augmented_lagrangian:
-                if alternation_type == AlternationType.DUAL_PRIMAL:
-                    cooper_optimizer_class = constrained_optimizers.AugmentedLagrangianDualPrimalOptimizer
-                elif alternation_type == AlternationType.PRIMAL_DUAL:
-                    cooper_optimizer_class = constrained_optimizers.AugmentedLagrangianPrimalDualOptimizer
-                else:
-                    raise ValueError(f"Alternation type {alternation_type} not supported for Augmented Lagrangian.")
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
             else:
-                if alternation_type == AlternationType.DUAL_PRIMAL:
-                    cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
-                elif alternation_type == AlternationType.PRIMAL_DUAL:
-                    cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
-                else:
-                    cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
+                cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
 
     cooper_optimizer = create_optimizer_from_kwargs(
         cooper_optimizer_class=cooper_optimizer_class,

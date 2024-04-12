@@ -1,8 +1,6 @@
 """
 Implementation of constrained optimizers based on alternation such as
-:py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`,
-:py:class:`AugmentedLagrangianPrimalDualOptimizer` and
-:py:class:`AugmentedLagrangianDualPrimalOptimizer`.
+:py:class:`AlternatingPrimalDualOptimizer` and :py:class:`AlternatingDualPrimalOptimizer`.
 """
 
 import warnings
@@ -18,7 +16,6 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
     extrapolation = False
     alternation_type: AlternationType
-    is_augmented_lagrangian_optimizer: bool
 
     def custom_sanity_checks(self):
         """
@@ -30,7 +27,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
                 be SGD(lr=1.0).
         """
 
-        if self.is_augmented_lagrangian_optimizer:
+        if any(constraint.penalty_coefficient is not None for constraint in self.cmp.constraints()):
             for dual_optimizer in self.dual_optimizers:
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
                 if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
@@ -45,7 +42,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
     alternation_type = AlternationType.PRIMAL_DUAL
-    is_augmented_lagrangian_optimizer = False
 
     def roll(self, compute_cmp_state_kwargs: dict = {}, compute_violations_kwargs: dict = {}) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
@@ -141,7 +137,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
     alternation_type = AlternationType.DUAL_PRIMAL
-    is_augmented_lagrangian_optimizer = False
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
@@ -180,21 +175,3 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         self.primal_step()
 
         return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
-
-
-class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing primal-dual updates according to the Augmented Lagrangian Method.
-    """
-
-    # TODO(gallego-posada): Add equations to illustrate the alternating update
-    is_augmented_lagrangian_optimizer = True
-
-
-class AugmentedLagrangianDualPrimalOptimizer(AlternatingDualPrimalOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing dual-primal updates according to the Augmented Lagrangian Method.
-    """
-
-    # TODO(gallego-posada): Add equations to illustrate the alternating update
-    is_augmented_lagrangian_optimizer = True

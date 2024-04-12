@@ -87,7 +87,7 @@ dual_params = itertools.chain.from_iterable(multiplier.parameters() for multipli
 # For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
 dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
 
-cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
+cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 # For the Augmented Lagrangian, we need to configure a penalty coefficient updater

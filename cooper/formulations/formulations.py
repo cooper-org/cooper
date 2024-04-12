@@ -99,10 +99,6 @@ class AugmentedLagrangianFormulation(Formulation):
         """Implements the Augmented Lagrangian formulation.
 
         .. warning::
-            This formulation is only compatible with the
-            :class:`cooper.optim.AugmentedLagrangianPrimalDualOptimizer` and
-            :class:`cooper.optim.AugmentedLagrangianDualPrimalOptimizer` classes.
-
             The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
 
         Args:
