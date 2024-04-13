@@ -47,19 +47,16 @@ class Constraint:
             if penalty_coefficient is not None:
                 raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
 
-    def prepare_kwargs_for_lagrangian_contribution(self, constraint_state: ConstraintState) -> dict:
-        kwargs = {"constraint_state": constraint_state, "multiplier": self.multiplier}
-        if self.formulation.expects_penalty_coefficient:
-            kwargs["penalty_coefficient"] = self.penalty_coefficient
-        return kwargs
-
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
     ) -> Optional[ContributionStore]:
         """Compute the contribution of the current constraint to the primal or dual Lagrangian."""
-        kwargs = self.prepare_kwargs_for_lagrangian_contribution(constraint_state=constraint_state)
-        compute_contribution_fn = getattr(self.formulation, f"compute_contribution_to_{primal_or_dual}_lagrangian")
-        return compute_contribution_fn(**kwargs)
+        return self.formulation.compute_contribution_to_lagrangian(
+            primal_or_dual=primal_or_dual,
+            constraint_state=constraint_state,
+            multiplier=self.multiplier,
+            penalty_coefficient=self.penalty_coefficient,
+        )
 
     def __repr__(self):
         repr = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
