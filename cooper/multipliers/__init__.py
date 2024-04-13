@@ -1,5 +1,4 @@
 import math
-from enum import Enum
 from typing import Union
 
 import torch
@@ -40,14 +39,3 @@ def evaluate_constraint_factor(
         value = value.expand(expand_shape)
 
     return value
-
-
-class MultiplierType(Enum):
-    DENSE = DenseMultiplier
-    INDEXED = IndexedMultiplier
-    IMPLICIT = ImplicitMultiplier
-
-
-class PenaltyCoefficientType(Enum):
-    DENSE = DensePenaltyCoefficient
-    INDEXED = IndexedPenaltyCoefficient
