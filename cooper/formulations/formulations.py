@@ -29,6 +29,9 @@ class Formulation(abc.ABC):
             raise ValueError(f"{type(self).__name__} requires either an equality or inequality constraint.")
         self.constraint_type = constraint_type
 
+    def __repr__(self):
+        return f"{type(self).__name__}(constraint_type={self.constraint_type})"
+
     @abc.abstractmethod
     def compute_contribution_to_primal_lagrangian(self, *args, **kwargs):
         pass
@@ -78,9 +81,6 @@ class LagrangianFormulation(Formulation):
         )
 
         return ContributionStore(lagrangian_contribution, multiplier_value)
-
-    def __repr__(self):
-        return f"LagrangianFormulation(constraint_type={self.constraint_type})"
 
 
 class AugmentedLagrangianFormulation(Formulation):
@@ -136,6 +136,3 @@ class AugmentedLagrangianFormulation(Formulation):
         )
 
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
-
-    def __repr__(self):
-        return f"AugmentedLagrangianFormulation(constraint_type={self.constraint_type})"
