@@ -51,8 +51,8 @@ class Constraint:
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
     ) -> Optional[ContributionStore]:
         """Compute the contribution of the current constraint to the primal or dual Lagrangian."""
-        return self.formulation.compute_contribution_to_lagrangian(
-            primal_or_dual=primal_or_dual,
+        compute_contribution_fn = getattr(self.formulation, f"compute_contribution_to_{primal_or_dual}_lagrangian")
+        return compute_contribution_fn(
             constraint_state=constraint_state,
             multiplier=self.multiplier,
             penalty_coefficient=self.penalty_coefficient,
