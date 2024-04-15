@@ -27,11 +27,11 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
                 be SGD(lr=1.0).
         """
 
-        if any(constraint.penalty_coefficient is not None for constraint in self.cmp.constraints()):
+        if any(self.cmp.penalty_coefficients()):
             for dual_optimizer in self.dual_optimizers:
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
                 if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
-                    warnings.warn("The Augmented Lagrangian Method requires all dual optimizers to be SGD(lr=1.0).")
+                    warnings.warn("Detected use of Augmented Lagrangian but not all dual optimizers are SGD(lr=1.0).")
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
