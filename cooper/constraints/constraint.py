@@ -31,7 +31,7 @@ class Constraint:
             raise ValueError(
                 f"Attempted to pair {self.constraint_type} constraint, with {multiplier.constraint_type} multiplier."
             )
-        self.multiplier.sanity_check()  # TODO: This fails for ImplicitMultiplier
+        self.multiplier.sanity_check()
 
         self.penalty_coefficient = penalty_coefficient
         self.sanity_check_penalty_coefficient(penalty_coefficient=self.penalty_coefficient)

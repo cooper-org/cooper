@@ -23,6 +23,10 @@ class Multiplier(torch.nn.Module, abc.ABC):
         """
         pass
 
+    def sanity_check(self):
+        # TODO(gallego-posada): Add docstring
+        pass
+
 
 class ExplicitMultiplier(Multiplier):
     """
