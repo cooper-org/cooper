@@ -35,6 +35,7 @@ class LagrangianStore:
 @dataclass
 class CMPState:
     # TODO(gallego-posada): consider adding utilities for fetching constraint features
+    # pattern could look like: `get_constraint_state_attrs(self, attr_name)`
     """Represents the state of a Constrained Minimization Problem in terms of the value
     of its loss and constraint violations/defects.
 
