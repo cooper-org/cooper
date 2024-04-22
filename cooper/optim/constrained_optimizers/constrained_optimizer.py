@@ -26,11 +26,6 @@ class ConstrainedOptimizer(CooperOptimizer):
     :py:class:`~cooper.formulation.Formulation` classes for further details on
     handling unconstrained problems.
 
-    TODO: Document that we need the multiplier to be able to do projection steps
-    # on the dual variables. This is because the projection step is implemented at the
-    # multiplier level and there is not enough information in the dual optimizer to
-    # carry out the projection step.
-
     Args:
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
@@ -43,10 +38,6 @@ class ConstrainedOptimizer(CooperOptimizer):
             ``~cooper.constraints.Constraint``\\s. If dealing with an unconstrained
             problem, please use a
             :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
-
-        multipliers: Multiplier(s) associated with the constrained optimization problem.
-            We keep a reference to the multipliers to post-process them after the dual
-            optimizer steps.
 
     """
 
