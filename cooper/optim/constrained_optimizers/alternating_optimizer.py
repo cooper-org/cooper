@@ -124,7 +124,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
         loss = new_cmp_state.loss if new_cmp_state.loss is not None else cmp_state.loss
 
-        # TODO(gallego-posada): Document that users should inspect primal_lagrangian_store for logging purposes
+        # TODO(gallego-posada): Document _which_ CMP state is being returned
         return RollOut(loss, new_cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 
 
@@ -173,4 +173,5 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         primal_lagrangian_store.backward()
         self.primal_step()
 
+        # TODO(gallego-posada): Document _which_ CMP state is being returned
         return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
