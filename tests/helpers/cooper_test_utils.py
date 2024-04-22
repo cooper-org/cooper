@@ -1,6 +1,5 @@
 """Cooper-related utilities for writing tests."""
 
-import itertools
 from copy import deepcopy
 from typing import Optional, Type
 
@@ -34,19 +33,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     Verified solution of the original constrained problem:
         (x=2/3, y=1/3)
 
-    When slack variables are enabled, the problem is reformulated as:
-        min x**2 + 2*y**2 + C * (s0**2 + s1**2)
-        st.
-            x + y >= 1 - s0
-            x**2 + y <= 1 + s1
-            s0, s1 >= 0
-
     For a value of C=1, the solution is:
         (x=1/2, y=1/4, s0=0, s1=1/4)
 
     Link to WolframAlpha queries:
         Standard CMP: https://tinyurl.com/ye8dw6t3
-        CMP with slack variables: https://tinyurl.com/bds5b3yj
     """
 
     def __init__(
@@ -55,7 +46,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
         formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
-        slack_variables: Optional[tuple[cooper.constraints.SlackVariable]] = None,
         penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
         device=None,
     ):
@@ -63,7 +53,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         self.use_ineq_constraints = use_ineq_constraints
         self.use_constraint_surrogate = use_constraint_surrogate
-        self.slack_variables = slack_variables
 
         if self.use_ineq_constraints:
             for ix in range(2):
@@ -117,10 +106,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         cg0_violation = -param_x - param_y + 1.0
         cg1_violation = param_x**2 + param_y - 1.0
 
-        if self.slack_variables is not None:
-            cg0_violation -= self.slack_variables[0]()
-            cg1_violation -= self.slack_variables[1]()
-
         if self.use_constraint_surrogate:
             # The constraint surrogates take precedence over the `strict_violation`
             # when computing the gradient of the Lagrangian wrt the primal variables
@@ -130,10 +115,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
             # Orig constraint: x**2 + y \le 1.0
             cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
-
-            if self.slack_variables is not None:
-                cg0_surrogate -= self.slack_variables[0]()
-                cg1_surrogate -= self.slack_variables[1]()
 
             cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
@@ -154,9 +135,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
 
         loss = param_x**2 + 2 * param_y**2
 
-        if self.slack_variables is not None:
-            loss += self.slack_variables[0]() ** 2 + self.slack_variables[1]() ** 2
-
         cmp_state = cooper.CMPState(loss=loss)
 
         if self.use_ineq_constraints:
@@ -171,18 +149,13 @@ def Toy2dCMP_params_init(device, request):
     return torch.tensor(request.param, device=device)
 
 
-@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
+@pytest.fixture(params=[True, False])
 def Toy2dCMP_problem_properties(request, device):
-    use_ineq_constraints, use_slack_variables = request.param
+    use_ineq_constraints = request.param
+    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints)
 
-    use_slack_variables = False
-    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints, use_slack_variables=use_slack_variables)
     if use_ineq_constraints:
-        if use_slack_variables:
-            exact_solution = torch.tensor([1.0 / 2.0, 1.0 / 4.0], device=device)
-            cmp_properties["slack_variables"] = torch.tensor([0.0, 1.0 / 4.0])
-        else:
-            exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
+        exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
     else:
         exact_solution = torch.tensor([0.0, 0.0], device=device)
 
