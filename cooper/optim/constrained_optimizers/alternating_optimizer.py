@@ -22,9 +22,8 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
-            # TODO(gallego-posada): Is this warning still accurate?
-            UserWarning: The Augmented Lagrangian Method requires all dual optimizers to
-                be SGD(lr=1.0).
+            UserWarning: Detected use of Augmented Lagrangian but not all dual
+                optimizers are SGD(lr=1.0).
         """
 
         if any(self.cmp.penalty_coefficients()):
