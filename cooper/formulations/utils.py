@@ -118,7 +118,7 @@ def compute_quadratic_penalty(
     return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, clamped_violation**2)
 
 
-def compute_quadratic_augmented_contribution(
+def compute_primal_quadratic_augmented_contribution(
     multiplier_value: torch.Tensor,
     penalty_coefficient_value: torch.Tensor,
     violation: torch.Tensor,
@@ -154,8 +154,6 @@ def compute_quadratic_augmented_contribution(
         aux2 = torch.relu(detached_multiplier + aux1) ** 2 - detached_multiplier**2
         return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, aux2)
     elif constraint_type == ConstraintType.EQUALITY:
-        # TODO(gallego-posada): Why is the linear term being computed with the "primal" weighted violation?
-        # Should we also have a "dual_weighted_violation"?
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
         return linear_term + quadratic_penalty

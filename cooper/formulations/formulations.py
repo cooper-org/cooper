@@ -138,7 +138,7 @@ class AugmentedLagrangianFormulation(Formulation):
             penalty_coefficient=penalty_coefficient,
             primal_or_dual="primal",
         )
-        lagrangian_contribution = formulation_utils.compute_quadratic_augmented_contribution(
+        lagrangian_contribution = formulation_utils.compute_primal_quadratic_augmented_contribution(
             multiplier_value=multiplier_value,
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
