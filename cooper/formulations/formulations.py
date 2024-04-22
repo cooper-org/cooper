@@ -6,7 +6,7 @@ import torch
 import cooper.formulations.utils as formulation_utils
 from cooper.constraints.constraint_state import ConstraintState
 from cooper.constraints.constraint_type import ConstraintType
-from cooper.multipliers import Multiplier, PenaltyCoefficient, evaluate_constraint_factor
+from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 class ContributionStore(NamedTuple):
@@ -51,10 +51,12 @@ class Formulation(abc.ABC):
             constraint_features = strict_constraint_features
 
         eval_factor_kwargs = dict(constraint_features=constraint_features, expand_shape=violation.shape)
-        multiplier_value = evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+        multiplier_value = formulation_utils.evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
         penalty_coefficient_value = None
         if self.expects_penalty_coefficient:
-            penalty_coefficient_value = evaluate_constraint_factor(module=penalty_coefficient, **eval_factor_kwargs)
+            penalty_coefficient_value = formulation_utils.evaluate_constraint_factor(
+                module=penalty_coefficient, **eval_factor_kwargs
+            )
 
         return violation, multiplier_value, penalty_coefficient_value
 
