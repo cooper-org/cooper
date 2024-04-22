@@ -22,7 +22,7 @@ class LagrangianStore:
     def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the primal variables."""
-        if self.lagrangian is not None and isinstance(self.lagrangian, torch.Tensor):
+        if self.lagrangian is not None:
             self.lagrangian.backward()
 
     def observed_multiplier_values(self):
