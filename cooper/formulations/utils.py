@@ -116,7 +116,8 @@ def compute_quadratic_augmented_contribution(
 
     if constraint_type == ConstraintType.INEQUALITY:
         aux1 = torch.einsum("i...,i...->i...", penalty_coefficient_value, violation)
-        aux2 = torch.relu(multiplier_value + aux1) ** 2 - multiplier_value**2
+        detached_multiplier = multiplier_value.detach()
+        aux2 = torch.relu(detached_multiplier + aux1) ** 2 - detached_multiplier**2
         return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, aux2)
     elif constraint_type == ConstraintType.EQUALITY:
         # TODO(gallego-posada): Why is the linear term being computed with the "primal" weighted violation?
