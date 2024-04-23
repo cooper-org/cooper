@@ -44,6 +44,7 @@ class CooperOptimizer(abc.ABC):
             for dual_optimizer in self.dual_optimizers:
                 dual_optimizer.zero_grad()
 
+    @torch.no_grad()
     def primal_step(self):
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
