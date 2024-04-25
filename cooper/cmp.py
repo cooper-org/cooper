@@ -74,13 +74,12 @@ class CMPState:
         penalty_coefficient_values = dict()
         for constraint, constraint_state in contributing_constraints.items():
             contribution_store = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
-
-            if contribution_store.lagrangian_contribution is not None:
+            if contribution_store is not None:
                 lagrangian = lagrangian + contribution_store.lagrangian_contribution
 
-            multiplier_values[constraint] = contribution_store.multiplier_value
-            if contribution_store.penalty_coefficient_value is not None:
-                penalty_coefficient_values[constraint] = contribution_store.penalty_coefficient_value
+                multiplier_values[constraint] = contribution_store.multiplier_value
+                if contribution_store.penalty_coefficient_value is not None:
+                    penalty_coefficient_values[constraint] = contribution_store.penalty_coefficient_value
 
         return LagrangianStore(
             lagrangian=lagrangian,
