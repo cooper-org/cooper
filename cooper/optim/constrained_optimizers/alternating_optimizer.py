@@ -9,14 +9,9 @@ import torch
 
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
 from cooper.optim.optimizer import RollOut
-from cooper.optim.types import AlternationType
 
 
 class BaseAlternatingOptimizer(ConstrainedOptimizer):
-
-    extrapolation = False
-    alternation_type: AlternationType
-
     def custom_sanity_checks(self):
         """
         Perform sanity checks on the initialization of ``AlternatingOptimizer``.
@@ -39,8 +34,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     """
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
-
-    alternation_type = AlternationType.PRIMAL_DUAL
 
     def roll(self, compute_cmp_state_kwargs: dict = {}, compute_violations_kwargs: dict = {}) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
@@ -134,8 +127,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     """
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
-
-    alternation_type = AlternationType.DUAL_PRIMAL
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are

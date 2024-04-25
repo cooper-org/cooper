@@ -3,7 +3,6 @@ Implementation of the :py:class:`UnconstrainedOptimizer` class.
 """
 from cooper.cmp import LagrangianStore
 from cooper.optim.optimizer import CooperOptimizer, RollOut
-from cooper.optim.types import AlternationType
 
 
 class UnconstrainedOptimizer(CooperOptimizer):
@@ -18,9 +17,6 @@ class UnconstrainedOptimizer(CooperOptimizer):
             in this case ``primal_optimizers`` accepts a sequence of
             ``torch.optim.Optimizer``\\s.
     """
-
-    extrapolation = False
-    alternation_type = AlternationType.FALSE
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the

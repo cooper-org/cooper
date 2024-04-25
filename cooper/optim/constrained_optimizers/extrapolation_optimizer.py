@@ -6,7 +6,6 @@ import torch
 
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
 from cooper.optim.optimizer import RollOut
-from cooper.optim.types import AlternationType
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
@@ -15,9 +14,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     """
 
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
-
-    extrapolation = True
-    alternation_type = AlternationType.FALSE
 
     def custom_sanity_checks(self):
         """

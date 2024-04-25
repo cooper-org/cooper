@@ -7,7 +7,6 @@ import torch
 
 from cooper.cmp import ConstrainedMinimizationProblem
 from cooper.optim.optimizer import CooperOptimizer
-from cooper.optim.types import AlternationType
 from cooper.utils import OneOrSequence
 
 
@@ -40,9 +39,6 @@ class ConstrainedOptimizer(CooperOptimizer):
             :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
 
     """
-
-    extrapolation: bool
-    alternation_type: AlternationType
 
     def __init__(
         self,

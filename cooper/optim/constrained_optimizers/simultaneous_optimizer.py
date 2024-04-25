@@ -3,16 +3,12 @@ Implementation of the :py:class:`SimultaneousOptimizer` class.
 """
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
 from cooper.optim.optimizer import RollOut
-from cooper.optim.types import AlternationType
 
 
 class SimultaneousOptimizer(ConstrainedOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing simultaneous gradient updates to the primal and dual variables.
     """
-
-    extrapolation = False
-    alternation_type = AlternationType.FALSE
 
     def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
