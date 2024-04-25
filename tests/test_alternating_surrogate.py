@@ -1,9 +1,7 @@
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
-import cooper
+from tests.helpers import cooper_test_utils, testing_utils
 
 USE_CONSTRAINT_SURROGATE = True
 
@@ -40,7 +38,7 @@ def test_manual_PrimalDual_surrogate(use_violation_fn, Toy2dCMP_problem_properti
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=False,
-        alternation_type=cooper.optim.AlternationType.PRIMAL_DUAL,
+        alternation_type=cooper_test_utils.AlternationType.PRIMAL_DUAL,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": DUAL_LR},
     )
@@ -142,7 +140,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=False,
-        alternation_type=cooper.optim.AlternationType.DUAL_PRIMAL,
+        alternation_type=cooper_test_utils.AlternationType.DUAL_PRIMAL,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": DUAL_LR},
     )
@@ -213,7 +211,7 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
 
 
 @pytest.mark.parametrize(
-    "alternation_type", [cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL]
+    "alternation_type", [cooper_test_utils.AlternationType.PRIMAL_DUAL, cooper_test_utils.AlternationType.DUAL_PRIMAL]
 )
 @pytest.mark.parametrize("use_defect_fn", [True, False])
 def test_convergence_surrogate(alternation_type, use_defect_fn, Toy2dCMP_problem_properties, device):

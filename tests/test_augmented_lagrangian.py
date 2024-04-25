@@ -1,16 +1,15 @@
 # FIXME(gallego-posada): Tests in this file are broken after removing formulation_kwargs
 # from the Constraint constructor.
 
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
+from tests.helpers import cooper_test_utils, testing_utils
 
 
-@pytest.fixture(params=[cooper.optim.AlternationType.PRIMAL_DUAL, cooper.optim.AlternationType.DUAL_PRIMAL])
+@pytest.fixture(params=[cooper_test_utils.AlternationType.PRIMAL_DUAL, cooper_test_utils.AlternationType.DUAL_PRIMAL])
 def alternation_type(request):
     return request.param
 
@@ -53,7 +52,7 @@ def test_manual_augmented_lagrangian_dual_primal(Toy2dCMP_params_init, device):
 
     mktensor = testing_utils.mktensor(device=device)
 
-    ALTERNATION_TYPE = cooper.optim.AlternationType.DUAL_PRIMAL
+    ALTERNATION_TYPE = cooper_test_utils.AlternationType.DUAL_PRIMAL
     cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
         primal_optimizers=primal_optimizers, alternation_type=ALTERNATION_TYPE, device=device
     )
@@ -123,7 +122,7 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
 
     mktensor = testing_utils.mktensor(device=device)
 
-    ALTERNATION_TYPE = cooper.optim.AlternationType.PRIMAL_DUAL
+    ALTERNATION_TYPE = cooper_test_utils.AlternationType.PRIMAL_DUAL
     cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
         primal_optimizers=primal_optimizers, alternation_type=ALTERNATION_TYPE, device=device
     )
@@ -213,7 +212,7 @@ def test_convergence_augmented_lagrangian(
 
     roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
-    if alternation_type == cooper.optim.AlternationType.PRIMAL_DUAL:
+    if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
         roll_kwargs["compute_violations_kwargs"] = dict(params=params)
 
     for step_id in range(1500):

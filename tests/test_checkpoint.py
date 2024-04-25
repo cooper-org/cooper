@@ -5,9 +5,9 @@
 import os
 import tempfile
 
-import cooper_test_utils
-import testing_utils
 import torch
+
+from tests.helpers import cooper_test_utils, testing_utils
 
 
 class Model(torch.nn.Module):
