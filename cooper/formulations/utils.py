@@ -63,7 +63,7 @@ def compute_dual_weighted_violation(
     multiplier_value: torch.Tensor,
     violation: torch.Tensor,
     penalty_coefficient_value: Optional[torch.Tensor] = None,
-) -> Optional[torch.Tensor]:
+) -> torch.Tensor:
     """Computes the sum of constraint violations weighted by the associated constraint
     factors (multipliers or penalty coefficients), while preserving the gradient for the
     dual variables.
