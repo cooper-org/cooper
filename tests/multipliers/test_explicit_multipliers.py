@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-import multiplier_test_utils  # noqa: F401
 import pytest
 import torch
 
