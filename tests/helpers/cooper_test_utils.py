@@ -1,13 +1,14 @@
 """Cooper-related utilities for writing tests."""
 
 from copy import deepcopy
+from enum import Enum
 from typing import Optional, Type
 
 import pytest
 import torch
 
 import cooper
-from cooper.optim import AlternationType, CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
+from cooper.optim import CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
 from cooper.utils import OneOrSequence
 
 
@@ -261,12 +262,18 @@ def create_optimizer_from_kwargs(
     return cooper_optimizer_class(**optimizer_kwargs)
 
 
+class AlternationType(Enum):
+    FALSE = False
+    PRIMAL_DUAL = "PrimalDual"
+    DUAL_PRIMAL = "DualPrimal"
+
+
 def build_cooper_optimizer_for_Toy2dCMP(
     cmp,
     primal_optimizers,
     extrapolation: bool = False,
     augmented_lagrangian: bool = False,
-    alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
+    alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> CooperOptimizer:
