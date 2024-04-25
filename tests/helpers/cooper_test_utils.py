@@ -47,7 +47,7 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
         formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
-        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient]] = None,
+        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient, ...]] = None,
         device=None,
     ):
         super().__init__()
