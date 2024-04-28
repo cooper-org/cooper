@@ -23,6 +23,10 @@ class Multiplier(torch.nn.Module, abc.ABC):
         """
         pass
 
+    def sanity_check(self):
+        # TODO(gallego-posada): Add docstring
+        pass
+
 
 class ExplicitMultiplier(Multiplier):
     """
@@ -100,6 +104,9 @@ class ExplicitMultiplier(Multiplier):
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
+    def __repr__(self):
+        return f"{type(self).__name__}(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
+
 
 class DenseMultiplier(ExplicitMultiplier):
     """Simplest kind of trainable Lagrange multiplier.
@@ -116,9 +123,6 @@ class DenseMultiplier(ExplicitMultiplier):
     def forward(self):
         """Return the current value of the multiplier."""
         return torch.clone(self.weight)
-
-    def __repr__(self):
-        return f"DenseMultiplier(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
 
 
 class IndexedMultiplier(ExplicitMultiplier):
@@ -156,9 +160,6 @@ class IndexedMultiplier(ExplicitMultiplier):
 
         # Flatten multiplier values to 1D since Embedding works with 2D tensors.
         return torch.flatten(multiplier_values)
-
-    def __repr__(self):
-        return f"IndexedMultiplier(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
 
 
 class ImplicitMultiplier(Multiplier):

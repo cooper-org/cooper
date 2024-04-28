@@ -5,33 +5,37 @@ from typing import Any, Iterator, Literal, Optional
 
 import torch
 
-from cooper.constraints import Constraint, ConstraintMeasurement, ConstraintState
+from cooper.constraints import Constraint, ConstraintState
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 @dataclass
 class LagrangianStore:
-    """Stores the value of the (primal or dual) Lagrangian, as well as
-    ``ConstraintMeasurement``s for the contributing constraints.
+    """Stores the value of the (primal or dual) Lagrangian, as well as the multiplier
+    and penalty coefficient values for the observed constraints.
     """
 
     lagrangian: Optional[torch.Tensor] = None
-    measured_constraints: dict[Constraint, ConstraintMeasurement] = field(default_factory=dict)
+    multiplier_values: dict[Constraint, torch.Tensor] = field(default_factory=dict)
+    penalty_coefficient_values: dict[Constraint, torch.Tensor] = field(default_factory=dict)
 
     def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
         respect to the primal variables."""
-        if self.lagrangian is not None and isinstance(self.lagrangian, torch.Tensor):
+        if self.lagrangian is not None:
             self.lagrangian.backward()
 
     def observed_multiplier_values(self):
-        for constraint_state in self.measured_constraints.values():
-            yield constraint_state.multiplier_value
+        yield from self.multiplier_values.values()
+
+    def observed_penalty_coefficient_values(self):
+        yield from self.penalty_coefficient_values.values()
 
 
 @dataclass
 class CMPState:
     # TODO(gallego-posada): consider adding utilities for fetching constraint features
+    # pattern could look like: `get_constraint_state_attrs(self, attr_name)`
     """Represents the state of a Constrained Minimization Problem in terms of the value
     of its loss and constraint violations/defects.
 
@@ -63,22 +67,26 @@ class CMPState:
             # No loss provided, and no observed constraints will contribute to Lagrangian.
             return LagrangianStore()
 
-        if (self.loss is None) or (primal_or_dual == "dual"):
-            # We don't count the loss towards the dual Lagrangian since the objective
-            # function does not depend on the dual variables.
-            lagrangian = 0.0
-        else:
-            lagrangian = self.loss.clone()
+        # We don't count the loss towards the dual Lagrangian since the objective
+        # function does not depend on the dual variables.
+        lagrangian = self.loss.clone() if self.loss is not None and primal_or_dual == "primal" else 0.0
 
-        measured_constraints = {}
+        multiplier_values = dict()
+        penalty_coefficient_values = dict()
         for constraint, constraint_state in contributing_constraints.items():
-            contribution_out = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
-            lagrangian_contribution, constraint_measurement = contribution_out
-            measured_constraints[constraint] = constraint_measurement
-            if lagrangian_contribution is not None:
-                lagrangian = lagrangian + lagrangian_contribution
+            contribution_store = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
+            if contribution_store is not None:
+                lagrangian = lagrangian + contribution_store.lagrangian_contribution
 
-        return LagrangianStore(lagrangian=lagrangian, measured_constraints=measured_constraints)
+                multiplier_values[constraint] = contribution_store.multiplier_value
+                if contribution_store.penalty_coefficient_value is not None:
+                    penalty_coefficient_values[constraint] = contribution_store.penalty_coefficient_value
+
+        return LagrangianStore(
+            lagrangian=lagrangian,
+            multiplier_values=multiplier_values,
+            penalty_coefficient_values=penalty_coefficient_values,
+        )
 
     def compute_primal_lagrangian(self) -> LagrangianStore:
         """Computes and accumulates the primal-differentiable Lagrangian based on the

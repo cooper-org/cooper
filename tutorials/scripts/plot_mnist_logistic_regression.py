@@ -97,7 +97,7 @@ for epoch_num in range(7):
         if torch.cuda.is_available():
             inputs, targets = inputs.cuda(non_blocking=True), targets.cuda(non_blocking=True)
 
-        cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(
+        _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(
             compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets)
         )
 

@@ -5,14 +5,12 @@ Implementation of the :py:class:`ConstrainedOptimizer` class.
 
 import torch
 
-from cooper.optim.optimizer_state import CooperOptimizerState
-from cooper.utils import OneOrSequence, ensure_sequence
-
-from ... import ConstrainedMinimizationProblem
-from ..types import AlternationType
+from cooper.cmp import ConstrainedMinimizationProblem
+from cooper.optim.optimizer import CooperOptimizer
+from cooper.utils import OneOrSequence
 
 
-class ConstrainedOptimizer:
+class ConstrainedOptimizer(CooperOptimizer):
     """
     Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given a provided :py:class:`~cooper.formulation.Formulation`.
@@ -27,11 +25,6 @@ class ConstrainedOptimizer:
     :py:class:`~cooper.formulation.Formulation` classes for further details on
     handling unconstrained problems.
 
-    TODO: Document that we need the multiplier to be able to do projection steps
-    # on the dual variables. This is because the projection step is implemented at the
-    # multiplier level and there is not enough information in the dual optimizer to
-    # carry out the projection step.
-
     Args:
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
@@ -45,24 +38,18 @@ class ConstrainedOptimizer:
             problem, please use a
             :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
 
-        multipliers: Multiplier(s) associated with the constrained optimization problem.
-            We keep a reference to the multipliers to post-process them after the dual
-            optimizer steps.
-
     """
-
-    extrapolation: bool
-    alternation_type: AlternationType
 
     def __init__(
         self,
+        cmp: ConstrainedMinimizationProblem,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        cmp: ConstrainedMinimizationProblem,
     ):
-        self.primal_optimizers = ensure_sequence(primal_optimizers)
-        self.dual_optimizers = ensure_sequence(dual_optimizers)
-        self.cmp = cmp
+        super().__init__(cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers)
+        self.base_sanity_checks()
+        # custom_sanity_checks are implemented in the derived classes
+        self.custom_sanity_checks()
 
     def base_sanity_checks(self):
         """
@@ -78,19 +65,14 @@ class ConstrainedOptimizer:
                 if not param_group["maximize"]:
                     raise ValueError("Dual optimizers must be set to carry out maximization steps.")
 
-    def zero_grad(self):
+    def custom_sanity_checks(self):
         """
-        Sets the gradients of all optimized :py:class:`~torch.nn.parameter.Parameter`\\s
-        to zero. This includes both the primal and dual variables.
+        Perform custom sanity checks on the initialization of ``ConstrainedOptimizer``.
         """
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.zero_grad()
-
-        for dual_optimizer in self.dual_optimizers:
-            dual_optimizer.zero_grad()
+        pass
 
     @torch.no_grad()
-    def dual_step(self, call_extrapolation: bool = False):
+    def dual_step(self):
         """
         Perform a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we require
@@ -98,38 +80,14 @@ class ConstrainedOptimizer:
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
-
-        Args:
-            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
-                opposed to ``dual_optimizer.step()``. This is only relevant for
-                :py:class:`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`
-                and should be left to ``False`` for other ``ConstrainedOptimizer``\\s.
         """
-
-        if call_extrapolation:
-            if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
-                raise ValueError("All dual optimizers must implement an `extrapolation` method.")
-            call_method = "extrapolation"
-        else:
-            call_method = "step"
 
         # Update multipliers based on current constraint violations (gradients)
         # For unobserved constraints the gradient is None, so this is a no-op.
         for dual_optimizer in self.dual_optimizers:
-            getattr(dual_optimizer, call_method)()  # type: ignore
+            dual_optimizer.step()
 
+        # post steps include, among other things, ensuring that
+        # multipliers for inequality constraints are non-negative.
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
-
-    def state_dict(self) -> CooperOptimizerState:
-        """
-        Returns the state of the ConstrainedOptimizer. See
-        :py:class:`~cooper.optim.constrained_optimizers.cooper_optimizer.CooperOptimizerState`.
-        """
-
-        primal_optimizer_states = [_.state_dict() for _ in self.primal_optimizers]
-        dual_optimizer_states = [_.state_dict() for _ in self.dual_optimizers]
-
-        return CooperOptimizerState(
-            primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
-        )

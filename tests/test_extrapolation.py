@@ -1,9 +1,8 @@
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper
+from tests.helpers import cooper_test_utils, testing_utils
 
 
 def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init, device):
@@ -29,7 +28,7 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=True,
-        alternation_type=cooper.optim.AlternationType.FALSE,
+        alternation_type=cooper_test_utils.AlternationType.FALSE,
         dual_optimizer_class=cooper.optim.ExtraSGD,
     )
 
@@ -61,7 +60,8 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     for constraint, constraint_state in cmp_state.observed_constraints.items():
         assert torch.allclose(constraint.multiplier.weight.grad, constraint_state.violation)
 
-    cooper_optimizer.step(call_extrapolation=True)
+    cooper_optimizer.primal_extrapolation_step()
+    cooper_optimizer.dual_extrapolation_step()
 
     # Perform the actual update step
     cooper_optimizer.zero_grad()
@@ -70,7 +70,8 @@ def test_manual_extrapolation(Toy2dCMP_problem_properties, Toy2dCMP_params_init,
     dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
     primal_lagrangian_store.backward()
     dual_lagrangian_store.backward()
-    cooper_optimizer.step(call_extrapolation=False)
+    cooper_optimizer.primal_step()
+    cooper_optimizer.dual_step()
 
     # After performing the update
     assert torch.allclose(params, mktensor([2.0e-4, -0.9614]))
@@ -104,7 +105,7 @@ def test_convergence_extrapolation(optimizer_name, Toy2dCMP_problem_properties, 
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=True,
-        alternation_type=cooper.optim.AlternationType.FALSE,
+        alternation_type=cooper_test_utils.AlternationType.FALSE,
         dual_optimizer_class=cooper.optim.ExtraSGD,
     )
 

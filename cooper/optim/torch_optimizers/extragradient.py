@@ -17,6 +17,8 @@ import torch
 # Alternatively, we could carry out updates using functional implementations of SGD and
 # Adam from `torch.optim`. This way, we can easily stay up-to-date with the community
 # approved implementations of these optimizers.
+
+
 # -----------------------------------------------------------------------------
 
 #  MIT License
@@ -93,7 +95,8 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
 
         loss = None
         if closure is not None:
-            loss = closure()
+            with torch.enable_grad():
+                loss = closure()
 
         i = -1
         for group in self.param_groups:

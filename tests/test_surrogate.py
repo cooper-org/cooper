@@ -1,9 +1,7 @@
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
-import cooper
+from tests.helpers import cooper_test_utils, testing_utils
 
 USE_CONSTRAINT_SURROGATE = True
 
@@ -39,7 +37,7 @@ def test_manual_simultaneous_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_par
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=False,
-        alternation_type=cooper.optim.AlternationType.FALSE,
+        alternation_type=cooper_test_utils.AlternationType.FALSE,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": DUAL_LR},
     )
@@ -51,7 +49,7 @@ def test_manual_simultaneous_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_par
 
     # ----------------------- First iteration -----------------------
     # The CMPState returned when using simultaneous updates is measured _before any_ updates
-    cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x0_y0)
 
     strict_violations_before_primal_update = mktensor(list(cmp_state.observed_strict_violations()))
@@ -78,7 +76,7 @@ def test_manual_simultaneous_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_par
     assert torch.allclose(primal_ls.lagrangian, _cmp_state.loss + torch.sum(violations_before_primal_update * lmbda0))
 
     # ----------------------- Second iteration -----------------------
-    cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
+    loss, cmp_state, primal_ls, dual_ls = cooper_optimizer.roll(**roll_kwargs)
     _cmp_state = cmp.compute_cmp_state(x1_y1)
 
     strict_violations_before_primal_update = mktensor(list(cmp_state.observed_strict_violations()))

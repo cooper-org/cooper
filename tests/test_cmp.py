@@ -1,5 +1,6 @@
-import cooper_test_utils
 import torch
+
+from tests.helpers import cooper_test_utils
 
 
 def test_pipeline_with_cmp(Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device):

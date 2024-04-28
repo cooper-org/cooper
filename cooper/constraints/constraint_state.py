@@ -94,16 +94,3 @@ class ConstraintState:
             strict_constraint_features = self.constraint_features
 
         return constraint_features, strict_constraint_features
-
-
-@dataclass
-class ConstraintMeasurement:
-    # TODO: update docstring. Current ConstraintMeasurement is agnostic to dual or primal
-    # lagrangian.
-    """Stores the value of the constraint factor (multiplier or penalty coefficient),
-    the contribution of the constraint to the primal-differentiable Lagrangian, and the
-    contribution of the constraint to the dual-differentiable Lagrangian."""
-
-    violation: Optional[torch.Tensor] = None
-    multiplier_value: Optional[torch.Tensor] = None
-    penalty_coefficient_value: Optional[torch.Tensor] = None

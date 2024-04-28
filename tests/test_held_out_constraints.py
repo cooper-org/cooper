@@ -1,9 +1,8 @@
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper
+from tests.helpers import cooper_test_utils, testing_utils
 
 
 class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -152,7 +151,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
         primal_optimizers=primal_optimizers,
         cmp=cmp,
         extrapolation=False,
-        alternation_type=cooper.optim.AlternationType.FALSE,
+        alternation_type=cooper_test_utils.AlternationType.FALSE,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": dual_lr},
     )
@@ -184,9 +183,9 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     lmbda = mktensor([0.0, 0.0])
 
     for i in range(10):
-        _cmp_state, _, _ = cooper_optimizer.roll(**roll_kwargs)
+        roll_out = cooper_optimizer.roll(**roll_kwargs)
+        constraint_state = roll_out.cmp_state.observed_constraints[cmp.constraint]
 
-        constraint_state = _cmp_state.observed_constraints[cmp.constraint]
         new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_state.constraint_features)
         new_lmbda = manual_update_on_dual(
             lmbda, constraint_state.strict_violation, constraint_state.strict_constraint_features

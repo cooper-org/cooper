@@ -3,7 +3,7 @@ import abc
 import torch
 
 from cooper.constraints import Constraint, ConstraintState, ConstraintType
-from cooper.multipliers import DensePenaltyCoefficient
+from cooper.multipliers import DensePenaltyCoefficient, IndexedPenaltyCoefficient
 
 
 class PenaltyCoefficientUpdater(abc.ABC):
@@ -47,25 +47,32 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
 
-        violation, strict_violation = constraint_state.extract_violations()
-        constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
+        _, strict_violation = constraint_state.extract_violations()
+        _, strict_constraint_features = constraint_state.extract_constraint_features()
         penalty_coefficient = constraint.penalty_coefficient
 
-        # TODO(merajhashemi): Make this block more readable
-        values_for_observed = (
-            penalty_coefficient.value
-            if isinstance(penalty_coefficient, DensePenaltyCoefficient)
-            else penalty_coefficient.value[strict_constraint_features]
-        )
-
-        if constraint.constraint_type == ConstraintType.EQUALITY:
-            condition = strict_violation.abs() > self.violation_tolerance
+        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient()
+        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient(strict_constraint_features)
         else:
-            condition = strict_violation > self.violation_tolerance
+            raise ValueError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
 
-        new_value = torch.where(condition, values_for_observed * self.growth_factor, values_for_observed)
+        if constraint.constraint_type == ConstraintType.INEQUALITY:
+            # For inequality constraints, we only consider the non-negative part of the violation.
+            strict_violation = strict_violation.relu()
+
+        if observed_penalty_values.dim() == 0:
+            condition = strict_violation.norm() > self.violation_tolerance
+        else:
+            condition = strict_violation.abs() > self.violation_tolerance
+
+        # Update the penalty coefficient by multiplying it by the growth factor when
+        # the constraint violation is larger than the tolerance. When the violation is
+        # less than the tolerance, the penalty value is left unchanged.
+        new_value = torch.where(condition, observed_penalty_values * self.growth_factor, observed_penalty_values)
 
         if isinstance(penalty_coefficient, DensePenaltyCoefficient):
             penalty_coefficient.value = new_value.detach()
-        else:
+        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
