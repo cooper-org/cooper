@@ -34,17 +34,17 @@ class Constraint:
         self.multiplier.sanity_check()
 
         self.penalty_coefficient = penalty_coefficient
-        self.sanity_check_penalty_coefficient(penalty_coefficient=self.penalty_coefficient)
+        self.sanity_check_penalty_coefficient()
 
-    def sanity_check_penalty_coefficient(self, penalty_coefficient: PenaltyCoefficient) -> None:
+    def sanity_check_penalty_coefficient(self) -> None:
         if self.formulation.expects_penalty_coefficient:
             if self.penalty_coefficient is None:
                 raise ValueError(f"{self.formulation_type} expects a penalty coefficient but none was provided.")
             else:
-                if torch.any(penalty_coefficient.value < 0):
+                if torch.any(self.penalty_coefficient.value < 0):
                     raise ValueError("All entries of the penalty coefficient must be non-negative.")
         else:
-            if penalty_coefficient is not None:
+            if self.penalty_coefficient is not None:
                 raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
 
     def compute_contribution_to_lagrangian(
