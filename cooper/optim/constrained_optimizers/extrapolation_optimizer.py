@@ -35,31 +35,31 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             )
 
     @torch.no_grad()
-    def dual_step(self, call_extrapolation: bool = False):
+    def primal_extrapolation_step(self):
         """
-        Perform a gradient step on the parameters associated with the dual variables.
-        Since the dual problem involves *maximizing* over the dual variables, we require
-        dual optimizers which satisfy `maximize=True`.
+        Perform an extrapolation step on the parameters associated with the primal variables.
+        """
+        if not all(hasattr(primal_optimizer, "extrapolation") for primal_optimizer in self.primal_optimizers):
+            raise ValueError("All primal optimizers must implement an `extrapolation` method.")
+
+        for primal_optimizer in self.primal_optimizers:
+            primal_optimizer.extrapolation()
+
+    @torch.no_grad()
+    def dual_extrapolation_step(self):
+        """
+        Perform an extrapolation step on the parameters associated with the dual variables.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
-
-        Args:
-            call_extrapolation: Whether to call ``dual_optimizer.extrapolation()`` as
-                opposed to ``dual_optimizer.step()``.
         """
-
-        if call_extrapolation:
-            if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
-                raise ValueError("All dual optimizers must implement an `extrapolation` method.")
-            call_method = "extrapolation"
-        else:
-            call_method = "step"
+        if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
+            raise ValueError("All dual optimizers must implement an `extrapolation` method.")
 
         # Update multipliers based on current constraint violations (gradients)
         # For unobserved constraints the gradient is None, so this is a no-op.
         for dual_optimizer in self.dual_optimizers:
-            getattr(dual_optimizer, call_method)()  # type: ignore
+            dual_optimizer.extrapolation()
 
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
@@ -84,9 +84,11 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             primal_lagrangian_store.backward()
             dual_lagrangian_store.backward()
 
-            call_method = "extrapolation" if call_extrapolation else "step"
-            for primal_optimizer in self.primal_optimizers:
-                getattr(primal_optimizer, call_method)()  # type: ignore
-            self.dual_step(call_extrapolation=call_extrapolation)
+            if call_extrapolation:
+                self.primal_extrapolation_step()
+                self.dual_extrapolation_step()
+            else:
+                self.primal_step()
+                self.dual_step()
 
         return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)
