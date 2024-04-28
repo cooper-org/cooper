@@ -87,5 +87,7 @@ class ConstrainedOptimizer(CooperOptimizer):
         for dual_optimizer in self.dual_optimizers:
             dual_optimizer.step()
 
+        # post steps include, among other things, ensuring that
+        # multipliers for inequality constraints are non-negative.
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
