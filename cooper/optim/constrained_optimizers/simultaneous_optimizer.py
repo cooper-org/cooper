@@ -34,6 +34,8 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         primal_lagrangian_store.backward()
         dual_lagrangian_store.backward()
 
+        # The order of the following operations is not important too
+        # because they update independent primal and dual parameters
         self.primal_step()
         self.dual_step()
 
