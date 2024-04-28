@@ -3,10 +3,10 @@ from typing import Literal, Optional, Type
 import torch
 
 from cooper.constraints.constraint_state import ConstraintState
+from cooper.constraints.constraint_type import ConstraintType
 from cooper.formulations import ContributionStore, Formulation, LagrangianFormulation
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
-from .constraint_type import ConstraintType
 
 
 class Constraint:
