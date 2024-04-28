@@ -30,6 +30,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
 
         # The order of the following operations is not important
+        # because the primal and dual lagrangians have independent gradients
         primal_lagrangian_store.backward()
         dual_lagrangian_store.backward()
 
