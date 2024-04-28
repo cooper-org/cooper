@@ -48,6 +48,7 @@ class ConstrainedOptimizer(CooperOptimizer):
     ):
         super().__init__(cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers)
         self.base_sanity_checks()
+        # custom_sanity_checks are implemented in the derived classes
         self.custom_sanity_checks()
 
     def base_sanity_checks(self):
