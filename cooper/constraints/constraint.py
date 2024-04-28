@@ -8,7 +8,6 @@ from cooper.formulations import ContributionStore, Formulation, LagrangianFormul
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
-
 class Constraint:
     """Constraint."""
 
