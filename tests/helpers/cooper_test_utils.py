@@ -12,6 +12,146 @@ from cooper.optim import CooperOptimizer, UnconstrainedOptimizer, constrained_op
 from cooper.utils import OneOrSequence
 
 
+class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
+    """
+    Minimization problem for minimizing the square norm of a vector under linear constraints:
+        min ||x||^2
+        st. Ax <= b
+        &   Cx == d
+
+    This is a convex optimization problem with linear inequality constraints.
+
+    Parameters:
+        A (torch.Tensor): Coefficient matrix for the linear inequality constraints.
+        b (torch.Tensor): Bias vector for the linear inequality constraints.
+        device (torch.device): The device tensors will be allocated on.
+    """
+
+    def __init__(
+        self,
+        has_ineq_constraint: bool = True,
+        has_eq_constraint: bool = True,
+        ineq_use_surrogate: bool = False,
+        eq_use_surrogate: bool = False,
+        A: Optional[torch.Tensor] = None,
+        b: Optional[torch.Tensor] = None,
+        C: Optional[torch.Tensor] = None,
+        d: Optional[torch.Tensor] = None,
+        ineq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
+        ineq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        ineq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        eq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
+        eq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        eq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        device="cpu",
+    ):
+        super().__init__()
+        self.has_ineq_constraint = has_ineq_constraint
+        self.has_eq_constraint = has_eq_constraint
+        self.ineq_use_surrogate = ineq_use_surrogate
+        self.eq_use_surrogate = eq_use_surrogate
+        self.ineq_multiplier_type = ineq_multiplier_type
+        self.eq_multiplier_type = eq_multiplier_type
+        self.A = A.to(device)
+        self.b = b.to(device)
+        self.C = C.to(device)
+        self.d = d.to(device)
+        self.device = device
+        self.generator = torch.Generator(device=device)
+        self.generator.manual_seed(0)
+
+        if has_ineq_constraint:
+            ineq_penalty_coefficient = None
+            if ineq_penalty_coefficient_type is not None:
+                ineq_penalty_coefficient = ineq_penalty_coefficient_type(init=torch.ones(b.numel(), device=device))
+
+            self.ineq_constraints = cooper.Constraint(
+                constraint_type=cooper.ConstraintType.INEQUALITY,
+                formulation_type=ineq_formulation_type,
+                multiplier=ineq_multiplier_type(
+                    constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=b.numel(), device=device
+                ),
+                penalty_coefficient=ineq_penalty_coefficient,
+            )
+
+        if has_eq_constraint:
+            eq_penalty_coefficient = None
+            if eq_penalty_coefficient_type is not None:
+                eq_penalty_coefficient = eq_penalty_coefficient_type(init=torch.ones(d.numel(), device=device))
+
+            self.eq_constraints = cooper.Constraint(
+                constraint_type=cooper.ConstraintType.EQUALITY,
+                formulation_type=eq_formulation_type,
+                multiplier=eq_multiplier_type(
+                    constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=d.numel(), device=device
+                ),
+                penalty_coefficient=eq_penalty_coefficient,
+            )
+
+    def _compute_eq_or_ineq_violations(self, x, A_or_C, b_or_d, has_constraint, use_surrogate, multiplier_type):
+        if not has_constraint:
+            return None
+
+        violation = A_or_C @ x - b_or_d
+
+        constraint_features = None
+        if multiplier_type == cooper.multipliers.IndexedMultiplier:
+            constraint_features = torch.randperm(b_or_d.numel(), generator=self.generator, device=self.device)
+            # we assume 80% of the constraints are observed
+            constraint_features = constraint_features[: 4 * b_or_d.numel() // 5]
+            violation = violation[constraint_features]
+
+        strict_violation = None
+        strict_constraint_features = None
+        if use_surrogate:
+            strict_violation = (
+                A_or_C + 0.1 * torch.randn(A_or_C.shape, generator=self.generator, device=self.device)
+            ) @ x
+            if multiplier_type == cooper.multipliers.IndexedMultiplier:
+                strict_constraint_features = torch.randperm(
+                    b_or_d.numel(), generator=self.generator, device=self.device
+                )
+                # we assume 80% of the constraints are observed
+                strict_constraint_features = strict_constraint_features[: 4 * b_or_d.numel() // 5]
+                strict_violation = strict_violation[strict_constraint_features]
+
+        return cooper.ConstraintState(
+            violation=violation,
+            constraint_features=constraint_features,
+            strict_violation=strict_violation,
+            strict_constraint_features=strict_constraint_features,
+        )
+
+    def compute_violations(self, x: torch.Tensor) -> cooper.CMPState:
+        """
+        Computes the constraint violations for the given parameters.
+        """
+        ineq_state = self._compute_eq_or_ineq_violations(
+            x, self.A, self.b, self.has_ineq_constraint, self.ineq_use_surrogate, self.ineq_multiplier_type
+        )
+        eq_state = self._compute_eq_or_ineq_violations(
+            x, self.C, self.d, self.has_eq_constraint, self.eq_use_surrogate, self.eq_multiplier_type
+        )
+
+        observed_constraints = {}
+        if self.has_ineq_constraint:
+            observed_constraints[self.ineq_constraints] = ineq_state
+        if self.has_eq_constraint:
+            observed_constraints[self.eq_constraints] = eq_state
+
+        return cooper.CMPState(observed_constraints=observed_constraints)
+
+    def compute_cmp_state(self, x: torch.Tensor) -> cooper.CMPState:
+        """
+        Computes the state of the CMP at the current value of the primal parameters
+        by evaluating the loss and constraints.
+        """
+        loss = torch.sum(x**2)
+        violation_state = self.compute_violations(x)
+        cmp_state = cooper.CMPState(loss=loss, observed_constraints=violation_state.observed_constraints)
+        return cmp_state
+
+
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     """
     Simple test on a 2D quadratic programming problem with quadratic constraints
