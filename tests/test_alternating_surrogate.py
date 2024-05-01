@@ -208,11 +208,3 @@ def test_manual_DualPrimal_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_param
     target_primal_lagrangian = _cmp_state.loss + torch.sum(violations_before_primal_update * lmbda2)
     # TODO(galllego-posada): check if need for relaxed tolerance comes from using surrogate constraints?
     assert torch.allclose(primal_ls.lagrangian, target_primal_lagrangian, atol=1e-4)
-
-
-@pytest.mark.parametrize(
-    "alternation_type", [cooper_test_utils.AlternationType.PRIMAL_DUAL, cooper_test_utils.AlternationType.DUAL_PRIMAL]
-)
-@pytest.mark.parametrize("use_defect_fn", [True, False])
-def test_convergence_surrogate(alternation_type, use_defect_fn, Toy2dCMP_problem_properties, device):
-    pass

@@ -103,31 +103,3 @@ def test_manual_simultaneous_surrogate(Toy2dCMP_problem_properties, Toy2dCMP_par
     target_primal_lagrangian = _cmp_state.loss + torch.sum(violations_before_primal_update * lmbda1)
     # TODO(galllego-posada): check if need for relaxed tolerance comes from using surrogate constraints?
     assert torch.allclose(primal_ls.lagrangian, target_primal_lagrangian, atol=1e-4)
-
-
-# TODO(gallego-posada): identify what the blocker is for implementing this test and report back
-# TODO(juan43ramirez): implement
-# def test_convergence_surrogate(
-#     Toy2dCMP_problem_properties, Toy2dCMP_params_init, use_multiple_primal_optimizers, device
-# ):
-#     params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
-#         use_multiple_primal_optimizers, Toy2dCMP_params_init
-#     )
-
-#     use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
-#     if not use_ineq_constraints:
-#         pytest.skip("Surrogate update tests require a problem with constraints.")
-#     use_constraint_surrogate = True
-
-#     cmp = cooper_test_utils.Toy2dCMP(
-#         use_ineq_constraints=use_ineq_constraints, use_constraint_surrogate=use_constraint_surrogate, device=device
-#     )
-
-#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp=cmp)
-
-#     for step_id in range(3000):
-#         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)
-#         cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
-
-#     for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
-#         assert torch.allclose(param, exact_solution)

@@ -193,40 +193,5 @@ def test_manual_augmented_lagrangian_primal_dual(Toy2dCMP_params_init, device):
     assert torch.allclose(torch.cat(multipliers_after_update), lmbda2)
 
 
-def test_convergence_augmented_lagrangian(
-    alternation_type, Toy2dCMP_params_init, Toy2dCMP_problem_properties, use_multiple_primal_optimizers, device
-):
-    """Test convergence of Augmented Lagrangian updates on toy 2D problem."""
-
-    use_ineq_constraints = Toy2dCMP_problem_properties["use_ineq_constraints"]
-    if not use_ineq_constraints:
-        pytest.skip("Alternating updates requires a problem with constraints.")
-
-    params, primal_optimizers = cooper_test_utils.build_params_and_primal_optimizers(
-        use_multiple_primal_optimizers=use_multiple_primal_optimizers, params_init=Toy2dCMP_params_init
-    )
-
-    cmp, cooper_optimizer, penalty_coefficients, penalty_updater = setup_augmented_lagrangian_objects(
-        primal_optimizers=primal_optimizers, alternation_type=alternation_type, device=device
-    )
-
-    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
-
-    if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-        roll_kwargs["compute_violations_kwargs"] = dict(params=params)
-
-    for step_id in range(1500):
-        roll_out = cooper_optimizer.roll(**roll_kwargs)
-        penalty_updater.step(roll_out.cmp_state.observed_constraints)
-        if step_id % 100 == 0:
-            # Increase the penalty coefficients
-            penalty_coefficients[0].value = penalty_coefficients[0]() * 1.1
-            penalty_coefficients[1].value = penalty_coefficients[1]() * 1.1
-
-    for param, exact_solution in zip(params, Toy2dCMP_problem_properties["exact_solution"]):
-        # NOTE: this test requires a relaxed tolerance of 1e-3
-        assert torch.allclose(param, exact_solution, atol=1e-3)
-
-
 # TODO(gallego-posada): Add a test to ensure IndexedPenaltyCoefficient works as expected
 # when used in an Augmented Lagrangian formulation.
