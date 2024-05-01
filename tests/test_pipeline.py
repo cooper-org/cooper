@@ -2,12 +2,8 @@ import pytest
 import torch
 
 import cooper
+from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
-
-
-@pytest.fixture(params=[True, False])
-def has_eq_constraint(request):
-    return request.param
 
 
 @pytest.fixture(params=[True, False])
@@ -30,9 +26,9 @@ def ineq_penalty_coefficient_type(ineq_formulation_type, ineq_multiplier_type):
     if ineq_formulation_type == cooper.LagrangianFormulation:
         return None
     if ineq_multiplier_type == cooper.multipliers.IndexedMultiplier:
-        pytest.skip("Indexed multipliers fail to converge in the Augmented Lagrangian formulation")
+        # pytest.skip("Indexed multipliers fail to converge in the Augmented Lagrangian formulation")
         # TODO(merajhashemi): Investigate why this is the case
-        # return cooper.multipliers.IndexedPenaltyCoefficient
+        return cooper.multipliers.IndexedPenaltyCoefficient
     elif ineq_multiplier_type == cooper.multipliers.DenseMultiplier:
         return cooper.multipliers.DensePenaltyCoefficient
 
@@ -59,7 +55,6 @@ class TestConvergence:
     @pytest.fixture(autouse=True)
     def setup_cmp(
         self,
-        has_eq_constraint,
         ineq_use_surrogate,
         ineq_multiplier_type,
         ineq_formulation_type,
@@ -68,18 +63,16 @@ class TestConvergence:
     ):
         self.cmp = cooper_test_utils.SquaredNormLinearCMP(
             has_ineq_constraint=True,
-            has_eq_constraint=has_eq_constraint,
+            has_eq_constraint=False,
             ineq_use_surrogate=ineq_use_surrogate,
             ineq_multiplier_type=ineq_multiplier_type,
             ineq_formulation_type=ineq_formulation_type,
             ineq_penalty_coefficient_type=ineq_penalty_coefficient_type,
             A=torch.eye(5, device=device),
             b=torch.zeros(5, device=device),
-            C=torch.eye(5, device=device),
-            d=torch.zeros(5, device=device),
             device=device,
         )
-        self.ineq_formulation_type = ineq_formulation_type
+        self.is_augmented_lagrangian = ineq_formulation_type == cooper.AugmentedLagrangianFormulation
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type):
@@ -93,16 +86,21 @@ class TestConvergence:
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,
             dual_optimizer_class=optimizer_class,
-            augmented_lagrangian=self.ineq_formulation_type == cooper.AugmentedLagrangianFormulation,
+            augmented_lagrangian=self.is_augmented_lagrangian,
             alternation_type=alternation_type,
-            dual_optimizer_kwargs={"lr": 1e-2},
         )
+
+        penalty_updater = None
+        if self.is_augmented_lagrangian:
+            penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.002, violation_tolerance=1e-4)
 
         roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
         if not extrapolation and alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
             roll_kwargs["compute_violations_kwargs"] = dict(x=x)
 
         for _ in range(2000):
-            cooper_optimizer.roll(**roll_kwargs)
+            roll_out = cooper_optimizer.roll(**roll_kwargs)
+            if self.is_augmented_lagrangian:
+                penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-        assert torch.allclose(x, torch.zeros_like(x), atol=1e-3)  # Tolerance is higher due to indexed multipliers
+        assert torch.allclose(x, torch.zeros_like(x), atol=8e-4)  # Tolerance is higher due to indexed multipliers

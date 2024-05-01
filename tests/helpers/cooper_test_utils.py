@@ -52,10 +52,10 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.eq_use_surrogate = eq_use_surrogate
         self.ineq_multiplier_type = ineq_multiplier_type
         self.eq_multiplier_type = eq_multiplier_type
-        self.A = A.to(device)
-        self.b = b.to(device)
-        self.C = C.to(device)
-        self.d = d.to(device)
+        self.A = A.to(device) if A is not None else None
+        self.b = b.to(device) if b is not None else None
+        self.C = C.to(device) if C is not None else None
+        self.d = d.to(device) if d is not None else None
         self.device = device
         self.generator = torch.Generator(device=device)
         self.generator.manual_seed(0)
