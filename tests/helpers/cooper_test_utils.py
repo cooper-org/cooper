@@ -104,9 +104,9 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         strict_violation = None
         strict_constraint_features = None
         if use_surrogate:
-            strict_violation = (
-                A_or_C + 0.1 * torch.randn(A_or_C.shape, generator=self.generator, device=self.device)
-            ) @ x
+            strict_violation = torch.mm(
+                A_or_C + 0.1 * torch.randn(A_or_C.shape, generator=self.generator, device=self.device), x
+            )
             if multiplier_type == cooper.multipliers.IndexedMultiplier:
                 strict_constraint_features = torch.randperm(
                     b_or_d.numel(), generator=self.generator, device=self.device
