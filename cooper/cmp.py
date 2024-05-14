@@ -135,22 +135,15 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         self._constraints[name] = constraint
 
+    def constraints(self) -> Iterator[Constraint]:
+        """Return an iterator over the registered constraints of the CMP."""
+        yield from self._constraints.values()
+
     def named_constraints(self) -> Iterator[tuple[str, Constraint]]:
         """Return an iterator over the registered constraints of the CMP, yielding
         tuples of the form `(constraint_name, constraint)`.
         """
         yield from self._constraints.items()
-
-    def constraints(self) -> Iterator[Constraint]:
-        """Return an iterator over the registered constraints of the CMP."""
-        yield from self._constraints.values()
-
-    def named_multipliers(self) -> Iterator[tuple[str, Multiplier]]:
-        """Returns an iterator over the multipliers associated with the registered
-        constraints of the CMP, yielding tuples of the form `(constraint_name, multiplier)`.
-        """
-        for constraint_name, constraint in self.named_constraints():
-            yield constraint_name, constraint.multiplier
 
     def multipliers(self) -> Iterator[Multiplier]:
         """Returns an iterator over the multipliers associated with the registered
@@ -158,14 +151,12 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint in self.constraints():
             yield constraint.multiplier
 
-    def dual_parameters(self) -> Iterator[Multiplier]:
-        """Return an iterator over the parameters of the multipliers associated with the
-        registered constraints of the CMP. This method is useful for instantiating the
-        dual optimizers. If a multiplier is shared by several constraints, we only
-        return its parameters once.
+    def named_multipliers(self) -> Iterator[tuple[str, Multiplier]]:
+        """Returns an iterator over the multipliers associated with the registered
+        constraints of the CMP, yielding tuples of the form `(constraint_name, multiplier)`.
         """
-        for multiplier in set(constraint.multiplier for constraint in self.constraints()):
-            yield from multiplier.parameters()
+        for constraint_name, constraint in self.named_constraints():
+            yield constraint_name, constraint.multiplier
 
     def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
         """Returns an iterator over the penalty coefficients associated with the
@@ -185,6 +176,15 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint_name, constraint in self.named_constraints():
             if constraint.penalty_coefficient is not None:
                 yield constraint_name, constraint.penalty_coefficient
+
+    def dual_parameters(self) -> Iterator[Multiplier]:
+        """Return an iterator over the parameters of the multipliers associated with the
+        registered constraints of the CMP. This method is useful for instantiating the
+        dual optimizers. If a multiplier is shared by several constraints, we only
+        return its parameters once.
+        """
+        for multiplier in set(constraint.multiplier for constraint in self.constraints()):
+            yield from multiplier.parameters()
 
     def state_dict(self) -> dict:
         """Returns the state of the CMP. This includes the state of the multipliers and penalty coefficients."""
