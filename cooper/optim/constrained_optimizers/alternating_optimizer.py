@@ -1,80 +1,31 @@
-# coding: utf8
 """
 Implementation of constrained optimizers based on alternation such as
-:py:class:`AlternatingPrimalDualOptimizer`, :py:class:`AlternatingDualPrimalOptimizer`,
-:py:class:`AugmentedLagrangianPrimalDualOptimizer` and
-:py:class:`AugmentedLagrangianDualPrimalOptimizer`.
+:py:class:`AlternatingPrimalDualOptimizer` and :py:class:`AlternatingDualPrimalOptimizer`.
 """
 
 import warnings
-from typing import Callable, Optional
 
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore
-from cooper.formulations import FormulationType
-from cooper.multipliers import Multiplier
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 
 
 class BaseAlternatingOptimizer(ConstrainedOptimizer):
-
-    extrapolation = False
-    alternation_type: AlternationType
-    is_augmented_lagrangian_optimizer: bool
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers)
-
-        self.base_sanity_checks()
-
-        self.custom_sanity_checks()
-
     def custom_sanity_checks(self):
         """
         Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
-            UserWarning: The Augmented Lagrangian Method requires all dual optimizers to
-                be SGD(lr=1.0).
-            UserWarning: Using an AlternatingOptimizer together with multipliers that
-                have ``restart_on_feasible=True`` is untested.
-
+            UserWarning: Detected use of Augmented Lagrangian but not all dual
+                optimizers are SGD(lr=1.0).
         """
 
-        if self.is_augmented_lagrangian_optimizer:
+        if any(self.cmp.penalty_coefficients()):
             for dual_optimizer in self.dual_optimizers:
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
                 if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
-                    warnings.warn("The Augmented Lagrangian Method requires all dual optimizers to be SGD(lr=1.0).")
-
-        for multiplier in self.multipliers:
-            if getattr(multiplier, "restart_on_feasible", False):
-                warnings.warn("Using alternating updates with dual restarts is untested. Please use with caution.")
-
-    def step(self):
-        pass
-
-    def update_penalty_coefficients(self, cmp_state: CMPState) -> None:
-        """Update the penalty coefficients of the constraints. Only the penalty
-        coefficients associated with the ``FormulationType.AUGMENTED_LAGRANGIAN`` and
-        constraints that ``contributes_to_dual_update`` are updated.
-        """
-        for constraint, constraint_state in cmp_state.observed_constraints:
-            if constraint.formulation_type == FormulationType.AUGMENTED_LAGRANGIAN:
-                # We might reach this point via an AugmetedLagrangianOptimizer acting
-                # on some constraints that do not use an Augmented Lagrangian formulation,
-                # so we do _not_ apply penalty coefficient updates to those.
-                if constraint_state.contributes_to_dual_update:
-                    constraint.update_penalty_coefficient(constraint_state=constraint_state)
+                    warnings.warn("Detected use of Augmented Lagrangian but not all dual optimizers are SGD(lr=1.0).")
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
@@ -84,14 +35,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
-    alternation_type = AlternationType.PRIMAL_DUAL
-    is_augmented_lagrangian_optimizer = False
-
-    def roll(
-        self,
-        compute_cmp_state_fn: Callable[..., CMPState],
-        compute_violations_fn: Optional[Callable[..., CMPState]] = None,
-    ) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}, compute_violations_kwargs: dict = {}) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
         (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
@@ -129,25 +73,24 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             :math:`\mu_t`.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state``
+                method.
 
-            compute_violations_fn: ``Callable`` for re-evaluating the constraint
-                violations when performing alternating updates. When this argument
-                is provided, it takes precedence over the ``compute_cmp_state_fn`` for
-                the update of the dual variables. If not provided, the violation
-                measured by ``compute_cmp_state_fn`` at the updated primal iterate are
-                used. Defaults to None.
+            compute_violations_kwargs: Keyword arguments to pass to the ``compute_violations``
+                method. When the ``compute_violations`` method is implemented, it takes
+                precedence over the ``compute_cmp_state`` for the update of the dual
+                variables. If not implemented, the violation measured by ``compute_cmp_state``
+                at the updated primal iterate are used.
 
         """
 
         self.zero_grad()
-        cmp_state = compute_cmp_state_fn()
+        cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update primal variables only
-        lagrangian_store_for_primal = cmp_state.populate_primal_lagrangian()
-        cmp_state.primal_backward()
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+        primal_lagrangian_store.backward()
+        self.primal_step()
 
         # Update dual variables based on constraint violations at new primal point
         self.zero_grad()
@@ -156,44 +99,26 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             # CMP state. This means we can skip gradient computation wrt the primal
             # parameters to avoid wasteful computation, since we will only need the
             # gradient wrt the dual variables.
-            if compute_violations_fn is not None:
-                new_cmp_state = compute_violations_fn()
+            try:
+                new_cmp_state = self.cmp.compute_violations(**compute_violations_kwargs)
 
                 if new_cmp_state.loss is not None:
                     raise RuntimeError(
-                        "Expected `compute_violations_fn` to not populate the loss. Please provide this value for the `compute_cmp_state_fn` instead."
+                        "Expected `compute_violations` to not populate the loss. "
+                        "Please provide this value for the `compute_cmp_state` instead."
                     )
-            else:
-                new_cmp_state = compute_cmp_state_fn()
 
-            if new_cmp_state._dual_lagrangian is not None:
-                error_message = (
-                    "Expected a fresh CMPState for alternating update but the provided state has a non-None value"
-                    " for the `_dual_lagrangian` attribute."
-                )
-                raise RuntimeError(error_message)
+            except NotImplementedError:
+                new_cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-        lagrangian_store_for_dual = new_cmp_state.populate_dual_lagrangian()
-        new_cmp_state.dual_backward()
-        self.dual_step(call_extrapolation=False)
+        dual_lagrangian_store = new_cmp_state.compute_dual_lagrangian()
+        dual_lagrangian_store.backward()
+        self.dual_step()
 
-        if self.is_augmented_lagrangian_optimizer:
-            self.update_penalty_coefficients(cmp_state=new_cmp_state)
+        loss = new_cmp_state.loss if new_cmp_state.loss is not None else cmp_state.loss
 
-        # Patch the CMPState and LagrangianStore with the latest available loss and
-        # Lagrangian estimate. See the docstring for more details.
-        if new_cmp_state.loss is None:
-            # If the loss was not populated by the `compute_violations_fn`, we copy the
-            # loss evaluated during the primal update so users can access it for logging
-            new_cmp_state.loss = cmp_state.loss
-        assert lagrangian_store_for_dual.lagrangian is None
-        lagrangian_store_for_dual.lagrangian = new_cmp_state.loss + lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_dual.primal_constraint_measurements == []
-        lagrangian_store_for_dual.primal_constraint_measurements = (
-            lagrangian_store_for_primal.primal_constraint_measurements
-        )
-
-        return new_cmp_state, lagrangian_store_for_dual
+        # TODO(gallego-posada): Document _which_ CMP state is being returned
+        return RollOut(loss, new_cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 
 
 class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
@@ -203,10 +128,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
-    alternation_type = AlternationType.DUAL_PRIMAL
-    is_augmented_lagrangian_optimizer = False
-
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -223,54 +145,24 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
                 \mathcal{L} = f(x_t) + {\lambda_{t+1}}^{\\top} g(x_t) + {\mu_{t+1}}^{\\top} h(x_t)
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
 
         """
 
         self.zero_grad()
-        cmp_state = compute_cmp_state_fn()
+        cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
         # Update dual variables only
-        lagrangian_store_for_dual = cmp_state.populate_dual_lagrangian()
-        cmp_state.dual_backward()
-        self.dual_step(call_extrapolation=False)
-
-        if self.is_augmented_lagrangian_optimizer:
-            self.update_penalty_coefficients(cmp_state=cmp_state)
+        dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
+        dual_lagrangian_store.backward()
+        self.dual_step()
 
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
         self.zero_grad()
-        lagrangian_store_for_primal = cmp_state.populate_primal_lagrangian()
-        cmp_state.primal_backward()
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+        primal_lagrangian_store.backward()
+        self.primal_step()
 
-        # Patch the CMPState and LagrangianStore with the latest available loss and
-        # Lagrangian estimate. See the docstring for more details.
-        assert lagrangian_store_for_primal.dual_lagrangian is None
-        lagrangian_store_for_primal.dual_lagrangian = lagrangian_store_for_dual.dual_lagrangian
-        assert lagrangian_store_for_primal.dual_constraint_measurements == []
-        lagrangian_store_for_primal.dual_constraint_measurements = (
-            lagrangian_store_for_dual.dual_constraint_measurements
-        )
-
-        return cmp_state, lagrangian_store_for_primal
-
-
-class AugmentedLagrangianPrimalDualOptimizer(AlternatingPrimalDualOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing primal-dual updates according to the Augmented Lagrangian Method.
-    """
-
-    # TODO(gallego-posada): Add equations to illustrate the alternating update
-    is_augmented_lagrangian_optimizer = True
-
-
-class AugmentedLagrangianDualPrimalOptimizer(AlternatingDualPrimalOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing dual-primal updates according to the Augmented Lagrangian Method.
-    """
-
-    # TODO(gallego-posada): Add equations to illustrate the alternating update
-    is_augmented_lagrangian_optimizer = True
+        # TODO(gallego-posada): Document _which_ CMP state is being returned
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)

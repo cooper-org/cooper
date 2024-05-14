@@ -1,9 +1,8 @@
-import cooper_test_utils
 import pytest
-import testing_utils
 import torch
 
 import cooper
+from tests.helpers import cooper_test_utils, testing_utils
 
 
 class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -31,16 +30,17 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
     """
 
     def __init__(self, use_constraint_surrogate=False, device=None, observe_probability=1.0):
+        super().__init__()
         self.use_constraint_surrogate = use_constraint_surrogate
         self.observe_probability = observe_probability
 
-        self.multiplier = cooper.multipliers.IndexedMultiplier(
-            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=2, device=device
+        multiplier = cooper.multipliers.IndexedMultiplier(
+            num_constraints=2, constraint_type=cooper.ConstraintType.INEQUALITY, device=device
         )
         self.constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
-            multiplier=self.multiplier,
+            formulation_type=cooper.LagrangianFormulation,
+            multiplier=multiplier,
         )
 
     def analytical_gradients(self, params):
@@ -112,7 +112,7 @@ class RandomConstraintsToy2dCMP(cooper.ConstrainedMinimizationProblem):
             strict_constraint_features=strict_constraint_features,
         )
 
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints={self.constraint: constraint_state})
 
 
 @pytest.fixture(params=[0.1, 0.5, 0.7, 1.0])
@@ -149,14 +149,14 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
 
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
         primal_optimizers=primal_optimizers,
-        multipliers=cmp.multiplier,
+        cmp=cmp,
         extrapolation=False,
-        alternation_type=cooper.optim.AlternationType.FALSE,
+        alternation_type=cooper_test_utils.AlternationType.FALSE,
         dual_optimizer_class=torch.optim.SGD,
         dual_optimizer_kwargs={"lr": dual_lr},
     )
 
-    roll_kwargs = {"compute_cmp_state_fn": lambda: cmp.compute_cmp_state(params)}
+    roll_kwargs = {"compute_cmp_state_kwargs": dict(params=params)}
 
     def manual_update_on_primal(xy, lmbda, grads, constraint_features):
         if constraint_features.numel() == 0:
@@ -183,14 +183,13 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
     lmbda = mktensor([0.0, 0.0])
 
     for i in range(10):
-        _cmp_state, lagrangian_store = cooper_optimizer.roll(**roll_kwargs)
+        roll_out = cooper_optimizer.roll(**roll_kwargs)
+        constraint_state = roll_out.cmp_state.observed_constraints[cmp.constraint]
 
-        constraint_features = _cmp_state.observed_constraints[0][1].constraint_features
-        new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_features)
-
-        strict_violation = _cmp_state.observed_constraints[0][1].strict_violation
-        strict_constraint_features = _cmp_state.observed_constraints[0][1].strict_constraint_features
-        new_lmbda = manual_update_on_dual(lmbda, strict_violation, strict_constraint_features)
+        new_xy = manual_update_on_primal(xy, lmbda, cmp.analytical_gradients(xy), constraint_state.constraint_features)
+        new_lmbda = manual_update_on_dual(
+            lmbda, constraint_state.strict_violation, constraint_state.strict_constraint_features
+        )
 
         assert torch.allclose(params, new_xy, atol=1e-3)
         assert torch.allclose(multipliers.weight.flatten(), new_lmbda)
@@ -228,7 +227,7 @@ def test_manual_heldout_constraints(Toy2dCMP_problem_properties, Toy2dCMP_params
 #         device=device, use_constraint_surrogate=use_constraint_surrogate, observe_probability=observe_probability
 #     )
 
-#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, multipliers=cmp.multipliers)
+#     cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(primal_optimizers, cmp=cmp)
 
 #     for step_id in range(1500):
 #         compute_cmp_state_fn = lambda: cmp.compute_cmp_state(params)

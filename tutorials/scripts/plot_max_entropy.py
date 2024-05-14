@@ -10,7 +10,7 @@ Here we consider a simple convex optimization problem to illustrate how to use
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
 """
-
+import itertools
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -30,22 +30,19 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
+        super().__init__()
+
         self.target_mean = target_mean
 
         default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
         default_cg_kwargs = {
             "constraint_type": cooper.ConstraintType.EQUALITY,
-            "formulation_type": cooper.FormulationType.LAGRANGIAN,
+            "formulation_type": cooper.LagrangianFormulation,
         }
         mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
         sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
         self.mean_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=mean_multiplier)
         self.sum_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=sum_multiplier)
-
-        self.multipliers = {"mean": mean_multiplier, "sum": sum_multiplier}
-        self.all_constraints = [self.sum_constraint, self.mean_constraint]
-
-        super().__init__()
 
     def compute_cmp_state(self, log_probs: torch.Tensor) -> cooper.CMPState:
         probs = torch.exp(log_probs)
@@ -57,10 +54,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
         mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = [
-            (self.sum_constraint, sum_constraint_state),
-            (self.mean_constraint, mean_constraint_state),
-        ]
+        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
@@ -74,20 +68,19 @@ log_probs = torch.nn.Parameter(torch.log(torch.ones(6, device=DEVICE) / 6))
 primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
-dual_parameters = []
-[dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers.values()]
-dual_optimizer = cooper.optim.nuPI(dual_parameters, lr=1e-2, Kp=10, maximize=True)
+dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+dual_optimizer = cooper.optim.nuPI(dual_params, lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multipliers.values()
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 
 state_history = {}
 for i in range(3000):
-    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs))
+    _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
-    observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
-    observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]
+    observed_violations = [cs.violation.data for c, cs in cmp_state.observed_constraints.items()]
+    observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
         "multipliers": deepcopy(torch.stack(observed_multipliers)),

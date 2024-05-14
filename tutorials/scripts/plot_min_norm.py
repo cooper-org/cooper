@@ -30,6 +30,7 @@ equations and :math:`0` everywhere else.
 The results below illustrate the influence of the number of observed equations on the
 convergence of the algorithm.
 """
+import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,7 +40,6 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
-from cooper import CMPState, Constraint, ConstraintState, ConstraintType, FormulationType
 
 style_utils.set_plot_style()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -112,25 +112,25 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
     """Min-norm problem with linear equality constraints."""
 
     def __init__(self, num_equations: int) -> None:
+        super().__init__()
         # Create a constraint for the equality constraints. We use a sparse constraint
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
-        constraint_type = ConstraintType.EQUALITY
-        self.multiplier = cooper.multipliers.IndexedMultiplier(
-            constraint_type=constraint_type, num_constraints=num_equations, device=DEVICE
+        constraint_type = cooper.ConstraintType.EQUALITY
+        multiplier = cooper.multipliers.IndexedMultiplier(
+            num_constraints=num_equations, constraint_type=constraint_type, device=DEVICE
         )
-        self.eq_constraint = Constraint(
-            constraint_type=constraint_type, formulation_type=FormulationType.LAGRANGIAN, multiplier=self.multiplier
+        self.eq_constraint = cooper.Constraint(
+            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
         )
-        super().__init__()
 
     def compute_cmp_state(
         self, x: torch.Tensor, sampled_equations: torch.Tensor, sampled_RHS: torch.Tensor, indices: torch.Tensor
-    ) -> CMPState:
+    ) -> cooper.CMPState:
         loss = torch.linalg.vector_norm(x) ** 2
         violation = (sampled_equations @ x - sampled_RHS).view(-1)
-        constraint_state = ConstraintState(violation=violation, constraint_features=indices)
-        return CMPState(loss=loss, observed_constraints=[(self.eq_constraint, constraint_state)])
+        constraint_state = cooper.ConstraintState(violation=violation, constraint_features=indices)
+        return cooper.CMPState(loss=loss, observed_constraints={self.eq_constraint: constraint_state})
 
 
 def run_experiment(
@@ -152,9 +152,10 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=dual_lr, maximize=True, foreach=False)
+    dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+    dual_optimizer = torch.optim.SGD(dual_params, lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+        primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
     )
 
     state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], max_abs_violation=[])
@@ -166,8 +167,13 @@ def run_experiment(
 
             sampled_equations, sampled_RHS = sampled_equations.to(DEVICE), sampled_RHS.to(DEVICE)
             indices = indices.to(DEVICE)
-            compute_cmp_state_fn = lambda: cmp.compute_cmp_state(x, sampled_equations, sampled_RHS, indices)
-            cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)
+            compute_cmp_state_kwargs = {
+                "x": x,
+                "sampled_equations": sampled_equations,
+                "sampled_RHS": sampled_RHS,
+                "indices": indices,
+            }
+            _, cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
 
             with torch.no_grad():
                 full_violation = A @ x - b
@@ -175,7 +181,7 @@ def run_experiment(
 
             state_history["step"].append(step_ix)
             state_history["relative_norm"].append(cmp_state.loss.item() / optimal_sq_norm)
-            state_history["multipliers"].append(cmp.multiplier(all_indices).cpu().tolist())
+            state_history["multipliers"].append(cmp.eq_constraint.multiplier(all_indices).cpu().tolist())
             state_history["x_gap"].append(torch.linalg.vector_norm(x - x_optim, ord=np.inf).cpu().item())
             state_history["max_abs_violation"].append(max_abs_violation.cpu().item())
 
@@ -203,7 +209,7 @@ def plot_results(state_histories) -> None:
         ax[exp_id, 3].set_yscale("log")
         ax[exp_id, 3].axhline(0, color="red", linestyle="--", alpha=0.3)
 
-    ax[0, 0].set_title(r"$\|x\|^2_2 $ vs $\|x^*\|^2_2$")
+    ax[0, 0].set_title(r"$\|x\|^2_2 $ / $\|x^*\|^2_2$")
     ax[0, 1].set_title("Multipliers")
     ax[0, 2].set_title(r"$\|x - x^*\|_\infty$")
     ax[0, 3].set_title(r"$\|Ax - b\|_\infty$")

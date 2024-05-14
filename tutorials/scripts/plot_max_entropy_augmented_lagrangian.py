@@ -12,7 +12,7 @@ for the faces?*
 
 This tutorial shows how to use the Augmented Lagrangian  in **Cooper**.
 """
-
+import itertools
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -21,6 +21,7 @@ import style_utils
 import torch
 
 import cooper
+from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 
 style_utils.set_plot_style()
 
@@ -32,31 +33,28 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
+        super().__init__()
         self.target_mean = target_mean
 
-        default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
-        mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
-        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0, device=DEVICE))
-        sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
+        mean_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
+        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor([1.0], device=DEVICE))
+        sum_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.AUGMENTED_LAGRANGIAN,
+            formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
-            formulation_kwargs={"penalty_growth_factor": 1.001},
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
+            formulation_type=cooper.LagrangianFormulation,
             multiplier=sum_multiplier,
         )
-
-        self.multipliers = {"mean": mean_multiplier, "sum": sum_multiplier}
-        self.penalty_coefficients = {"mean": mean_penalty_coefficient}
-        self.all_constraints = [self.sum_constraint, self.mean_constraint]
-
-        super().__init__()
 
     def compute_cmp_state(self, log_probs: torch.Tensor) -> cooper.CMPState:
         probs = torch.exp(log_probs)
@@ -68,14 +66,14 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
         mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = [
-            (self.sum_constraint, sum_constraint_state),
-            (self.mean_constraint, mean_constraint_state),
-        ]
+        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
+
+# FIXME(gallego-posada): This tutorial is broken. Currently not solving the problem.
+# Likely due to the changes in the PenaltyCoefficientUpdater.
 
 # Define the problem with the constraints
 cmp = MaximumEntropy(target_mean=4.5)
@@ -85,29 +83,33 @@ log_probs = torch.nn.Parameter(torch.log(torch.ones(6, device=DEVICE) / 6))
 primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
-dual_parameters = []
-[dual_parameters.extend(multiplier.parameters()) for multiplier in cmp.multipliers.values()]
+dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
 # For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
-dual_optimizer = torch.optim.SGD(dual_parameters, lr=1.0, maximize=True)
+dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
 
-cooper_optimizer = cooper.optim.AugmentedLagrangianDualPrimalOptimizer(
-    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multipliers.values()
+cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
+    primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
-
+# For the Augmented Lagrangian, we need to configure a penalty coefficient updater
+penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.001, violation_tolerance=1e-4)
 
 state_history = {}
 for i in range(3000):
-    cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn=lambda: cmp.compute_cmp_state(log_probs))
+    _, cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    penalty_updater.step(cmp_state.observed_constraints)
 
-    observed_violations = [constraint_state.violation.data for _, constraint_state in cmp_state.observed_constraints]
-    observed_multipliers = [multiplier().data for multiplier in cmp.multipliers.values()]
-    observed_penalty_coefficients = [pc().data for pc in cmp.penalty_coefficients.values()]
+    observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}
+    for constraint, constraint_state in cmp_state.observed_constraints.items():
+        observed["violations"].append(constraint_state.violation.data)
+        observed["multipliers"].append(constraint.multiplier().data)
+        if constraint.penalty_coefficient is not None:
+            observed["penalty_coefficients"].append(constraint.penalty_coefficient().data)
 
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
-        "multipliers": deepcopy(torch.stack(observed_multipliers)),
-        "violation": deepcopy(torch.stack(observed_violations)),
-        "penalty_coefficients": deepcopy(torch.stack(observed_penalty_coefficients)),
+        "multipliers": deepcopy(torch.stack(observed["multipliers"])),
+        "violation": deepcopy(torch.stack(observed["violations"])),
+        "penalty_coefficients": deepcopy(torch.stack(observed["penalty_coefficients"])),
     }
 
 

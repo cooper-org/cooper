@@ -1,18 +1,11 @@
-# coding: utf8
 """
 Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
 """
 
-from typing import Callable, Optional
-
 import torch
 
-from cooper.cmp import CMPState, LagrangianStore
-from cooper.multipliers import Multiplier
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
@@ -22,21 +15,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
 
-    extrapolation = True
-    alternation_type = AlternationType.FALSE
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers)
-
-        self.base_sanity_checks()
-
-        self.custom_sanity_checks()
-
     def custom_sanity_checks(self):
         """
         Perform sanity checks on the initialization of
@@ -45,8 +23,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
                 some of the provided optimizers do not have an extrapolation method.
-            RuntimeError: Using an ExtrapolationConstrainedOptimizer together with
-                multipliers that have ``restart_on_feasible=True`` is not supported.
         """
 
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
@@ -58,51 +34,61 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 Please ensure that all optimizers are extrapolation capable."""
             )
 
-        for multiplier in self.multipliers:
-            if getattr(multiplier, "restart_on_feasible", False):
-                raise RuntimeError(
-                    """Using restart on feasible for multipliers is not supported in
-                    conjunction with the ExtrapolationConstrainedOptimizer."""
-                )
-
-    def step(self, call_extrapolation: bool = False):
-        """Performs an extrapolation step or update step on both the primal and dual
-        variables.
-
-        Args:
-            call_extrapolation: Whether to call ``primal_optimizer.extrapolation()`` as
-                opposed to ``primal_optimizer.step()``. Defaults to False.
+    @torch.no_grad()
+    def primal_extrapolation_step(self):
         """
-
-        call_method = "extrapolation" if call_extrapolation else "step"
+        Perform an extrapolation step on the parameters associated with the primal variables.
+        """
+        if not all(hasattr(primal_optimizer, "extrapolation") for primal_optimizer in self.primal_optimizers):
+            raise ValueError("All primal optimizers must implement an `extrapolation` method.")
 
         for primal_optimizer in self.primal_optimizers:
-            getattr(primal_optimizer, call_method)()  # type: ignore
+            primal_optimizer.extrapolation()
 
-            # FIXME(gallego-posada): This line should not be indented inside the loop!
-            self.dual_step(call_extrapolation=call_extrapolation)
+    @torch.no_grad()
+    def dual_extrapolation_step(self):
+        """
+        Perform an extrapolation step on the parameters associated with the dual variables.
 
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
+        After being updated by the dual optimizer steps, the multipliers are
+        post-processed (e.g. to ensure non-negativity for inequality constraints).
+        """
+        if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
+            raise ValueError("All dual optimizers must implement an `extrapolation` method.")
+
+        # Update multipliers based on current constraint violations (gradients)
+        # For unobserved constraints the gradient is None, so this is a no-op.
+        for dual_optimizer in self.dual_optimizers:
+            dual_optimizer.extrapolation()
+
+        for multiplier in self.cmp.multipliers():
+            multiplier.post_step_()
+
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
         and Lagrangian are carried out twice, since we compute an "extra" gradient.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
-        self.zero_grad()
-        cmp_state_pre_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_pre_extrapolation = cmp_state_pre_extrapolation.populate_lagrangian()  # noqa: F841
-        cmp_state_pre_extrapolation.backward()
-        self.step(call_extrapolation=True)
+        for call_extrapolation in (True, False):
+            self.zero_grad()
+            cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
-        # Perform an update step
-        self.zero_grad()
-        cmp_state_post_extrapolation = compute_cmp_state_fn()
-        lagrangian_store_post_extrapolation = cmp_state_post_extrapolation.populate_lagrangian()
-        cmp_state_post_extrapolation.backward()
-        self.step(call_extrapolation=False)
+            primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+            dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
 
-        return cmp_state_post_extrapolation, lagrangian_store_post_extrapolation
+            primal_lagrangian_store.backward()
+            dual_lagrangian_store.backward()
+
+            if call_extrapolation:
+                self.primal_extrapolation_step()
+                self.dual_extrapolation_step()
+            else:
+                self.primal_step()
+                self.dual_step()
+
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)

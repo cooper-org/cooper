@@ -1,18 +1,9 @@
-# coding: utf8
 """
 Implementation of the :py:class:`SimultaneousOptimizer` class.
 """
 
-from typing import Callable, Optional
-
-import torch
-
-from cooper.cmp import CMPState, LagrangianStore
-from cooper.multipliers import Multiplier
-from cooper.utils import OneOrSequence
-
-from ..types import AlternationType
-from .constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
+from cooper.optim.optimizer import RollOut
 
 
 class SimultaneousOptimizer(ConstrainedOptimizer):
@@ -20,39 +11,32 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
     by performing simultaneous gradient updates to the primal and dual variables.
     """
 
-    extrapolation = False
-    alternation_type = AlternationType.FALSE
-
-    def __init__(
-        self,
-        primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-        dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-        multipliers: Optional[OneOrSequence[Multiplier]] = None,
-    ):
-        super().__init__(primal_optimizers, dual_optimizers, multipliers)
-
-        self.base_sanity_checks()
-
-    def step(self):
-        """Performs a single optimization step on both the primal and dual variables."""
-
-        for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.step()
-
-        self.dual_step(call_extrapolation=False)
-
-    def roll(self, compute_cmp_state_fn: Callable[..., CMPState]) -> tuple[CMPState, LagrangianStore]:
+    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
         dual variables.
 
         Args:
-            compute_cmp_state_fn: ``Callable`` for evaluating the CMPState.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
         self.zero_grad()
-        cmp_state = compute_cmp_state_fn()
-        lagrangian_store = cmp_state.populate_lagrangian()
-        cmp_state.backward()
-        self.step()
 
-        return cmp_state, lagrangian_store
+        cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
+
+        # TODO (gallego-posada): The current design goes over the constraints twice. We
+        # could reduce overhead by writing a dedicated compute_lagrangian function for
+        # the simultaneous updates
+        primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
+        dual_lagrangian_store = cmp_state.compute_dual_lagrangian()
+
+        # The order of the following operations is not important
+        # because the primal and dual lagrangians have independent gradients
+        primal_lagrangian_store.backward()
+        dual_lagrangian_store.backward()
+
+        # The order of the following operations is not important too
+        # because they update independent primal and dual parameters
+        self.primal_step()
+        self.dual_step()
+
+        return RollOut(cmp_state.loss, cmp_state, primal_lagrangian_store, dual_lagrangian_store)

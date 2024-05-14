@@ -1,13 +1,8 @@
-import os
-import sys
-
 import pytest
 import torch
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "helpers"))
-
-import testing_utils  # noqa: E402
-from cooper_test_utils import (  # noqa: E402, F401
+from tests.helpers import testing_utils
+from tests.helpers.cooper_test_utils import (  # noqa:  F401
     Toy2dCMP_params_init,
     Toy2dCMP_problem_properties,
     use_multiple_primal_optimizers,

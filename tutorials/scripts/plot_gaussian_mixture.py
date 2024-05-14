@@ -27,7 +27,7 @@ rather than a "proper" proxy-Lagrangian formulation. For details on the
 notion of a proxy-Lagrangian formulation, see :math:`\S` 4.2 in
 :cite:p:`cotter2019JMLR`.
 """
-
+import itertools
 import random
 
 import matplotlib.pyplot as plt
@@ -107,12 +107,11 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
     def __init__(self, use_strict_constraints: bool = False, constraint_level: float = 0.7):
         super().__init__()
 
-        constraint_type = constraint_type = cooper.ConstraintType.INEQUALITY
-        self.multiplier = cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1)
-        self.constraint = cooper.Constraint(
+        constraint_type = cooper.ConstraintType.INEQUALITY
+        self.rate_constraint = cooper.Constraint(
             constraint_type=constraint_type,
-            formulation_type=cooper.FormulationType.LAGRANGIAN,
-            multiplier=self.multiplier,
+            formulation_type=cooper.LagrangianFormulation,
+            multiplier=cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=1),
         )
 
         self.constraint_level = constraint_level
@@ -139,7 +138,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
             strict_violation = self.constraint_level - prop_0
 
         constraint_state = cooper.ConstraintState(violation=differentiable_violation, strict_violation=strict_violation)
-        return cooper.CMPState(loss=loss, observed_constraints=[(self.constraint, constraint_state)])
+        return cooper.CMPState(loss=loss, observed_constraints={self.rate_constraint: constraint_state})
 
 
 def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_level=0.7):
@@ -155,17 +154,17 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_lev
 
     if is_constrained:
         cmp = MixtureSeparation(use_strict_constraints, constraint_level)
-        dual_optimizer = torch.optim.SGD(cmp.multiplier.parameters(), lr=lr, momentum=0.7, maximize=True)
+        dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+        dual_optimizer = torch.optim.SGD(dual_params, lr=lr, momentum=0.7, maximize=True)
         cooper_optimizer = cooper.optim.SimultaneousOptimizer(
-            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, multipliers=cmp.multiplier
+            primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
         )
     else:
         cmp = UnconstrainedMixtureSeparation()
-        cooper_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer)
+        cooper_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer, cmp=cmp)
 
     for _ in range(num_iters):
-        compute_cmp_state_fn = lambda: cmp.compute_cmp_state(model, inputs, targets)
-        cmp_state, lagrangian_store = cooper_optimizer.roll(compute_cmp_state_fn)
+        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets))
 
     # Number of elements predicted as class 0 in the train set after training
     logits = model(inputs)

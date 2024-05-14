@@ -158,7 +158,7 @@ def test_manual_nupi_dense_update():
 @pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
     num_multipliers = 10
-    multiplier_init = torch.ones(num_multipliers, 1, device=device)
+    multiplier_init = torch.ones(num_multipliers, device=device)
     multiplier_module = cooper.multipliers.IndexedMultiplier(
         init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY
     )
@@ -287,7 +287,7 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
     """Verify the behavior of nuPI when initialized with SGD."""
 
     num_multipliers = 10
-    multiplier_init = torch.ones(num_multipliers, 1, device=device)
+    multiplier_init = torch.ones(num_multipliers, device=device)
     multiplier_module = cooper.multipliers.IndexedMultiplier(
         init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY
     )

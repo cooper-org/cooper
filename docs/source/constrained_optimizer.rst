@@ -190,7 +190,6 @@ Other update strategies supported by :py:class:`~ConstrainedOptimizer` include:
 
 - :ref:`Alternating updates<alternating_updates>` for (projected) gradient descent-ascent
 - The :ref:`Augmented Lagrangian<augmented_lagrangian_const_opt>` method (ALM)
-- Performing :ref:`dual_restarts` on the Lagrange multipliers for inequality constraints
 - Using :ref:`Extra-gradient<extra-gradient_optimizers>`
 
   - Extra-gradient-based optimizers require an extra call to the

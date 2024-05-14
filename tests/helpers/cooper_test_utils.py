@@ -1,15 +1,15 @@
 """Cooper-related utilities for writing tests."""
 
-import itertools
 from copy import deepcopy
-from typing import Optional, Union
+from enum import Enum
+from typing import Optional, Type
 
 import pytest
 import torch
 
 import cooper
-from cooper.constraints import SlackVariable
-from cooper.multipliers import PenaltyCoefficient
+from cooper.optim import CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
+from cooper.utils import OneOrSequence
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
@@ -34,19 +34,11 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
     Verified solution of the original constrained problem:
         (x=2/3, y=1/3)
 
-    When slack variables are enabled, the problem is reformulated as:
-        min x**2 + 2*y**2 + C * (s0**2 + s1**2)
-        st.
-            x + y >= 1 - s0
-            x**2 + y <= 1 + s1
-            s0, s1 >= 0
-
     For a value of C=1, the solution is:
         (x=1/2, y=1/4, s0=0, s1=1/4)
 
     Link to WolframAlpha queries:
         Standard CMP: https://tinyurl.com/ye8dw6t3
-        CMP with slack variables: https://tinyurl.com/bds5b3yj
     """
 
     def __init__(
@@ -54,39 +46,29 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         use_ineq_constraints=False,
         use_constraint_surrogate=False,
         constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
-        formulation_type: cooper.FormulationType = cooper.FormulationType.LAGRANGIAN,
-        slack_variables: Optional[tuple[SlackVariable]] = None,
-        penalty_coefficients: Optional[tuple[PenaltyCoefficient]] = None,
-        formulation_kwargs: Optional[dict] = {},
+        formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
+        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient, ...]] = None,
         device=None,
     ):
-        self.use_ineq_constraints = use_ineq_constraints
-        self.use_constraint_surrogate = use_constraint_surrogate
         super().__init__()
 
-        self.slack_variables = slack_variables
+        self.use_ineq_constraints = use_ineq_constraints
+        self.use_constraint_surrogate = use_constraint_surrogate
 
-        self.constraints = []
         if self.use_ineq_constraints:
             for ix in range(2):
-
-                multiplier = None
-                if constraint_type in [cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY]:
-                    multiplier = cooper.multipliers.DenseMultiplier(
-                        constraint_type=constraint_type, num_constraints=1, device=device
-                    )
-
+                multiplier = cooper.multipliers.DenseMultiplier(
+                    constraint_type=constraint_type, num_constraints=1, device=device
+                )
                 penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
+
                 constraint = cooper.Constraint(
                     constraint_type=constraint_type,
                     formulation_type=formulation_type,
                     multiplier=multiplier,
                     penalty_coefficient=penalty_coefficient,
-                    formulation_kwargs=formulation_kwargs,
                 )
-                self.constraints.append(constraint)
-
-        self.multipliers = [cg.multiplier for cg in self.constraints if cg.multiplier is not None]
+                setattr(self, f"constraint_{ix}", constraint)
 
     def analytical_gradients(self, params):
         """Returns the analytical gradients of the loss and constraints for a given
@@ -116,16 +98,14 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         return loss_grad, torch.stack([cg0_grad, cg1_grad])
 
     def compute_violations(self, params) -> cooper.CMPState:
-        """Evaluates the constraint violations for this CMP."""
+        """Evaluates only the constraint violations for this CMP."""
+        if params is None:
+            raise NotImplementedError()
 
         param_x, param_y = params() if callable(params) else params
 
         cg0_violation = -param_x - param_y + 1.0
         cg1_violation = param_x**2 + param_y - 1.0
-
-        if self.slack_variables is not None:
-            cg0_violation -= self.slack_variables[0]()
-            cg1_violation -= self.slack_variables[1]()
 
         if self.use_constraint_surrogate:
             # The constraint surrogates take precedence over the `strict_violation`
@@ -137,17 +117,13 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
             # Orig constraint: x**2 + y \le 1.0
             cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
 
-            if self.slack_variables is not None:
-                cg0_surrogate -= self.slack_variables[0]()
-                cg1_surrogate -= self.slack_variables[1]()
-
             cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
         else:
             cg0_state = cooper.ConstraintState(violation=cg0_violation)
             cg1_state = cooper.ConstraintState(violation=cg1_violation)
 
-        observed_constraints = [(self.constraints[0], cg0_state), (self.constraints[1], cg1_state)]
+        observed_constraints = {self.constraint_0: cg0_state, self.constraint_1: cg1_state}
 
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 
@@ -159,9 +135,6 @@ class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
         param_x, param_y = params() if callable(params) else params
 
         loss = param_x**2 + 2 * param_y**2
-
-        if self.slack_variables is not None:
-            loss += self.slack_variables[0]() ** 2 + self.slack_variables[1]() ** 2
 
         cmp_state = cooper.CMPState(loss=loss)
 
@@ -177,18 +150,13 @@ def Toy2dCMP_params_init(device, request):
     return torch.tensor(request.param, device=device)
 
 
-@pytest.fixture(params=list(itertools.product([True, False], repeat=2)))
+@pytest.fixture(params=[True, False])
 def Toy2dCMP_problem_properties(request, device):
-    use_ineq_constraints, use_slack_variables = request.param
+    use_ineq_constraints = request.param
+    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints)
 
-    use_slack_variables = False
-    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints, use_slack_variables=use_slack_variables)
     if use_ineq_constraints:
-        if use_slack_variables:
-            exact_solution = torch.tensor([1.0 / 2.0, 1.0 / 4.0], device=device)
-            cmp_properties["slack_variables"] = torch.tensor([0.0, 1.0 / 4.0])
-        else:
-            exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
+        exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
     else:
         exact_solution = torch.tensor([0.0, 0.0], device=device)
 
@@ -204,9 +172,9 @@ def use_multiple_primal_optimizers(request):
 
 def build_params(use_multiple_primal_optimizers, params_init):
     if use_multiple_primal_optimizers:
-        params = [torch.nn.Parameter(params_init[0]), torch.nn.Parameter(params_init[1])]
+        params = [torch.nn.Parameter(params_init[0].clone()), torch.nn.Parameter(params_init[1].clone())]
     else:
-        params = torch.nn.Parameter(params_init)
+        params = torch.nn.Parameter(params_init.clone())
 
     return params
 
@@ -254,65 +222,89 @@ def build_params_and_primal_optimizers(
 
 
 def build_dual_optimizers(
-    multipliers,
-    extrapolation=False,
+    dual_parameters,
     augmented_lagrangian=False,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
-    if len(multipliers) == 0:
-        return None
 
     # Make copy of this fixture since we are modifying in-place
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
 
-    dual_params = [{"params": _.parameters()} for _ in multipliers]
-    if extrapolation:
-        # Extrapolation optimizers are part of the `cooper.optim` module
-        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
+    if augmented_lagrangian:
+        assert dual_optimizer_class == torch.optim.SGD
+        dual_optimizer_kwargs["lr"] = 1.0
+
+    if dual_optimizer_class == torch.optim.SGD:
+        # SGD does not support `foreach=True` (the default for 2.0.0) when the
+        # parameters use sparse gradients. Disabling foreach.
+        dual_optimizer_kwargs["foreach"] = False
+
+    return dual_optimizer_class(dual_parameters, **dual_optimizer_kwargs)
+
+
+def create_optimizer_from_kwargs(
+    cooper_optimizer_class: Type[CooperOptimizer],
+    cmp: cooper.ConstrainedMinimizationProblem,
+    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
+    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
+) -> CooperOptimizer:
+    """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
+
+    if dual_optimizers is None:
+        if cooper_optimizer_class != UnconstrainedOptimizer:
+            raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
     else:
-        if augmented_lagrangian:
-            assert dual_optimizer_class == torch.optim.SGD
-            dual_optimizer_kwargs["lr"] = 1.0
+        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
 
-        if dual_optimizer_class == torch.optim.SGD:
-            # SGD does not support `foreach=True` (the default for 2.0.0) when the
-            # parameters use sparse gradients. Disabling foreach.
-            dual_optimizer_kwargs["foreach"] = False
+    return cooper_optimizer_class(**optimizer_kwargs)
 
-        dual_optimizers = dual_optimizer_class(dual_params, **dual_optimizer_kwargs)
 
-    return dual_optimizers
+class AlternationType(Enum):
+    FALSE = False
+    PRIMAL_DUAL = "PrimalDual"
+    DUAL_PRIMAL = "DualPrimal"
 
 
 def build_cooper_optimizer_for_Toy2dCMP(
+    cmp,
     primal_optimizers,
-    multipliers,
     extrapolation: bool = False,
     augmented_lagrangian: bool = False,
-    alternation_type: cooper.optim.AlternationType = cooper.optim.AlternationType.FALSE,
+    alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
-) -> Union[cooper.optim.ConstrainedOptimizer, cooper.optim.UnconstrainedOptimizer]:
+) -> CooperOptimizer:
 
-    multipliers = cooper.utils.ensure_sequence(multipliers) if multipliers is not None else []
+    dual_optimizers = None
+    if len(list(cmp.constraints())) != 0:
+        dual_optimizers = build_dual_optimizers(
+            dual_parameters=cmp.dual_parameters(),
+            augmented_lagrangian=augmented_lagrangian,
+            dual_optimizer_class=dual_optimizer_class,
+            dual_optimizer_kwargs=dual_optimizer_kwargs,
+        )
 
-    dual_optimizers = build_dual_optimizers(
-        multipliers=multipliers,
-        augmented_lagrangian=augmented_lagrangian,
-        extrapolation=extrapolation,
-        dual_optimizer_class=dual_optimizer_class,
-        dual_optimizer_kwargs=dual_optimizer_kwargs,
-    )
+    if dual_optimizers is None:
+        cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
+    else:
+        if extrapolation:
+            cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+        else:
+            if alternation_type == AlternationType.DUAL_PRIMAL:
+                cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
+            elif alternation_type == AlternationType.PRIMAL_DUAL:
+                cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
+            else:
+                cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
 
-    cooper_optimizer = cooper.optim.utils.create_optimizer_from_kwargs(
+    cooper_optimizer = create_optimizer_from_kwargs(
+        cooper_optimizer_class=cooper_optimizer_class,
+        cmp=cmp,
         primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,
-        multipliers=multipliers,
-        extrapolation=extrapolation,
-        alternation_type=alternation_type,
-        augmented_lagrangian=augmented_lagrangian,
     )
 
     return cooper_optimizer
