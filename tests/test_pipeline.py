@@ -8,6 +8,16 @@ from tests.helpers import cooper_test_utils
 GROWTH_FACTOR = 1.002
 
 
+@pytest.fixture(params=[10])
+def num_constraints(request):
+    return request.param
+
+
+@pytest.fixture(params=[5, 10])
+def num_variables(request):
+    return request.param
+
+
 @pytest.fixture(params=[True, False])
 def ineq_use_surrogate(request):
     return request.param
@@ -61,8 +71,17 @@ class TestConvergence:
         ineq_multiplier_type,
         ineq_formulation_type,
         ineq_penalty_coefficient_type,
+        num_constraints,
+        num_variables,
         device,
     ):
+
+        A = torch.randn(
+            num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
+        )
+        self.x_star = torch.randn(num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0))
+        b = torch.mm(A, self.x_star)
+
         self.cmp = cooper_test_utils.SquaredNormLinearCMP(
             has_ineq_constraint=True,
             has_eq_constraint=False,
@@ -70,15 +89,17 @@ class TestConvergence:
             ineq_multiplier_type=ineq_multiplier_type,
             ineq_formulation_type=ineq_formulation_type,
             ineq_penalty_coefficient_type=ineq_penalty_coefficient_type,
-            A=torch.eye(5, device=device),
-            b=torch.zeros(5, device=device),
+            A=A,
+            b=b,
             device=device,
         )
+
         self.is_augmented_lagrangian = ineq_formulation_type == cooper.AugmentedLagrangianFormulation
+        self.num_variables = num_variables
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type):
-        x = torch.nn.Parameter(torch.ones(5, device=self.device))
+        x = torch.nn.Parameter(torch.zeros(self.num_variables, device=self.device))
 
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=1e-2)
@@ -105,4 +126,4 @@ class TestConvergence:
             if self.is_augmented_lagrangian:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-        assert torch.allclose(x, torch.zeros_like(x), atol=8e-4)  # Tolerance is higher due to indexed multipliers
+        assert torch.allclose(x, self.x_star, atol=1e-8)  # Tolerance is higher due to indexed multipliers
