@@ -5,6 +5,8 @@ import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
+GROWTH_FACTOR = 1.002
+
 
 @pytest.fixture(params=[True, False])
 def ineq_use_surrogate(request):
@@ -92,7 +94,7 @@ class TestConvergence:
 
         penalty_updater = None
         if self.is_augmented_lagrangian:
-            penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.002, violation_tolerance=1e-4)
+            penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=GROWTH_FACTOR)
 
         roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
         if not extrapolation and alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
