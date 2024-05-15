@@ -88,31 +88,29 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
                 penalty_coefficient=eq_penalty_coefficient,
             )
 
-    def _compute_eq_or_ineq_violations(self, x, A_or_C, b_or_d, has_constraint, use_surrogate, multiplier_type):
+    def _compute_eq_or_ineq_violations(self, x, lhs, rhs, has_constraint, use_surrogate, multiplier_type):
         if not has_constraint:
             return None
 
-        violation = A_or_C @ x - b_or_d
+        violation = lhs @ x - rhs
 
         constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
-            constraint_features = torch.randperm(b_or_d.numel(), generator=self.generator, device=self.device)
+            constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
             # we assume 80% of the constraints are observed
-            constraint_features = constraint_features[: 4 * b_or_d.numel() // 5]
+            constraint_features = constraint_features[: 4 * rhs.numel() // 5]
             violation = violation[constraint_features]
 
         strict_violation = None
         strict_constraint_features = None
         if use_surrogate:
             strict_violation = torch.mm(
-                A_or_C + 0.1 * torch.randn(A_or_C.shape, generator=self.generator, device=self.device), x
+                lhs + 0.1 * torch.randn(lhs.shape, generator=self.generator, device=self.device), x
             )
             if multiplier_type == cooper.multipliers.IndexedMultiplier:
-                strict_constraint_features = torch.randperm(
-                    b_or_d.numel(), generator=self.generator, device=self.device
-                )
+                strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
                 # we assume 80% of the constraints are observed
-                strict_constraint_features = strict_constraint_features[: 4 * b_or_d.numel() // 5]
+                strict_constraint_features = strict_constraint_features[: 4 * rhs.numel() // 5]
                 strict_violation = strict_violation[strict_constraint_features]
 
         return cooper.ConstraintState(
