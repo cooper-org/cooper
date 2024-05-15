@@ -69,7 +69,12 @@ class CMPState:
 
         # We don't count the loss towards the dual Lagrangian since the objective
         # function does not depend on the dual variables.
-        lagrangian = self.loss.clone() if self.loss is not None and primal_or_dual == "primal" else 0.0
+        if self.loss is not None and primal_or_dual == "primal":
+            lagrangian = self.loss.clone()
+        else:
+            # Some contibuting constraints were provided, but no loss was provided.
+            device = next(iter(self.observed_constraints.values())).violation.device
+            lagrangian = torch.tensor(0.0, device=device, requires_grad=True)
 
         multiplier_values = dict()
         penalty_coefficient_values = dict()
