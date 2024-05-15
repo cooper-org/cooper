@@ -111,7 +111,7 @@ def plot_pane(ax, inputs, x1, x2, achieved_const, titles, colors):
     ax.set_aspect("equal")
     ax.set_xlim(-2, 2)
     ax.set_ylim(-2, 2)
-    ax.set_title(titles[idx] + " - Pred. Blue %: " + const_str)
+    ax.set_title(titles[idx] + " - Pred. Blue: " + const_str)
 
 
 class UnconstrainedMixtureSeparation(cooper.ConstrainedMinimizationProblem):
@@ -179,7 +179,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
 
 def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_level=0.7):
 
-    is_constrained = "const" in problem_name.lower()
+    is_constrained = "unconstrained" not in problem_name.lower()
     use_strict_constraints = "proxy" in problem_name.lower()
 
     model = torch.nn.Linear(2, 1)
