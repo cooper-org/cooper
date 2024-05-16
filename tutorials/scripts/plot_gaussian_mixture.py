@@ -69,7 +69,6 @@ and constrained with proxy constraints.
     feasible solution.
 """
 
-import itertools
 import random
 
 import matplotlib.pyplot as plt
@@ -198,8 +197,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_lev
 
     if is_constrained:
         cmp = MixtureSeparation(use_strict_constraints, constraint_level)
-        dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
-        dual_optimizer = torch.optim.SGD(dual_params, lr=lr, momentum=0.7, maximize=True)
+        dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=lr, momentum=0.7, maximize=True)
         cooper_optimizer = cooper.optim.SimultaneousOptimizer(
             primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
         )

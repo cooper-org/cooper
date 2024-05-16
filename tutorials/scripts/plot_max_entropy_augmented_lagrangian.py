@@ -23,9 +23,6 @@ where :math:`p` is the probability distribution over the faces of the die.
 This tutorial shows how to use the Augmented Lagrangian Method in **Cooper**.
 """
 
-import itertools
-from copy import deepcopy
-
 import matplotlib.pyplot as plt
 import numpy as np
 import style_utils
@@ -99,16 +96,13 @@ cmp = MaximumEntropy(target_mean=4.5)
 log_probs = torch.nn.Parameter(torch.log(torch.ones(6, device=DEVICE) / 6))
 primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
-# Define the dual optimizer
-dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
-
 # Note that Cooper internally scales the dual learning rate for multipliers
 # corresponding to Augmented Lagrangian formulations by the penalty coefficient.
 #
 # Therefore, we need to configure the dual optimizer to SGD(lr=1.0) for recovering the
 # updates of the Augmented Lagrangian Method. This leads to the learning rate being the
 # same as the value of the penalty coefficient.
-dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
+dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=1.0, maximize=True)
 
 # The Augmented Lagrangian Method employs alternating updates. Here we choose
 # Dual-Primal updates, where the multipliers are updated first, followed by the primal
@@ -130,14 +124,14 @@ for i in range(3000):
     _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
     penalty_updater.step(cmp_state.observed_constraints)
 
-    observed_violations = [cs.violation.data for c, cs in cmp_state.observed_constraints.items()]
+    observed_violations = list(cmp_state.observed_violations())
     observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
     observed_penalty_coefficients = list(primal_lagrangian_store.observed_penalty_coefficient_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
         "multipliers": torch.stack(observed_multipliers).detach(),
-        "violation": deepcopy(torch.stack(observed_violations)),
-        "penalty_coefficients": deepcopy(torch.stack(observed_penalty_coefficients)),
+        "violation": torch.stack(observed_violations).detach(),
+        "penalty_coefficients": torch.stack(observed_penalty_coefficients).detach(),
     }
 
 # Theoretical solution

@@ -26,9 +26,6 @@ the dual variables. For a detailed explanation of the $\nu$PI algorithm, see the
 `ICML 2024 <https://icml.cc/virtual/2024/poster/35138>`_.
 """
 
-import itertools
-from copy import deepcopy
-
 import matplotlib.pyplot as plt
 import numpy as np
 import style_utils
@@ -95,10 +92,8 @@ cmp = MaximumEntropy(target_mean=4.5)
 log_probs = torch.nn.Parameter(torch.log(torch.ones(6, device=DEVICE) / 6))
 primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
-# Define the dual optimizer
-dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
 # We employ the nuPI algorithm for updating the dual variables
-dual_optimizer = cooper.optim.nuPI(dual_params, lr=1e-2, Kp=10, maximize=True)
+dual_optimizer = cooper.optim.nuPI(cmp.dual_parameters(), lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
@@ -108,13 +103,14 @@ state_history = {}
 for i in range(3000):
     _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
 
-    observed_violations = [cs.violation.data for c, cs in cmp_state.observed_constraints.items()]
+    observed_violations = list(cmp_state.observed_violations())
     observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
         "multipliers": torch.stack(observed_multipliers).detach(),
-        "violation": deepcopy(torch.stack(observed_violations)),
+        "violation": torch.stack(observed_violations).detach(),
     }
+
 
 # Theoretical solution
 optimal_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])

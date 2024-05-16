@@ -42,7 +42,6 @@ constant in-between measurements of the true constraint.
 
 """
 
-import itertools
 import random
 
 import matplotlib.pyplot as plt
@@ -174,8 +173,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
 
     cmp = MinNormWithSingularValueConstraints(y=y, z=z, constraint_level=constraint_level)
     primal_optimizer = torch.optim.SGD([X], lr=primal_lr)
-    dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
-    dual_optimizer = torch.optim.SGD(dual_params, lr=dual_lr, maximize=True, foreach=False)
+    dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
         primal_optimizers=primal_optimizer, cmp=cmp, dual_optimizers=dual_optimizer
     )
