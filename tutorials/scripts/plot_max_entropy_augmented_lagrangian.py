@@ -10,8 +10,19 @@ Here we consider a simple convex optimization problem to illustrate how to use
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
 
-This tutorial shows how to use the Augmented Lagrangian  in **Cooper**.
+Formally, we want to solve the following optimization problem:
+.. math::
+    \begin{aligned}
+    \max_{p} & -\sum_{i=1}^6 p_i \log p_i \\
+    & \sum_{i=1}^6 i p_i = 4.5 \\
+    \text{s.t.} & \sum_{i=1}^6 p_i = 1 \\
+    & p_i \geq 0 \quad \forall i
+    \end{aligned}
+where :math:`p` is the probability distribution over the faces of the die.
+
+This tutorial shows how to use the Augmented Lagrangian Method in **Cooper**.
 """
+
 import itertools
 from copy import deepcopy
 
@@ -44,17 +55,23 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
             constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
         )
 
+        # The mean constraint is solved using an Augmented Lagrangian formulation
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
             formulation_type=cooper.AugmentedLagrangianFormulation,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
         )
+
+        # For the sum constraint, we use a Lagrangian formulation, without an augmented
+        # quadratic penalty term
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
             formulation_type=cooper.LagrangianFormulation,
             multiplier=sum_multiplier,
         )
+
+        # For simple non-negativity constraints, we use projection
 
     def compute_cmp_state(self, log_probs: torch.Tensor) -> cooper.CMPState:
         probs = torch.exp(log_probs)
@@ -63,17 +80,17 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         # Equality constraints for proper normalization and mean constraint
         mean = torch.sum(probs * torch.arange(1, len(probs) + 1, device=DEVICE))
 
-        sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
-        mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
+        sum_constraint_violation = cooper.ConstraintState(violation=torch.sum(probs) - 1)
+        mean_constraint_violation = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
+        observed_constraints = {
+            self.sum_constraint: sum_constraint_violation,
+            self.mean_constraint: mean_constraint_violation,
+        }
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
-
-# FIXME(gallego-posada): This tutorial is broken. Currently not solving the problem.
-# Likely due to the changes in the PenaltyCoefficientUpdater.
 
 # Define the problem with the constraints
 cmp = MaximumEntropy(target_mean=4.5)
@@ -84,13 +101,25 @@ primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
 dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
-# For the Augmented Lagrangian, we need to configure the dual optimizer to SGD(lr=1.0)
+
+# Note that Cooper internally scales the dual learning rate for multipliers
+# corresponding to Augmented Lagrangian formulations by the penalty coefficient.
+#
+# Therefore, we need to configure the dual optimizer to SGD(lr=1.0) for recovering the
+# updates of the Augmented Lagrangian Method. This leads to the learning rate being the
+# same as the value of the penalty coefficient.
 dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
 
 cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
-# For the Augmented Lagrangian, we need to configure a penalty coefficient updater
+
+# For the Augmented Lagrangian, we define a scheme to increase the penalty coefficient
+# throughout the optimization process. In this tutorial, we use a
+# PenaltyCoefficientUpdater from Cooper.
+#
+# If the constraint does not improve by the given tolerance, the penalty coefficient
+# is multiplied by the growth factor.
 penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.001, violation_tolerance=1e-4)
 
 state_history = {}
@@ -113,7 +142,7 @@ for i in range(3000):
     }
 
 
-# Theoretical solution
+# True solution - derived analytically
 optimal_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])
 optimal_entropy = -torch.sum(optimal_prob * torch.log(optimal_prob))
 
