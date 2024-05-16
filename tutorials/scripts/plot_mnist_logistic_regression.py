@@ -2,15 +2,22 @@
 Training a logistic regression classifier on MNIST under a norm constraint
 =====================================================================================
 
-Here we consider a simple convex constrained optimization problem that involves
-training a Logistic Regression clasifier on the MNIST dataset. The model is
-constrained so that the squared L2 norm of its parameters is less than 1.
+.. note::
 
-This example illustrates how **Cooper** integrates with:`
-    - constructing a``cooper.optim.SimultaneousOptimizer``
-    - models defined using a ``torch.nn.Module``,
-    - CUDA acceleration,
-    - typical machine learning training loops,
+    This example illustrates how to use **Cooper** on a simple machine learning problem
+    that involves using mini-batches of data.
+
+In this example, we consider a simple convex constrained optimization problem: training
+a Logistic Regression clasifier on the MNIST dataset. The model is constrained so that
+the squared L2 norm of its parameters is less than 1.
+
+Although we employ a simple Logistic Regression model, the same principles can be applied
+
+This example illustrates how **Cooper** integrates with a typical PyTorch trainig
+pipeline, where:`
+    - models are defined using a ``torch.nn.Module``,
+    - steps loop over mini-batches of data,
+    - CUDA acceleration is used.
 """
 
 import matplotlib.pyplot as plt
@@ -29,10 +36,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
-    def __init__(self, epsilon: float = 1.0):
+    def __init__(self, constraint_level: float = 1.0):
         super().__init__()
-        self.epsilon = epsilon
 
+        self.constraint_level = constraint_level
+
+        # The multiplier must be on the same device as the model
         multiplier = cooper.multipliers.DenseMultiplier(
             constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
         )
@@ -49,36 +58,32 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
         accuracy = (logits.argmax(dim=1) == targets).float().mean()
 
         sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
-        # Constraint violations use convention “g - \epsilon ≤ 0”
-        constraint_state = cooper.ConstraintState(violation=sq_l2_norm - self.epsilon)
+
+        # Constraint violations use convention g <= 0
+        constraint_state = cooper.ConstraintState(violation=sq_l2_norm - self.constraint_level)
 
         # Create a CMPState object, which contains the loss and observed constraints
-        return cooper.CMPState(
-            loss=loss, observed_constraints={self.norm_constraint: constraint_state}, misc={"accuracy": accuracy}
-        )
+        observed_constraints = {self.norm_constraint: constraint_state}
+        return cooper.CMPState(loss=loss, observed_constraints=observed_constraints, misc={"accuracy": accuracy})
 
 
+# Load the MNIST dataset
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST("data", train=True, download=True, transform=data_transforms),
-    batch_size=256,
-    num_workers=0,
-    pin_memory=torch.cuda.is_available(),
-)
+dataset = datasets.MNIST("tutorials/data", train=True, download=True, transform=data_transforms)
+train_loader = torch.utils.data.DataLoader(dataset, batch_size=128, num_workers=4, pin_memory=torch.cuda.is_available())
 
 # Create a Logistic Regression model
 model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
 model = model.to(DEVICE)
 
 # Instantiate the constrained optimization problem
-cmp = NormConstrainedLogisticRegression()
+cmp = NormConstrainedLogisticRegression(constraint_level=1.0)
 
-# Instantiate Pytorch optimizer class for the primal variables
+# Instantiate a PyTorch optimizer for the primal variables
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, amsgrad=True)
 
-# Instantiate Pytorch optimizer class for the dual variables
-# TODO(gallego-posada): Update optimizer instantiation to use utils to extract multiplier parameters
-dual_optimizer = torch.optim.SGD(cmp.norm_constraint.multiplier.parameters(), lr=1e-3, maximize=True)
+# Instantiate PyTorch optimizer for the dual variables
+dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=1e-3, maximize=True)
 
 # Instantiate the Cooper optimizer
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
@@ -105,8 +110,10 @@ for epoch_num in range(7):
             all_metrics["batch_ix"].append(batch_ix)
             all_metrics["train_loss"].append(cmp_state.loss.item())
             all_metrics["train_acc"].append(cmp_state.misc["accuracy"].item())
-            # TODO(gallego-posada): extract multiplier value from primal_lagrangian_store
-            all_metrics["multiplier_value"].append(cmp.norm_constraint.multiplier().item())
+
+            multiplier_value = primal_lagrangian_store.multiplier_values[cmp.norm_constraint].item()
+            all_metrics["multiplier_value"].append(multiplier_value)
+
             constraint_violation = cmp_state.observed_constraints[cmp.norm_constraint].violation
             all_metrics["constraint_violation"].append(constraint_violation.item())
 

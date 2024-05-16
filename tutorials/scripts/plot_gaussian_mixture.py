@@ -57,9 +57,9 @@ class 0 leads to an increase in the proportion of points predicted as class 0.
 **Results.** The plot shows the decision boundary of the linear model trained with
 three different formulations: unconstrained, constrained with the surrogate constraint,
 and constrained with proxy constraints.
-* As evidenced in the leftmost plot, the proportion of points predicted as class 0 when
-    training without constraints is 50%. This is to be expected, as the model is
-    optimizing for binary cross-entropy over a balanced and (almost) separable dataset.
+* The proportion of points predicted as class 0 when training without constraints is
+    50%. This is to be expected, as the model is optimizing the loss over a balanced and
+    (almost) separable dataset.
 * The middle plot shows the decision boundary of the model trained with the surrogate
     constraint. The proportion of points predicted as class 0 is 66%, which is below the
     desired 70%. This is due to the relaxation of the constraint, which is different
