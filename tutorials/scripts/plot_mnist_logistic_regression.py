@@ -68,8 +68,9 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
 
 # Load the MNIST dataset
+data_path = "~/tutorials/data"
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-dataset = datasets.MNIST("tutorials/data", train=True, download=True, transform=data_transforms)
+dataset = datasets.MNIST(data_path, train=True, download=True, transform=data_transforms)
 train_loader = torch.utils.data.DataLoader(dataset, batch_size=128, num_workers=4, pin_memory=torch.cuda.is_available())
 
 # Create a Logistic Regression model
