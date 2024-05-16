@@ -4,6 +4,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Optional, Type
 
+import cvxpy as cp
 import pytest
 import torch
 
@@ -94,7 +95,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
     def _compute_eq_or_ineq_violations(self, x, lhs, rhs, use_surrogate, multiplier_type, observed_constraint_ratio):
 
-        violation = torch.mm(lhs, x) - rhs
+        violation = torch.matmul(lhs, x) - rhs
 
         constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
@@ -105,8 +106,9 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         strict_violation = None
         strict_constraint_features = None
         if use_surrogate:
-            strict_violation = torch.mm(
-                lhs + 0.1 * torch.randn(lhs.shape, generator=self.generator, device=self.device), x
+            strict_violation = (
+                torch.matmul(lhs + 0.0001 * torch.randn(lhs.shape, generator=self.generator, device=self.device), x)
+                - rhs
             )
             if multiplier_type == cooper.multipliers.IndexedMultiplier:
                 strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
@@ -157,6 +159,23 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         violation_state = self.compute_violations(x)
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=violation_state.observed_constraints)
         return cmp_state
+
+    def compute_exact_solution(self):
+        x = cp.Variable(self.A.cpu().numpy().shape[1])
+        objective = cp.Minimize(cp.sum_squares(x))
+
+        constraints = []
+        if self.has_ineq_constraint:
+            constraints.append(self.A.cpu().numpy() @ x <= self.b.cpu().numpy())
+        if self.has_eq_constraint:
+            constraints.append(self.C.cpu().numpy() @ x == self.d.cpu().numpy())
+
+        cp.Problem(objective, constraints).solve()
+
+        x_star = torch.from_numpy(x.value).float().to(device=self.device)
+        lambda_star = [torch.from_numpy(c.dual_value).float().to(device=self.device) for c in constraints]
+
+        return x_star, lambda_star
 
 
 class Toy2dCMP(cooper.ConstrainedMinimizationProblem):

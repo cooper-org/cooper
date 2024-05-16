@@ -8,7 +8,7 @@ from tests.helpers import cooper_test_utils
 GROWTH_FACTOR = 1.002
 
 
-@pytest.fixture(params=[10])
+@pytest.fixture(params=[5])
 def num_constraints(request):
     return request.param
 
@@ -38,8 +38,6 @@ def ineq_penalty_coefficient_type(ineq_formulation_type, ineq_multiplier_type):
     if ineq_formulation_type == cooper.LagrangianFormulation:
         return None
     if ineq_multiplier_type == cooper.multipliers.IndexedMultiplier:
-        # pytest.skip("Indexed multipliers fail to converge in the Augmented Lagrangian formulation")
-        # TODO(merajhashemi): Investigate why this is the case
         return cooper.multipliers.IndexedPenaltyCoefficient
     elif ineq_multiplier_type == cooper.multipliers.DenseMultiplier:
         return cooper.multipliers.DensePenaltyCoefficient
@@ -79,8 +77,7 @@ class TestConvergence:
         A = torch.randn(
             num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
         )
-        self.x_star = torch.randn(num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0))
-        b = torch.mm(A, self.x_star)
+        b = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
 
         self.cmp = cooper_test_utils.SquaredNormLinearCMP(
             has_ineq_constraint=True,
@@ -94,12 +91,13 @@ class TestConvergence:
             device=device,
         )
 
+        self.ineq_use_surrogate = ineq_use_surrogate
         self.is_augmented_lagrangian = ineq_formulation_type == cooper.AugmentedLagrangianFormulation
         self.num_variables = num_variables
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type):
-        x = torch.nn.Parameter(torch.zeros(self.num_variables, device=self.device))
+        x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
 
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=1e-2)
@@ -126,4 +124,13 @@ class TestConvergence:
             if self.is_augmented_lagrangian:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-        assert torch.allclose(x, self.x_star, atol=1e-8)  # Tolerance is higher due to indexed multipliers
+        # Compute the exact solution
+        x_star, lambda_star = self.cmp.compute_exact_solution()
+
+        # Check if the primal variable is close to the exact solution
+        # The tolerance is higher for the surrogate case
+        atol = 1e-5 if not self.ineq_use_surrogate else 1e-2
+        assert torch.allclose(x, x_star, atol=atol)
+
+        # Check if the dual variable is close to the exact solution
+        assert torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
