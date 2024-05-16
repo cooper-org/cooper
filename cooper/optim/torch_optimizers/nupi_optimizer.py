@@ -9,7 +9,9 @@ descent, gradient descent with Polyak and Nesterov momentum, the optimistic grad
 method, and PI controllers. It's benefits when updating Lagrange multipliers in
 Lagrangian constrained optimization are discussed in the paper.
 
-# TODO(juan43ramirez): add a link to arXiv once the paper is released.
+For a detailed explanation of the $\nu$PI algorithm, see the paper:
+*On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
+`ICML 2024 <https://icml.cc/virtual/2024/poster/35138>`_.
 """
 
 import warnings
