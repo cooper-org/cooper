@@ -6,7 +6,7 @@ Here we consider a simple convex optimization problem to illustrate how to use
 **Cooper**. This example is inspired by `this StackExchange question
 <https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch>`_\:
 
-*I am trying to solve the following problem using Pytorch: given a 6-sided die
+*I am trying to solve the following problem using PyTorch: given a 6-sided die
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
 

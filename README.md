@@ -9,19 +9,19 @@
 
 ## About
 
-**Cooper** is a toolkit for Lagrangian-based constrained optimization in Pytorch.
+**Cooper** is a toolkit for Lagrangian-based constrained optimization in PyTorch.
 This library aims to encourage and facilitate the study of constrained
 optimization problems in machine learning.
 
-**Cooper** is (almost!) seamlessly integrated with Pytorch and preserves the
+**Cooper** is (almost!) seamlessly integrated with PyTorch and preserves the
 usual `loss -> backward -> step` workflow. If you are already familiar with
-Pytorch, using **Cooper** will be a breeze! 🙂
+PyTorch, using **Cooper** will be a breeze! 🙂
 
 **Cooper** was born out of the need to handle constrained optimization problems
 for which the loss or constraints are not necessarily "nicely behaved"
 or "theoretically tractable", e.g. when no (efficient) projection or proximal
 are available. Although assumptions of this kind have enabled the development of
-great Pytorch-based libraries such as [CHOP](https://github.com/openopt/chop)
+great PyTorch-based libraries such as [CHOP](https://github.com/openopt/chop)
 and [GeoTorch](https://github.com/Lezcano/geotorch), they are seldom satisfied
 in the context of many modern machine learning problems.
 
@@ -52,7 +52,7 @@ Please visit the entry in the **Tutorial Gallery** for a complete version of the
 import cooper
 import torch
 
-train_loader = ... # Create a Pytorch Dataloader for MNIST
+train_loader = ... # Create a PyTorch Dataloader for MNIST
 loss_fn = torch.nn.CrossEntropyLoss()
 
 # Create a Logistic Regression model
@@ -61,7 +61,7 @@ if torch.cuda.is_available():
     model = model.cuda()
 primal_optimizer = torch.optim.Adagrad(model.parameters(), lr=5e-3)
 
-# Create a Cooper formulation, and pick a Pytorch optimizer class for the dual variables
+# Create a Cooper formulation, and pick a PyTorch optimizer class for the dual variables
 formulation = cooper.LagrangianFormulation()
 dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
 
@@ -125,7 +125,7 @@ to the **Cooper** root directory and install the package in development mode by 
     -   `constrained_optimizer` - `torch.optim.Optimizer`-like class for handling CMPs
     -   `lagrangian_formulation` - Lagrangian formulation of a CMP
     -   `multipliers` - utility class for Lagrange multipliers
-    -   `optim` - aliases for Pytorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
+    -   `optim` - aliases for PyTorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
 -   `tests` - unit tests for `cooper` components
 -   `tutorials` - source code for examples contained in the tutorial gallery
 
