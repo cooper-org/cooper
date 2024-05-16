@@ -2,6 +2,19 @@ r"""
 Linear classification with rate constraints
 ===============================================
 
+.. note::
+
+    This example highlights the use of proxy constraints :cite:t:`cotter2019JMLR`. Proxy
+    constraints allow using different constraint violations for updating the primal and
+    dual variables. They are useful when the true constraint is non-differentiable, but
+    there exists a differentiable surrogate that is aligned with the original constraint.
+    This example is based on Fig. 2 of :cite:t:`cotter2019JMLR`.
+
+    By default, Cooper uses the provided violation to update both the primal and dual.
+    To use proxy constraints, the user must provide a `strict_violation` in the
+    `ConstraintState` object. The `strict_violation` is used to update the dual variables,
+    while the `violation` is used to update the primal variables.
+
 In this example we consider a linear classification problem on a synthetically generated
 mixture of Gaussians. We constrain the model to predict at least 70% of the training
 points as class blue (class 0). The optimization problem is defined as follows:
@@ -54,8 +67,6 @@ and constrained with proxy constraints.
 * The rightmost plot shows the decision boundary of the model trained with the proxy
     constraint. The proportion of points predicted as class 0 is 70%, thus yielding a
     feasible solution.
-
-This example is based on Fig. 2 of :cite:t:`cotter2019JMLR`.
 """
 
 import itertools

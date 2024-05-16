@@ -6,10 +6,11 @@ Linear transformation between two vectors with constrained spectrum
 
     This example highlights the use of the flags `contributes_to_primal_update` and
     `contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
-    specify whether a constraint contributes to the primal or dual update. By default,
-    both flags are set to True. However, in this example, we want to update the
-    primal parameters based on the surrogate constraint since the true constraint is
-    expensive to compute, and difficult to differentiate.
+    specify whether a constraint violation contributes to the primal or dual update. By
+    default, both flags are set to True. However, in this example, we update the primal
+    parameters based on a surrogate constraint since the true constraint is expensive to
+    compute, and difficult to differentiate. The true constraint is only computed every
+    few iterations, and the multipliers are updated based on the true constraint.
 
 Consider the problem of finding the matrix :math:`X` that transforms a vector :math:`y`
 so as to minimize the mean squared error between :math:`Xy` and another vector :math:`z`.
@@ -23,10 +24,10 @@ where :math:`X \in \mathbb{R}^{m \\times n}`, :math:`y \in \mathbb{R}^m`,
 :math:`z \in \mathbb{R}^n`, :math:`r = \min\{m, n\}`, :math:`\sigma_i(X)` denotes the
 :math:`i`-th singular value of :math:`X`, and :math:`c` is a constant.
 
-Note that calculating the geometric mean of the singular values of X is expensive since
-it requires computing the SVD decomposition of X. However, the *arithmetic* mean of the
-squared singular values of X can be computed cheaply as it corresponds to the trace of
-:math:`X X^T`.
+We calculate the geometric mean of the singular values of :math:`X` by first computing
+the singular value decomposition of :math:`X`. Note that the SVD decomposition is
+relatively expensive. However, the *arithmetic* mean of the squared singular values of
+:math:`X` can be computed cheaply as it corresponds to the trace of :math:`X X^T`.
 
 Therefore, we can use the arithmetic mean as a surrogate for the true constraint on the
 geometric mean of the singular values of X. While this choice of surrogate is not
@@ -40,6 +41,7 @@ constraint which is only observed sporadically. Note how the multiplier value re
 constant in-between measurements of the true constraint.
 
 """
+
 import itertools
 import random
 
@@ -91,15 +93,13 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         self.r = min(y.shape[0], z.shape[0])
         self.constraint_level = constraint_level
 
-        # Creating a constraint with a single constraint
+        # Creating a constraint with a single equality constraint
         constraint_type = cooper.ConstraintType.EQUALITY
         multiplier = cooper.multipliers.DenseMultiplier(
             num_constraints=1, constraint_type=constraint_type, device=DEVICE
         )
         self.sv_constraint = cooper.Constraint(
-            constraint_type=constraint_type,
-            formulation_type=cooper.LagrangianFormulation,
-            multiplier=multiplier,
+            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
         )
 
     def loss_fn(self, X: torch.Tensor) -> torch.Tensor:
@@ -123,13 +123,15 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         # Compute the objective
         objective = self.loss_fn(X)
 
+        # We include the constraint level offset, but note that it is irrelevant since
+        # the surrogate constraint is used only to compute gradients.
+        surrogate_violation = self.compute_arithmetic_mean(X) - self.constraint_level
+
         # `strict_violation` is not measured, so only X is updated (and not the
         # multipliers). We must specify `contributes_to_dual_update=False` to avoid
         # updating the multipliers based on the surrogate constraint.
         constraint_state = cooper.ConstraintState(
-            violation=self.compute_arithmetic_mean(X),
-            contributes_to_primal_update=True,
-            contributes_to_dual_update=False,
+            violation=surrogate_violation, contributes_to_primal_update=True, contributes_to_dual_update=False
         )
 
         return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
@@ -138,27 +140,28 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
     def compute_geometric_mean(self, X: torch.Tensor) -> torch.Tensor:
         return torch.linalg.svdvals(X).prod()
 
-    def compute_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
+    def compute_true_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
         # Compute the objective
         objective = self.loss_fn(X)
 
         # Compute the non-differentiable constraint to update the multipliers.
         # This is only done sporadically since the SVD decomposition is expensive.
-
         # Geometric mean of singular values of X *equal* to `constraint_level`.
-        strict_violation = self.compute_geometric_mean(X) - self.constraint_level
+        true_violation = self.compute_geometric_mean(X) - self.constraint_level
 
-        # Note that it is not necessary to set `contributes_to_primal_update=True`
-        # *and* `contributes_to_dual_update=True`, since the default value is True.
-        # We set them here for clarity.
         constraint_state = cooper.ConstraintState(
-            violation=self.compute_arithmetic_mean(X),
-            strict_violation=strict_violation,
-            contributes_to_primal_update=True,
-            contributes_to_dual_update=True,
+            violation=true_violation, contributes_to_primal_update=False, contributes_to_dual_update=True
         )
 
-        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint, constraint_state})
+        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
+
+    def compute_cmp_state(self, X: torch.Tensor, true_or_surrogate: str = "true") -> cooper.CMPState:
+        if true_or_surrogate == "true":
+            return self.compute_true_cmp_state(X)
+        elif true_or_surrogate == "surrogate":
+            return self.compute_surrogate_cmp_state(X)
+        else:
+            raise ValueError("Invalid value for `true_or_surrogate`.")
 
 
 def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for_dual_update, primal_lr, dual_lr):
@@ -183,22 +186,18 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
             loss=[cmp.loss_fn(X).item()],
             arithmetic_mean=[cmp.compute_arithmetic_mean(X).item()],
             geometric_mean=[cmp.compute_geometric_mean(X).item()],
-            multiplier_values=[cmp.constraint.multiplier.weight.item()],
+            multiplier_values=[cmp.sv_constraint.multiplier.weight.item()],
         )
 
     for iter in range(max_iter):
         prev_X = X.clone().detach()
 
         if iter % freq_for_dual_update == 0:
-            # Compute the true violation every `freq_for_dual_update` iterations for
-            # updating the multipliers.
-            # TODO(merajhashemi): Fix! roll only uses `compute_cmp_state` and not the surrogate.
-
-            compute_cmp_state_fn = lambda: cmp.compute_cmp_state(X)
+            true_or_surrogate = "true"
         else:
-            compute_cmp_state_fn = lambda: cmp.compute_surrogate_cmp_state(X)
+            true_or_surrogate = "surrogate"
 
-        cooper_optimizer.roll(compute_cmp_state_fn=compute_cmp_state_fn)  # noqa: F841
+        cooper_optimizer.roll({"X": X, "true_or_surrogate": true_or_surrogate})
 
         if prev_X.allclose(X, atol=tolerance):
             break
@@ -207,7 +206,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
             state_history["loss"].append(cmp.loss_fn(X).item())
             state_history["arithmetic_mean"].append(cmp.compute_arithmetic_mean(X).item())
             state_history["geometric_mean"].append(cmp.compute_geometric_mean(X).item())
-            state_history["multiplier_values"].append(cmp.multiplier.weight.item())
+            state_history["multiplier_values"].append(cmp.sv_constraint.multiplier.weight.item())
 
     return state_history
 
@@ -244,7 +243,7 @@ def plot_results(state_history, constraint_level):
 
 dim_y, dim_z = 4, 4
 constraint_level = 1.0 ** min(dim_y, dim_z)
-primal_lr, dual_lr = 1e-2, 1e-1
+primal_lr, dual_lr = 3e-2, 1e-1
 freq_for_dual_update = 100
 max_iter, tolerance = 50_000, 1e-6
 
