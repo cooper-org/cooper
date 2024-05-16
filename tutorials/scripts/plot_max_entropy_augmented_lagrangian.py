@@ -110,6 +110,9 @@ dual_params = itertools.chain.from_iterable(multiplier.parameters() for multipli
 # same as the value of the penalty coefficient.
 dual_optimizer = torch.optim.SGD(dual_params, lr=1.0, maximize=True)
 
+# The Augmented Lagrangian Method employs alternating updates. Here we choose
+# Dual-Primal updates, where the multipliers are updated first, followed by the primal
+# parameters.
 cooper_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
@@ -124,25 +127,20 @@ penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.001, v
 
 state_history = {}
 for i in range(3000):
-    _, cmp_state, _, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
     penalty_updater.step(cmp_state.observed_constraints)
 
-    observed = {"violations": [], "multipliers": [], "penalty_coefficients": []}
-    for constraint, constraint_state in cmp_state.observed_constraints.items():
-        observed["violations"].append(constraint_state.violation.data)
-        observed["multipliers"].append(constraint.multiplier().data)
-        if constraint.penalty_coefficient is not None:
-            observed["penalty_coefficients"].append(constraint.penalty_coefficient().data)
-
+    observed_violations = [cs.violation.data for c, cs in cmp_state.observed_constraints.items()]
+    observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
+    observed_penalty_coefficients = list(primal_lagrangian_store.observed_penalty_coefficient_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
-        "multipliers": deepcopy(torch.stack(observed["multipliers"])),
-        "violation": deepcopy(torch.stack(observed["violations"])),
-        "penalty_coefficients": deepcopy(torch.stack(observed["penalty_coefficients"])),
+        "multipliers": torch.stack(observed_multipliers).detach(),
+        "violation": deepcopy(torch.stack(observed_violations)),
+        "penalty_coefficients": deepcopy(torch.stack(observed_penalty_coefficients)),
     }
 
-
-# True solution - derived analytically
+# Theoretical solution
 optimal_prob = torch.tensor([0.05435, 0.07877, 0.1142, 0.1654, 0.2398, 0.3475])
 optimal_entropy = -torch.sum(optimal_prob * torch.log(optimal_prob))
 

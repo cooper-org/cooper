@@ -9,7 +9,23 @@ Here we consider a simple convex optimization problem to illustrate how to use
 *I am trying to solve the following problem using Pytorch: given a 6-sided die
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
+
+Formally, we want to solve the following optimization problem:
+.. math::
+    \begin{aligned}
+    \max_{p} & -\sum_{i=1}^6 p_i \log p_i \\
+    & \sum_{i=1}^6 i p_i = 4.5 \\
+    \text{s.t.} & \sum_{i=1}^6 p_i = 1 \\
+    & p_i \geq 0 \quad \forall i
+    \end{aligned}
+where :math:`p` is the probability distribution over the faces of the die.
+
+This example makes use of the $\nu$PI algorithm for improving the training dynamics of
+the dual variables. For a detailed explanation of the $\nu$PI algorithm, see the paper:
+*On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
+`ICML 2024 <https://icml.cc/virtual/2024/poster/35138>`_.
 """
+
 import itertools
 from copy import deepcopy
 
@@ -31,18 +47,27 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
     def __init__(self, target_mean: float) -> None:
         super().__init__()
-
         self.target_mean = target_mean
 
-        default_multiplier_kwargs = {"constraint_type": cooper.ConstraintType.EQUALITY, "device": DEVICE}
-        default_cg_kwargs = {
-            "constraint_type": cooper.ConstraintType.EQUALITY,
-            "formulation_type": cooper.LagrangianFormulation,
-        }
-        mean_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
-        sum_multiplier = cooper.multipliers.DenseMultiplier(**default_multiplier_kwargs, num_constraints=1)
-        self.mean_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=mean_multiplier)
-        self.sum_constraint = cooper.Constraint(**default_cg_kwargs, multiplier=sum_multiplier)
+        mean_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
+        sum_multiplier = cooper.multipliers.DenseMultiplier(
+            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
+        )
+
+        self.mean_constraint = cooper.Constraint(
+            constraint_type=cooper.ConstraintType.EQUALITY,
+            formulation_type=cooper.LagrangianFormulation,
+            multiplier=mean_multiplier,
+        )
+        self.sum_constraint = cooper.Constraint(
+            constraint_type=cooper.ConstraintType.EQUALITY,
+            formulation_type=cooper.LagrangianFormulation,
+            multiplier=sum_multiplier,
+        )
+
+        # For simple non-negativity constraints, we use projection
 
     def compute_cmp_state(self, log_probs: torch.Tensor) -> cooper.CMPState:
         probs = torch.exp(log_probs)
@@ -51,16 +76,19 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         # Equality constraints for proper normalization and mean constraint
         mean = torch.sum(probs * torch.arange(1, len(probs) + 1, device=DEVICE))
 
-        sum_constraint_state = cooper.ConstraintState(violation=torch.sum(probs) - 1)
-        mean_constraint_state = cooper.ConstraintState(violation=mean - self.target_mean)
+        sum_constraint_violation = cooper.ConstraintState(violation=torch.sum(probs) - 1)
+        mean_constraint_violation = cooper.ConstraintState(violation=mean - self.target_mean)
 
-        observed_constraints = {self.sum_constraint: sum_constraint_state, self.mean_constraint: mean_constraint_state}
+        observed_constraints = {
+            self.sum_constraint: sum_constraint_violation,
+            self.mean_constraint: mean_constraint_violation,
+        }
 
         # Flip loss sign since we want to *maximize* the entropy
         return cooper.CMPState(loss=-entropy, observed_constraints=observed_constraints)
 
 
-# Define the problem with the constraintss
+# Define the problem with the constraints
 cmp = MaximumEntropy(target_mean=4.5)
 
 # Define the primal parameters and optimizer
@@ -69,6 +97,7 @@ primal_optimizer = torch.optim.SGD([log_probs], lr=3e-2)
 
 # Define the dual optimizer
 dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
+# We employ the nuPI algorithm for updating the dual variables
 dual_optimizer = cooper.optim.nuPI(dual_params, lr=1e-2, Kp=10, maximize=True)
 
 cooper_optimizer = cooper.optim.SimultaneousOptimizer(
@@ -83,7 +112,7 @@ for i in range(3000):
     observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
-        "multipliers": deepcopy(torch.stack(observed_multipliers)),
+        "multipliers": torch.stack(observed_multipliers).detach(),
         "violation": deepcopy(torch.stack(observed_violations)),
     }
 
