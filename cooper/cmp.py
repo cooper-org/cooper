@@ -58,23 +58,26 @@ class CMPState:
     def _compute_primal_or_dual_lagrangian(self, primal_or_dual: Literal["primal", "dual"]) -> LagrangianStore:
         """Computes the primal or dual Lagrangian based on the loss and the
         contribution of the observed constraints.
+
+        We don't count the loss towards the dual Lagrangian since the objective is not
+        a function of the dual variables.
         """
 
         check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
         contributing_constraints = {c: cs for c, cs in self.observed_constraints.items() if check_contributes_fn(cs)}
 
-        if self.loss is None and len(contributing_constraints) == 0:
-            # No loss provided, and no observed constraints will contribute to Lagrangian.
-            return LagrangianStore()
+        if len(contributing_constraints) == 0:
+            if self.loss is None:
+                return LagrangianStore()
+            else:
+                # No observed constraints contribute to the Lagrangian.
+                lagrangian = self.loss.clone() if primal_or_dual == "primal" else None
+                return LagrangianStore(lagrangian=lagrangian)
 
-        # We don't count the loss towards the dual Lagrangian since the objective
-        # function does not depend on the dual variables.
-        if self.loss is not None and primal_or_dual == "primal":
-            lagrangian = self.loss.clone()
+        if primal_or_dual == "primal":
+            lagrangian = self.loss.clone() if self.loss is not None else 0.0
         else:
-            # Some contibuting constraints were provided, but no loss was provided.
-            device = next(iter(self.observed_constraints.values())).violation.device
-            lagrangian = torch.tensor(0.0, device=device, requires_grad=True)
+            lagrangian = 0.0
 
         multiplier_values = dict()
         penalty_coefficient_values = dict()
