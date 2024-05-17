@@ -11,7 +11,7 @@ Lagrangian constrained optimization are discussed in the paper.
 
 For a detailed explanation of the $\nu$PI algorithm, see the paper:
 *On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
-`ICML 2024 <https://icml.cc/virtual/2024/poster/35138>`_.
+`ICML 2024 <https://openreview.net/forum?id=1khG2xf1yt>`_.
 """
 
 import warnings
