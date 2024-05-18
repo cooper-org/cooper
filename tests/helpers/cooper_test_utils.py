@@ -172,7 +172,9 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         if self.has_eq_constraint:
             constraints.append(self.C.cpu().numpy() @ x == self.d.cpu().numpy())
 
-        cp.Problem(objective, constraints).solve()
+        prob = cp.Problem(objective, constraints)
+        prob.solve()
+        assert prob.status == cp.OPTIMAL
 
         x_star = torch.from_numpy(x.value).float().to(device=self.device)
         lambda_star = [torch.from_numpy(c.dual_value).float().to(device=self.device) for c in constraints]
