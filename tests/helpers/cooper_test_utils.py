@@ -93,7 +93,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
                 penalty_coefficient=eq_penalty_coefficient,
             )
 
-    def _compute_eq_or_ineq_violations(self, x, lhs, rhs, use_surrogate, multiplier_type, observed_constraint_ratio):
+    def _compute_violations(self, x, lhs, rhs, use_surrogate, multiplier_type, observed_constraint_ratio):
 
         violation = torch.matmul(lhs, x) - rhs
 
@@ -106,10 +106,12 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         strict_violation = None
         strict_constraint_features = None
         if use_surrogate:
-            strict_violation = (
-                torch.matmul(lhs + 0.0001 * torch.randn(lhs.shape, generator=self.generator, device=self.device), x)
-                - rhs
-            )
+            # Make noise generator deterministic, so that we don't deal with stochastic constraints
+            noise_generator = torch.Generator(device=self.device)
+            noise_generator.manual_seed(0)
+            noise = 0.0001 * torch.randn(lhs.shape, generator=noise_generator, device=self.device)
+            strict_violation = torch.matmul(lhs + noise, x) - rhs
+
             if multiplier_type == cooper.multipliers.IndexedMultiplier:
                 strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
                 strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * rhs.numel())]
@@ -128,7 +130,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         """
         ineq_state = None
         if self.has_ineq_constraint:
-            ineq_state = self._compute_eq_or_ineq_violations(
+            ineq_state = self._compute_violations(
                 x,
                 self.A,
                 self.b,
@@ -138,7 +140,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             )
         eq_state = None
         if self.has_eq_constraint:
-            eq_state = self._compute_eq_or_ineq_violations(
+            eq_state = self._compute_violations(
                 x, self.C, self.d, self.eq_use_surrogate, self.eq_multiplier_type, self.eq_observed_constraint_ratio
             )
 
@@ -393,7 +395,6 @@ def build_dual_optimizers(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
-
     # Make copy of this fixture since we are modifying in-place
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
@@ -443,7 +444,6 @@ def build_cooper_optimizer_for_Toy2dCMP(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> CooperOptimizer:
-
     dual_optimizers = None
     if len(list(cmp.constraints())) != 0:
         dual_optimizers = build_dual_optimizers(

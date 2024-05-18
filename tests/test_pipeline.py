@@ -129,7 +129,7 @@ class TestConvergence:
 
         # Check if the primal variable is close to the exact solution
         # The tolerance is higher for the surrogate case
-        atol = 1e-5 if not self.ineq_use_surrogate else 1e-2
+        atol = 1e-5 if not self.ineq_use_surrogate else 1e-3
         assert torch.allclose(x, x_star, atol=atol)
 
         # Check if the dual variable is close to the exact solution
