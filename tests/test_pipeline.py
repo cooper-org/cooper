@@ -94,9 +94,13 @@ class TestConvergence:
         self.ineq_use_surrogate = ineq_use_surrogate
         self.is_augmented_lagrangian = ineq_formulation_type == cooper.AugmentedLagrangianFormulation
         self.num_variables = num_variables
+        self.num_constraints = num_constraints
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type):
+        if self.num_constraints > self.num_variables:
+            pytest.skip("Overconstrained problem. Skipping test.")
+
         x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
 
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
