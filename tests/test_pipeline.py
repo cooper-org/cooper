@@ -1,4 +1,6 @@
 # TODO(merajhashemi): Fix tests with surrogate
+from typing import Optional
+
 import pytest
 import torch
 
@@ -49,8 +51,8 @@ def ineq_penalty_coefficient_type(ineq_formulation_type, ineq_multiplier_type):
 
 @pytest.fixture(params=[True, False])
 def extrapolation(request, ineq_formulation_type):
-    if ineq_formulation_type == cooper.AugmentedLagrangianFormulation:
-        return False
+    if request.param and ineq_formulation_type == cooper.AugmentedLagrangianFormulation:
+        pytest.skip("Extrapolation is not supported for Augmented Lagrangian formulation.")
     return request.param
 
 
@@ -61,9 +63,14 @@ def extrapolation(request, ineq_formulation_type):
         cooper_test_utils.AlternationType.DUAL_PRIMAL,
     ]
 )
-def alternation_type(request, extrapolation):
-    if extrapolation:
-        return cooper_test_utils.AlternationType.FALSE
+def alternation_type(request, extrapolation, ineq_formulation_type):
+    if extrapolation and request.param != cooper_test_utils.AlternationType.FALSE:
+        pytest.skip("Extrapolation is only supported for simultaneous updates.")
+    if (
+        ineq_formulation_type == cooper.AugmentedLagrangianFormulation
+        and request.param == cooper_test_utils.AlternationType.FALSE
+    ):
+        pytest.skip("Augmented Lagrangian formulation requires alternation.")
     return request.param
 
 
@@ -192,7 +199,9 @@ class TestConvergence:
             constraint_features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
 
         # Manual step
-        manual_out = self.manual_roll(manual_x, manual_multiplier, alternation_type, extrapolation)
+        manual_out = self.manual_roll(
+            manual_x, manual_multiplier, alternation_type, manual_penalty_coeff, extrapolation
+        )
         (
             manual_x,
             manual_multiplier,
@@ -201,17 +210,17 @@ class TestConvergence:
             manual_observed_multipliers,
         ) = manual_out
 
-        if self.is_augmented_lagrangian:
-            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[constraint_features].relu()
-            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
-            # Update the penalty coefficients for the violated constraints
-            manual_penalty_coeff[constraint_features][violated_indices] *= PENALTY_GROWTH_FACTOR
-
         # Check manual and cooper outputs are close
         assert torch.allclose(observed_multipliers, manual_observed_multipliers[constraint_features], atol=1e-4)
         assert torch.allclose(x, manual_x, atol=1e-4)
         assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
+
+        if self.is_augmented_lagrangian:
+            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[constraint_features].relu()
+            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
+            # Update the penalty coefficients for the violated constraints
+            manual_penalty_coeff[constraint_features][violated_indices] *= PENALTY_GROWTH_FACTOR
 
         # ----------------------- Second iteration -----------------------
         roll_out = cooper_optimizer.roll(**roll_kwargs)
@@ -226,7 +235,9 @@ class TestConvergence:
             constraint_features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
 
         # Manual step
-        manual_out = self.manual_roll(manual_x, manual_multiplier, alternation_type, extrapolation)
+        manual_out = self.manual_roll(
+            manual_x, manual_multiplier, alternation_type, manual_penalty_coeff, extrapolation
+        )
         (
             manual_x,
             manual_multiplier,
@@ -235,24 +246,27 @@ class TestConvergence:
             manual_observed_multipliers,
         ) = manual_out
 
-        if self.is_augmented_lagrangian:
-            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[constraint_features].relu()
-            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
-            # Update the penalty coefficients for the violated constraints
-            manual_penalty_coeff[constraint_features][violated_indices] *= PENALTY_GROWTH_FACTOR
-
         # Check manual and cooper outputs are close
         assert torch.allclose(observed_multipliers, manual_observed_multipliers[constraint_features], atol=1e-4)
         assert torch.allclose(x, manual_x, atol=1e-4)
         assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
+        if self.is_augmented_lagrangian:
+            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[constraint_features].relu()
+            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
+            # Update the penalty coefficients for the violated constraints
+            manual_penalty_coeff[constraint_features][violated_indices] *= PENALTY_GROWTH_FACTOR
+
+    def _manual_violation(self, manual_x):
+        return self.cmp.A @ manual_x - self.cmp.b
+
     def _manual_primal_step(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
         if manual_penalty_coeff is not None:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
             # constraints is:
             #   grad_obj + relu(lambda + penalty * const_violation) * grad_const
-            violation = self.cmp.A @ manual_x - self.cmp.b
+            violation = self._manual_violation(manual_x)
             manual_x_grad = 2 * manual_x + self.cmp.A.t() @ torch.relu(
                 manual_multiplier + manual_penalty_coeff * violation
             )
@@ -261,17 +275,34 @@ class TestConvergence:
         manual_x = manual_x - PRIMAL_LR * manual_x_grad
         return manual_x
 
-    def _manual_dual_step(self, manual_x, manual_multiplier):
-        violation = self.cmp.A @ manual_x - self.cmp.b
-        manual_multiplier = torch.relu(manual_multiplier + DUAL_LR * violation)
+    def _manual_dual_step(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
+        violation = self._manual_violation(manual_x)
+        if manual_penalty_coeff is None:
+            manual_multiplier = torch.relu(manual_multiplier + DUAL_LR * violation)
+        else:
+            manual_multiplier = torch.relu(manual_multiplier + manual_penalty_coeff * violation)
         return manual_multiplier
 
-    def _manual_primal_lagrangian(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
+    def _manual_primal_lagrangian(
+        self, manual_x, manual_multiplier, manual_penalty_coeff: Optional[torch.Tensor] = None
+    ):
+        violation = self._manual_violation(manual_x)
+        loss = torch.sum(manual_x**2)
 
-        return torch.sum(manual_x**2) + manual_multiplier @ (self.cmp.A @ manual_x - self.cmp.b)
+        if manual_penalty_coeff is None:
+            return loss + torch.dot(manual_multiplier, violation)
+
+        aug_lag = loss + 0.5 * torch.dot(
+            1 / manual_penalty_coeff,
+            torch.relu(manual_multiplier + manual_penalty_coeff * violation) ** 2 - manual_multiplier**2,
+        )
+        return aug_lag
 
     def _manual_dual_lagrangian(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
-        return manual_multiplier @ (self.cmp.A @ manual_x - self.cmp.b)
+        violation = self.cmp.A @ manual_x - self.cmp.b
+        if manual_penalty_coeff is None:
+            return torch.sum(manual_multiplier * violation)
+        return torch.sum(manual_penalty_coeff * manual_multiplier * violation)
 
     def _manual_simultaneous_roll(self, manual_x, manual_multiplier):
         manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier)
@@ -288,10 +319,10 @@ class TestConvergence:
             manual_observed_multipliers,
         )
 
-    def _manual_dual_primal_roll(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
-        manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier)
-        manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier)
-        manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier)
+    def _manual_dual_primal_roll(self, manual_x, manual_multiplier, manual_penalty_coeff):
+        manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, manual_penalty_coeff)
+        manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier, manual_penalty_coeff)
+        manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier, manual_penalty_coeff)
         manual_observed_multipliers = manual_multiplier.clone()
         manual_x = self._manual_primal_step(manual_x, manual_multiplier, manual_penalty_coeff)
         return (
@@ -302,12 +333,12 @@ class TestConvergence:
             manual_observed_multipliers,
         )
 
-    def _manual_primal_dual_roll(self, manual_x, manual_multiplier, manual_penalty_coeff=None):
-        manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier)
+    def _manual_primal_dual_roll(self, manual_x, manual_multiplier, manual_penalty_coeff):
+        manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier, manual_penalty_coeff)
         manual_observed_multipliers = manual_multiplier.clone()
         manual_x = self._manual_primal_step(manual_x, manual_multiplier, manual_penalty_coeff)
-        manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier)
-        manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier)
+        manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, manual_penalty_coeff)
+        manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier, manual_penalty_coeff)
         return (
             manual_x,
             manual_multiplier,
@@ -321,7 +352,23 @@ class TestConvergence:
         manual_multiplier_copy = manual_multiplier.clone()
         manual_x = self._manual_primal_step(manual_x_copy, manual_multiplier_copy)
         manual_multiplier = self._manual_dual_step(manual_x_copy, manual_multiplier_copy)
-        return self._manual_simultaneous_roll(manual_x, manual_multiplier)
+
+        manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier)
+        manual_observed_multipliers = manual_multiplier.clone()
+        manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier)
+
+        manual_x_grad = 2 * manual_x + self.cmp.A.t() @ manual_multiplier
+        manual_x, manual_multiplier = manual_x_copy - PRIMAL_LR * manual_x_grad, self._manual_dual_step(
+            manual_x, manual_multiplier_copy
+        )
+
+        return (
+            manual_x,
+            manual_multiplier,
+            manual_primal_lagrangian,
+            manual_dual_lagrangian,
+            manual_observed_multipliers,
+        )
 
     @torch.inference_mode()
     def manual_roll(
