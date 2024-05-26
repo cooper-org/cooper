@@ -160,10 +160,6 @@ class TestConvergence:
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
             pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
 
-        if self.ineq_use_surrogate:
-            # TODO(merajhashemi): Fix tests with surrogate
-            pytest.skip("Manual surrogate tests are not implemented yet.")
-
         x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=PRIMAL_LR)
@@ -288,7 +284,9 @@ class TestConvergence:
             # Update the penalty coefficients for the violated constraints
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
-    def _manual_violation(self, manual_x):
+    def _manual_violation(self, manual_x, strict=False):
+        if strict and self.ineq_use_surrogate:
+            return self.cmp.A_sur @ manual_x - self.cmp.b
         return self.cmp.A @ manual_x - self.cmp.b
 
     def _manual_primal_step(self, manual_x, manual_multiplier, features, manual_penalty_coeff=None):
@@ -306,7 +304,7 @@ class TestConvergence:
         return manual_x
 
     def _manual_dual_step(self, manual_x, manual_multiplier, strict_features, manual_penalty_coeff=None):
-        violation = self._manual_violation(manual_x)[strict_features]
+        violation = self._manual_violation(manual_x, strict=True)[strict_features]
         if manual_penalty_coeff is None:
             manual_multiplier[strict_features] = torch.relu(manual_multiplier[strict_features] + DUAL_LR * violation)
         else:
@@ -332,7 +330,7 @@ class TestConvergence:
         return aug_lag
 
     def _manual_dual_lagrangian(self, manual_x, manual_multiplier, strict_features, manual_penalty_coeff=None):
-        violation = self._manual_violation(manual_x)[strict_features]
+        violation = self._manual_violation(manual_x, strict=True)[strict_features]
         if manual_penalty_coeff is None:
             return torch.sum(manual_multiplier[strict_features] * violation)
         return torch.sum(manual_penalty_coeff[strict_features] * manual_multiplier[strict_features] * violation)

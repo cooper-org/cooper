@@ -65,6 +65,18 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.generator = torch.Generator(device=device)
         self.generator.manual_seed(0)
 
+        self.A_sur = None
+        if has_ineq_constraint and ineq_use_surrogate:
+            # Make noise generator deterministic, so that we don't deal with stochastic constraints
+            noise = 0.0001 * torch.randn(A.shape, generator=self.generator, device=self.device)
+            self.A_sur = A + noise
+
+        self.C_sur = None
+        if has_eq_constraint and eq_use_surrogate:
+            # Make noise generator deterministic, so that we don't deal with stochastic constraints
+            noise = 0.0001 * torch.randn(C.shape, generator=self.generator, device=self.device)
+            self.C_sur = C + noise
+
         if has_ineq_constraint:
             ineq_penalty_coefficient = None
             if ineq_penalty_coefficient_type is not None:
@@ -93,7 +105,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
                 penalty_coefficient=eq_penalty_coefficient,
             )
 
-    def _compute_violations(self, x, lhs, rhs, use_surrogate, multiplier_type, observed_constraint_ratio):
+    def _compute_violations(self, x, lhs, rhs, lhs_sur, multiplier_type, observed_constraint_ratio):
 
         violation = torch.matmul(lhs, x) - rhs
 
@@ -105,12 +117,8 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         strict_violation = None
         strict_constraint_features = None
-        if use_surrogate:
-            # Make noise generator deterministic, so that we don't deal with stochastic constraints
-            noise_generator = torch.Generator(device=self.device)
-            noise_generator.manual_seed(0)
-            noise = 0.0001 * torch.randn(lhs.shape, generator=noise_generator, device=self.device)
-            strict_violation = torch.matmul(lhs + noise, x) - rhs
+        if lhs_sur is not None:
+            strict_violation = torch.matmul(lhs_sur, x) - rhs
 
             if multiplier_type == cooper.multipliers.IndexedMultiplier:
                 strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
@@ -134,14 +142,14 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
                 x,
                 self.A,
                 self.b,
-                self.ineq_use_surrogate,
+                self.A_sur,
                 self.ineq_multiplier_type,
                 self.ineq_observed_constraint_ratio,
             )
         eq_state = None
         if self.has_eq_constraint:
             eq_state = self._compute_violations(
-                x, self.C, self.d, self.eq_use_surrogate, self.eq_multiplier_type, self.eq_observed_constraint_ratio
+                x, self.C, self.d, self.C_sur, self.eq_multiplier_type, self.eq_observed_constraint_ratio
             )
 
         observed_constraints = {}
