@@ -84,6 +84,12 @@ the existence of a pure Nash equilibrium is guaranteed :cite:p:`vonNeumann1928th
 .. autoclass:: LagrangianFormulation
     :members:
 
+Damped-Lagrangian Formulation
+----------------------------
+
+.. autoclass:: DampedLagrangianFormulation
+    :members:
+
 Proxy-Lagrangian Formulation
 ----------------------------
 

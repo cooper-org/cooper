@@ -328,6 +328,86 @@ class LagrangianFormulation(BaseLagrangianFormulation):
                 violation_for_update.backward(inputs=dual_vars)
 
 
+class DampedLagrangianFormulation(LagrangianFormulation):
+
+    """
+    Provides utilities for computing the Damped-Lagrangian proposed by
+    :cite:t:`platt1987constrained` and associated with a ``ConstrainedMinimizationProblem`` and for populating the gradients for the
+    primal and dual parameters.
+
+    Args:
+        cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
+            rise to the Lagrangian.
+        damping_coefficient: Coefficient used for the damping term of the multipliers.
+        ineq_init: Initialization values for the inequality multipliers.
+        eq_init: Initialization values for the equality multipliers.
+        aug_lag_coefficient: Coefficient used for the augmented Lagrangian.
+    """
+
+    def __init__(
+        self,
+        cmp: ConstrainedMinimizationProblem,
+        damping_coefficient: float,
+        ineq_init: Optional[torch.Tensor] = None,
+        eq_init: Optional[torch.Tensor] = None,
+        aug_lag_coefficient: float = 0.0,
+    ):
+        super().__init__(cmp, ineq_init, eq_init, aug_lag_coefficient)
+
+        if damping_coefficient <= 0:
+            raise ValueError("Damping coefficient must be stricly positive")
+
+        self.damping_coefficient = damping_coefficient
+
+    def weighted_violation(
+        self, cmp_state: CMPState, constraint_type: str
+    ) -> torch.Tensor:
+        """
+        Computes the dot product between the current damped multipliers and the
+        constraint violations of type ``constraint_type``. If proxy-constraints
+        are provided in the :py:class:`.CMPState`, the non-proxy (usually
+        non-differentiable) constraints are used for computing the dot product,
+        while the "proxy-constraint" dot products are stored under
+        ``self.state_update``.
+
+        Args:
+            cmp_state: current ``CMPState``
+            constraint_type: type of constrained to be used
+        """
+
+        defect = getattr(cmp_state, constraint_type + "_defect")
+        has_defect = defect is not None
+
+        proxy_defect = getattr(cmp_state, "proxy_" + constraint_type + "_defect")
+        has_proxy_defect = proxy_defect is not None
+
+        if not has_proxy_defect:
+            # If not given proxy constraints, then the regular defects are
+            # used for computing gradients and evaluating the multipliers
+            proxy_defect = defect
+
+        if not has_defect:
+            # We should always have at least the regular defects, if not, then
+            # the problem instance does not have `constraint_type` constraints
+            proxy_violation = torch.tensor([0.0], device=cmp_state.loss.device)
+        else:
+            multipliers = getattr(self, constraint_type + "_multipliers")()
+            # We compute the damped multipliers. We use the damping coefficient
+            # and the defect level to avoid oscillations
+            damped_multiplier = (multipliers - self.damping_coefficient * defect.detach())
+
+            # We compute (primal) gradients of this object
+            proxy_violation = torch.sum(damped_multiplier.detach() * proxy_defect)
+
+            # This is the violation of the "actual" constraint. We use this
+            # to update the value of the multipliers by lazily filling the
+            # multiplier gradients in `populate_gradients`
+            violation_for_update = torch.sum(damped_multiplier * defect.detach())
+            self.state_update.append(violation_for_update)
+
+        return proxy_violation
+
+
 class ProxyLagrangianFormulation(BaseLagrangianFormulation):
     """
     Placeholder class for the proxy-Lagrangian formulation proposed by
