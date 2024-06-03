@@ -30,8 +30,8 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
     def __init__(
         self,
-        has_ineq_constraint: bool = True,
-        has_eq_constraint: bool = True,
+        has_ineq_constraint: bool = False,
+        has_eq_constraint: bool = False,
         ineq_use_surrogate: bool = False,
         eq_use_surrogate: bool = False,
         A: Optional[torch.Tensor] = None,
@@ -171,7 +171,8 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         return cmp_state
 
     def compute_exact_solution(self):
-        x = cp.Variable(self.A.cpu().numpy().shape[1])
+        num_variables = self.A.shape[1] if self.A is not None else self.C.shape[1]
+        x = cp.Variable(num_variables)
         objective = cp.Minimize(cp.sum_squares(x))
 
         constraints = []

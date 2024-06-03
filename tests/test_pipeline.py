@@ -13,6 +13,11 @@ PENALTY_GROWTH_FACTOR = 1.002
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
 
+@pytest.fixture(params=[cooper.ConstraintType.INEQUALITY])
+def constraint_type(request):
+    return request.param
+
+
 @pytest.fixture(params=[5])
 def num_constraints(request):
     return request.param
@@ -24,33 +29,33 @@ def num_variables(request):
 
 
 @pytest.fixture(params=[True, False])
-def ineq_use_surrogate(request):
+def use_surrogate(request):
     return request.param
 
 
 @pytest.fixture(params=[cooper.multipliers.DenseMultiplier, cooper.multipliers.IndexedMultiplier])
-def ineq_multiplier_type(request):
+def multiplier_type(request):
     return request.param
 
 
 @pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
-def ineq_formulation_type(request):
+def formulation_type(request):
     return request.param
 
 
 @pytest.fixture
-def ineq_penalty_coefficient_type(ineq_formulation_type, ineq_multiplier_type):
-    if ineq_formulation_type == cooper.LagrangianFormulation:
+def penalty_coefficient_type(formulation_type, multiplier_type):
+    if formulation_type == cooper.LagrangianFormulation:
         return None
-    if ineq_multiplier_type == cooper.multipliers.IndexedMultiplier:
+    if multiplier_type == cooper.multipliers.IndexedMultiplier:
         return cooper.multipliers.IndexedPenaltyCoefficient
-    elif ineq_multiplier_type == cooper.multipliers.DenseMultiplier:
+    elif multiplier_type == cooper.multipliers.DenseMultiplier:
         return cooper.multipliers.DensePenaltyCoefficient
 
 
 @pytest.fixture(params=[True, False])
-def extrapolation(request, ineq_formulation_type):
-    if request.param and ineq_formulation_type == cooper.AugmentedLagrangianFormulation:
+def extrapolation(request, formulation_type):
+    if request.param and formulation_type == cooper.AugmentedLagrangianFormulation:
         pytest.skip("Extrapolation is not supported for Augmented Lagrangian formulation.")
     return request.param
 
@@ -62,11 +67,11 @@ def extrapolation(request, ineq_formulation_type):
         cooper_test_utils.AlternationType.DUAL_PRIMAL,
     ]
 )
-def alternation_type(request, extrapolation, ineq_formulation_type):
+def alternation_type(request, extrapolation, formulation_type):
     if extrapolation and request.param != cooper_test_utils.AlternationType.FALSE:
         pytest.skip("Extrapolation is only supported for simultaneous updates.")
     if (
-        ineq_formulation_type == cooper.AugmentedLagrangianFormulation
+        formulation_type == cooper.AugmentedLagrangianFormulation
         and request.param == cooper_test_utils.AlternationType.FALSE
     ):
         pytest.skip("Augmented Lagrangian formulation requires alternation.")
@@ -77,35 +82,46 @@ class TestConvergence:
     @pytest.fixture(autouse=True)
     def setup_cmp(
         self,
-        ineq_use_surrogate,
-        ineq_multiplier_type,
-        ineq_formulation_type,
-        ineq_penalty_coefficient_type,
+        constraint_type,
+        use_surrogate,
+        multiplier_type,
+        formulation_type,
+        penalty_coefficient_type,
         num_constraints,
         num_variables,
         device,
     ):
 
-        A = torch.randn(
+        self.lhs = torch.randn(
             num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
         )
-        b = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
+        self.rhs = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
 
-        self.cmp = cooper_test_utils.SquaredNormLinearCMP(
-            has_ineq_constraint=True,
-            has_eq_constraint=False,
-            ineq_use_surrogate=ineq_use_surrogate,
-            ineq_multiplier_type=ineq_multiplier_type,
-            ineq_formulation_type=ineq_formulation_type,
-            ineq_penalty_coefficient_type=ineq_penalty_coefficient_type,
-            A=A,
-            b=b,
-            device=device,
-        )
+        cmp_kwargs = dict(device=device)
+        if constraint_type == cooper.ConstraintType.INEQUALITY:
+            cmp_kwargs["A"] = self.lhs
+            cmp_kwargs["b"] = self.rhs
+            prefix = "ineq"
 
-        self.ineq_use_surrogate = ineq_use_surrogate
-        self.is_augmented_lagrangian = ineq_formulation_type == cooper.AugmentedLagrangianFormulation
-        self.is_indexed_multiplier = ineq_multiplier_type == cooper.multipliers.IndexedMultiplier
+        else:
+            cmp_kwargs["C"] = self.lhs
+            cmp_kwargs["d"] = self.rhs
+            prefix = "eq"
+
+        cmp_kwargs[f"has_{prefix}_constraint"] = True
+        cmp_kwargs[f"{prefix}_use_surrogate"] = use_surrogate
+        cmp_kwargs[f"{prefix}_multiplier_type"] = multiplier_type
+        cmp_kwargs[f"{prefix}_formulation_type"] = formulation_type
+        cmp_kwargs[f"{prefix}_penalty_coefficient_type"] = penalty_coefficient_type
+
+        self.cmp = cooper_test_utils.SquaredNormLinearCMP(**cmp_kwargs)
+
+        self.is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
+        self.lhs_sur = self.cmp.A_sur if self.is_inequality else self.cmp.C_sur
+
+        self.use_surrogate = use_surrogate
+        self.is_augmented_lagrangian = formulation_type == cooper.AugmentedLagrangianFormulation
+        self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
         self.num_variables = num_variables
         self.num_constraints = num_constraints
         self.device = device
@@ -149,7 +165,7 @@ class TestConvergence:
 
         # Check if the primal variable is close to the exact solution
         # The tolerance is higher for the surrogate case
-        atol = 1e-5 if not self.ineq_use_surrogate else 1e-3
+        atol = 1e-5 if not self.use_surrogate else 1e-3
         assert torch.allclose(x, x_star, atol=atol)
 
         # Check if the dual variable is close to the exact solution
@@ -232,8 +248,10 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
-            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[strict_features].relu()
-            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
+            positive_violations = (self.lhs @ manual_x - self.rhs)[strict_features]
+            if self.is_inequality:
+                positive_violations.relu_()
+            violated_indices = positive_violations.abs() > PENALTY_VIOLATION_TOLERANCE
             # Update the penalty coefficients for the violated constraints
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
@@ -279,15 +297,17 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
-            positive_violations = (self.cmp.A @ manual_x - self.cmp.b)[strict_features].relu()
-            violated_indices = positive_violations > PENALTY_VIOLATION_TOLERANCE
+            positive_violations = (self.lhs @ manual_x - self.rhs)[strict_features]
+            if self.is_inequality:
+                positive_violations.relu_()
+            violated_indices = positive_violations.abs() > PENALTY_VIOLATION_TOLERANCE
             # Update the penalty coefficients for the violated constraints
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
     def _manual_violation(self, manual_x, strict=False):
-        if strict and self.ineq_use_surrogate:
-            return self.cmp.A_sur @ manual_x - self.cmp.b
-        return self.cmp.A @ manual_x - self.cmp.b
+        if strict and self.use_surrogate:
+            return self.lhs_sur @ manual_x - self.rhs
+        return self.lhs @ manual_x - self.rhs
 
     def _manual_primal_step(self, manual_x, manual_multiplier, features, manual_penalty_coeff=None):
         if manual_penalty_coeff is not None:
@@ -295,22 +315,28 @@ class TestConvergence:
             # constraints is:
             #  grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
             violation = self._manual_violation(manual_x)[features]
-            manual_x_grad = 2 * manual_x + self.cmp.A[features].t() @ torch.relu(
-                manual_multiplier[features] + manual_penalty_coeff[features] * violation
-            )
+
+            aux_grad = manual_multiplier[features] + manual_penalty_coeff[features] * violation
+            if self.is_inequality:
+                aux_grad.relu_()
+
+            manual_x_grad = 2 * manual_x + self.lhs[features].t() @ aux_grad
         else:
-            manual_x_grad = 2 * manual_x + self.cmp.A[features].t() @ manual_multiplier[features]
+            manual_x_grad = 2 * manual_x + self.lhs[features].t() @ manual_multiplier[features]
         manual_x = manual_x - PRIMAL_LR * manual_x_grad
         return manual_x
 
     def _manual_dual_step(self, manual_x, manual_multiplier, strict_features, manual_penalty_coeff=None):
         violation = self._manual_violation(manual_x, strict=True)[strict_features]
         if manual_penalty_coeff is None:
-            manual_multiplier[strict_features] = torch.relu(manual_multiplier[strict_features] + DUAL_LR * violation)
+            manual_multiplier[strict_features] = manual_multiplier[strict_features] + DUAL_LR * violation
         else:
-            manual_multiplier[strict_features] = torch.relu(
+            manual_multiplier[strict_features] = (
                 manual_multiplier[strict_features] + manual_penalty_coeff[strict_features] * violation
             )
+
+        if self.is_inequality:
+            manual_multiplier.relu_()
         return manual_multiplier
 
     def _manual_primal_lagrangian(
@@ -322,10 +348,11 @@ class TestConvergence:
         if manual_penalty_coeff is None:
             return loss + torch.dot(manual_multiplier[features], violation)
 
+        penalty_term = manual_multiplier[features] + manual_penalty_coeff[features] * violation
+        if self.is_inequality:
+            penalty_term.relu_()
         aug_lag = loss + 0.5 * torch.dot(
-            1 / manual_penalty_coeff[features],
-            torch.relu(manual_multiplier[features] + manual_penalty_coeff[features] * violation) ** 2
-            - manual_multiplier[features] ** 2,
+            1 / manual_penalty_coeff[features], penalty_term**2 - manual_multiplier[features] ** 2
         )
         return aug_lag
 
@@ -396,7 +423,7 @@ class TestConvergence:
         manual_observed_multipliers = manual_multiplier.clone()
         manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, strict_features)
 
-        manual_x_grad = 2 * manual_x + self.cmp.A[features].t() @ manual_multiplier[features]
+        manual_x_grad = 2 * manual_x + self.lhs[features].t() @ manual_multiplier[features]
         manual_x, manual_multiplier = manual_x_copy - PRIMAL_LR * manual_x_grad, self._manual_dual_step(
             manual_x, manual_multiplier_copy, strict_features
         )
