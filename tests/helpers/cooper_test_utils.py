@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Optional, Type
+from typing import Iterable, Optional, Type
 
 import cvxpy as cp
 import torch
@@ -191,33 +191,34 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
 
 def build_primal_optimizers(
-    params, use_multiple_primal_optimizers, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
+    params: Iterable[torch.nn.Parameter],
+    use_multiple_primal_optimizers=False,
+    extrapolation=False,
+    primal_optimizer_class=None,
+    primal_optimizer_kwargs=None,
 ):
-    if use_multiple_primal_optimizers:
-        if optimizer_names is None:
-            optimizer_names = ["SGD", "Adam"] if not extrapolation else ["ExtraSGD", "ExtraAdam"]
+    if primal_optimizer_kwargs is None:
+        primal_optimizer_kwargs = {"lr": 1e-2}
 
-        if optimizer_kwargs is None:
-            optimizer_kwargs = [{"lr": 1e-2}, {"lr": 1e-2}]
+    if not use_multiple_primal_optimizers:
+        if primal_optimizer_class is None:
+            primal_optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
 
-        primal_optimizers = []
-        for param, optimizer_name, kwargs in zip(params, optimizer_names, optimizer_kwargs):
-            if not extrapolation:
-                optimizer = getattr(torch.optim, optimizer_name)([param], **kwargs)
-            else:
-                optimizer = getattr(cooper.optim, optimizer_name)([param], **kwargs)
+        return primal_optimizer_class(params, **primal_optimizer_kwargs)
 
-            primal_optimizers.append(optimizer)
+    if primal_optimizer_class is not None:
+        primal_optimizer_class = [primal_optimizer_class] * 2
     else:
-        if optimizer_names is None:
-            optimizer_names = "SGD" if not extrapolation else "ExtraSGD"
-        if optimizer_kwargs is None:
-            optimizer_kwargs = {"lr": 1e-2}
-
         if not extrapolation:
-            primal_optimizers = getattr(torch.optim, optimizer_names)([params], **optimizer_kwargs)
+            primal_optimizer_class = [torch.optim.SGD, torch.optim.Adam]
         else:
-            primal_optimizers = getattr(cooper.optim, optimizer_names)([params], **optimizer_kwargs)
+            primal_optimizer_class = [cooper.optim.ExtraSGD, cooper.optim.ExtraAdam]
+
+    primal_optimizers = []
+    for i, param in enumerate(params):
+        optimizer_class = primal_optimizer_class[i % 2]
+        optimizer = optimizer_class([param], **primal_optimizer_kwargs)
+        primal_optimizers.append(optimizer)
 
     return primal_optimizers
 
@@ -268,7 +269,7 @@ class AlternationType(Enum):
     DUAL_PRIMAL = "DualPrimal"
 
 
-def build_cooper_optimizer_for_Toy2dCMP(
+def build_cooper_optimizer(
     cmp,
     primal_optimizers,
     extrapolation: bool = False,

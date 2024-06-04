@@ -61,20 +61,21 @@ class TestConvergence:
         self.num_constraints = num_constraints
         self.device = device
 
-    def test_convergence(self, extrapolation, alternation_type):
+    def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
         if self.num_constraints > self.num_variables:
             pytest.skip("Overconstrained problem. Skipping test.")
 
         x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
+        params = x.tensor_split(2) if use_multiple_primal_optimizers else [x]
+        primal_optimizers = cooper_test_utils.build_primal_optimizers(
+            params, use_multiple_primal_optimizers, extrapolation, primal_optimizer_kwargs={"lr": PRIMAL_LR}
+        )
 
-        optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
-        primal_optimizers = optimizer_class([x], lr=PRIMAL_LR)
-
-        cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
             cmp=self.cmp,
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,
-            dual_optimizer_class=optimizer_class,
+            dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
             augmented_lagrangian=self.is_augmented_lagrangian,
             alternation_type=alternation_type,
             dual_optimizer_kwargs={"lr": DUAL_LR},
@@ -115,7 +116,7 @@ class TestConvergence:
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=PRIMAL_LR)
 
-        cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+        cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
             cmp=self.cmp,
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,

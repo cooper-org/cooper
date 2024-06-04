@@ -49,7 +49,7 @@ def construct_cmp(
     )
 
 
-def test_checkpoint(multiplier_type, num_constraints, num_variables, device):
+def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
     if num_constraints > num_variables:
         pytest.skip("Overconstrained problem. Skipping test.")
 
@@ -59,10 +59,10 @@ def test_checkpoint(multiplier_type, num_constraints, num_variables, device):
 
     cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
 
-    primal_optimizer_class = torch.optim.SGD
-    primal_optimizers = primal_optimizer_class(model.parameters(), lr=PRIMAL_LR)
-
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer_for_Toy2dCMP(
+    primal_optimizers = cooper_test_utils.build_primal_optimizers(
+        model.parameters(), use_multiple_primal_optimizers, primal_optimizer_kwargs=dict(lr=PRIMAL_LR)
+    )
+    cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         dual_optimizer_kwargs={"lr": DUAL_LR},
@@ -108,7 +108,9 @@ def test_checkpoint(multiplier_type, num_constraints, num_variables, device):
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device=device)
 
-    loaded_primal_optimizers = primal_optimizer_class(loaded_model.parameters(), lr=PRIMAL_LR)
+    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(
+        loaded_model.parameters(), use_multiple_primal_optimizers, primal_optimizer_kwargs=dict(lr=PRIMAL_LR)
+    )
 
     loaded_dual_optimizers = None
     if any(new_cmp.constraints()):
