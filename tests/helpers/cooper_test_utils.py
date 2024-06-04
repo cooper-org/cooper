@@ -190,15 +190,6 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         return x_star, lambda_star
 
 
-def build_params(use_multiple_primal_optimizers, params_init):
-    if use_multiple_primal_optimizers:
-        params = [torch.nn.Parameter(params_init[0].clone()), torch.nn.Parameter(params_init[1].clone())]
-    else:
-        params = torch.nn.Parameter(params_init.clone())
-
-    return params
-
-
 def build_primal_optimizers(
     params, use_multiple_primal_optimizers, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
 ):
@@ -207,7 +198,7 @@ def build_primal_optimizers(
             optimizer_names = ["SGD", "Adam"] if not extrapolation else ["ExtraSGD", "ExtraAdam"]
 
         if optimizer_kwargs is None:
-            optimizer_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
+            optimizer_kwargs = [{"lr": 1e-2}, {"lr": 1e-2}]
 
         primal_optimizers = []
         for param, optimizer_name, kwargs in zip(params, optimizer_names, optimizer_kwargs):
@@ -229,16 +220,6 @@ def build_primal_optimizers(
             primal_optimizers = getattr(cooper.optim, optimizer_names)([params], **optimizer_kwargs)
 
     return primal_optimizers
-
-
-def build_params_and_primal_optimizers(
-    use_multiple_primal_optimizers, params_init, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
-):
-    params = build_params(use_multiple_primal_optimizers, params_init)
-    primal_optimizers = build_primal_optimizers(
-        params, use_multiple_primal_optimizers, extrapolation, optimizer_names, optimizer_kwargs
-    )
-    return params, primal_optimizers
 
 
 def build_dual_optimizers(
