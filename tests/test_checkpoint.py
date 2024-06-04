@@ -97,7 +97,9 @@ def test_checkpoint(multiplier_type, num_constraints, num_variables, device):
 
     model_state_dict_200 = model.state_dict()
     cooper_optimizer_state_dict_200 = cooper_optimizer.state_dict()
+    cmp_state_dict_200 = cmp.state_dict()
 
+    # ------------ Reload from 100-step checkpoint ------------
     new_cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
     new_cmp.load_state_dict(cmp_state_dict_100)
 
@@ -130,3 +132,4 @@ def test_checkpoint(multiplier_type, num_constraints, num_variables, device):
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
     assert testing_utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
     assert testing_utils.validate_state_dicts(loaded_cooper_optimizer.state_dict(), cooper_optimizer_state_dict_200)
+    assert testing_utils.validate_state_dicts(new_cmp.state_dict(), cmp_state_dict_200)
