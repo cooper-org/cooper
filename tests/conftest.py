@@ -3,11 +3,6 @@ import torch
 
 import cooper
 from tests.helpers import cooper_test_utils
-from tests.helpers.cooper_test_utils import (  # noqa:  F401
-    Toy2dCMP_params_init,
-    Toy2dCMP_problem_properties,
-    use_multiple_primal_optimizers,
-)
 
 
 @pytest.fixture(scope="session", params=["cpu", "cuda"])
@@ -20,6 +15,11 @@ def device(request):
 
 @pytest.fixture(params=[cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY])
 def constraint_type(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def use_multiple_primal_optimizers(request):
     return request.param
 
 
