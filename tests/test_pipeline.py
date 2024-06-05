@@ -54,6 +54,7 @@ class TestConvergence:
         self.is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
         self.lhs_sur = self.cmp.A_sur if self.is_inequality else self.cmp.C_sur
 
+        self.constraint_type = constraint_type
         self.use_surrogate = use_surrogate
         self.is_augmented_lagrangian = formulation_type == cooper.AugmentedLagrangianFormulation
         self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
@@ -62,6 +63,8 @@ class TestConvergence:
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
+        if self.constraint_type == cooper.ConstraintType.EQUALITY:
+            pytest.skip("Convergence test does not support equality constraints.")
 
         x_init = torch.ones(self.num_variables, device=self.device)
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
