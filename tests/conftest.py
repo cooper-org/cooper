@@ -22,14 +22,14 @@ def use_multiple_primal_optimizers(request):
     return request.param
 
 
-@pytest.fixture(params=[5])
-def num_constraints(request):
+@pytest.fixture(params=[5, 10])
+def num_variables(request):
     return request.param
 
 
-@pytest.fixture(params=[5, 10])
-def num_variables(request, num_constraints):
-    if num_constraints > request.param:
+@pytest.fixture(params=[5])
+def num_constraints(request, num_variables):
+    if request.param > num_variables:
         pytest.skip("Overconstrained problem. Skipping test.")
     return request.param
 
