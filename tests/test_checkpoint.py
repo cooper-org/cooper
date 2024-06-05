@@ -4,7 +4,6 @@ import os
 import tempfile
 from typing import Sequence
 
-import pytest
 import torch
 
 import cooper
@@ -40,6 +39,7 @@ def construct_cmp(
     b = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
 
     return cooper_test_utils.SquaredNormLinearCMP(
+        num_variables=num_variables,
         has_ineq_constraint=True,
         ineq_multiplier_type=multiplier_type,
         ineq_formulation_type=cooper.LagrangianFormulation,
@@ -50,8 +50,6 @@ def construct_cmp(
 
 
 def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
-    if num_constraints > num_variables:
-        pytest.skip("Overconstrained problem. Skipping test.")
 
     x = torch.ones(num_variables, device=device).split(1)
     model = Model(x)

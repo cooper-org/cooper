@@ -29,6 +29,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
     def __init__(
         self,
+        num_variables: int,
         has_ineq_constraint: bool = False,
         has_eq_constraint: bool = False,
         ineq_use_surrogate: bool = False,
@@ -48,6 +49,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         device="cpu",
     ):
         super().__init__()
+        self.num_variables = num_variables
         self.has_ineq_constraint = has_ineq_constraint
         self.has_eq_constraint = has_eq_constraint
         self.ineq_use_surrogate = ineq_use_surrogate
@@ -170,8 +172,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         return cmp_state
 
     def compute_exact_solution(self):
-        num_variables = self.A.shape[1] if self.A is not None else self.C.shape[1]
-        x = cp.Variable(num_variables)
+        x = cp.Variable(self.num_variables)
         objective = cp.Minimize(cp.sum_squares(x))
 
         constraints = []

@@ -32,7 +32,7 @@ class TestConvergence:
         )
         self.rhs = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
 
-        cmp_kwargs = dict(device=device)
+        cmp_kwargs = dict(num_variables=num_variables, device=device)
         if constraint_type == cooper.ConstraintType.INEQUALITY:
             cmp_kwargs["A"] = self.lhs
             cmp_kwargs["b"] = self.rhs
@@ -62,11 +62,10 @@ class TestConvergence:
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
-        if self.num_constraints > self.num_variables:
-            pytest.skip("Overconstrained problem. Skipping test.")
 
-        x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
-        params = x.tensor_split(2) if use_multiple_primal_optimizers else [x]
+        x_init = torch.ones(self.num_variables, device=self.device)
+        x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
+        params = list(map(lambda t: torch.nn.Parameter(t), x_init))
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
             params, use_multiple_primal_optimizers, extrapolation, primal_optimizer_kwargs={"lr": PRIMAL_LR}
         )
@@ -87,11 +86,11 @@ class TestConvergence:
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 
-        roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
-        if not extrapolation and alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            roll_kwargs["compute_violations_kwargs"] = dict(x=x)
-
         for _ in range(2000):
+            roll_kwargs = {"compute_cmp_state_kwargs": dict(x=torch.cat(params))}
+            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+                roll_kwargs["compute_violations_kwargs"] = dict(x=torch.cat(params))
+
             roll_out = cooper_optimizer.roll(**roll_kwargs)
             if self.is_augmented_lagrangian:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
@@ -102,7 +101,7 @@ class TestConvergence:
         # Check if the primal variable is close to the exact solution
         # The tolerance is higher for the surrogate case
         atol = 1e-5 if not self.use_surrogate else 1e-3
-        assert torch.allclose(x, x_star, atol=atol)
+        assert torch.allclose(torch.cat(params), x_star, atol=atol)
 
         # Check if the dual variable is close to the exact solution
         assert torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
@@ -133,7 +132,7 @@ class TestConvergence:
             )
 
         roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
-        if not extrapolation and alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
             roll_kwargs["compute_violations_kwargs"] = dict(x=x)
 
         manual_x = torch.ones(self.num_variables, device=self.device)
@@ -251,7 +250,6 @@ class TestConvergence:
             # constraints is:
             #  grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
             violation = self._manual_violation(manual_x)[features]
-
             aux_grad = manual_multiplier[features] + manual_penalty_coeff[features] * violation
             if self.is_inequality:
                 aux_grad.relu_()

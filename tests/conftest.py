@@ -9,7 +9,6 @@ from tests.helpers import cooper_test_utils
 def device(request):
     if request.param == "cuda" and not torch.cuda.is_available():
         pytest.skip("Aim device 'cuda' is not available.")
-
     return torch.device(request.param)
 
 
@@ -29,7 +28,9 @@ def num_constraints(request):
 
 
 @pytest.fixture(params=[5, 10])
-def num_variables(request):
+def num_variables(request, num_constraints):
+    if num_constraints > request.param:
+        pytest.skip("Overconstrained problem. Skipping test.")
     return request.param
 
 
