@@ -20,6 +20,9 @@ pipeline, where:`
     - CUDA acceleration is used.
 """
 
+import os
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
 import style_utils
@@ -91,12 +94,26 @@ cooper_optimizer = cooper.optim.SimultaneousOptimizer(
     primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
 )
 
+# Create a directory to save checkpoints
+checkpoint_path = "~/tutorials/checkpoint"
+if not os.path.exists(checkpoint_path):
+    os.makedirs(checkpoint_path)
 
-all_metrics = {"batch_ix": [], "train_loss": [], "train_acc": [], "multiplier_value": [], "constraint_violation": []}
+# Load checkpoint if exists
+if not os.path.isfile(checkpoint_path + "/checkpoint.pth"):
+    batch_ix = 0
+    start_epoch = 0
+    all_metrics = defaultdict(list)
+else:
+    checkpoint = torch.load(checkpoint_path + "/checkpoint.pth")
+    batch_ix = checkpoint["batch_ix"]
+    start_epoch = checkpoint["epoch"] + 1
+    all_metrics = checkpoint["all_metrics"]
+    model.load_state_dict(checkpoint["model_state_dict"])
+    cmp.load_state_dict(checkpoint["cmp_state_dict"])
+    cooper_optimizer.load_state_dict(checkpoint["cooper_optimizer_state_dict"])
 
-batch_ix = 0
-
-for epoch_num in range(7):
+for epoch_num in range(start_epoch, 7):
     for inputs, targets in train_loader:
         batch_ix += 1
 
@@ -117,6 +134,24 @@ for epoch_num in range(7):
 
             constraint_violation = cmp_state.observed_constraints[cmp.norm_constraint].violation
             all_metrics["constraint_violation"].append(constraint_violation.item())
+
+    # Save checkpoint at the end of each epoch
+    torch.save(
+        {
+            "batch_ix": batch_ix,
+            "epoch": epoch_num,
+            "all_metrics": all_metrics,
+            "model_state_dict": model.state_dict(),
+            "cmp_state_dict": cmp.state_dict(),
+            "cooper_optimizer_state_dict": cooper_optimizer.state_dict(),
+        },
+        checkpoint_path + "/checkpoint.pth",
+    )
+
+del batch_ix, epoch_num, all_metrics, model, cmp, cooper_optimizer
+
+# Post-training analysis and plotting
+all_metrics = torch.load(checkpoint_path + "/checkpoint.pth")["all_metrics"]
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))
 
