@@ -71,7 +71,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
 
 # Load the MNIST dataset
-data_path = "~/tutorials/data"
+data_path = "./data"
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 dataset = datasets.MNIST(data_path, train=True, download=True, transform=data_transforms)
 train_loader = torch.utils.data.DataLoader(dataset, batch_size=128, num_workers=4, pin_memory=torch.cuda.is_available())
@@ -95,7 +95,7 @@ cooper_optimizer = cooper.optim.SimultaneousOptimizer(
 )
 
 # Create a directory to save checkpoints
-checkpoint_path = "~/tutorials/checkpoint"
+checkpoint_path = "./checkpoint"
 if not os.path.exists(checkpoint_path):
     os.makedirs(checkpoint_path)
 
