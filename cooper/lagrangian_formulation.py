@@ -331,14 +331,16 @@ class LagrangianFormulation(BaseLagrangianFormulation):
 class DampedLagrangianFormulation(LagrangianFormulation):
 
     """
-    Provides utilities for computing the Damped-Lagrangian proposed by
-    :cite:t:`platt1987constrained` and associated with a ``ConstrainedMinimizationProblem`` and for populating the gradients for the
-    primal and dual parameters.
+    Provides utilities for computing the Damped-Lagrangian
+    proposed by :cite:t:`platt1987constrained` and associated with a
+    ``ConstrainedMinimizationProblem`` and for populating the
+    gradients for the primal and dual parameters.
 
     Args:
         cmp: ``ConstrainedMinimizationProblem`` we aim to solve and which gives
             rise to the Lagrangian.
-        damping_coefficient: Coefficient used for the damping term of the multipliers.
+        damping_coefficient: Coefficient used for the damping term of the
+            multipliers.
         ineq_init: Initialization values for the inequality multipliers.
         eq_init: Initialization values for the equality multipliers.
         aug_lag_coefficient: Coefficient used for the augmented Lagrangian.

@@ -84,8 +84,34 @@ the existence of a pure Nash equilibrium is guaranteed :cite:p:`vonNeumann1928th
 .. autoclass:: LagrangianFormulation
     :members:
 
+
 Damped-Lagrangian Formulation
-----------------------------
+-----------------------------
+
+The Damped-Lagrangian Formulation modifies the traditional Lagrangian approach to address oscillations that can occur in the optimization process when constraints are suddenly satisfied or violated.
+This methodology, termed the *Modified Differential Method of Multipliers*, was initially proposed by John C. Platt and Alan H. Barr in 1988 :cite:`platt1987constrained`
+and further explored in contemporary discussions on making machine learning algorithms more tunable, as highlighted in a recent blog post :cite:`engraved2024tunable`.
+
+Overview
+^^^^^^^^
+The standard Lagrangian multipliers approach can lead to oscillatory behavior as the Lagrangian multiplier \(\lambda\) grows uncontrolled when constraints are breached.
+Upon meeting the constraints, a high \(\lambda\) value can push the solution away from the constraint boundary, resulting in oscillations around the optimal solution.
+The Damped-Lagrangian formulation introduces a damping mechanism to stabilize these oscillations and enhance convergence.
+
+Theoretical Background
+^^^^^^^^^^^^^^^^^^^^^^
+The principal adjustment involves introducing a damping term to the update rule of \(\lambda\), analogous to damping in a physical oscillatory system,
+to prevent excessive fluctuations and promote stability.
+
+Advantages
+^^^^^^^^^^
+1. **Reduced Oscillations**: Introduces damping to minimize oscillatory behaviors, leading to more stable convergence.
+2. **Flexibility**: Effective across both convex and concave Pareto fronts.
+3. **Hyper-parameter Tuning**: The damping hyper-parameter allows for balancing quick convergence with adequate exploration of the solution space.
+
+Considerations
+^^^^^^^^^^^^^^
+- **Hyper-parameter Selection**: Introduces a new hyper-parameter, the damping factor, which necessitates careful tuning to optimize convergence dynamics without altering the final solution.
 
 .. autoclass:: DampedLagrangianFormulation
     :members:
