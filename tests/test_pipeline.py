@@ -7,8 +7,8 @@ import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
-PRIMAL_LR = 1e-2
-DUAL_LR = 1e-2
+PRIMAL_LR = 2e-2
+DUAL_LR = 1e-1
 PENALTY_GROWTH_FACTOR = 1.002
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
@@ -90,8 +90,6 @@ class TestConvergence:
         self.device = device
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
-        if self.constraint_type == cooper.ConstraintType.EQUALITY:
-            pytest.skip("Convergence test does not support equality constraints.")
 
         x_init = torch.ones(self.num_variables, device=self.device)
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
@@ -128,13 +126,17 @@ class TestConvergence:
         # Compute the exact solution
         x_star, lambda_star = self.cmp.compute_exact_solution()
 
+        atol = 1e-5
         # Check if the primal variable is close to the exact solution
-        # The tolerance is higher for the surrogate case
-        atol = 1e-5 if not self.use_surrogate else 1e-3
-        assert torch.allclose(torch.cat(params), x_star, atol=atol)
+        if not self.use_surrogate:
+            assert torch.allclose(torch.cat(params), x_star, atol=atol)
 
-        # Check if the dual variable is close to the exact solution
-        assert torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
+            # Check if the dual variable is close to the exact solution
+            assert torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
+        else:
+            # The surrogate formulation is not guaranteed to converge to the exact solution,
+            # but it should be feasible
+            assert torch.le(self.lhs @ torch.cat(params) - self.rhs, atol).all()
 
     def test_manual_step(self, extrapolation, alternation_type):
 
@@ -270,7 +272,7 @@ class TestConvergence:
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
     def _manual_violation(self, manual_x, strict=False):
-        if strict and self.use_surrogate:
+        if not strict and self.use_surrogate:
             return self.lhs_sur @ manual_x - self.rhs
         return self.lhs @ manual_x - self.rhs
 
