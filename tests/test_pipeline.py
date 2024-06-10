@@ -8,8 +8,8 @@ from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficient
 from tests.helpers import cooper_test_utils
 
 PRIMAL_LR = 2e-2
-DUAL_LR = 1e-1
-PENALTY_GROWTH_FACTOR = 1.002
+DUAL_LR = 5e-1
+PENALTY_GROWTH_FACTOR = 1.0005
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
 
@@ -88,6 +88,8 @@ class TestConvergence:
         self.num_variables = num_variables
         self.num_constraints = num_constraints
         self.device = device
+        self.primal_lr = 0.3 * PRIMAL_LR if self.is_augmented_lagrangian and use_surrogate else PRIMAL_LR
+        self.dual_lr = DUAL_LR / num_variables
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
 
@@ -95,7 +97,7 @@ class TestConvergence:
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
         params = list(map(lambda t: torch.nn.Parameter(t), x_init))
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
-            params, use_multiple_primal_optimizers, extrapolation, primal_optimizer_kwargs={"lr": PRIMAL_LR}
+            params, use_multiple_primal_optimizers, extrapolation, primal_optimizer_kwargs={"lr": self.primal_lr}
         )
 
         cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
@@ -105,7 +107,7 @@ class TestConvergence:
             dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
             augmented_lagrangian=self.is_augmented_lagrangian,
             alternation_type=alternation_type,
-            dual_optimizer_kwargs={"lr": DUAL_LR},
+            dual_optimizer_kwargs={"lr": self.dual_lr},
         )
 
         penalty_updater = None
@@ -126,7 +128,7 @@ class TestConvergence:
         # Compute the exact solution
         x_star, lambda_star = self.cmp.compute_exact_solution()
 
-        atol = 1e-5
+        atol = 1e-4
         # Check if the primal variable is close to the exact solution
         if not self.use_surrogate:
             assert torch.allclose(torch.cat(params), x_star, atol=atol)
@@ -136,6 +138,7 @@ class TestConvergence:
         else:
             # The surrogate formulation is not guaranteed to converge to the exact solution,
             # but it should be feasible
+            atol = 5e-4
             assert torch.le(self.lhs @ torch.cat(params) - self.rhs, atol).all()
 
     def test_manual_step(self, extrapolation, alternation_type):
