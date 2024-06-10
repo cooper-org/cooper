@@ -108,24 +108,24 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
     def _compute_violations(self, x, lhs, rhs, lhs_sur, multiplier_type, observed_constraint_ratio):
 
-        violation = torch.matmul(lhs, x) - rhs
+        strict_violation = torch.matmul(lhs, x) - rhs
+
+        strict_constraint_features = None
+        if multiplier_type == cooper.multipliers.IndexedMultiplier:
+            strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
+            strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * rhs.numel())]
+            strict_violation = strict_violation[strict_constraint_features]
+
+        if lhs_sur is None:
+            return cooper.ConstraintState(violation=strict_violation, constraint_features=strict_constraint_features)
+
+        violation = torch.matmul(lhs_sur, x) - rhs
 
         constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
             constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
             constraint_features = constraint_features[: int(observed_constraint_ratio * rhs.numel())]
             violation = violation[constraint_features]
-
-        strict_violation = None
-        strict_constraint_features = None
-        if lhs_sur is not None:
-            strict_violation = violation.clone()
-            violation = torch.matmul(lhs_sur, x) - rhs
-
-            if multiplier_type == cooper.multipliers.IndexedMultiplier:
-                strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
-                strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * rhs.numel())]
-                strict_violation = strict_violation[strict_constraint_features]
 
         return cooper.ConstraintState(
             violation=violation,

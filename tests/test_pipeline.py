@@ -191,6 +191,7 @@ class TestConvergence:
         if strict_features is None:
             strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
+        manual_x_prev = manual_x.clone()
         # Manual step
         (
             manual_x,
@@ -215,10 +216,13 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
-            positive_violations = (self.lhs @ manual_x - self.rhs)[strict_features]
+            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+                strict_violation = self._manual_violation(manual_x, strict=True)[strict_features]
+            else:
+                strict_violation = self._manual_violation(manual_x_prev, strict=True)[strict_features]
             if self.is_inequality:
-                positive_violations.relu_()
-            violated_indices = positive_violations.abs() > PENALTY_VIOLATION_TOLERANCE
+                strict_violation.relu_()
+            violated_indices = strict_violation.abs() > PENALTY_VIOLATION_TOLERANCE
             # Update the penalty coefficients for the violated constraints
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
@@ -240,6 +244,7 @@ class TestConvergence:
         if strict_features is None:
             strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
+        manual_x_prev = manual_x.clone()
         # Manual step
         (
             manual_x,
@@ -264,10 +269,13 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
-            positive_violations = (self.lhs @ manual_x - self.rhs)[strict_features]
+            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+                strict_violation = self._manual_violation(manual_x, strict=True)[strict_features]
+            else:
+                strict_violation = self._manual_violation(manual_x_prev, strict=True)[strict_features]
             if self.is_inequality:
-                positive_violations.relu_()
-            violated_indices = positive_violations.abs() > PENALTY_VIOLATION_TOLERANCE
+                strict_violation.relu_()
+            violated_indices = strict_violation.abs() > PENALTY_VIOLATION_TOLERANCE
             # Update the penalty coefficients for the violated constraints
             manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
@@ -277,6 +285,7 @@ class TestConvergence:
         return self.lhs @ manual_x - self.rhs
 
     def _manual_primal_step(self, manual_x, manual_multiplier, features, manual_penalty_coeff=None):
+        lhs = self.lhs_sur if self.use_surrogate else self.lhs
         if manual_penalty_coeff is not None:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
             # constraints is:
@@ -285,10 +294,9 @@ class TestConvergence:
             aux_grad = manual_multiplier[features] + manual_penalty_coeff[features] * violation
             if self.is_inequality:
                 aux_grad.relu_()
-
-            manual_x_grad = 2 * manual_x + self.lhs[features].t() @ aux_grad
+            manual_x_grad = 2 * manual_x + lhs[features].t() @ aux_grad
         else:
-            manual_x_grad = 2 * manual_x + self.lhs[features].t() @ manual_multiplier[features]
+            manual_x_grad = 2 * manual_x + lhs[features].t() @ manual_multiplier[features]
         manual_x = manual_x - PRIMAL_LR * manual_x_grad
         return manual_x
 
@@ -389,7 +397,8 @@ class TestConvergence:
         manual_observed_multipliers = manual_multiplier.clone()
         manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, strict_features)
 
-        manual_x_grad = 2 * manual_x + self.lhs[features].t() @ manual_multiplier[features]
+        lhs = self.lhs_sur if self.use_surrogate else self.lhs
+        manual_x_grad = 2 * manual_x + lhs[features].t() @ manual_multiplier[features]
         manual_x, manual_multiplier = manual_x_copy - PRIMAL_LR * manual_x_grad, self._manual_dual_step(
             manual_x, manual_multiplier_copy, strict_features
         )
