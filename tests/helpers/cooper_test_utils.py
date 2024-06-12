@@ -1,5 +1,5 @@
 """Cooper-related utilities for writing tests."""
-
+import itertools
 from copy import deepcopy
 from enum import Enum
 from typing import Iterable, Optional, Type
@@ -194,32 +194,22 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
 def build_primal_optimizers(
     params: Iterable[torch.nn.Parameter],
-    use_multiple_primal_optimizers=False,
     extrapolation=False,
     primal_optimizer_class=None,
     primal_optimizer_kwargs=None,
 ):
-    if primal_optimizer_kwargs is None:
-        primal_optimizer_kwargs = {"lr": 1e-2}
-
-    if not use_multiple_primal_optimizers:
-        if primal_optimizer_class is None:
-            primal_optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
-
-        return primal_optimizer_class(params, **primal_optimizer_kwargs)
-
-    if primal_optimizer_class is not None:
-        primal_optimizer_class = [primal_optimizer_class] * 2
-    else:
+    if primal_optimizer_class is None:
         if not extrapolation:
-            primal_optimizer_class = [torch.optim.SGD, torch.optim.Adam]
+            primal_optimizer_class = itertools.cycle([torch.optim.SGD, torch.optim.Adam])
         else:
-            primal_optimizer_class = [cooper.optim.ExtraSGD, cooper.optim.ExtraAdam]
+            primal_optimizer_class = itertools.cycle([cooper.optim.ExtraSGD, cooper.optim.ExtraAdam])
+
+    if primal_optimizer_kwargs is None:
+        primal_optimizer_kwargs = itertools.cycle([{"lr": 1e-2}, {"lr": 1e-3}])
 
     primal_optimizers = []
-    for i, param in enumerate(params):
-        optimizer_class = primal_optimizer_class[i % 2]
-        optimizer = optimizer_class([param], **primal_optimizer_kwargs)
+    for param, optimizer_class, kwargs in zip(params, primal_optimizer_class, primal_optimizer_kwargs):
+        optimizer = optimizer_class([param], **kwargs)
         primal_optimizers.append(optimizer)
 
     return primal_optimizers

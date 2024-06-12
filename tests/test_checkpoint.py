@@ -9,7 +9,6 @@ import torch
 import cooper
 from tests.helpers import cooper_test_utils, testing_utils
 
-PRIMAL_LR = 1e-2
 DUAL_LR = 1e-2
 
 
@@ -57,9 +56,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
 
-    primal_optimizers = cooper_test_utils.build_primal_optimizers(
-        model.parameters(), use_multiple_primal_optimizers, primal_optimizer_kwargs=dict(lr=PRIMAL_LR)
-    )
+    primal_optimizers = cooper_test_utils.build_primal_optimizers(model.parameters())
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
@@ -106,10 +103,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device=device)
 
-    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(
-        loaded_model.parameters(), use_multiple_primal_optimizers, primal_optimizer_kwargs=dict(lr=PRIMAL_LR)
-    )
-
+    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(loaded_model.parameters())
     loaded_dual_optimizers = None
     if any(new_cmp.constraints()):
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(

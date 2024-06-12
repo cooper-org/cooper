@@ -7,9 +7,9 @@ import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
-PRIMAL_LR = 2e-2
+PRIMAL_LR = 2.5e-2
 DUAL_LR = 5e-1
-PENALTY_GROWTH_FACTOR = 1.0005
+PENALTY_GROWTH_FACTOR = 1.0 + 2.5e-4
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
 
@@ -25,7 +25,7 @@ class TestConvergenceNoConstraint:
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
         params = list(map(lambda t: torch.nn.Parameter(t), x_init))
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
-            params, use_multiple_primal_optimizers, primal_optimizer_kwargs={"lr": PRIMAL_LR}
+            params, primal_optimizer_kwargs=[{"lr": PRIMAL_LR} for _ in range(len(params))]
         )
 
         cooper_optimizer = cooper_test_utils.build_cooper_optimizer(cmp=self.cmp, primal_optimizers=primal_optimizers)
@@ -88,7 +88,7 @@ class TestConvergence:
         self.num_variables = num_variables
         self.num_constraints = num_constraints
         self.device = device
-        self.primal_lr = 0.3 * PRIMAL_LR if self.is_augmented_lagrangian and use_surrogate else PRIMAL_LR
+        self.primal_lr = 0.3 * PRIMAL_LR if self.is_augmented_lagrangian else PRIMAL_LR
         self.dual_lr = DUAL_LR / num_variables
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
@@ -96,17 +96,21 @@ class TestConvergence:
         x_init = torch.ones(self.num_variables, device=self.device)
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
         params = list(map(lambda t: torch.nn.Parameter(t), x_init))
+
+        primal_optimizer_kwargs = [{"lr": self.primal_lr}]
+        if use_multiple_primal_optimizers:
+            primal_optimizer_kwargs.append({"lr": 5 * self.primal_lr, "betas": (0.0, 0.0), "eps": 1.0})
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
-            params, use_multiple_primal_optimizers, extrapolation, primal_optimizer_kwargs={"lr": self.primal_lr}
+            params, extrapolation, primal_optimizer_kwargs=primal_optimizer_kwargs
         )
 
         cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
             cmp=self.cmp,
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,
-            dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
             augmented_lagrangian=self.is_augmented_lagrangian,
             alternation_type=alternation_type,
+            dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
             dual_optimizer_kwargs={"lr": self.dual_lr},
         )
 
