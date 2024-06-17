@@ -54,10 +54,8 @@ class TestConvergence:
         device,
     ):
 
-        self.lhs = torch.randn(
-            num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
-        )
-        self.rhs = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
+        self.lhs = torch.randn(num_constraints, num_variables, generator=torch.Generator().manual_seed(0)).to(device)
+        self.rhs = torch.randn(num_constraints, generator=torch.Generator().manual_seed(0)).to(device)
 
         cmp_kwargs = dict(num_variables=num_variables, device=device)
         if constraint_type == cooper.ConstraintType.INEQUALITY:
