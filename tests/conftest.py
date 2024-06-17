@@ -62,7 +62,7 @@ def penalty_coefficient_type(formulation_type, multiplier_type):
 @pytest.fixture(params=[True, False])
 def extrapolation(request, formulation_type):
     if request.param and formulation_type == cooper.AugmentedLagrangianFormulation:
-        pytest.skip("Extrapolation is not supported for Augmented Lagrangian formulation.")
+        pytest.skip("Extrapolation is not supported for the Augmented Lagrangian formulation.")
     return request.param
 
 
@@ -74,11 +74,11 @@ def extrapolation(request, formulation_type):
     ]
 )
 def alternation_type(request, extrapolation, formulation_type):
-    if extrapolation and request.param != cooper_test_utils.AlternationType.FALSE:
+
+    is_alternation = request.param != cooper_test_utils.AlternationType.FALSE
+
+    if extrapolation and is_alternation:
         pytest.skip("Extrapolation is only supported for simultaneous updates.")
-    if (
-        formulation_type == cooper.AugmentedLagrangianFormulation
-        and request.param == cooper_test_utils.AlternationType.FALSE
-    ):
+    if formulation_type == cooper.AugmentedLagrangianFormulation and not is_alternation:
         pytest.skip("Augmented Lagrangian formulation requires alternation.")
     return request.param

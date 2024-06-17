@@ -1,4 +1,5 @@
 """Cooper-related utilities for writing tests."""
+
 import itertools
 from copy import deepcopy
 from enum import Enum
@@ -14,7 +15,7 @@ from cooper.utils import OneOrSequence
 
 class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
     """
-    Minimization problem for minimizing the square norm of a vector under linear constraints:
+    Problem formulation for minimizing the square norm of a vector under linear constraints:
         min ||x||^2
         st. Ax <= b
         &   Cx == d
@@ -50,19 +51,23 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
     ):
         super().__init__()
         self.num_variables = num_variables
+
         self.has_ineq_constraint = has_ineq_constraint
         self.has_eq_constraint = has_eq_constraint
         self.ineq_use_surrogate = ineq_use_surrogate
         self.eq_use_surrogate = eq_use_surrogate
-        self.ineq_multiplier_type = ineq_multiplier_type
-        self.eq_multiplier_type = eq_multiplier_type
-        self.ineq_observed_constraint_ratio = ineq_observed_constraint_ratio
-        self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
+
         self.A = A.to(device) if A is not None else None
         self.b = b.to(device) if b is not None else None
         self.C = C.to(device) if C is not None else None
         self.d = d.to(device) if d is not None else None
+
+        self.ineq_multiplier_type = ineq_multiplier_type
+        self.eq_multiplier_type = eq_multiplier_type
+        self.ineq_observed_constraint_ratio = ineq_observed_constraint_ratio
+        self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
         self.device = device
+
         self.generator = torch.Generator(device=device)
         self.generator.manual_seed(0)
 
@@ -83,12 +88,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if ineq_penalty_coefficient_type is not None:
                 ineq_penalty_coefficient = ineq_penalty_coefficient_type(init=torch.ones(b.numel(), device=device))
 
+            ineq_multiplier = ineq_multiplier_type(
+                constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=b.numel(), device=device
+            )
             self.ineq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.INEQUALITY,
                 formulation_type=ineq_formulation_type,
-                multiplier=ineq_multiplier_type(
-                    constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=b.numel(), device=device
-                ),
+                multiplier=ineq_multiplier,
                 penalty_coefficient=ineq_penalty_coefficient,
             )
 
@@ -97,12 +103,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if eq_penalty_coefficient_type is not None:
                 eq_penalty_coefficient = eq_penalty_coefficient_type(init=torch.ones(d.numel(), device=device))
 
+            eq_multiplier = eq_multiplier_type(
+                constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=d.numel(), device=device
+            )
             self.eq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.EQUALITY,
                 formulation_type=eq_formulation_type,
-                multiplier=eq_multiplier_type(
-                    constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=d.numel(), device=device
-                ),
+                multiplier=eq_multiplier,
                 penalty_coefficient=eq_penalty_coefficient,
             )
 
@@ -138,26 +145,20 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         """
         Computes the constraint violations for the given parameters.
         """
+        observed_constraints = {}
+
         ineq_state = None
         if self.has_ineq_constraint:
             ineq_state = self._compute_violations(
-                x,
-                self.A,
-                self.b,
-                self.A_sur,
-                self.ineq_multiplier_type,
-                self.ineq_observed_constraint_ratio,
+                x, self.A, self.b, self.A_sur, self.ineq_multiplier_type, self.ineq_observed_constraint_ratio
             )
+            observed_constraints[self.ineq_constraints] = ineq_state
+
         eq_state = None
         if self.has_eq_constraint:
             eq_state = self._compute_violations(
                 x, self.C, self.d, self.C_sur, self.eq_multiplier_type, self.eq_observed_constraint_ratio
             )
-
-        observed_constraints = {}
-        if self.has_ineq_constraint:
-            observed_constraints[self.ineq_constraints] = ineq_state
-        if self.has_eq_constraint:
             observed_constraints[self.eq_constraints] = eq_state
 
         return cooper.CMPState(observed_constraints=observed_constraints)
@@ -271,7 +272,10 @@ def build_cooper_optimizer(
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> CooperOptimizer:
     dual_optimizers = None
-    if len(list(cmp.constraints())) != 0:
+    cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
+
+    if len(list(cmp.constraints())) > 0:
+        # If there are constraints, we build dual optimizers
         dual_optimizers = build_dual_optimizers(
             dual_parameters=cmp.dual_parameters(),
             augmented_lagrangian=augmented_lagrangian,
@@ -279,9 +283,6 @@ def build_cooper_optimizer(
             dual_optimizer_kwargs=dual_optimizer_kwargs,
         )
 
-    if dual_optimizers is None:
-        cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
-    else:
         if extrapolation:
             cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
         else:

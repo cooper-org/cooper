@@ -304,8 +304,8 @@ class TestConvergence:
             manual_x_grad = 2 * manual_x + lhs[features].t() @ aux_grad
         else:
             manual_x_grad = 2 * manual_x + lhs[features].t() @ manual_multiplier[features]
-        manual_x = manual_x - PRIMAL_LR * manual_x_grad
-        return manual_x
+
+        return manual_x - PRIMAL_LR * manual_x_grad
 
     def _manual_dual_step(self, manual_x, manual_multiplier, strict_features, manual_penalty_coeff=None):
         violation = self._manual_violation(manual_x, strict=True)[strict_features]
@@ -318,13 +318,14 @@ class TestConvergence:
 
         if self.is_inequality:
             manual_multiplier.relu_()
+
         return manual_multiplier
 
     def _manual_primal_lagrangian(
         self, manual_x, manual_multiplier, features, manual_penalty_coeff: Optional[torch.Tensor] = None
     ):
-        violation = self._manual_violation(manual_x)[features]
         loss = torch.sum(manual_x**2)
+        violation = self._manual_violation(manual_x)[features]
 
         if manual_penalty_coeff is None:
             return loss + torch.dot(manual_multiplier[features], violation)
@@ -332,6 +333,7 @@ class TestConvergence:
         penalty_term = manual_multiplier[features] + manual_penalty_coeff[features] * violation
         if self.is_inequality:
             penalty_term.relu_()
+
         aug_lag = loss + 0.5 * torch.dot(
             1 / manual_penalty_coeff[features], penalty_term**2 - manual_multiplier[features] ** 2
         )
@@ -341,15 +343,18 @@ class TestConvergence:
         violation = self._manual_violation(manual_x, strict=True)[strict_features]
         if manual_penalty_coeff is None:
             return torch.sum(manual_multiplier[strict_features] * violation)
+
         return torch.sum(manual_penalty_coeff[strict_features] * manual_multiplier[strict_features] * violation)
 
     def _manual_simultaneous_roll(self, manual_x, manual_multiplier, features, strict_features):
         manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier, features)
         manual_observed_multipliers = manual_multiplier.clone()
         manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, strict_features)
+
         manual_x, manual_multiplier = self._manual_primal_step(
             manual_x, manual_multiplier, features
         ), self._manual_dual_step(manual_x, manual_multiplier, strict_features)
+
         return (
             manual_x,
             manual_multiplier,
@@ -359,15 +364,19 @@ class TestConvergence:
         )
 
     def _manual_dual_primal_roll(self, manual_x, manual_multiplier, features, strict_features, manual_penalty_coeff):
+        # Dual step
         manual_dual_lagrangian = self._manual_dual_lagrangian(
             manual_x, manual_multiplier, strict_features, manual_penalty_coeff
         )
         manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier, strict_features, manual_penalty_coeff)
+
+        # Primal step
         manual_primal_lagrangian = self._manual_primal_lagrangian(
             manual_x, manual_multiplier, features, manual_penalty_coeff
         )
         manual_observed_multipliers = manual_multiplier.clone()
         manual_x = self._manual_primal_step(manual_x, manual_multiplier, features, manual_penalty_coeff)
+
         return (
             manual_x,
             manual_multiplier,
@@ -377,15 +386,19 @@ class TestConvergence:
         )
 
     def _manual_primal_dual_roll(self, manual_x, manual_multiplier, features, strict_features, manual_penalty_coeff):
+        # Primal step
         manual_primal_lagrangian = self._manual_primal_lagrangian(
             manual_x, manual_multiplier, features, manual_penalty_coeff
         )
         manual_observed_multipliers = manual_multiplier.clone()
         manual_x = self._manual_primal_step(manual_x, manual_multiplier, features, manual_penalty_coeff)
+
+        # Dual step
         manual_dual_lagrangian = self._manual_dual_lagrangian(
             manual_x, manual_multiplier, strict_features, manual_penalty_coeff
         )
         manual_multiplier = self._manual_dual_step(manual_x, manual_multiplier, strict_features, manual_penalty_coeff)
+
         return (
             manual_x,
             manual_multiplier,
@@ -397,9 +410,12 @@ class TestConvergence:
     def _manual_extragradient_roll(self, manual_x, manual_multiplier, features, strict_features):
         manual_x_copy = manual_x.clone()
         manual_multiplier_copy = manual_multiplier.clone()
+
+        # Extrapolation step
         manual_x = self._manual_primal_step(manual_x_copy, manual_multiplier_copy, features)
         manual_multiplier = self._manual_dual_step(manual_x_copy, manual_multiplier_copy.clone(), strict_features)
 
+        # Update step
         manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier, features)
         manual_observed_multipliers = manual_multiplier.clone()
         manual_dual_lagrangian = self._manual_dual_lagrangian(manual_x, manual_multiplier, strict_features)

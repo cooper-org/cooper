@@ -26,12 +26,7 @@ class Model(torch.nn.Module):
         return torch.stack([getattr(self, f"params_{i}") for i in range(self.num_params)])
 
 
-def construct_cmp(
-    multiplier_type,
-    num_constraints,
-    num_variables,
-    device,
-):
+def construct_cmp(multiplier_type, num_constraints, num_variables, device):
     A = torch.randn(
         num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
     )
@@ -58,9 +53,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     primal_optimizers = cooper_test_utils.build_primal_optimizers(model.parameters())
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
-        cmp=cmp,
-        primal_optimizers=primal_optimizers,
-        dual_optimizer_kwargs={"lr": DUAL_LR},
+        cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizer_kwargs={"lr": DUAL_LR}
     )
     cooper_optimizer_class = type(cooper_optimizer)
 
