@@ -277,8 +277,7 @@ def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
     manual_grad = params_for_manual_update.clone().detach()  # L2 loss has the parameter as the gradient
     params_for_manual_update = params_for_manual_update - lr * Ki * manual_grad
 
-    if not torch.allclose(params, params_for_manual_update):
-        breakpoint()
+    assert torch.allclose(params, params_for_manual_update)
 
 
 @pytest.mark.parametrize(["Kp", "Ki", "ema_nu"], ALL_HYPER_PARAMS)

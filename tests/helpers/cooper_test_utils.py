@@ -201,12 +201,12 @@ def build_primal_optimizers(
 ):
     if primal_optimizer_class is None:
         if not extrapolation:
-            primal_optimizer_class = itertools.cycle([torch.optim.SGD, torch.optim.Adam])
+            primal_optimizer_class = itertools.cycle([torch.optim.SGD, torch.optim.SGD])
         else:
-            primal_optimizer_class = itertools.cycle([cooper.optim.ExtraSGD, cooper.optim.ExtraAdam])
+            primal_optimizer_class = itertools.cycle([cooper.optim.ExtraSGD, cooper.optim.ExtraSGD])
 
     if primal_optimizer_kwargs is None:
-        primal_optimizer_kwargs = itertools.cycle([{"lr": 1e-2}, {"lr": 1e-3}])
+        primal_optimizer_kwargs = itertools.cycle([{"lr": 1e-2}, {"lr": 1e-2}])
 
     primal_optimizers = []
     for param, optimizer_class, kwargs in zip(params, primal_optimizer_class, primal_optimizer_kwargs):
