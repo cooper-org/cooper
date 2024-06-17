@@ -7,13 +7,10 @@ import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
-PRIMAL_LR = 1e-2
-PRIMAL_MOMENTUM = 0.9  # used for convergence tests only
-DUAL_LR = 1e-3
+PRIMAL_LR = 2.5e-2
+DUAL_LR = 5e-1
 PENALTY_GROWTH_FACTOR = 1.0 + 2.5e-4
 PENALTY_VIOLATION_TOLERANCE = 1e-4
-
-ATOL = 1e-4
 
 
 class TestConvergenceNoConstraint:
@@ -40,7 +37,7 @@ class TestConvergenceNoConstraint:
         x_star, lambda_star = self.cmp.compute_exact_solution()
 
         # Check if the primal variable is close to the exact solution
-        assert torch.allclose(torch.cat(params), x_star, atol=ATOL)
+        assert torch.allclose(torch.cat(params), x_star, atol=1e-5)
 
 
 class TestConvergence:
@@ -100,7 +97,9 @@ class TestConvergence:
         x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
         params = list(map(lambda t: torch.nn.Parameter(t), x_init))
 
-        primal_optimizer_kwargs = [{"lr": self.primal_lr, "momentum": PRIMAL_MOMENTUM} for _ in range(len(params))]
+        primal_optimizer_kwargs = [{"lr": self.primal_lr}]
+        if use_multiple_primal_optimizers:
+            primal_optimizer_kwargs.append({"lr": 5 * self.primal_lr, "betas": (0.0, 0.0), "eps": 1.0})
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
             params, extrapolation, primal_optimizer_kwargs=primal_optimizer_kwargs
         )
@@ -121,10 +120,7 @@ class TestConvergence:
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 
-        # Compute the exact solution
-        x_star, lambda_star = self.cmp.compute_exact_solution()
-
-        for _ in range(10_000):
+        for _ in range(2000):
             roll_kwargs = {"compute_cmp_state_kwargs": dict(x=torch.cat(params))}
             if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
                 roll_kwargs["compute_violations_kwargs"] = dict(x=torch.cat(params))
@@ -133,28 +129,21 @@ class TestConvergence:
             if self.is_augmented_lagrangian:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-            # Break if the asserts would already be satisfied
-            is_primal_close = torch.allclose(torch.cat(params), x_star, atol=ATOL)
-            is_dual_close = torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=ATOL)
-            if is_primal_close and is_dual_close:
-                break
+        # Compute the exact solution
+        x_star, lambda_star = self.cmp.compute_exact_solution()
 
+        atol = 1e-4
         # Check if the primal variable is close to the exact solution
         if not self.use_surrogate:
-            atol = 1e-3 if extrapolation else ATOL
             assert torch.allclose(torch.cat(params), x_star, atol=atol)
 
             # Check if the dual variable is close to the exact solution
             assert torch.allclose(list(self.cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
         else:
             # The surrogate formulation is not guaranteed to converge to the exact solution,
-            # but it should be (approximately) feasible
-            atol = 1e-3
-
-            if self.is_inequality:
-                assert torch.le(self.lhs_sur @ torch.cat(params) - self.rhs, atol).all()
-            else:
-                assert torch.allclose(self.lhs_sur @ torch.cat(params), self.rhs, atol=atol)
+            # but it should be feasible
+            atol = 5e-4
+            assert torch.le(self.lhs @ torch.cat(params) - self.rhs, atol).all()
 
     def test_manual_step(self, extrapolation, alternation_type):
 
@@ -228,10 +217,10 @@ class TestConvergence:
         )
 
         # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=ATOL)
-        assert torch.allclose(x, manual_x, atol=ATOL)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=ATOL)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=ATOL)
+        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=1e-4)
+        assert torch.allclose(x, manual_x, atol=1e-4)
+        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
+        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
             if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
@@ -281,10 +270,10 @@ class TestConvergence:
         )
 
         # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=ATOL)
-        assert torch.allclose(x, manual_x, atol=ATOL)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=ATOL)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=ATOL)
+        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=1e-4)
+        assert torch.allclose(x, manual_x, atol=1e-4)
+        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
+        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
 
         if self.is_augmented_lagrangian:
             if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
