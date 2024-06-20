@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 import pytest
@@ -7,8 +8,8 @@ import cooper
 from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
-PRIMAL_LR = 2.5e-2
-DUAL_LR = 5e-1
+PRIMAL_LR = 3e-2
+DUAL_LR = 2e-1
 PENALTY_GROWTH_FACTOR = 1.0 + 2.5e-4
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
@@ -54,8 +55,18 @@ class TestConvergence:
         device,
     ):
 
-        self.lhs = torch.randn(num_constraints, num_variables, generator=torch.Generator().manual_seed(0)).to(device)
-        self.rhs = torch.randn(num_constraints, generator=torch.Generator().manual_seed(0)).to(device)
+        generator = torch.Generator(device).manual_seed(0)
+
+        # Uniform distribution between 1.5 and 2.5
+        S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
+
+        U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, device=device, generator=generator))
+        V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, device=device, generator=generator))
+
+        # Form the matrix U * S * V
+        self.lhs = torch.mm(U, torch.mm(S, V[:num_constraints, :]))
+        self.rhs = torch.randn(num_constraints, device=device, generator=generator)
+        self.rhs = self.rhs / self.rhs.norm()
 
         cmp_kwargs = dict(num_variables=num_variables, device=device)
         if constraint_type == cooper.ConstraintType.INEQUALITY:
@@ -87,7 +98,7 @@ class TestConvergence:
         self.num_constraints = num_constraints
         self.device = device
         self.primal_lr = 0.3 * PRIMAL_LR if self.is_augmented_lagrangian else PRIMAL_LR
-        self.dual_lr = DUAL_LR / num_variables
+        self.dual_lr = DUAL_LR / math.sqrt(num_variables)
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
 
