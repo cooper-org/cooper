@@ -68,8 +68,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
         self.device = device
 
-        self.generator = torch.Generator(device=device)
-        self.generator.manual_seed(0)
+        self.generator = torch.Generator(device=device).manual_seed(0)
 
         self.A_sur = None
         if has_ineq_constraint and ineq_use_surrogate:
