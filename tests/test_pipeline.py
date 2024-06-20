@@ -97,7 +97,7 @@ class TestConvergence:
         self.num_variables = num_variables
         self.num_constraints = num_constraints
         self.device = device
-        self.primal_lr = 0.3 * PRIMAL_LR if self.is_augmented_lagrangian else PRIMAL_LR
+        self.primal_lr = PRIMAL_LR
         self.dual_lr = DUAL_LR / math.sqrt(num_variables)
 
     def test_convergence(self, extrapolation, alternation_type, use_multiple_primal_optimizers):
