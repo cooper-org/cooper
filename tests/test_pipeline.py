@@ -108,7 +108,7 @@ class TestConvergence:
 
         primal_optimizer_kwargs = [{"lr": self.primal_lr}]
         if use_multiple_primal_optimizers:
-            primal_optimizer_kwargs.append({"lr": 5 * self.primal_lr, "betas": (0.0, 0.0), "eps": 1.0})
+            primal_optimizer_kwargs.append({"lr": 10 * self.primal_lr, "betas": (0.0, 0.0), "eps": 10.0})
         primal_optimizers = cooper_test_utils.build_primal_optimizers(
             params, extrapolation, primal_optimizer_kwargs=primal_optimizer_kwargs
         )
