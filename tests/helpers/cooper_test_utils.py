@@ -9,8 +9,6 @@ import cvxpy as cp
 import torch
 
 import cooper
-from cooper.optim import CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
-from cooper.utils import OneOrSequence
 
 
 class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
@@ -283,7 +281,7 @@ def build_cooper_optimizer(
     alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
-) -> CooperOptimizer:
+) -> cooper.optim.CooperOptimizer:
 
     dual_optimizers = None
     cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
@@ -298,13 +296,13 @@ def build_cooper_optimizer(
         )
 
         if extrapolation:
-            cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+            cooper_optimizer_class = cooper.optim.ExtrapolationConstrainedOptimizer
         elif alternation_type == AlternationType.DUAL_PRIMAL:
-            cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
+            cooper_optimizer_class = cooper.optim.AlternatingDualPrimalOptimizer
         elif alternation_type == AlternationType.PRIMAL_DUAL:
-            cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
+            cooper_optimizer_class = cooper.optim.AlternatingPrimalDualOptimizer
         else:
-            cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
+            cooper_optimizer_class = cooper.optim.SimultaneousOptimizer
 
     cooper_optimizer = cooper_optimizer_class(
         cmp=cmp,
