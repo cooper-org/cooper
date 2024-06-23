@@ -89,13 +89,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         self.A_sur = None
         if has_ineq_constraint and ineq_use_surrogate:
-            # Make noise generator deterministic, so that we don't deal with stochastic constraints
+            # Use a generator with a fixed seed for reproducibility across different runs of the same test
             noise = 1e-1 * torch.randn(A.shape, generator=self.generator, device=self.device)
             self.A_sur = A + noise
 
         self.C_sur = None
         if has_eq_constraint and eq_use_surrogate:
-            # Make noise generator deterministic, so that we don't deal with stochastic constraints
+            # Use a generator with a fixed seed for reproducibility across different runs of the same test
             noise = 1e-1 * torch.randn(C.shape, generator=self.generator, device=self.device)
             self.C_sur = C + noise
 
