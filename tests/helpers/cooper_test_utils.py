@@ -37,11 +37,15 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         ineq_penalty_coefficient_type: Penalty coefficient type for the linear inequality constraints.
         ineq_observed_constraint_ratio: Ratio of constraints to observe for the linear inequality constraints when
             using indexed multipliers.
+        ineq_surrogate_noise_magnitude: Magnitude of noise to add to the linear inequality constraints when using
+            surrogate constraints.
         eq_formulation_type: Formulation type for the linear equality constraints.
         eq_multiplier_type: Multiplier type for the linear equality constraints.
         eq_penalty_coefficient_type: Penalty coefficient type for the linear equality constraints.
         eq_observed_constraint_ratio: Ratio of constraints to observe for the linear equality constraints when
             using indexed multipliers.
+        eq_surrogate_noise_magnitude: Magnitude of noise to add to the linear equality constraints when using
+            surrogate constraints.
         device: The device tensors will be allocated on.
     """
 
@@ -60,10 +64,12 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         ineq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
         ineq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
         ineq_observed_constraint_ratio: float = 1.0,
+        ineq_surrogate_noise_magnitude: float = 1e-1,
         eq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
         eq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
         eq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
         eq_observed_constraint_ratio: float = 1.0,
+        eq_surrogate_noise_magnitude: float = 1e-1,
         device="cpu",
     ):
         super().__init__()
@@ -90,13 +96,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.A_sur = None
         if has_ineq_constraint and ineq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = 1e-1 * torch.randn(A.shape, generator=self.generator, device=self.device)
+            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, generator=self.generator, device=self.device)
             self.A_sur = A + noise
 
         self.C_sur = None
         if has_eq_constraint and eq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = 1e-1 * torch.randn(C.shape, generator=self.generator, device=self.device)
+            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, generator=self.generator, device=self.device)
             self.C_sur = C + noise
 
         if has_ineq_constraint:
