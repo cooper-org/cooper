@@ -161,6 +161,8 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
+            # Sampling constraint features separately from the previous block to allow
+            # for the sampled surrogate_constraints to be different from the sampled strict_constraints
             constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
             constraint_features = constraint_features[: int(observed_constraint_ratio * num_constraints)]
             violation = violation[constraint_features]
