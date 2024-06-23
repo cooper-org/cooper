@@ -103,8 +103,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
             dual_parameters=new_cmp.dual_parameters(), dual_optimizer_kwargs={"lr": DUAL_LR}
         )
 
-    loaded_cooper_optimizer = cooper_test_utils.create_optimizer_from_kwargs(
-        cooper_optimizer_class=cooper_optimizer_class,
+    loaded_cooper_optimizer = cooper_optimizer_class(
         cmp=new_cmp,
         primal_optimizers=loaded_primal_optimizers,
         dual_optimizers=loaded_dual_optimizers,

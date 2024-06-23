@@ -96,13 +96,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.A_sur = None
         if has_ineq_constraint and ineq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, generator=self.generator, device=self.device)
+            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, device=device, generator=self.generator)
             self.A_sur = A + noise
 
         self.C_sur = None
         if has_eq_constraint and eq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, generator=self.generator, device=self.device)
+            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, device=device, generator=self.generator)
             self.C_sur = C + noise
 
         if has_ineq_constraint:
@@ -145,12 +145,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         observed_constraint_ratio: float,
     ) -> cooper.ConstraintState:
 
+        num_constraints = rhs.numel()
         strict_violation = torch.matmul(lhs, x) - rhs
 
         strict_constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
-            strict_constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
-            strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * rhs.numel())]
+            strict_constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * num_constraints)]
             strict_violation = strict_violation[strict_constraint_features]
 
         if lhs_sur is None:
@@ -160,8 +161,8 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         constraint_features = None
         if multiplier_type == cooper.multipliers.IndexedMultiplier:
-            constraint_features = torch.randperm(rhs.numel(), generator=self.generator, device=self.device)
-            constraint_features = constraint_features[: int(observed_constraint_ratio * rhs.numel())]
+            constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            constraint_features = constraint_features[: int(observed_constraint_ratio * num_constraints)]
             violation = violation[constraint_features]
 
         return cooper.ConstraintState(
@@ -177,14 +178,12 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         """
         observed_constraints = {}
 
-        ineq_state = None
         if self.has_ineq_constraint:
             ineq_state = self._compute_constraint_states(
                 x, self.A, self.b, self.A_sur, self.ineq_multiplier_type, self.ineq_observed_constraint_ratio
             )
             observed_constraints[self.ineq_constraints] = ineq_state
 
-        eq_state = None
         if self.has_eq_constraint:
             eq_state = self._compute_constraint_states(
                 x, self.C, self.d, self.C_sur, self.eq_multiplier_type, self.eq_observed_constraint_ratio
@@ -268,24 +267,6 @@ def build_dual_optimizers(
     return dual_optimizer_class(dual_parameters, **dual_optimizer_kwargs)
 
 
-def create_optimizer_from_kwargs(
-    cooper_optimizer_class: Type[CooperOptimizer],
-    cmp: cooper.ConstrainedMinimizationProblem,
-    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-) -> CooperOptimizer:
-    """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
-
-    if dual_optimizers is None:
-        if cooper_optimizer_class != UnconstrainedOptimizer:
-            raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
-        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
-    else:
-        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
-
-    return cooper_optimizer_class(**optimizer_kwargs)
-
-
 class AlternationType(Enum):
     FALSE = False
     PRIMAL_DUAL = "PrimalDual"
@@ -301,10 +282,11 @@ def build_cooper_optimizer(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ) -> CooperOptimizer:
+
     dual_optimizers = None
     cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
 
-    if len(list(cmp.constraints())) > 0:
+    if any(cmp.constraints()):
         # If there are constraints, we build dual optimizers
         dual_optimizers = build_dual_optimizers(
             dual_parameters=cmp.dual_parameters(),
@@ -315,16 +297,14 @@ def build_cooper_optimizer(
 
         if extrapolation:
             cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+        elif alternation_type == AlternationType.DUAL_PRIMAL:
+            cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
+        elif alternation_type == AlternationType.PRIMAL_DUAL:
+            cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
         else:
-            if alternation_type == AlternationType.DUAL_PRIMAL:
-                cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
-            elif alternation_type == AlternationType.PRIMAL_DUAL:
-                cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
-            else:
-                cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
+            cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
 
-    cooper_optimizer = create_optimizer_from_kwargs(
-        cooper_optimizer_class=cooper_optimizer_class,
+    cooper_optimizer = cooper_optimizer_class(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,
