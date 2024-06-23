@@ -22,10 +22,27 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
     This is a convex optimization problem with linear inequality constraints.
 
-    Parameters:
-        A (torch.Tensor): Coefficient matrix for the linear inequality constraints.
-        b (torch.Tensor): Bias vector for the linear inequality constraints.
-        device (torch.device): The device tensors will be allocated on.
+    Args:
+        num_variables: Number of variables in the optimization problem.
+        has_ineq_constraint: Whether the problem has linear inequality constraints.
+        has_eq_constraint: Whether the problem has linear equality constraints.
+        ineq_use_surrogate: Whether to use surrogate constraints for the linear inequality constraints.
+        eq_use_surrogate: Whether to use surrogate constraints for the linear equality constraints.
+        A: Coefficient matrix for the linear inequality constraints.
+        b: Bias vector for the linear inequality constraints.
+        C: Coefficient matrix for the linear equality constraints.
+        d: Bias vector for the linear equality constraints.
+        ineq_formulation_type: Formulation type for the linear inequality constraints.
+        ineq_multiplier_type: Multiplier type for the linear inequality constraints.
+        ineq_penalty_coefficient_type: Penalty coefficient type for the linear inequality constraints.
+        ineq_observed_constraint_ratio: Ratio of constraints to observe for the linear inequality constraints when
+            using indexed multipliers.
+        eq_formulation_type: Formulation type for the linear equality constraints.
+        eq_multiplier_type: Multiplier type for the linear equality constraints.
+        eq_penalty_coefficient_type: Penalty coefficient type for the linear equality constraints.
+        eq_observed_constraint_ratio: Ratio of constraints to observe for the linear equality constraints when
+            using indexed multipliers.
+        device: The device tensors will be allocated on.
     """
 
     def __init__(
