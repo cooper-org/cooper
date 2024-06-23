@@ -135,7 +135,15 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
                 penalty_coefficient=eq_penalty_coefficient,
             )
 
-    def _compute_violations(self, x, lhs, rhs, lhs_sur, multiplier_type, observed_constraint_ratio):
+    def _compute_constraint_states(
+        self,
+        x: torch.Tensor,
+        lhs: torch.Tensor,
+        rhs: torch.Tensor,
+        lhs_sur: Optional[torch.Tensor],
+        multiplier_type: Type[cooper.multipliers.Multiplier],
+        observed_constraint_ratio: float,
+    ) -> cooper.ConstraintState:
 
         strict_violation = torch.matmul(lhs, x) - rhs
 
@@ -171,14 +179,14 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         ineq_state = None
         if self.has_ineq_constraint:
-            ineq_state = self._compute_violations(
+            ineq_state = self._compute_constraint_states(
                 x, self.A, self.b, self.A_sur, self.ineq_multiplier_type, self.ineq_observed_constraint_ratio
             )
             observed_constraints[self.ineq_constraints] = ineq_state
 
         eq_state = None
         if self.has_eq_constraint:
-            eq_state = self._compute_violations(
+            eq_state = self._compute_constraint_states(
                 x, self.C, self.d, self.C_sur, self.eq_multiplier_type, self.eq_observed_constraint_ratio
             )
             observed_constraints[self.eq_constraints] = eq_state
