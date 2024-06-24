@@ -224,10 +224,10 @@ class TestConvergence:
         )
 
         # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=1e-4)
-        assert torch.allclose(x, manual_x, atol=1e-4)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
+        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
+        assert torch.allclose(x, manual_x)
+        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
+        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
         if self.is_augmented_lagrangian:
             if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
@@ -277,10 +277,10 @@ class TestConvergence:
         )
 
         # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features], atol=1e-4)
-        assert torch.allclose(x, manual_x, atol=1e-4)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian, atol=1e-4)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian, atol=1e-4)
+        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
+        assert torch.allclose(x, manual_x)
+        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
+        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
         if self.is_augmented_lagrangian:
             if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
