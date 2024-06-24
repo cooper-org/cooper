@@ -59,17 +59,17 @@ class TestConvergence:
 
         # Uniform distribution between 1.5 and 2.5
         S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
-
         U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, device=device, generator=generator))
         V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, device=device, generator=generator))
-
         # Form the matrix U * S * V
         self.lhs = torch.mm(U, torch.mm(S, V[:num_constraints, :]))
         self.rhs = torch.randn(num_constraints, device=device, generator=generator)
         self.rhs = self.rhs / self.rhs.norm()
 
+        self.is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
+
         cmp_kwargs = dict(num_variables=num_variables, device=device)
-        if constraint_type == cooper.ConstraintType.INEQUALITY:
+        if self.is_inequality:
             cmp_kwargs["A"] = self.lhs
             cmp_kwargs["b"] = self.rhs
             prefix = "ineq"
@@ -86,8 +86,6 @@ class TestConvergence:
         cmp_kwargs[f"{prefix}_penalty_coefficient_type"] = penalty_coefficient_type
 
         self.cmp = cooper_test_utils.SquaredNormLinearCMP(**cmp_kwargs)
-
-        self.is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
         self.lhs_sur = self.cmp.A_sur if self.is_inequality else self.cmp.C_sur
 
         self.constraint_type = constraint_type
