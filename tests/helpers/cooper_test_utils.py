@@ -3,7 +3,7 @@
 import itertools
 from copy import deepcopy
 from enum import Enum
-from typing import Iterable, Optional, Type
+from typing import Optional, Sequence, Type
 
 import cvxpy as cp
 import torch
@@ -223,11 +223,17 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
 
 def build_primal_optimizers(
-    params: Iterable[torch.nn.Parameter],
+    params: Sequence[torch.nn.Parameter],
     extrapolation=False,
     primal_optimizer_class=None,
     primal_optimizer_kwargs=None,
 ):
+    """
+    Builds a list of primal optimizers for the given parameters.
+
+    If only one entry in params, we return an SGD optimizer over all params.
+    If more than one entries in params, we cycle between SGD and Adam optimizers.
+    """
     if primal_optimizer_class is None:
         if not extrapolation:
             primal_optimizer_class = itertools.cycle([torch.optim.SGD, torch.optim.Adam])

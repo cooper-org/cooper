@@ -51,7 +51,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
 
-    primal_optimizers = cooper_test_utils.build_primal_optimizers(model.parameters())
+    primal_optimizers = cooper_test_utils.build_primal_optimizers(list(model.parameters()))
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
         cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizer_kwargs={"lr": DUAL_LR}
     )
@@ -96,7 +96,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device=device)
 
-    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(loaded_model.parameters())
+    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(list(loaded_model.parameters()))
     loaded_dual_optimizers = None
     if any(new_cmp.constraints()):
         loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(
