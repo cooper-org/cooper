@@ -52,10 +52,11 @@ class TestConvergence:
         penalty_coefficient_type,
         num_constraints,
         num_variables,
+        seed,
         device,
     ):
 
-        generator = torch.Generator(device).manual_seed(0)
+        generator = torch.Generator(device).manual_seed(seed=seed)
 
         # Uniform distribution between 1.5 and 2.5
         S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)

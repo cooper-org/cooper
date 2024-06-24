@@ -12,6 +12,11 @@ def device(request):
     return torch.device(request.param)
 
 
+@pytest.fixture(params=[0, 1])
+def seed(request):
+    return request.param
+
+
 @pytest.fixture(params=[cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY])
 def constraint_type(request):
     return request.param
