@@ -23,14 +23,13 @@ class Model(torch.nn.Module):
             self.register_parameter(name=f"params_{i}", param=param)
 
     def forward(self):
-        return torch.stack([getattr(self, f"params_{i}") for i in range(self.num_params)])
+        return torch.cat([getattr(self, f"params_{i}") for i in range(self.num_params)])
 
 
 def construct_cmp(multiplier_type, num_constraints, num_variables, device):
-    A = torch.randn(
-        num_constraints, num_variables, device=device, generator=torch.Generator(device=device).manual_seed(0)
-    )
-    b = torch.randn(num_constraints, device=device, generator=torch.Generator(device=device).manual_seed(0))
+    generator = torch.Generator(device).manual_seed(0)
+    A = torch.randn(num_constraints, num_variables, device=device, generator=generator)
+    b = torch.randn(num_constraints, device=device, generator=generator)
 
     return cooper_test_utils.SquaredNormLinearCMP(
         num_variables=num_variables,
@@ -45,7 +44,9 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
 
 def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
 
-    x = torch.ones(num_variables, device=device).split(1)
+    x = [torch.ones(num_variables, device=device)]
+    if use_multiple_primal_optimizers:
+        x = x[0].split(1)
     model = Model(x)
     model.to(device=device)
 
@@ -91,7 +92,9 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     new_cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
     new_cmp.load_state_dict(cmp_state_dict_100)
 
-    x = torch.randn(num_variables, device=device).split(1)
+    x = [torch.randn(num_variables, device=device)]
+    if use_multiple_primal_optimizers:
+        x = x[0].split(1)
     loaded_model = Model(x)
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device=device)
