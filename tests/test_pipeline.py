@@ -56,7 +56,7 @@ class TestConvergence:
         device,
     ):
 
-        generator = torch.Generator(device).manual_seed(seed=seed)
+        generator = torch.Generator(device).manual_seed(seed)
 
         # Uniform distribution between 1.5 and 2.5
         S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
@@ -140,9 +140,9 @@ class TestConvergence:
         # Compute the exact solution
         x_star, lambda_star = self.cmp.compute_exact_solution()
 
-        atol = 1e-4
-        # Check if the primal variable is close to the exact solution
         if not self.use_surrogate:
+            # Check if the primal variable is close to the exact solution
+            atol = 1e-4
             assert torch.allclose(torch.cat(params), x_star, atol=atol)
 
             # Check if the dual variable is close to the exact solution
@@ -154,6 +154,13 @@ class TestConvergence:
             assert torch.le(self.lhs @ torch.cat(params) - self.rhs, atol).all()
 
     def test_manual_step(self, extrapolation, alternation_type):
+        """
+        Test the cooper optimizer roll methods implementation.
+
+        This method tests the cooper optimizers by comparing the results with the manual implementation.
+        The manual implementation assumes Stochastic Gradient Descent (SGD) is used for both the primal
+        and dual optimizers.
+        """
 
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
             pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
@@ -231,15 +238,10 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
         if self.is_augmented_lagrangian:
-            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-                strict_violation = self._manual_violation(manual_x, strict=True)[strict_features]
-            else:
-                strict_violation = self._manual_violation(manual_x_prev, strict=True)[strict_features]
-            if self.is_inequality:
-                strict_violation.relu_()
-            violated_indices = strict_violation.abs() > PENALTY_VIOLATION_TOLERANCE
-            # Update the penalty coefficients for the violated constraints
-            manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
+            # Update penalty coefficients for Augmented Lagrangian Method
+            self._manual_update_penalty_coefficients(
+                manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
+            )
 
         # ----------------------- Second iteration -----------------------
         roll_out = cooper_optimizer.roll(**roll_kwargs)
@@ -284,23 +286,24 @@ class TestConvergence:
         assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
         if self.is_augmented_lagrangian:
-            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-                strict_violation = self._manual_violation(manual_x, strict=True)[strict_features]
-            else:
-                strict_violation = self._manual_violation(manual_x_prev, strict=True)[strict_features]
-            if self.is_inequality:
-                strict_violation.relu_()
-            violated_indices = strict_violation.abs() > PENALTY_VIOLATION_TOLERANCE
-            # Update the penalty coefficients for the violated constraints
-            manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
+            # Update penalty coefficients for Augmented Lagrangian Method
+            self._manual_update_penalty_coefficients(
+                manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
+            )
 
     def _manual_violation(self, manual_x, strict=False):
+        """
+        Compute the constraint violations given the primal variables.
+        If strict is True, the strict violations are computed.
+        Otherwise, the surrogate violations are computed if the surrogates are provided.
+        """
         if not strict and self.use_surrogate:
             return self.lhs_sur @ manual_x - self.rhs
         return self.lhs @ manual_x - self.rhs
 
     def _manual_primal_step(self, manual_x, manual_multiplier, features, manual_penalty_coeff=None):
         lhs = self.lhs_sur if self.use_surrogate else self.lhs
+        obj_grad = 2 * manual_x
         if manual_penalty_coeff is not None:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
             # constraints is:
@@ -309,9 +312,10 @@ class TestConvergence:
             aux_grad = manual_multiplier[features] + manual_penalty_coeff[features] * violation
             if self.is_inequality:
                 aux_grad.relu_()
-            manual_x_grad = 2 * manual_x + lhs[features].t() @ aux_grad
+            constraint_grad = lhs[features].t() @ aux_grad
         else:
-            manual_x_grad = 2 * manual_x + lhs[features].t() @ manual_multiplier[features]
+            constraint_grad = lhs[features].t() @ manual_multiplier[features]
+        manual_x_grad = obj_grad + constraint_grad
 
         return manual_x - PRIMAL_LR * manual_x_grad
 
@@ -352,7 +356,24 @@ class TestConvergence:
         if manual_penalty_coeff is None:
             return torch.sum(manual_multiplier[strict_features] * violation)
 
+        # When the penalty coefficient is provided, the dual lagrangian is weighted by
+        # both the value of the multiplier and the penalty coefficient.
+        # This way, the gradient with respect to the multiplier is the constraint violation times
+        # the penalty coefficient, as required by the updates of the Augmented Lagrangian Method.
         return torch.sum(manual_penalty_coeff[strict_features] * manual_multiplier[strict_features] * violation)
+
+    def _manual_update_penalty_coefficients(
+        self, manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
+    ):
+        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+            strict_violation = self._manual_violation(manual_x, strict=True)[strict_features]
+        else:
+            strict_violation = self._manual_violation(manual_x_prev, strict=True)[strict_features]
+        if self.is_inequality:
+            strict_violation.relu_()
+        violated_indices = strict_violation.abs() > PENALTY_VIOLATION_TOLERANCE
+        # Update the penalty coefficients for the violated constraints
+        manual_penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
     def _manual_simultaneous_roll(self, manual_x, manual_multiplier, features, strict_features):
         manual_primal_lagrangian = self._manual_primal_lagrangian(manual_x, manual_multiplier, features)
@@ -416,11 +437,11 @@ class TestConvergence:
         )
 
     def _manual_extragradient_roll(self, manual_x, manual_multiplier, features, strict_features):
-        manual_x_copy = manual_x.clone()
+        manual_x_copy = manual_x.clone()  # x_t
         manual_multiplier_copy = manual_multiplier.clone()
 
         # Extrapolation step
-        manual_x = self._manual_primal_step(manual_x_copy, manual_multiplier_copy, features)
+        manual_x = self._manual_primal_step(manual_x_copy, manual_multiplier_copy, features)  # x_{t+1/2}
         manual_multiplier = self._manual_dual_step(manual_x_copy, manual_multiplier_copy.clone(), strict_features)
 
         # Update step
