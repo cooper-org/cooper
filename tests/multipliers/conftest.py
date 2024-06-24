@@ -26,7 +26,7 @@ def multiplier_class(request):
 
 
 @pytest.fixture
-def init_tensor(constraint_type, multiplier_shape, random_seed):
+def init_multiplier_tensor(constraint_type, multiplier_shape, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
     raw_init = torch.randn(*multiplier_shape, generator=generator)
     if constraint_type == cooper.ConstraintType.INEQUALITY:
