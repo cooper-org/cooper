@@ -83,8 +83,9 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.C = C.to(device) if C is not None else None
         self.d = d.to(device) if d is not None else None
 
-        self.ineq_multiplier_type = ineq_multiplier_type
-        self.eq_multiplier_type = eq_multiplier_type
+        self.is_ineq_sampled = ineq_multiplier_type == cooper.multipliers.IndexedMultiplier
+        self.is_eq_sampled = eq_multiplier_type == cooper.multipliers.IndexedMultiplier
+
         self.ineq_observed_constraint_ratio = ineq_observed_constraint_ratio
         self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
         self.device = device
@@ -139,7 +140,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         lhs: torch.Tensor,
         rhs: torch.Tensor,
         lhs_sur: Optional[torch.Tensor],
-        multiplier_type: Type[cooper.multipliers.Multiplier],
+        is_sampled: bool,
         observed_constraint_ratio: float,
     ) -> cooper.ConstraintState:
 
@@ -147,7 +148,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         strict_violation = torch.matmul(lhs, x) - rhs
 
         strict_constraint_features = None
-        if multiplier_type == cooper.multipliers.IndexedMultiplier:
+        if is_sampled:
             strict_constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
             strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * num_constraints)]
             strict_violation = strict_violation[strict_constraint_features]
@@ -158,7 +159,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         violation = torch.matmul(lhs_sur, x) - rhs
 
         constraint_features = None
-        if multiplier_type == cooper.multipliers.IndexedMultiplier:
+        if is_sampled:
             # Sampling constraint features separately from the previous block to allow
             # for the sampled surrogate_constraints to be different from the sampled strict_constraints
             constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
@@ -180,13 +181,13 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         if self.has_ineq_constraint:
             ineq_state = self._compute_constraint_states(
-                x, self.A, self.b, self.A_sur, self.ineq_multiplier_type, self.ineq_observed_constraint_ratio
+                x, self.A, self.b, self.A_sur, self.is_ineq_sampled, self.ineq_observed_constraint_ratio
             )
             observed_constraints[self.ineq_constraints] = ineq_state
 
         if self.has_eq_constraint:
             eq_state = self._compute_constraint_states(
-                x, self.C, self.d, self.C_sur, self.eq_multiplier_type, self.eq_observed_constraint_ratio
+                x, self.C, self.d, self.C_sur, self.is_eq_sampled, self.eq_observed_constraint_ratio
             )
             observed_constraints[self.eq_constraints] = eq_state
 
