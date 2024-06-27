@@ -87,3 +87,17 @@ def alternation_type(request, extrapolation, formulation_type):
     if formulation_type == cooper.AugmentedLagrangianFormulation and not is_alternation:
         pytest.skip("Augmented Lagrangian formulation requires alternation.")
     return request.param
+
+
+@pytest.fixture
+def cmp_no_constraint(device, num_variables):
+    cmp = cooper_test_utils.SquaredNormLinearCMP(num_variables=num_variables, device=device)
+    return cmp
+
+
+@pytest.fixture
+def params(device, num_variables, use_multiple_primal_optimizers):
+    x_init = torch.ones(num_variables, device=device)
+    x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
+    params = list(map(lambda t: torch.nn.Parameter(t), x_init))
+    return params
