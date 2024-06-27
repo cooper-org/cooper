@@ -114,101 +114,54 @@ class TestConvergence:
         if self.is_augmented_lagrangian:
             manual_penalty_coeff = torch.ones(self.num_constraints, device=self.device)
 
-        # ----------------------- First iteration -----------------------
-        roll_out = cooper_optimizer.roll(**roll_kwargs)
-        if self.is_augmented_lagrangian:
-            penalty_updater.step(roll_out.cmp_state.observed_constraints)
+        # ----------------------- Iterations -----------------------
+        for _ in range(2):
+            roll_out = cooper_optimizer.roll(**roll_kwargs)
+            if self.is_augmented_lagrangian:
+                penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
-        else:
-            observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
+            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+                observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
+            else:
+                observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
 
-        features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
-        if features is None:
-            features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
+            features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
+            if features is None:
+                features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-        strict_features = list(roll_out.cmp_state.observed_constraints.values())[0].strict_constraint_features
-        if strict_features is None:
-            strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
+            strict_features = list(roll_out.cmp_state.observed_constraints.values())[0].strict_constraint_features
+            if strict_features is None:
+                strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-        manual_x_prev = manual_x.clone()
-        # Manual step
-        (
-            manual_x,
-            manual_multiplier,
-            manual_primal_lagrangian,
-            manual_dual_lagrangian,
-            manual_observed_multipliers,
-        ) = self.manual_roll(
-            manual_x,
-            manual_multiplier,
-            features,
-            strict_features,
-            alternation_type,
-            manual_penalty_coeff,
-            extrapolation,
-        )
-
-        # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
-        assert torch.allclose(x, manual_x)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
-
-        if self.is_augmented_lagrangian:
-            # Update penalty coefficients for Augmented Lagrangian Method
-            self._update_penalty_coefficients(
-                manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
+            manual_x_prev = manual_x.clone()
+            # Manual step
+            (
+                manual_x,
+                manual_multiplier,
+                manual_primal_lagrangian,
+                manual_dual_lagrangian,
+                manual_observed_multipliers,
+            ) = self.manual_roll(
+                manual_x,
+                manual_multiplier,
+                features,
+                strict_features,
+                alternation_type,
+                manual_penalty_coeff,
+                extrapolation,
             )
 
-        # ----------------------- Second iteration -----------------------
-        roll_out = cooper_optimizer.roll(**roll_kwargs)
-        if self.is_augmented_lagrangian:
-            penalty_updater.step(roll_out.cmp_state.observed_constraints)
+            if self.is_augmented_lagrangian:
+                # Update penalty coefficients for Augmented Lagrangian Method
+                self._update_penalty_coefficients(
+                    manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
+                )
 
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
-        else:
-            observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
-
-        features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
-        if features is None:
-            features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
-
-        strict_features = list(roll_out.cmp_state.observed_constraints.values())[0].strict_constraint_features
-        if strict_features is None:
-            strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
-
-        manual_x_prev = manual_x.clone()
-        # Manual step
-        (
-            manual_x,
-            manual_multiplier,
-            manual_primal_lagrangian,
-            manual_dual_lagrangian,
-            manual_observed_multipliers,
-        ) = self.manual_roll(
-            manual_x,
-            manual_multiplier,
-            features,
-            strict_features,
-            alternation_type,
-            manual_penalty_coeff,
-            extrapolation,
-        )
-
-        # Check manual and cooper outputs are close
-        assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
-        assert torch.allclose(x, manual_x)
-        assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
-        assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
-
-        if self.is_augmented_lagrangian:
-            # Update penalty coefficients for Augmented Lagrangian Method
-            self._update_penalty_coefficients(
-                manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
-            )
+            # Check manual and cooper outputs are close
+            assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
+            assert torch.allclose(x, manual_x)
+            assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
+            assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
     def _violation(self, x, strict=False):
         """
