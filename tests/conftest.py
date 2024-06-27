@@ -101,3 +101,54 @@ def params(device, num_variables, use_multiple_primal_optimizers):
     x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
     params = list(map(lambda t: torch.nn.Parameter(t), x_init))
     return params
+
+
+@pytest.fixture
+def constraint_params(num_variables, num_constraints, seed, device):
+    generator = torch.Generator(device).manual_seed(seed)
+
+    # Uniform distribution between 1.5 and 2.5
+    S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
+    U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, device=device, generator=generator))
+    V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, device=device, generator=generator))
+
+    # Form the matrix U * S * V
+    lhs = torch.mm(U, torch.mm(S, V[:num_constraints, :]))
+    rhs = torch.randn(num_constraints, device=device, generator=generator)
+    rhs = rhs / rhs.norm()
+
+    return lhs, rhs
+
+
+@pytest.fixture
+def cmp(
+    constraint_params,
+    constraint_type,
+    num_variables,
+    use_surrogate,
+    multiplier_type,
+    formulation_type,
+    penalty_coefficient_type,
+    device,
+):
+    lhs, rhs = constraint_params
+
+    cmp_kwargs = dict(num_variables=num_variables, device=device)
+    is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
+    if is_inequality:
+        cmp_kwargs["A"] = lhs
+        cmp_kwargs["b"] = rhs
+        prefix = "ineq"
+    else:
+        cmp_kwargs["C"] = lhs
+        cmp_kwargs["d"] = rhs
+        prefix = "eq"
+
+    cmp_kwargs[f"has_{prefix}_constraint"] = True
+    cmp_kwargs[f"{prefix}_use_surrogate"] = use_surrogate
+    cmp_kwargs[f"{prefix}_multiplier_type"] = multiplier_type
+    cmp_kwargs[f"{prefix}_formulation_type"] = formulation_type
+    cmp_kwargs[f"{prefix}_penalty_coefficient_type"] = penalty_coefficient_type
+
+    cmp = cooper_test_utils.SquaredNormLinearCMP(**cmp_kwargs)
+    return cmp
