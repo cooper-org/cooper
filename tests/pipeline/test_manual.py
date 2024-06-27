@@ -125,11 +125,11 @@ class TestConvergence:
             else:
                 observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
 
-            features = list(roll_out.cmp_state.observed_constraints.values())[0].constraint_features
+            features = list(roll_out.cmp_state.observed_constraint_features())[0]
             if features is None:
                 features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-            strict_features = list(roll_out.cmp_state.observed_constraints.values())[0].strict_constraint_features
+            strict_features = list(roll_out.cmp_state.observed_strict_constraint_features())[0]
             if strict_features is None:
                 strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
