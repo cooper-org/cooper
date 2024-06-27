@@ -18,6 +18,8 @@ class TestConvergence:
     @pytest.fixture(autouse=True)
     def setup_cmp(
         self,
+        cmp,
+        constraint_params,
         constraint_type,
         use_surrogate,
         multiplier_type,
@@ -25,41 +27,12 @@ class TestConvergence:
         penalty_coefficient_type,
         num_constraints,
         num_variables,
-        seed,
         device,
     ):
-
-        generator = torch.Generator(device).manual_seed(seed)
-
-        # Uniform distribution between 1.5 and 2.5
-        S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
-        U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, device=device, generator=generator))
-        V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, device=device, generator=generator))
-        # Form the matrix U * S * V
-        self.lhs = torch.mm(U, torch.mm(S, V[:num_constraints, :]))
-        self.rhs = torch.randn(num_constraints, device=device, generator=generator)
-        self.rhs = self.rhs / self.rhs.norm()
-
         self.is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
 
-        cmp_kwargs = dict(num_variables=num_variables, device=device)
-        if self.is_inequality:
-            cmp_kwargs["A"] = self.lhs
-            cmp_kwargs["b"] = self.rhs
-            prefix = "ineq"
-
-        else:
-            cmp_kwargs["C"] = self.lhs
-            cmp_kwargs["d"] = self.rhs
-            prefix = "eq"
-
-        cmp_kwargs[f"has_{prefix}_constraint"] = True
-        cmp_kwargs[f"{prefix}_use_surrogate"] = use_surrogate
-        cmp_kwargs[f"{prefix}_multiplier_type"] = multiplier_type
-        cmp_kwargs[f"{prefix}_formulation_type"] = formulation_type
-        cmp_kwargs[f"{prefix}_penalty_coefficient_type"] = penalty_coefficient_type
-
-        self.cmp = cooper_test_utils.SquaredNormLinearCMP(**cmp_kwargs)
+        self.cmp = cmp
+        self.lhs, self.rhs = constraint_params
         self.lhs_sur = self.cmp.A_sur if self.is_inequality else self.cmp.C_sur
 
         self.constraint_type = constraint_type
