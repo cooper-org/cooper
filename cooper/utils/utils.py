@@ -7,6 +7,4 @@ def ensure_sequence(argument: Any):
     Ensures that an argument is an instance of Sequence by wrapping it into a list
     whenever necessary. When argument is None, None is returned without wrapping.
     """
-    if argument is None:
-        return None
     return argument if isinstance(argument, Sequence) else [argument]
