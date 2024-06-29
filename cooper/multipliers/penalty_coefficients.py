@@ -17,6 +17,8 @@ class PenaltyCoefficient(abc.ABC):
             raise ValueError("PenaltyCoefficient should not require gradients.")
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
+        if init.dim() == 0:
+            init = init.unsqueeze(0)
         self._value = init.clone()
 
     @property
