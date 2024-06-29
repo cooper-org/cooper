@@ -6,43 +6,6 @@ import torch
 import cooper
 
 
-@pytest.fixture
-def eq_constraint():
-    constraint = cooper.Constraint(
-        constraint_type=cooper.ConstraintType.EQUALITY,
-        multiplier=cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1
-        ),
-    )
-    return constraint
-
-
-@pytest.fixture
-def ineq_constraint():
-    constraint = cooper.Constraint(
-        constraint_type=cooper.ConstraintType.INEQUALITY,
-        multiplier=cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1
-        ),
-    )
-    return constraint
-
-
-@pytest.fixture
-def cmp_state():
-    return cooper.CMPState()
-
-
-class DummyCMP(cooper.ConstrainedMinimizationProblem):
-    def compute_cmp_state(self):
-        return cmp_state
-
-
-@pytest.fixture
-def cmp_instance():
-    return DummyCMP()
-
-
 def test_lagrangian_store_initialization():
     lagrangian_store = cooper.LagrangianStore()
     assert is_dataclass(lagrangian_store)
