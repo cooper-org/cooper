@@ -51,9 +51,6 @@ class ConstraintState:
     contributes_to_dual_update: bool = True
 
     def __post_init__(self):
-        if self.constraint_features is not None and self.violation is None:
-            raise ValueError("violation must be provided if constraint_features is provided.")
-
         if self.strict_constraint_features is not None and self.strict_violation is None:
             raise ValueError("strict_violation must be provided if strict_constraint_features is provided.")
 
