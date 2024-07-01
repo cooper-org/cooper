@@ -17,12 +17,19 @@ def evaluate_multiplier(multiplier, all_indices):
         return multiplier()
 
 
-@pytest.mark.xfail(strict=True, raises=ValueError)
-def test_inequality_multiplier_fails_with_negative_init(constraint_type, multiplier_class, init_multiplier_tensor):
+def test_multiplier_initialization(constraint_type, multiplier_class, init_multiplier_tensor, device):
+    multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor, device=device)
+    assert multiplier.constraint_type == constraint_type
+    assert torch.equal(multiplier.weight.view(-1), init_multiplier_tensor.view(-1))
+    assert multiplier.device == device
+
+
+def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multiplier_tensor):
     # Force the initialization tensor to have negative entries
     if constraint_type == cooper.ConstraintType.EQUALITY:
         pytest.skip("")
-    multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor.abs().neg())
+    with pytest.raises(ValueError, match="For inequality constraint, all entries in multiplier must be non-negative."):
+        multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor.abs().neg())
 
 
 def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
@@ -31,6 +38,14 @@ def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_mul
     multiplier_values = evaluate_multiplier(ineq_multiplier, all_indices)
     target_tensor = init_multiplier_tensor.reshape(multiplier_values.shape)
     assert torch.allclose(multiplier_values, target_tensor)
+
+
+def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multiplier_tensor):
+    multiplier = cooper.multipliers.IndexedMultiplier(constraint_type=constraint_type, init=init_multiplier_tensor)
+    indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="Indices must be of type torch.long."):
+        multiplier.forward(indices)
 
 
 def test_equality_post_step_(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
@@ -99,7 +114,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
 
     new_multiplier.load_state_dict(state_dict)
 
-    assert torch.allclose(multiplier.weight, new_multiplier.weight)
+    assert torch.equal(multiplier.weight, new_multiplier.weight)
 
 
 def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, multiplier_shape, random_seed):
