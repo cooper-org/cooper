@@ -25,7 +25,7 @@ def evaluate_constraint_factor(
     # arguments. This should be generalized to allow for multiple arguments.
     value = module() if constraint_features is None else module(constraint_features)
 
-    if len(value.shape) == 0:
+    if value.dim() == 0:
         # Unsqueeze value to make it a 1D tensor for consistent use in Formulations' einsum  calls
         value.unsqueeze_(0)
 
