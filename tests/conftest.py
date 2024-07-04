@@ -15,9 +15,7 @@ def device(request):
 def eq_constraint():
     constraint = cooper.Constraint(
         constraint_type=cooper.ConstraintType.EQUALITY,
-        multiplier=cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1
-        ),
+        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
     )
     return constraint
 
@@ -26,9 +24,7 @@ def eq_constraint():
 def ineq_constraint():
     constraint = cooper.Constraint(
         constraint_type=cooper.ConstraintType.INEQUALITY,
-        multiplier=cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1
-        ),
+        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
     )
     return constraint
 

@@ -32,7 +32,7 @@ def penalty_coefficient(num_constraints, multiplier_class, is_scalar):
 def constraint(num_constraints, constraint_type, multiplier_class, penalty_coefficient):
     constraint = cooper.Constraint(
         constraint_type=constraint_type,
-        multiplier=multiplier_class(constraint_type=constraint_type, num_constraints=num_constraints),
+        multiplier=multiplier_class(num_constraints=num_constraints),
         formulation_type=cooper.AugmentedLagrangianFormulation,
         penalty_coefficient=penalty_coefficient,
     )

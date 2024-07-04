@@ -11,7 +11,7 @@ def test_penalty_coefficient_check():
 
     # Create instances of ConstraintState and Multiplier
     constraint_state = ConstraintState(violation=torch.tensor([1.0]))
-    multiplier = cooper.multipliers.DenseMultiplier(constraint_type=ConstraintType.EQUALITY, num_constraints=1)
+    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
 
     # Call compute_contribution_to_primal_lagrangian with penalty_coefficient set to None
     # Expect a ValueError to be raised

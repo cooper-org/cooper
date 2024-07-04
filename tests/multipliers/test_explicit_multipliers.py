@@ -10,16 +10,11 @@ from tests.helpers import testing_utils
 
 def evaluate_multiplier(multiplier, all_indices):
     """Helper function for consistently evaluating Indexed/Explicit multipliers."""
-    if isinstance(multiplier, cooper.multipliers.IndexedMultiplier):
-        return multiplier(all_indices)
-    else:
-        # Ignore indices for non-indexed multipliers
-        return multiplier()
+    return multiplier(all_indices) if multiplier.expects_constraint_features else multiplier()
 
 
 def test_multiplier_initialization(constraint_type, multiplier_class, init_multiplier_tensor, device):
-    multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor, device=device)
-    assert multiplier.constraint_type == constraint_type
+    multiplier = multiplier_class(init=init_multiplier_tensor, device=device)
     assert torch.equal(multiplier.weight.view(-1), init_multiplier_tensor.to(device).view(-1))
     assert multiplier.device == device
 
@@ -28,20 +23,22 @@ def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multipl
     # Force the initialization tensor to have negative entries
     if constraint_type == cooper.ConstraintType.EQUALITY:
         pytest.skip("")
+
+    multiplier = multiplier_class(init=init_multiplier_tensor.abs().neg())
     with pytest.raises(ValueError, match="For inequality constraint, all entries in multiplier must be non-negative."):
-        multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor.abs().neg())
+        multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
 
 def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
     # Ensure that the multiplier returns the correct value when called
-    ineq_multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor)
+    ineq_multiplier = multiplier_class(init=init_multiplier_tensor)
     multiplier_values = evaluate_multiplier(ineq_multiplier, all_indices)
     target_tensor = init_multiplier_tensor.reshape(multiplier_values.shape)
     assert torch.allclose(multiplier_values, target_tensor)
 
 
 def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multiplier_tensor):
-    multiplier = cooper.multipliers.IndexedMultiplier(constraint_type=constraint_type, init=init_multiplier_tensor)
+    multiplier = cooper.multipliers.IndexedMultiplier(init=init_multiplier_tensor)
     indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
 
     with pytest.raises(ValueError, match="Indices must be of type torch.long."):
@@ -54,7 +51,8 @@ def test_equality_post_step_(constraint_type, multiplier_class, init_multiplier_
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         pytest.skip("")
 
-    eq_multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor)
+    eq_multiplier = multiplier_class(init=init_multiplier_tensor)
+    eq_multiplier.set_constraint_type(cooper.ConstraintType.EQUALITY)
     eq_multiplier.post_step_()
     multiplier_values = evaluate_multiplier(eq_multiplier, all_indices)
     target_tensor = init_multiplier_tensor.reshape(multiplier_values.shape)
@@ -66,7 +64,8 @@ def test_ineq_post_step_(constraint_type, multiplier_class, init_multiplier_tens
     if constraint_type == cooper.ConstraintType.EQUALITY:
         pytest.skip("")
 
-    ineq_multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor)
+    ineq_multiplier = multiplier_class(init=init_multiplier_tensor)
+    ineq_multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
     # Overwrite the multiplier to have some *negative* entries and gradients
     hard_coded_weight_data = torch.randn_like(ineq_multiplier.weight)
@@ -103,9 +102,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
     generator = testing_utils.frozen_rand_generator(random_seed)
 
     multiplier_init = torch.randn(*multiplier_shape, generator=generator)
-    if multiplier.is_inequality:
-        multiplier_init = multiplier_init.relu()
-    new_multiplier = explicit_multiplier_class(constraint_type=multiplier.constraint_type, init=multiplier_init)
+    new_multiplier = explicit_multiplier_class(init=multiplier_init)
 
     # Save to file to force reading from file so we can ensure correct loading
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -119,5 +116,5 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
 
 def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, multiplier_shape, random_seed):
     """Test that the state_dict of a multiplier can be saved and loaded correctly."""
-    ineq_multiplier = multiplier_class(constraint_type=constraint_type, init=init_multiplier_tensor)
-    check_save_load_state_dict(ineq_multiplier, multiplier_class, multiplier_shape, random_seed)
+    multiplier = multiplier_class(init=init_multiplier_tensor)
+    check_save_load_state_dict(multiplier, multiplier_class, multiplier_shape, random_seed)

@@ -9,6 +9,9 @@ from cooper.constraints.constraint_type import ConstraintType
 
 
 class Multiplier(torch.nn.Module, abc.ABC):
+    expects_constraint_features: bool
+    constraint_type: ConstraintType
+
     @abc.abstractmethod
     def forward(self, *args, **kwargs):
         """Return the current value of the multiplier."""
@@ -26,6 +29,10 @@ class Multiplier(torch.nn.Module, abc.ABC):
     def sanity_check(self):
         # TODO(gallego-posada): Add docstring
         pass
+
+    def set_constraint_type(self, constraint_type):
+        self.constraint_type = constraint_type
+        self.sanity_check()
 
 
 class ExplicitMultiplier(Multiplier):
@@ -46,7 +53,6 @@ class ExplicitMultiplier(Multiplier):
 
     def __init__(
         self,
-        constraint_type: ConstraintType,
         num_constraints: Optional[int] = None,
         init: Optional[torch.Tensor] = None,
         device: Optional[torch.device] = None,
@@ -54,14 +60,7 @@ class ExplicitMultiplier(Multiplier):
     ):
         super().__init__()
 
-        self.constraint_type = constraint_type
         self.weight = self.initialize_weight(num_constraints=num_constraints, init=init, device=device, dtype=dtype)
-
-        self.sanity_check()
-
-    @property
-    def is_inequality(self):
-        return self.constraint_type == ConstraintType.INEQUALITY
 
     def initialize_weight(
         self,
@@ -90,7 +89,7 @@ class ExplicitMultiplier(Multiplier):
         return self.weight.device
 
     def sanity_check(self):
-        if self.is_inequality and torch.any(self.weight.data < 0):
+        if self.constraint_type == ConstraintType.INEQUALITY and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
     @torch.no_grad()
@@ -100,7 +99,7 @@ class ExplicitMultiplier(Multiplier):
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative.
         """
-        if self.is_inequality:
+        if self.constraint_type == ConstraintType.INEQUALITY:
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
@@ -119,6 +118,8 @@ class DenseMultiplier(ExplicitMultiplier):
     one constraint per training example) you may consider using an
     :py:class:`~cooper.multipliers.IndexedMultiplier`.
     """
+
+    expects_constraint_features = False
 
     def forward(self):
         """Return the current value of the multiplier."""
@@ -139,8 +140,10 @@ class IndexedMultiplier(ExplicitMultiplier):
     and memory-efficient sparse gradients (on GPU).
     """
 
-    def __init__(self, *args, **kwargs):
-        super(IndexedMultiplier, self).__init__(*args, **kwargs)
+    expects_constraint_features = True
+
+    def __init__(self, num_constraints=None, init=None, device=None, dtype=torch.float32):
+        super().__init__(num_constraints, init, device, dtype)
         if self.weight.dim() == 1:
             # To use the forward call in F.embedding, we must reshape the weight to be a
             # 2-dim tensor

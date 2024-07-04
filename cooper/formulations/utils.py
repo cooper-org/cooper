@@ -17,13 +17,13 @@ def evaluate_constraint_factor(
 
     Args:
         module: Multiplier or penalty coefficient module.
-        constraint_state: The current state of the constraint.
+        constraint_features: The observed features of the constraint.
         expand_shape: Shape of the constraint violation tensor.
     """
 
     # TODO(gallego-posada): This way of calling the modules assumes either 0 or 1
     # arguments. This should be generalized to allow for multiple arguments.
-    value = module() if constraint_features is None else module(constraint_features)
+    value = module(constraint_features) if module.expects_constraint_features else module()
 
     if value.dim() == 0:
         # Unsqueeze value to make it a 1D tensor for consistent use in Formulations' einsum  calls

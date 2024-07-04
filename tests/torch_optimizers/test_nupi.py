@@ -159,9 +159,7 @@ def test_manual_nupi_dense_update():
 def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, device=device)
-    multiplier_module = cooper.multipliers.IndexedMultiplier(
-        init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY
-    )
+    multiplier_module = cooper.multipliers.IndexedMultiplier(init=multiplier_init)
     param = multiplier_module.weight
 
     def loss_fn(indices):
@@ -287,9 +285,7 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
 
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, device=device)
-    multiplier_module = cooper.multipliers.IndexedMultiplier(
-        init=multiplier_init, constraint_type=cooper.ConstraintType.EQUALITY
-    )
+    multiplier_module = cooper.multipliers.IndexedMultiplier(init=multiplier_init)
     param = multiplier_module.weight
 
     def loss_fn(indices):

@@ -11,12 +11,15 @@ class PenaltyCoefficient(abc.ABC):
         init: Value of the penalty coefficient.
     """
 
+    expects_constraint_features: bool
+    _value: Optional[torch.Tensor] = None
+
     def __init__(self, init: torch.Tensor):
         if init.requires_grad:
             raise ValueError("PenaltyCoefficient should not require gradients.")
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
-        self._value = init.clone()
+        self.value = init
 
     @property
     def value(self):
@@ -28,11 +31,12 @@ class PenaltyCoefficient(abc.ABC):
         """Update the value of the penalty."""
         if value.requires_grad:
             raise ValueError("New value of PenaltyCoefficient should not require gradients.")
-        if value.shape != self._value.shape:
+        if self._value is not None and value.shape != self._value.shape:
             raise ValueError(
                 f"New shape {value.shape} of PenaltyCoefficient does not match existing shape {self._value.shape}."
             )
         self._value = value.clone()
+        self.sanity_check()
 
     def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
         """Move the penalty to a new device and/or change its dtype."""
@@ -44,6 +48,10 @@ class PenaltyCoefficient(abc.ABC):
 
     def load_state_dict(self, state_dict):
         self._value = state_dict["value"]
+
+    def sanity_check(self):
+        if torch.any(self._value < 0):
+            raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
     def __repr__(self):
         if self.value.numel() <= 10:
@@ -60,6 +68,8 @@ class PenaltyCoefficient(abc.ABC):
 class DensePenaltyCoefficient(PenaltyCoefficient):
     """Constant (non-trainable) coefficient class used for Augmented Lagrangian formulation."""
 
+    expects_constraint_features = False
+
     @torch.no_grad()
     def __call__(self):
         """Return the current value of the penalty coefficient."""
@@ -71,6 +81,8 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
     When called, indexed penalty coefficients accept a tensor of indices and return the
     value of the penalty for a subset of constraints.
     """
+
+    expects_constraint_features = True
 
     @torch.no_grad()
     def __call__(self, indices: torch.Tensor):

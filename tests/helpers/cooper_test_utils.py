@@ -109,9 +109,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if ineq_penalty_coefficient_type is not None:
                 ineq_penalty_coefficient = ineq_penalty_coefficient_type(init=torch.ones(b.numel(), device=device))
 
-            ineq_multiplier = ineq_multiplier_type(
-                constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=b.numel(), device=device
-            )
+            ineq_multiplier = ineq_multiplier_type(num_constraints=b.numel(), device=device)
             self.ineq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.INEQUALITY,
                 formulation_type=ineq_formulation_type,
@@ -124,9 +122,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if eq_penalty_coefficient_type is not None:
                 eq_penalty_coefficient = eq_penalty_coefficient_type(init=torch.ones(d.numel(), device=device))
 
-            eq_multiplier = eq_multiplier_type(
-                constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=d.numel(), device=device
-            )
+            eq_multiplier = eq_multiplier_type(num_constraints=d.numel(), device=device)
             self.eq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.EQUALITY,
                 formulation_type=eq_formulation_type,

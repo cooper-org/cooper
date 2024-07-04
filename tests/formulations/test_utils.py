@@ -11,9 +11,7 @@ def num_constraints(request):
 
 
 def test_evaluate_constraint_factor_dense_multiplier(num_constraints):
-    multiplier = cooper.multipliers.DenseMultiplier(
-        constraint_type=cooper.constraints.ConstraintType.INEQUALITY, num_constraints=num_constraints
-    )
+    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
 
     result = cooper.formulations.utils.evaluate_constraint_factor(multiplier, None, (num_constraints,))
 
@@ -22,9 +20,7 @@ def test_evaluate_constraint_factor_dense_multiplier(num_constraints):
 
 
 def test_evaluate_constraint_factor_indexed_multiplier(num_constraints):
-    multiplier = cooper.multipliers.IndexedMultiplier(
-        constraint_type=cooper.constraints.ConstraintType.INEQUALITY, num_constraints=num_constraints
-    )
+    multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_constraints)
 
     constraint_features = torch.randperm(num_constraints)
     result = cooper.formulations.utils.evaluate_constraint_factor(multiplier, constraint_features, (num_constraints,))

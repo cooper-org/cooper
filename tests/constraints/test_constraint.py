@@ -20,8 +20,8 @@ def formulation_type(request):
 
 
 @pytest.fixture
-def multiplier(num_constraints, constraint_type):
-    return cooper.multipliers.DenseMultiplier(constraint_type=constraint_type, num_constraints=num_constraints)
+def multiplier(num_constraints):
+    return cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
 
 
 @pytest.fixture
@@ -49,20 +49,6 @@ def test_constraint_initialization(
     assert valid_constraint.formulation_type == formulation_type
     assert valid_constraint.multiplier == multiplier
     assert valid_constraint.penalty_coefficient == penalty_coefficient
-
-
-def test_constraint_initialization_incompatible_multiplier(
-    constraint_type, formulation_type, multiplier, penalty_coefficient
-):
-    # Test initialization with incompatible multiplier
-    multiplier.constraint_type = object()
-    with pytest.raises(ValueError, match="Attempted to pair"):
-        cooper.Constraint(
-            constraint_type=constraint_type,
-            multiplier=multiplier,
-            formulation_type=formulation_type,
-            penalty_coefficient=penalty_coefficient,
-        )
 
 
 def test_constraint_sanity_check_penalty_coefficient(constraint_type, multiplier):
