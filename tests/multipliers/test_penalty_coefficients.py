@@ -40,7 +40,7 @@ def test_penalty_coefficient_failure_with_grad(penalty_coefficient_class, num_co
 
 def test_penalty_coefficient_failure_with_wrong_shape(penalty_coefficient_class):
     generator = testing_utils.frozen_rand_generator()
-    with pytest.raises(ValueError, match="init must either be a scalar or a 1D tensor of shape `(num_constraints,)`."):
+    with pytest.raises(ValueError, match="init must either be a scalar or a 1D tensor"):
         penalty_coefficient_class(torch.randn(1, generator=generator).unsqueeze(0))
 
 

@@ -1,5 +1,4 @@
 import abc
-import warnings
 from typing import Optional
 
 import torch
@@ -17,8 +16,6 @@ class PenaltyCoefficient(abc.ABC):
             raise ValueError("PenaltyCoefficient should not require gradients.")
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
-        if init.dim() == 0:
-            init = init.unsqueeze(0)
         self._value = init.clone()
 
     @property
@@ -32,7 +29,7 @@ class PenaltyCoefficient(abc.ABC):
         if value.requires_grad:
             raise ValueError("New value of PenaltyCoefficient should not require gradients.")
         if value.shape != self._value.shape:
-            warnings.warn(
+            raise ValueError(
                 f"New shape {value.shape} of PenaltyCoefficient does not match existing shape {self._value.shape}."
             )
         self._value = value.clone()
@@ -87,6 +84,9 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
             # Not allowing for boolean "indices", which are treated as indices by
             # torch.nn.functional.embedding and *not* as masks.
             raise ValueError("Indices must be of type torch.long.")
+
+        if self.value.dim() == 0:
+            return self.value.clone()
 
         coefficient_values = torch.nn.functional.embedding(indices, self.value.unsqueeze(1), sparse=False)
 

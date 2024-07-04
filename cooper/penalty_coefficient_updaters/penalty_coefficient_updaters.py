@@ -72,7 +72,7 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         # less than the tolerance, the penalty value is left unchanged.
         new_value = torch.where(condition, observed_penalty_values * self.growth_factor, observed_penalty_values)
 
-        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
-            penalty_coefficient.value = new_value.detach()
-        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
+        if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
+        else:
+            penalty_coefficient.value = new_value.detach()

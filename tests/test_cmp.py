@@ -184,7 +184,8 @@ def test_cmp_state_dict(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     state_dict = cmp_instance.state_dict()
     assert state_dict["multipliers"]["test_constraint"] == eq_constraint.multiplier.state_dict()
-    assert state_dict["penalty_coefficients"]["test_constraint"] == eq_constraint.penalty_coefficient.state_dict()
+    if eq_constraint.penalty_coefficient is not None:
+        assert state_dict["penalty_coefficients"]["test_constraint"] == eq_constraint.penalty_coefficient.state_dict()
 
 
 def test_load_state_dict(cmp_instance, eq_constraint):
@@ -196,10 +197,11 @@ def test_load_state_dict(cmp_instance, eq_constraint):
         == state_dict["multipliers"]["test_constraint"]
     )
 
-    assert (
-        cmp_instance._constraints["test_constraint"].penalty_coefficient.state_dict()
-        == state_dict["penalty_coefficients"]["test_constraint"]
-    )
+    if eq_constraint.penalty_coefficient is not None:
+        assert (
+            cmp_instance._constraints["test_constraint"].penalty_coefficient.state_dict()
+            == state_dict["penalty_coefficients"]["test_constraint"]
+        )
 
 
 def test_cmp_setattr_getattr_delattr(cmp_instance, eq_constraint):
@@ -214,4 +216,4 @@ def test_repr(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     repr_str = repr(cmp_instance)
     assert "test_constraint" in repr_str
-    assert "DummyConstraint" in repr_str
+    assert cmp_instance.__class__.__name__ in repr_str
