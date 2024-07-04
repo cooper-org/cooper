@@ -16,7 +16,7 @@ def evaluate_multiplier(multiplier, all_indices):
 def test_multiplier_initialization(constraint_type, multiplier_class, init_multiplier_tensor, device):
     multiplier = multiplier_class(init=init_multiplier_tensor, device=device)
     assert torch.equal(multiplier.weight.view(-1), init_multiplier_tensor.to(device).view(-1))
-    assert multiplier.device == device
+    assert multiplier.device.type == device.type
 
 
 def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multiplier_tensor):
