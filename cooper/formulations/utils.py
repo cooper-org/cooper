@@ -8,7 +8,9 @@ from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 def evaluate_constraint_factor(
-    module: Union[Multiplier, PenaltyCoefficient], constraint_features: torch.Tensor, expand_shape: torch.Tensor
+    module: Union[Multiplier, PenaltyCoefficient],
+    constraint_features: Optional[torch.Tensor],
+    expand_shape: tuple[int, ...],
 ) -> torch.Tensor:
     """Evaluate the Lagrange multiplier or penalty coefficient associated with a
     constraint.
@@ -16,6 +18,7 @@ def evaluate_constraint_factor(
     Args:
         module: Multiplier or penalty coefficient module.
         constraint_state: The current state of the constraint.
+        expand_shape: Shape of the constraint violation tensor.
     """
 
     # TODO(gallego-posada): This way of calling the modules assumes either 0 or 1
