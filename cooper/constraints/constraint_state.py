@@ -70,9 +70,9 @@ class ConstraintState:
         if do_unsqueeze:
             # If the violation is a scalar, we unsqueeze it to ensure that it has at
             # least one dimension for using einsum.
-            if len(violation.shape) == 0:
+            if violation.dim() == 0:
                 violation = violation.unsqueeze(0)
-            if len(strict_violation.shape) == 0:
+            if strict_violation.dim() == 0:
                 strict_violation = strict_violation.unsqueeze(0)
 
         return violation, strict_violation

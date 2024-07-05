@@ -14,12 +14,18 @@ def num_constraints(request):
 
 @pytest.fixture
 def violation(num_constraints):
-    return torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(0))
+    violation = torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(0))
+    if num_constraints == 1:
+        violation.squeeze_()
+    return violation
 
 
 @pytest.fixture
 def strict_violation(num_constraints):
-    return torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(1))
+    strict_violation = torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(1))
+    if num_constraints == 1:
+        strict_violation.squeeze_()
+    return strict_violation
 
 
 @pytest.fixture
