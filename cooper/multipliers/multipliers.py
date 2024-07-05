@@ -104,7 +104,7 @@ class ExplicitMultiplier(Multiplier):
             self.weight.data = torch.relu(self.weight.data)
 
     def __repr__(self):
-        return f"{type(self).__name__}(constraint_type={self.constraint_type}, num_constraints={self.weight.shape[0]})"
+        return f"{type(self).__name__}(num_constraints={self.weight.shape[0]})"
 
 
 class DenseMultiplier(ExplicitMultiplier):

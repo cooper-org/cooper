@@ -15,8 +15,8 @@ def constraint_type(request):
     return request.param
 
 
-@pytest.fixture(params=[(100,), (1000,)])
-def multiplier_shape(request):
+@pytest.fixture(params=[1, 100, 1000])
+def num_constraints(request):
     return request.param
 
 
@@ -26,9 +26,9 @@ def multiplier_class(request):
 
 
 @pytest.fixture
-def init_multiplier_tensor(constraint_type, multiplier_shape, random_seed):
+def init_multiplier_tensor(constraint_type, num_constraints, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
-    raw_init = torch.randn(*multiplier_shape, generator=generator)
+    raw_init = torch.randn(num_constraints, generator=generator)
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         return raw_init.relu()
     else:
@@ -36,5 +36,5 @@ def init_multiplier_tensor(constraint_type, multiplier_shape, random_seed):
 
 
 @pytest.fixture
-def all_indices(multiplier_shape):
-    return torch.arange(0, multiplier_shape[0], dtype=torch.long)
+def all_indices(num_constraints):
+    return torch.arange(num_constraints, dtype=torch.long)

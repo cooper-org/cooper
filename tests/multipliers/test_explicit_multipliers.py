@@ -13,10 +13,31 @@ def evaluate_multiplier(multiplier, all_indices):
     return multiplier(all_indices) if multiplier.expects_constraint_features else multiplier()
 
 
-def test_multiplier_initialization(constraint_type, multiplier_class, init_multiplier_tensor, device):
+def test_multiplier_initialization_with_init(multiplier_class, init_multiplier_tensor, device):
     multiplier = multiplier_class(init=init_multiplier_tensor, device=device)
     assert torch.equal(multiplier.weight.view(-1), init_multiplier_tensor.to(device).view(-1))
     assert multiplier.device.type == device.type
+
+
+def test_multiplier_initialization_with_num_constraints(multiplier_class, num_constraints, device):
+    multiplier = multiplier_class(num_constraints=num_constraints, device=device)
+    assert multiplier.weight.numel() == num_constraints
+    assert multiplier.device.type == device.type
+
+
+def test_multiplier_initialization_without_init_or_num_constraints(multiplier_class):
+    with pytest.raises(ValueError, match="At least one of `num_constraints` and `init` must be provided."):
+        multiplier_class()
+
+
+def test_multiplier_initialization_with_inconsistent_init_shape(multiplier_class, num_constraints):
+    with pytest.raises(ValueError, match="Inconsistent `init` shape"):
+        multiplier_class(num_constraints=num_constraints, init=torch.zeros(num_constraints + 1))
+
+
+def test_multiplier_repr(multiplier_class, num_constraints):
+    multiplier = multiplier_class(num_constraints=num_constraints)
+    assert repr(multiplier) == f"{multiplier_class.__name__}(num_constraints={num_constraints})"
 
 
 def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multiplier_tensor):
@@ -98,10 +119,10 @@ def test_ineq_post_step_(constraint_type, multiplier_class, init_multiplier_tens
     assert torch.allclose(current_grad, hard_coded_gradient_data)
 
 
-def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier_shape, random_seed):
+def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constraints, random_seed):
     generator = testing_utils.frozen_rand_generator(random_seed)
 
-    multiplier_init = torch.randn(*multiplier_shape, generator=generator)
+    multiplier_init = torch.randn(num_constraints, generator=generator)
     new_multiplier = explicit_multiplier_class(init=multiplier_init)
 
     # Save to file to force reading from file so we can ensure correct loading
@@ -114,7 +135,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, multiplier
     assert torch.equal(multiplier.weight, new_multiplier.weight)
 
 
-def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, multiplier_shape, random_seed):
+def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, num_constraints, random_seed):
     """Test that the state_dict of a multiplier can be saved and loaded correctly."""
     multiplier = multiplier_class(init=init_multiplier_tensor)
-    check_save_load_state_dict(multiplier, multiplier_class, multiplier_shape, random_seed)
+    check_save_load_state_dict(multiplier, multiplier_class, num_constraints, random_seed)
