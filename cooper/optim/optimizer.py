@@ -29,7 +29,7 @@ class CooperOptimizer(abc.ABC):
         dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     ):
         self.cmp = cmp
-        self.primal_optimizers = ensure_sequence(primal_optimizers)
+        self.primal_optimizers = ensure_sequence(primal_optimizers) if primal_optimizers is not None else None
         self.dual_optimizers = ensure_sequence(dual_optimizers) if dual_optimizers is not None else None
 
     def zero_grad(self):
@@ -38,11 +38,14 @@ class CooperOptimizer(abc.ABC):
         to zero. This includes both the primal and dual variables.
         """
         for primal_optimizer in self.primal_optimizers:
-            primal_optimizer.zero_grad()
+            # Prior to PyTorch 2.0, set_to_none=False was the default behavior.
+            # The default behavior was changed to set_to_none=True in PyTorch 2.0.
+            # We set set_to_none=True explicitly to ensure compatibility with both versions.
+            primal_optimizer.zero_grad(set_to_none=True)
 
         if self.dual_optimizers is not None:
             for dual_optimizer in self.dual_optimizers:
-                dual_optimizer.zero_grad()
+                dual_optimizer.zero_grad(set_to_none=True)
 
     @torch.no_grad()
     def primal_step(self):
