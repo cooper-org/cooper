@@ -15,8 +15,6 @@ class PenaltyCoefficient(abc.ABC):
     _value: Optional[torch.Tensor] = None
 
     def __init__(self, init: torch.Tensor):
-        if init.requires_grad:
-            raise ValueError("PenaltyCoefficient should not require gradients.")
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
         self.value = init
@@ -30,7 +28,7 @@ class PenaltyCoefficient(abc.ABC):
     def value(self, value: torch.Tensor):
         """Update the value of the penalty."""
         if value.requires_grad:
-            raise ValueError("New value of PenaltyCoefficient should not require gradients.")
+            raise ValueError("PenaltyCoefficient should not require gradients.")
         if self._value is not None and value.shape != self._value.shape:
             raise ValueError(
                 f"New shape {value.shape} of PenaltyCoefficient does not match existing shape {self._value.shape}."
@@ -40,7 +38,7 @@ class PenaltyCoefficient(abc.ABC):
 
     def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
         """Move the penalty to a new device and/or change its dtype."""
-        self.value = self.value.to(device=device, dtype=dtype)
+        self._value = self._value.to(device=device, dtype=dtype)
         return self
 
     def state_dict(self):

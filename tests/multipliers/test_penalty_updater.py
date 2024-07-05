@@ -46,13 +46,13 @@ def test_initialization_with_negative_violation_tolerance():
 
 def test_update_penalty_coefficient(constraint, num_constraints, is_scalar):
     violation = 2e-4 * torch.ones(num_constraints)
-
     constraint_state = cooper.ConstraintState(
         violation=violation, constraint_features=torch.arange(num_constraints, dtype=torch.long)
     )
-    penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.1, violation_tolerance=1e-4)
 
+    penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.1, violation_tolerance=1e-4)
     penalty_updater.update_penalty_coefficient_(constraint, constraint_state)
+
     true_penalty = torch.tensor(1.1) if is_scalar else 1.1 * torch.ones(num_constraints)
     assert torch.equal(constraint.penalty_coefficient.value, true_penalty)
 
@@ -64,3 +64,16 @@ def test_update_penalty_coefficient_with_unsupported_penalty_coefficient_type(co
     penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.1, violation_tolerance=1e-4)
     with pytest.raises(ValueError, match=r".*Unsupported penalty coefficient type.*"):
         penalty_updater.update_penalty_coefficient_(constraint, constraint_state)
+
+
+def test_update_penalty_coefficient_step(constraint, num_constraints, is_scalar):
+    violation = 2e-4 * torch.ones(num_constraints)
+    constraint_state = cooper.ConstraintState(
+        violation=violation, constraint_features=torch.arange(num_constraints, dtype=torch.long)
+    )
+
+    penalty_updater = MultiplicativePenaltyCoefficientUpdater(growth_factor=1.1, violation_tolerance=1e-4)
+    penalty_updater.step({constraint: constraint_state})
+
+    true_penalty = torch.tensor(1.1) if is_scalar else 1.1 * torch.ones(num_constraints)
+    assert torch.equal(constraint.penalty_coefficient.value, true_penalty)
