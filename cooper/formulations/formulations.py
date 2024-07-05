@@ -42,6 +42,8 @@ class Formulation(abc.ABC):
 
         if self.expects_penalty_coefficient and penalty_coefficient is None:
             raise ValueError(f"{type(self).__name__} expects a penalty coefficient but none was provided.")
+        if not self.expects_penalty_coefficient and penalty_coefficient is not None:
+            raise ValueError(f"{type(self).__name__} does not expect a penalty coefficient but one was provided.")
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()

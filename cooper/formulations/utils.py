@@ -158,5 +158,3 @@ def compute_primal_quadratic_augmented_contribution(
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
         return linear_term + quadratic_penalty
-    else:
-        raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")
