@@ -6,6 +6,54 @@ import torch
 import cooper
 
 
+@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
+def formulation_type(request):
+    return request.param
+
+
+@pytest.fixture
+def penalty_coefficient(formulation_type):
+    if not formulation_type.expects_penalty_coefficient:
+        return None
+    return cooper.multipliers.DensePenaltyCoefficient(torch.ones(1))
+
+
+@pytest.fixture
+def eq_constraint(formulation_type, penalty_coefficient):
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=formulation_type,
+        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
+        penalty_coefficient=penalty_coefficient,
+    )
+    return constraint
+
+
+@pytest.fixture
+def ineq_constraint(formulation_type, penalty_coefficient):
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.INEQUALITY,
+        formulation_type=formulation_type,
+        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
+        penalty_coefficient=penalty_coefficient,
+    )
+    return constraint
+
+
+@pytest.fixture
+def cmp_state():
+    return cooper.CMPState()
+
+
+@pytest.fixture
+def cmp_instance():
+    class DummyCMP(cooper.ConstrainedMinimizationProblem):
+        def compute_cmp_state(self):
+            return cmp_state
+
+    return DummyCMP()
+
+
 def test_lagrangian_store_initialization():
     lagrangian_store = cooper.LagrangianStore()
     assert is_dataclass(lagrangian_store)
@@ -77,7 +125,10 @@ def test_compute_primal_lagrangian_with_constraints(cmp_state, eq_constraint):
     eq_constraint.multiplier.weight.data.fill_(2.0)
     cmp_state.observed_constraints[eq_constraint] = constraint_state
     lagrangian_store = cmp_state.compute_primal_lagrangian()
-    assert lagrangian_store.lagrangian.item() == 6.0
+    true_lagrangian = 3.0 * 2.0
+    if eq_constraint.penalty_coefficient is not None:
+        true_lagrangian += 0.5 * (3.0**2)
+    assert lagrangian_store.lagrangian.item() == true_lagrangian
 
 
 def test_observed_violations(cmp_state, eq_constraint):
@@ -128,6 +179,11 @@ def test_cmp_register_duplicate_constraint(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     with pytest.raises(ValueError, match=r".*already exists.*"):
         cmp_instance._register_constraint("test_constraint", eq_constraint)
+
+
+def test_cmp_register_constraint_wrong_type(cmp_instance):
+    with pytest.raises(ValueError, match="Expected a Constraint instance"):
+        cmp_instance._register_constraint("test_constraint", object())
 
 
 def test_cmp_constraints(cmp_instance, eq_constraint):
@@ -206,10 +262,12 @@ def test_load_state_dict(cmp_instance, eq_constraint):
 
 def test_cmp_setattr_getattr_delattr(cmp_instance, eq_constraint):
     cmp_instance.test_constraint = eq_constraint
+    cmp_instance.tolerance = 1e-2
     assert cmp_instance.test_constraint == eq_constraint
     del cmp_instance.test_constraint
     with pytest.raises(AttributeError):
         _ = cmp_instance.test_constraint
+    del cmp_instance.tolerance
 
 
 def test_repr(cmp_instance, eq_constraint):
