@@ -48,7 +48,7 @@ def test_penalty_coefficient_failure_with_grad(penalty_coefficient_class, init_t
 
 def test_penalty_coefficient_failure_with_wrong_shape(penalty_coefficient, init_tensor):
     with pytest.raises(ValueError, match="PenaltyCoefficient does not match existing shape"):
-        penalty_coefficient.value = init_tensor[:1]
+        penalty_coefficient.value = init_tensor.unsqueeze(-1)
 
 
 def test_penalty_coefficient_sanity_check(penalty_coefficient_class, init_tensor):
