@@ -51,9 +51,6 @@ class ConstraintState:
     contributes_to_dual_update: bool = True
 
     def __post_init__(self):
-        if self.constraint_features is not None and self.violation is None:
-            raise ValueError("violation must be provided if constraint_features is provided.")
-
         if self.strict_constraint_features is not None and self.strict_violation is None:
             raise ValueError("strict_violation must be provided if strict_constraint_features is provided.")
 
@@ -73,9 +70,9 @@ class ConstraintState:
         if do_unsqueeze:
             # If the violation is a scalar, we unsqueeze it to ensure that it has at
             # least one dimension for using einsum.
-            if len(violation.shape) == 0:
+            if violation.dim() == 0:
                 violation = violation.unsqueeze(0)
-            if len(strict_violation.shape) == 0:
+            if strict_violation.dim() == 0:
                 strict_violation = strict_violation.unsqueeze(0)
 
         return violation, strict_violation

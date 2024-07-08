@@ -113,6 +113,14 @@ class CMPState:
         for constraint_state in self.observed_constraints.values():
             yield constraint_state.strict_violation
 
+    def observed_constraint_features(self):
+        for constraint_state in self.observed_constraints.values():
+            yield constraint_state.constraint_features
+
+    def observed_strict_constraint_features(self):
+        for constraint_state in self.observed_constraints.values():
+            yield constraint_state.strict_constraint_features
+
 
 class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems."""
@@ -177,7 +185,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             if constraint.penalty_coefficient is not None:
                 yield constraint_name, constraint.penalty_coefficient
 
-    def dual_parameters(self) -> Iterator[Multiplier]:
+    def dual_parameters(self) -> Iterator[torch.nn.Parameter]:
         """Return an iterator over the parameters of the multipliers associated with the
         registered constraints of the CMP. This method is useful for instantiating the
         dual optimizers. If a multiplier is shared by several constraints, we only

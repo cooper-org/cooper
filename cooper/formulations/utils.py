@@ -8,21 +8,24 @@ from cooper.multipliers import Multiplier, PenaltyCoefficient
 
 
 def evaluate_constraint_factor(
-    module: Union[Multiplier, PenaltyCoefficient], constraint_features: torch.Tensor, expand_shape: torch.Tensor
+    module: Union[Multiplier, PenaltyCoefficient],
+    constraint_features: Optional[torch.Tensor],
+    expand_shape: tuple[int, ...],
 ) -> torch.Tensor:
     """Evaluate the Lagrange multiplier or penalty coefficient associated with a
     constraint.
 
     Args:
         module: Multiplier or penalty coefficient module.
-        constraint_state: The current state of the constraint.
+        constraint_features: The observed features of the constraint.
+        expand_shape: Shape of the constraint violation tensor.
     """
 
     # TODO(gallego-posada): This way of calling the modules assumes either 0 or 1
     # arguments. This should be generalized to allow for multiple arguments.
-    value = module() if constraint_features is None else module(constraint_features)
+    value = module(constraint_features) if module.expects_constraint_features else module()
 
-    if len(value.shape) == 0:
+    if value.dim() == 0:
         # Unsqueeze value to make it a 1D tensor for consistent use in Formulations' einsum  calls
         value.unsqueeze_(0)
 
@@ -155,5 +158,3 @@ def compute_primal_quadratic_augmented_contribution(
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
         return linear_term + quadratic_penalty
-    else:
-        raise ValueError(f"{constraint_type} is incompatible with quadratic penalties.")

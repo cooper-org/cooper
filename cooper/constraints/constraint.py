@@ -1,7 +1,5 @@
 from typing import Literal, Optional, Type
 
-import torch
-
 from cooper.constraints.constraint_state import ConstraintState
 from cooper.constraints.constraint_type import ConstraintType
 from cooper.formulations import ContributionStore, Formulation, LagrangianFormulation
@@ -26,25 +24,10 @@ class Constraint:
         self.formulation = formulation_type(constraint_type=self.constraint_type)
 
         self.multiplier = multiplier
-        if multiplier.constraint_type != self.constraint_type:
-            raise ValueError(
-                f"Attempted to pair {self.constraint_type} constraint, with {multiplier.constraint_type} multiplier."
-            )
-        self.multiplier.sanity_check()
+        self.multiplier.set_constraint_type(constraint_type)
 
         self.penalty_coefficient = penalty_coefficient
-        self.sanity_check_penalty_coefficient()
-
-    def sanity_check_penalty_coefficient(self) -> None:
-        if self.formulation.expects_penalty_coefficient:
-            if self.penalty_coefficient is None:
-                raise ValueError(f"{self.formulation_type} expects a penalty coefficient but none was provided.")
-            else:
-                if torch.any(self.penalty_coefficient.value < 0):
-                    raise ValueError("All entries of the penalty coefficient must be non-negative.")
-        else:
-            if self.penalty_coefficient is not None:
-                raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
+        self.formulation.sanity_check_penalty_coefficient(penalty_coefficient)
 
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
