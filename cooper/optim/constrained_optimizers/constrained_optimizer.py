@@ -57,9 +57,9 @@ class ConstrainedOptimizer(CooperOptimizer):
         """
 
         if self.primal_optimizers is None:
-            raise RuntimeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
+            raise TypeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
         if self.dual_optimizers is None:
-            raise RuntimeError("No dual optimizer(s) was provided for building a ConstrainedOptimizer.")
+            raise TypeError("No dual optimizer(s) was provided for building a ConstrainedOptimizer.")
         for dual_optimizer in self.dual_optimizers:
             for param_group in dual_optimizer.param_groups:
                 if not param_group["maximize"]:

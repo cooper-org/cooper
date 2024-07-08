@@ -1,224 +1,251 @@
 """Cooper-related utilities for writing tests."""
 
+import itertools
 from copy import deepcopy
 from enum import Enum
-from typing import Optional, Type
+from typing import Optional, Sequence, Type
 
-import pytest
+import cvxpy as cp
 import torch
 
 import cooper
-from cooper.optim import CooperOptimizer, UnconstrainedOptimizer, constrained_optimizers
-from cooper.utils import OneOrSequence
 
 
-class Toy2dCMP(cooper.ConstrainedMinimizationProblem):
+class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
     """
-    Simple test on a 2D quadratic programming problem with quadratic constraints
-        min x**2 + 2*y**2
-        st.
-            x + y >= 1
-            x**2 + y <= 1
+    Problem formulation for minimizing the square norm of a vector under linear constraints:
+        min ||x||^2
+        st. Ax <= b
+        &   Cx == d
 
-    If hard violations are used, the "differentiable" surrogates are set to:
-            0.9 * x + y >= 1
-            x**2 + 0.9 * y <= 1
+    This is a convex optimization problem with linear inequality constraints.
 
-    This is a convex optimization problem.
-
-    The constraint levels of the differentiable surrogates are not strictly required
-    since these functions are only employed via their gradients, thus the constant
-    contribution of the constraint level disappears. We include them here for
-    readability.
-
-    Verified solution of the original constrained problem:
-        (x=2/3, y=1/3)
-
-    For a value of C=1, the solution is:
-        (x=1/2, y=1/4, s0=0, s1=1/4)
-
-    Link to WolframAlpha queries:
-        Standard CMP: https://tinyurl.com/ye8dw6t3
+    Args:
+        num_variables: Number of variables in the optimization problem.
+        has_ineq_constraint: Whether the problem has linear inequality constraints.
+        has_eq_constraint: Whether the problem has linear equality constraints.
+        ineq_use_surrogate: Whether to use surrogate constraints for the linear inequality constraints.
+        eq_use_surrogate: Whether to use surrogate constraints for the linear equality constraints.
+        A: Coefficient matrix for the linear inequality constraints.
+        b: Bias vector for the linear inequality constraints.
+        C: Coefficient matrix for the linear equality constraints.
+        d: Bias vector for the linear equality constraints.
+        ineq_formulation_type: Formulation type for the linear inequality constraints.
+        ineq_multiplier_type: Multiplier type for the linear inequality constraints.
+        ineq_penalty_coefficient_type: Penalty coefficient type for the linear inequality constraints.
+        ineq_observed_constraint_ratio: Ratio of constraints to observe for the linear inequality constraints when
+            using indexed multipliers.
+        ineq_surrogate_noise_magnitude: Magnitude of noise to add to the linear inequality constraints when using
+            surrogate constraints.
+        eq_formulation_type: Formulation type for the linear equality constraints.
+        eq_multiplier_type: Multiplier type for the linear equality constraints.
+        eq_penalty_coefficient_type: Penalty coefficient type for the linear equality constraints.
+        eq_observed_constraint_ratio: Ratio of constraints to observe for the linear equality constraints when
+            using indexed multipliers.
+        eq_surrogate_noise_magnitude: Magnitude of noise to add to the linear equality constraints when using
+            surrogate constraints.
+        device: The device tensors will be allocated on.
     """
 
     def __init__(
         self,
-        use_ineq_constraints=False,
-        use_constraint_surrogate=False,
-        constraint_type: cooper.ConstraintType = cooper.ConstraintType.INEQUALITY,
-        formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
-        penalty_coefficients: Optional[tuple[cooper.multipliers.PenaltyCoefficient, ...]] = None,
-        device=None,
+        num_variables: int,
+        has_ineq_constraint: bool = False,
+        has_eq_constraint: bool = False,
+        ineq_use_surrogate: bool = False,
+        eq_use_surrogate: bool = False,
+        A: Optional[torch.Tensor] = None,
+        b: Optional[torch.Tensor] = None,
+        C: Optional[torch.Tensor] = None,
+        d: Optional[torch.Tensor] = None,
+        ineq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
+        ineq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        ineq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        ineq_observed_constraint_ratio: float = 1.0,
+        ineq_surrogate_noise_magnitude: float = 1e-1,
+        eq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
+        eq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        eq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        eq_observed_constraint_ratio: float = 1.0,
+        eq_surrogate_noise_magnitude: float = 1e-1,
+        device="cpu",
     ):
         super().__init__()
+        self.num_variables = num_variables
 
-        self.use_ineq_constraints = use_ineq_constraints
-        self.use_constraint_surrogate = use_constraint_surrogate
+        self.has_ineq_constraint = has_ineq_constraint
+        self.has_eq_constraint = has_eq_constraint
+        self.ineq_use_surrogate = ineq_use_surrogate
+        self.eq_use_surrogate = eq_use_surrogate
 
-        if self.use_ineq_constraints:
-            for ix in range(2):
-                multiplier = cooper.multipliers.DenseMultiplier(
-                    constraint_type=constraint_type, num_constraints=1, device=device
-                )
-                penalty_coefficient = penalty_coefficients[ix] if penalty_coefficients is not None else None
+        self.A = A.to(device) if A is not None else None
+        self.b = b.to(device) if b is not None else None
+        self.C = C.to(device) if C is not None else None
+        self.d = d.to(device) if d is not None else None
 
-                constraint = cooper.Constraint(
-                    constraint_type=constraint_type,
-                    formulation_type=formulation_type,
-                    multiplier=multiplier,
-                    penalty_coefficient=penalty_coefficient,
-                )
-                setattr(self, f"constraint_{ix}", constraint)
+        self.is_ineq_sampled = ineq_multiplier_type == cooper.multipliers.IndexedMultiplier
+        self.is_eq_sampled = eq_multiplier_type == cooper.multipliers.IndexedMultiplier
 
-    def analytical_gradients(self, params):
-        """Returns the analytical gradients of the loss and constraints for a given
-        value of the parameters."""
+        self.ineq_observed_constraint_ratio = ineq_observed_constraint_ratio
+        self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
+        self.device = device
 
-        param_x, param_y = params() if callable(params) else params
+        self.generator = torch.Generator(device=device).manual_seed(0)
 
-        # Params are detached and cloned for safety
-        param_x = param_x.detach().clone()
-        param_y = param_y.detach().clone()
+        self.A_sur = None
+        if has_ineq_constraint and ineq_use_surrogate:
+            # Use a generator with a fixed seed for reproducibility across different runs of the same test
+            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, device=device, generator=self.generator)
+            self.A_sur = A + noise
 
-        # Gradient of x^2 + 2 * y^2 is [2 * x, 4 * y]
-        loss_grad = torch.stack([2 * param_x, 4 * param_y])
+        self.C_sur = None
+        if has_eq_constraint and eq_use_surrogate:
+            # Use a generator with a fixed seed for reproducibility across different runs of the same test
+            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, device=device, generator=self.generator)
+            self.C_sur = C + noise
 
-        if not self.use_ineq_constraints:
-            return loss_grad
+        if has_ineq_constraint:
+            ineq_penalty_coefficient = None
+            if ineq_penalty_coefficient_type is not None:
+                ineq_penalty_coefficient = ineq_penalty_coefficient_type(init=torch.ones(b.numel(), device=device))
 
-        if self.use_constraint_surrogate:
-            # The constraint surrogates take precedence over the `strict_violation`
-            # when computing the gradient of the Lagrangian wrt the primal parameters.
-            cg0_grad = torch.tensor([-0.9, -1.0], device=param_x.device)
-            cg1_grad = torch.tensor([2 * param_x, 0.9], device=param_x.device)
-        else:
-            cg0_grad = torch.tensor([-1.0, -1.0], device=param_x.device)
-            cg1_grad = torch.tensor([2 * param_x, 1.0], device=param_x.device)
+            ineq_multiplier = ineq_multiplier_type(num_constraints=b.numel(), device=device)
+            self.ineq_constraints = cooper.Constraint(
+                constraint_type=cooper.ConstraintType.INEQUALITY,
+                formulation_type=ineq_formulation_type,
+                multiplier=ineq_multiplier,
+                penalty_coefficient=ineq_penalty_coefficient,
+            )
 
-        return loss_grad, torch.stack([cg0_grad, cg1_grad])
+        if has_eq_constraint:
+            eq_penalty_coefficient = None
+            if eq_penalty_coefficient_type is not None:
+                eq_penalty_coefficient = eq_penalty_coefficient_type(init=torch.ones(d.numel(), device=device))
 
-    def compute_violations(self, params) -> cooper.CMPState:
-        """Evaluates only the constraint violations for this CMP."""
-        if params is None:
-            raise NotImplementedError()
+            eq_multiplier = eq_multiplier_type(num_constraints=d.numel(), device=device)
+            self.eq_constraints = cooper.Constraint(
+                constraint_type=cooper.ConstraintType.EQUALITY,
+                formulation_type=eq_formulation_type,
+                multiplier=eq_multiplier,
+                penalty_coefficient=eq_penalty_coefficient,
+            )
 
-        param_x, param_y = params() if callable(params) else params
+    def _compute_constraint_states(
+        self,
+        x: torch.Tensor,
+        lhs: torch.Tensor,
+        rhs: torch.Tensor,
+        lhs_sur: Optional[torch.Tensor],
+        is_sampled: bool,
+        observed_constraint_ratio: float,
+    ) -> cooper.ConstraintState:
 
-        cg0_violation = -param_x - param_y + 1.0
-        cg1_violation = param_x**2 + param_y - 1.0
+        num_constraints = rhs.numel()
+        strict_violation = torch.matmul(lhs, x) - rhs
 
-        if self.use_constraint_surrogate:
-            # The constraint surrogates take precedence over the `strict_violation`
-            # when computing the gradient of the Lagrangian wrt the primal variables
+        strict_constraint_features = None
+        if is_sampled:
+            strict_constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * num_constraints)]
+            strict_violation = strict_violation[strict_constraint_features]
 
-            # Orig constraint: x + y \ge 1
-            cg0_surrogate = -0.9 * param_x - param_y + 1.0
+        if lhs_sur is None:
+            return cooper.ConstraintState(violation=strict_violation, constraint_features=strict_constraint_features)
 
-            # Orig constraint: x**2 + y \le 1.0
-            cg1_surrogate = param_x**2 + 0.9 * param_y - 1.0
+        violation = torch.matmul(lhs_sur, x) - rhs
 
-            cg0_state = cooper.ConstraintState(violation=cg0_surrogate, strict_violation=cg0_violation)
-            cg1_state = cooper.ConstraintState(violation=cg1_surrogate, strict_violation=cg1_violation)
-        else:
-            cg0_state = cooper.ConstraintState(violation=cg0_violation)
-            cg1_state = cooper.ConstraintState(violation=cg1_violation)
+        constraint_features = None
+        if is_sampled:
+            # Sampling constraint features separately from the previous block to allow
+            # for the sampled surrogate_constraints to be different from the sampled strict_constraints
+            constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            constraint_features = constraint_features[: int(observed_constraint_ratio * num_constraints)]
+            violation = violation[constraint_features]
 
-        observed_constraints = {self.constraint_0: cg0_state, self.constraint_1: cg1_state}
+        return cooper.ConstraintState(
+            violation=violation,
+            constraint_features=constraint_features,
+            strict_violation=strict_violation,
+            strict_constraint_features=strict_constraint_features,
+        )
 
-        return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
+    def compute_violations(self, x: torch.Tensor) -> cooper.CMPState:
+        """
+        Computes the constraint violations for the given parameters.
+        """
+        observed_constraints = {}
 
-    def compute_cmp_state(self, params):
-        """Computes the state of the CMP at the current value of the primal parameters
+        if self.has_ineq_constraint:
+            ineq_state = self._compute_constraint_states(
+                x, self.A, self.b, self.A_sur, self.is_ineq_sampled, self.ineq_observed_constraint_ratio
+            )
+            observed_constraints[self.ineq_constraints] = ineq_state
+
+        if self.has_eq_constraint:
+            eq_state = self._compute_constraint_states(
+                x, self.C, self.d, self.C_sur, self.is_eq_sampled, self.eq_observed_constraint_ratio
+            )
+            observed_constraints[self.eq_constraints] = eq_state
+
+        return cooper.CMPState(observed_constraints=observed_constraints)
+
+    def compute_cmp_state(self, x: torch.Tensor) -> cooper.CMPState:
+        """
+        Computes the state of the CMP at the current value of the primal parameters
         by evaluating the loss and constraints.
         """
-
-        param_x, param_y = params() if callable(params) else params
-
-        loss = param_x**2 + 2 * param_y**2
-
-        cmp_state = cooper.CMPState(loss=loss)
-
-        if self.use_ineq_constraints:
-            violation_cmp_state = self.compute_violations(params=(param_x, param_y))
-            cmp_state.observed_constraints = violation_cmp_state.observed_constraints
-
+        loss = torch.sum(x**2)
+        violation_state = self.compute_violations(x)
+        cmp_state = cooper.CMPState(loss=loss, observed_constraints=violation_state.observed_constraints)
         return cmp_state
 
+    def compute_exact_solution(self):
+        x = cp.Variable(self.num_variables)
+        objective = cp.Minimize(cp.sum_squares(x))
 
-@pytest.fixture(params=[[0.0, -1.0], [0.1, 0.5]])
-def Toy2dCMP_params_init(device, request):
-    return torch.tensor(request.param, device=device)
+        constraints = []
+        if self.has_ineq_constraint:
+            constraints.append(self.A.cpu().numpy() @ x <= self.b.cpu().numpy())
+        if self.has_eq_constraint:
+            constraints.append(self.C.cpu().numpy() @ x == self.d.cpu().numpy())
 
+        prob = cp.Problem(objective, constraints)
+        prob.solve()
+        assert prob.status == cp.OPTIMAL
 
-@pytest.fixture(params=[True, False])
-def Toy2dCMP_problem_properties(request, device):
-    use_ineq_constraints = request.param
-    cmp_properties = dict(use_ineq_constraints=use_ineq_constraints)
+        x_star = torch.from_numpy(x.value).float().to(device=self.device)
+        lambda_star = [torch.from_numpy(c.dual_value).float().to(device=self.device) for c in constraints]
 
-    if use_ineq_constraints:
-        exact_solution = torch.tensor([2.0 / 3.0, 1.0 / 3.0], device=device)
-    else:
-        exact_solution = torch.tensor([0.0, 0.0], device=device)
-
-    cmp_properties["exact_solution"] = exact_solution
-
-    return cmp_properties
-
-
-@pytest.fixture(params=[True, False])
-def use_multiple_primal_optimizers(request):
-    return request.param
-
-
-def build_params(use_multiple_primal_optimizers, params_init):
-    if use_multiple_primal_optimizers:
-        params = [torch.nn.Parameter(params_init[0].clone()), torch.nn.Parameter(params_init[1].clone())]
-    else:
-        params = torch.nn.Parameter(params_init.clone())
-
-    return params
+        return x_star, lambda_star
 
 
 def build_primal_optimizers(
-    params, use_multiple_primal_optimizers, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
+    params: Sequence[torch.nn.Parameter],
+    extrapolation=False,
+    primal_optimizer_class=None,
+    primal_optimizer_kwargs=None,
 ):
-    if use_multiple_primal_optimizers:
-        if optimizer_names is None:
-            optimizer_names = ["SGD", "Adam"] if not extrapolation else ["ExtraSGD", "ExtraAdam"]
+    """
+    Builds a list of primal optimizers for the given parameters.
 
-        if optimizer_kwargs is None:
-            optimizer_kwargs = [{"lr": 1e-2, "momentum": 0.3}, {"lr": 1e-2}]
-
-        primal_optimizers = []
-        for param, optimizer_name, kwargs in zip(params, optimizer_names, optimizer_kwargs):
-            if not extrapolation:
-                optimizer = getattr(torch.optim, optimizer_name)([param], **kwargs)
-            else:
-                optimizer = getattr(cooper.optim, optimizer_name)([param], **kwargs)
-
-            primal_optimizers.append(optimizer)
-    else:
-        if optimizer_names is None:
-            optimizer_names = "SGD" if not extrapolation else "ExtraSGD"
-        if optimizer_kwargs is None:
-            optimizer_kwargs = {"lr": 1e-2}
-
+    If only one entry in params, we return an SGD optimizer over all params.
+    If more than one entries in params, we cycle between SGD and Adam optimizers.
+    """
+    if primal_optimizer_class is None:
         if not extrapolation:
-            primal_optimizers = getattr(torch.optim, optimizer_names)([params], **optimizer_kwargs)
+            primal_optimizer_class = itertools.cycle([torch.optim.SGD, torch.optim.Adam])
         else:
-            primal_optimizers = getattr(cooper.optim, optimizer_names)([params], **optimizer_kwargs)
+            primal_optimizer_class = itertools.cycle([cooper.optim.ExtraSGD, cooper.optim.ExtraAdam])
+
+    if primal_optimizer_kwargs is None:
+        primal_optimizer_kwargs = itertools.cycle([{"lr": 1e-2}, {"lr": 1e-3}])
+
+    primal_optimizers = []
+    for param, optimizer_class, kwargs in zip(params, primal_optimizer_class, primal_optimizer_kwargs):
+        optimizer = optimizer_class([param], **kwargs)
+        primal_optimizers.append(optimizer)
 
     return primal_optimizers
-
-
-def build_params_and_primal_optimizers(
-    use_multiple_primal_optimizers, params_init, extrapolation=False, optimizer_names=None, optimizer_kwargs=None
-):
-    params = build_params(use_multiple_primal_optimizers, params_init)
-    primal_optimizers = build_primal_optimizers(
-        params, use_multiple_primal_optimizers, extrapolation, optimizer_names, optimizer_kwargs
-    )
-    return params, primal_optimizers
 
 
 def build_dual_optimizers(
@@ -227,7 +254,6 @@ def build_dual_optimizers(
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
 ):
-
     # Make copy of this fixture since we are modifying in-place
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
@@ -244,31 +270,13 @@ def build_dual_optimizers(
     return dual_optimizer_class(dual_parameters, **dual_optimizer_kwargs)
 
 
-def create_optimizer_from_kwargs(
-    cooper_optimizer_class: Type[CooperOptimizer],
-    cmp: cooper.ConstrainedMinimizationProblem,
-    primal_optimizers: OneOrSequence[torch.optim.Optimizer],
-    dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-) -> CooperOptimizer:
-    """Creates a constrained or unconstrained optimizer from a set of keyword arguments."""
-
-    if dual_optimizers is None:
-        if cooper_optimizer_class != UnconstrainedOptimizer:
-            raise ValueError("Dual optimizers must be provided for constrained optimization problems.")
-        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, cmp=cmp)
-    else:
-        optimizer_kwargs = dict(primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers, cmp=cmp)
-
-    return cooper_optimizer_class(**optimizer_kwargs)
-
-
 class AlternationType(Enum):
     FALSE = False
     PRIMAL_DUAL = "PrimalDual"
     DUAL_PRIMAL = "DualPrimal"
 
 
-def build_cooper_optimizer_for_Toy2dCMP(
+def build_cooper_optimizer(
     cmp,
     primal_optimizers,
     extrapolation: bool = False,
@@ -276,10 +284,13 @@ def build_cooper_optimizer_for_Toy2dCMP(
     alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs={"lr": 1e-2},
-) -> CooperOptimizer:
+) -> cooper.optim.CooperOptimizer:
 
     dual_optimizers = None
-    if len(list(cmp.constraints())) != 0:
+    cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
+
+    if any(cmp.constraints()):
+        # If there are constraints, we build dual optimizers
         dual_optimizers = build_dual_optimizers(
             dual_parameters=cmp.dual_parameters(),
             augmented_lagrangian=augmented_lagrangian,
@@ -287,21 +298,16 @@ def build_cooper_optimizer_for_Toy2dCMP(
             dual_optimizer_kwargs=dual_optimizer_kwargs,
         )
 
-    if dual_optimizers is None:
-        cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
-    else:
         if extrapolation:
-            cooper_optimizer_class = constrained_optimizers.ExtrapolationConstrainedOptimizer
+            cooper_optimizer_class = cooper.optim.ExtrapolationConstrainedOptimizer
+        elif alternation_type == AlternationType.DUAL_PRIMAL:
+            cooper_optimizer_class = cooper.optim.AlternatingDualPrimalOptimizer
+        elif alternation_type == AlternationType.PRIMAL_DUAL:
+            cooper_optimizer_class = cooper.optim.AlternatingPrimalDualOptimizer
         else:
-            if alternation_type == AlternationType.DUAL_PRIMAL:
-                cooper_optimizer_class = constrained_optimizers.AlternatingDualPrimalOptimizer
-            elif alternation_type == AlternationType.PRIMAL_DUAL:
-                cooper_optimizer_class = constrained_optimizers.AlternatingPrimalDualOptimizer
-            else:
-                cooper_optimizer_class = constrained_optimizers.SimultaneousOptimizer
+            cooper_optimizer_class = cooper.optim.SimultaneousOptimizer
 
-    cooper_optimizer = create_optimizer_from_kwargs(
-        cooper_optimizer_class=cooper_optimizer_class,
+    cooper_optimizer = cooper_optimizer_class(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         dual_optimizers=dual_optimizers,

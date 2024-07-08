@@ -39,9 +39,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         """
         Perform an extrapolation step on the parameters associated with the primal variables.
         """
-        if not all(hasattr(primal_optimizer, "extrapolation") for primal_optimizer in self.primal_optimizers):
-            raise ValueError("All primal optimizers must implement an `extrapolation` method.")
-
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()
 
@@ -53,9 +50,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
         """
-        if not all(hasattr(dual_optimizer, "extrapolation") for dual_optimizer in self.dual_optimizers):
-            raise ValueError("All dual optimizers must implement an `extrapolation` method.")
-
         # Update multipliers based on current constraint violations (gradients)
         # For unobserved constraints the gradient is None, so this is a no-op.
         for dual_optimizer in self.dual_optimizers:
