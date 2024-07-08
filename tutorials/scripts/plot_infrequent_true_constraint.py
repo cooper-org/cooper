@@ -94,9 +94,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
 
         # Creating a constraint with a single equality constraint
         constraint_type = cooper.ConstraintType.EQUALITY
-        multiplier = cooper.multipliers.DenseMultiplier(
-            num_constraints=1, constraint_type=constraint_type, device=DEVICE
-        )
+        multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
         self.sv_constraint = cooper.Constraint(
             constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
         )

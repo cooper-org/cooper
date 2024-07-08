@@ -45,9 +45,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
         self.constraint_level = constraint_level
 
         # The multiplier must be on the same device as the model
-        multiplier = cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.INEQUALITY, num_constraints=1, device=DEVICE
-        )
+        multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
 
         self.norm_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,

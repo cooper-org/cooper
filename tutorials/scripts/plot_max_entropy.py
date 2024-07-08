@@ -46,12 +46,8 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         super().__init__()
         self.target_mean = target_mean
 
-        mean_multiplier = cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
-        )
-        sum_multiplier = cooper.multipliers.DenseMultiplier(
-            constraint_type=cooper.ConstraintType.EQUALITY, num_constraints=1, device=DEVICE
-        )
+        mean_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
+        sum_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
