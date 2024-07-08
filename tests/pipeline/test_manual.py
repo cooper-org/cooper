@@ -24,7 +24,6 @@ class TestConvergence:
         use_surrogate,
         multiplier_type,
         formulation_type,
-        penalty_coefficient_type,
         num_constraints,
         num_variables,
         device,
