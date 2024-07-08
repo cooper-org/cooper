@@ -91,7 +91,7 @@ def alternation_type(request, extrapolation, formulation_type):
 
 
 @pytest.fixture
-def cmp_no_constraint(device, num_variables):
+def unconstrained_cmp(device, num_variables):
     cmp = cooper_test_utils.SquaredNormLinearCMP(num_variables=num_variables, device=device)
     return cmp
 
@@ -156,12 +156,12 @@ def cmp(
 
 
 @pytest.fixture
-def cooper_optimizer_no_constraint(cmp_no_constraint, params):
+def cooper_optimizer_no_constraint(unconstrained_cmp, params):
     primal_optimizers = cooper_test_utils.build_primal_optimizers(
         params, primal_optimizer_kwargs=[{"lr": PRIMAL_LR} for _ in range(len(params))]
     )
     cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
-        cmp=cmp_no_constraint, primal_optimizers=primal_optimizers
+        cmp=unconstrained_cmp, primal_optimizers=primal_optimizers
     )
     return cooper_optimizer
 

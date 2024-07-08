@@ -3,12 +3,12 @@ import torch
 from tests.helpers import cooper_test_utils
 
 
-def test_convergence_no_constraint(cmp_no_constraint, params, cooper_optimizer_no_constraint):
+def test_convergence_no_constraint(unconstrained_cmp, params, cooper_optimizer_no_constraint):
     for _ in range(2000):
         cooper_optimizer_no_constraint.roll(compute_cmp_state_kwargs=dict(x=torch.cat(params)))
 
     # Compute the exact solution
-    x_star, _ = cmp_no_constraint.compute_exact_solution()
+    x_star, _ = unconstrained_cmp.compute_exact_solution()
 
     # Check if the primal variable is close to the exact solution
     assert torch.allclose(torch.cat(params), x_star, atol=1e-5)
