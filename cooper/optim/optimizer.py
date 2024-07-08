@@ -29,8 +29,8 @@ class CooperOptimizer(abc.ABC):
         dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
     ):
         self.cmp = cmp
-        self.primal_optimizers = ensure_sequence(primal_optimizers) if primal_optimizers is not None else None
-        self.dual_optimizers = ensure_sequence(dual_optimizers) if dual_optimizers is not None else None
+        self.primal_optimizers = ensure_sequence(primal_optimizers)
+        self.dual_optimizers = ensure_sequence(dual_optimizers)
 
     def zero_grad(self):
         """
