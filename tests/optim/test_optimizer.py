@@ -67,7 +67,7 @@ def test_load_state_dict_mismatch_dual_count(cooper_optimizer, cooper_optimizer_
         pytest.skip("UnconstrainedOptimizer does not have dual optimizers.")
 
     state = cooper_optimizer.state_dict()
-    new_optimizer = cooper.optim.AlternatingDualPrimalOptimizer(
+    new_optimizer = cooper_optimizer_class(
         cmp_instance,
         cooper_optimizer.primal_optimizers,
         [
