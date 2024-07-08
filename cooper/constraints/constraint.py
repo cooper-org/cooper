@@ -27,13 +27,7 @@ class Constraint:
         self.multiplier.set_constraint_type(constraint_type)
 
         self.penalty_coefficient = penalty_coefficient
-        self.sanity_check_penalty_coefficient()
-
-    def sanity_check_penalty_coefficient(self) -> None:
-        if self.formulation.expects_penalty_coefficient and self.penalty_coefficient is None:
-            raise ValueError(f"{self.formulation_type} expects a penalty coefficient but none was provided.")
-        if not self.formulation.expects_penalty_coefficient and self.penalty_coefficient is not None:
-            raise ValueError(f"Received unexpected penalty coefficient for {self.formulation_type}.")
+        self.formulation.sanity_check_penalty_coefficient(penalty_coefficient)
 
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]

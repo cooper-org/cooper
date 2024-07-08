@@ -108,7 +108,7 @@ def test_prepare_kwargs_for_lagrangian_contribution_fails_with_penalty_coefficie
 
     # Call _prepare_kwargs_for_lagrangian_contribution with penalty_coefficient set to a value
     # Expect a ValueError to be raised
-    with pytest.raises(ValueError, match=r".*does not expect a penalty coefficient but one was provided.*"):
+    with pytest.raises(ValueError, match=r"Received unexpected penalty coefficient for.*"):
         formulation._prepare_kwargs_for_lagrangian_contribution(
             constraint_state=constraint_state,
             multiplier=multiplier,

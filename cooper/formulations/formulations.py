@@ -32,6 +32,12 @@ class Formulation(abc.ABC):
     def __repr__(self):
         return f"{type(self).__name__}(constraint_type={self.constraint_type})"
 
+    def sanity_check_penalty_coefficient(self, penalty_coefficient: Optional[PenaltyCoefficient]) -> None:
+        if self.expects_penalty_coefficient and penalty_coefficient is None:
+            raise ValueError(f"{type(self).__name__} expects a penalty coefficient but none was provided.")
+        if not self.expects_penalty_coefficient and penalty_coefficient is not None:
+            raise ValueError(f"Received unexpected penalty coefficient for {type(self).__name__}.")
+
     def _prepare_kwargs_for_lagrangian_contribution(
         self,
         constraint_state: ConstraintState,
@@ -40,10 +46,7 @@ class Formulation(abc.ABC):
         primal_or_dual: Literal["primal", "dual"],
     ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
 
-        if self.expects_penalty_coefficient and penalty_coefficient is None:
-            raise ValueError(f"{type(self).__name__} expects a penalty coefficient but none was provided.")
-        if not self.expects_penalty_coefficient and penalty_coefficient is not None:
-            raise ValueError(f"{type(self).__name__} does not expect a penalty coefficient but one was provided.")
+        self.sanity_check_penalty_coefficient(penalty_coefficient)
 
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
