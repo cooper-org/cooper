@@ -145,7 +145,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             constraint: Constraint instance to be registered.
         """
         if not isinstance(constraint, Constraint):
-            raise ValueError(f"Expected a Constraint instance, got {type(constraint)}")
+            raise TypeError(f"Expected a Constraint instance, got {type(constraint)}")
         if name in self._constraints:
             raise ValueError(f"Constraint with name {name} already exists")
 
@@ -200,7 +200,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         dual optimizers. If a multiplier is shared by several constraints, we only
         return its parameters once.
         """
-        for multiplier in set(constraint.multiplier for constraint in self.constraints()):
+        for multiplier in {constraint.multiplier for constraint in self.constraints()}:
             yield from multiplier.parameters()
 
     def state_dict(self) -> dict:

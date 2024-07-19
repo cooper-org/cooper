@@ -55,7 +55,7 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
             observed_penalty_values = penalty_coefficient(strict_constraint_features)
         else:
-            raise ValueError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
+            raise TypeError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
 
         if constraint.constraint_type == ConstraintType.INEQUALITY:
             # For inequality constraints, we only consider the non-negative part of the violation.

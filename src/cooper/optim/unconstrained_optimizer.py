@@ -1,5 +1,7 @@
 """Implementation of the :py:class:`UnconstrainedOptimizer` class."""
 
+from typing import Optional
+
 from cooper.cmp import LagrangianStore
 from cooper.optim.optimizer import CooperOptimizer, RollOut
 
@@ -17,7 +19,7 @@ class UnconstrainedOptimizer(CooperOptimizer):
             ``torch.optim.Optimizer``\\s.
     """
 
-    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the
         parameters.
 
