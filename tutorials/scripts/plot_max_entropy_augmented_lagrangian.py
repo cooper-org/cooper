@@ -1,5 +1,4 @@
-r"""
-Finding a discrete maximum entropy distribution
+r"""Finding a discrete maximum entropy distribution.
 ===============================================
 
 Here we consider a simple convex optimization problem to illustrate how to use

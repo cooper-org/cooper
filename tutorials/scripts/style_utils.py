@@ -1,6 +1,4 @@
-"""
-Consistent style format for plots in example gallery.
-"""
+"""Consistent style format for plots in example gallery."""
 
 import matplotlib.pyplot as plt
 

@@ -1,6 +1,4 @@
-"""
-Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class.
-"""
+"""Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class."""
 
 import torch
 
@@ -16,15 +14,13 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
 
     def custom_sanity_checks(self):
-        """
-        Perform sanity checks on the initialization of
+        """Perform sanity checks on the initialization of
         ``ExtrapolationConstrainedOptimizer``.
 
         Raises:
             RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
                 some of the provided optimizers do not have an extrapolation method.
         """
-
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
         are_dual_extra_optims = [hasattr(_, "extrapolation") for _ in self.dual_optimizers]
 
@@ -36,16 +32,13 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     @torch.no_grad()
     def primal_extrapolation_step(self):
-        """
-        Perform an extrapolation step on the parameters associated with the primal variables.
-        """
+        """Perform an extrapolation step on the parameters associated with the primal variables."""
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()
 
     @torch.no_grad()
     def dual_extrapolation_step(self):
-        """
-        Perform an extrapolation step on the parameters associated with the dual variables.
+        """Perform an extrapolation step on the parameters associated with the dual variables.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
@@ -67,7 +60,6 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
-
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
         for call_extrapolation in (True, False):

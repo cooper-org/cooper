@@ -13,11 +13,10 @@ import cooper
 
 
 class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
-    """
-    Problem formulation for minimizing the square norm of a vector under linear constraints:
+    """Problem formulation for minimizing the square norm of a vector under linear constraints:
         min ||x||^2
         st. Ax <= b
-        &   Cx == d
+        &   Cx == d.
 
     This is a convex optimization problem with linear inequality constraints.
 
@@ -170,9 +169,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         )
 
     def compute_violations(self, x: torch.Tensor) -> cooper.CMPState:
-        """
-        Computes the constraint violations for the given parameters.
-        """
+        """Computes the constraint violations for the given parameters."""
         observed_constraints = {}
 
         if self.has_ineq_constraint:
@@ -190,8 +187,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         return cooper.CMPState(observed_constraints=observed_constraints)
 
     def compute_cmp_state(self, x: torch.Tensor) -> cooper.CMPState:
-        """
-        Computes the state of the CMP at the current value of the primal parameters
+        """Computes the state of the CMP at the current value of the primal parameters
         by evaluating the loss and constraints.
         """
         loss = torch.sum(x**2)
@@ -225,8 +221,7 @@ def build_primal_optimizers(
     primal_optimizer_class=None,
     primal_optimizer_kwargs=None,
 ):
-    """
-    Builds a list of primal optimizers for the given parameters.
+    """Builds a list of primal optimizers for the given parameters.
 
     If only one entry in params, we return an SGD optimizer over all params.
     If more than one entries in params, we cycle between SGD and Adam optimizers.

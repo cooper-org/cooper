@@ -22,7 +22,8 @@ class LagrangianStore:
 
     def backward(self) -> None:
         """Triggers backward calls to compute the gradient of the Lagrangian with
-        respect to the primal variables."""
+        respect to the primal variables.
+        """
         if self.lagrangian is not None:
             self.lagrangian.backward()
 
@@ -63,7 +64,6 @@ class CMPState:
         We don't count the loss towards the dual Lagrangian since the objective is not
         a function of the dual variables.
         """
-
         check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
         contributing_constraints = {c: cs for c, cs in self.observed_constraints.items() if check_contributes_fn(cs)}
 
@@ -144,7 +144,6 @@ class ConstrainedMinimizationProblem(abc.ABC):
             name: Name of the constraint.
             constraint: Constraint instance to be registered.
         """
-
         if not isinstance(constraint, Constraint):
             raise ValueError(f"Expected a Constraint instance, got {type(constraint)}")
         if name in self._constraints:
@@ -164,7 +163,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def multipliers(self) -> Iterator[Multiplier]:
         """Returns an iterator over the multipliers associated with the registered
-        constraints of the CMP."""
+        constraints of the CMP.
+        """
         for constraint in self.constraints():
             yield constraint.multiplier
 

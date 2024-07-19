@@ -89,7 +89,6 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
         Args:
             indices: Tensor of indices for which to return the penalty coefficient.
         """
-
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
             # torch.nn.functional.embedding and *not* as masks.

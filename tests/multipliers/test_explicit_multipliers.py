@@ -68,7 +68,8 @@ def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multip
 
 def test_equality_post_step_(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
     """Post-step for equality multipliers should be a no-op. Check that multiplier
-    values remain unchanged after calling post_step_."""
+    values remain unchanged after calling post_step_.
+    """
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         pytest.skip("")
 

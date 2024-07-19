@@ -20,7 +20,6 @@ def evaluate_constraint_factor(
         constraint_features: The observed features of the constraint.
         expand_shape: Shape of the constraint violation tensor.
     """
-
     # TODO(gallego-posada): This way of calling the modules assumes either 0 or 1
     # arguments. This should be generalized to allow for multiple arguments.
     value = module(constraint_features) if module.expects_constraint_features else module()
@@ -54,7 +53,6 @@ def compute_primal_weighted_violation(
             the constraint.
         violation: Tensor of constraint violations.
     """
-
     # When computing the gradient of the Lagrangian with respect to the primal
     # variables, we do not need to differentiate the multiplier. So we detach the
     # multiplier to avoid computing its gradient.
@@ -91,7 +89,6 @@ def compute_dual_weighted_violation(
         violation: Tensor of constraint violations.
         penalty_coefficient_value: Tensor of penalty coefficient values.
     """
-
     args = [multiplier_value, violation.detach()]
     einsum_str = "i...,i..."
 
@@ -105,8 +102,7 @@ def compute_dual_weighted_violation(
 def compute_quadratic_penalty(
     penalty_coefficient_value: torch.Tensor, violation: torch.Tensor, constraint_type: ConstraintType
 ) -> Optional[torch.Tensor]:
-    r"""
-    Computes the contribution of a constraint in the quadratic-penalty formulation.
+    r"""Computes the contribution of a constraint in the quadratic-penalty formulation.
     This corresponds to Eq 17.7 in Nocedal and Wright (2006). Let us denote the equality
     and inequality constraints by :math:`h_i(x)` and :math:`g_i(x)`, respectively. Let
     the :math:`\rho` denote the penalty coefficient.
@@ -114,7 +110,6 @@ def compute_quadratic_penalty(
     .. math::
         \frac{\rho}{2} ||h(x)||_2^2 + \frac{\rho}{2} ||\texttt{relu}(g(x))||_2^2
     """
-
     clamped_violation = torch.relu(violation) if constraint_type == ConstraintType.INEQUALITY else violation
     return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, clamped_violation**2)
 
@@ -125,8 +120,7 @@ def compute_primal_quadratic_augmented_contribution(
     violation: torch.Tensor,
     constraint_type: ConstraintType,
 ) -> Optional[torch.Tensor]:
-    r"""
-    Computes the quadratic-augmented contribution of a constraint to the Lagrangian.
+    r"""Computes the quadratic-augmented contribution of a constraint to the Lagrangian.
 
     When the constraint is an inequality constraint, the quadratic penalty is computed
     following Eqs 17.64 and 17.65 in Numerical Optimization by Nocedal and Wright (2006).
@@ -148,7 +142,6 @@ def compute_primal_quadratic_augmented_contribution(
         \lambda^{\top} \text{violation}+ \frac{rho}{2} ||violation||_2^2
 
     """
-
     if constraint_type == ConstraintType.INEQUALITY:
         aux1 = torch.einsum("i...,i...->i...", penalty_coefficient_value, violation)
         detached_multiplier = multiplier_value.detach()

@@ -1,5 +1,4 @@
-"""
-The nuPI optimizer is a first-order optimization algorithm proposed in the paper
+r"""The nuPI optimizer is a first-order optimization algorithm proposed in the paper
 "On PI controllers for updating Lagrange multipliers in constrained optimization." by
 Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
 Jose Gallego-Posada.
@@ -22,8 +21,7 @@ import torch
 
 
 class InitType(Enum):
-    """
-    nuPI initialization types. This is used to determine how to initialize the
+    r"""nuPI initialization types. This is used to determine how to initialize the
     error and derivative terms of the nuPI controller. The initialization scheme
     `SGD` ensures that the first step of `nuPI(KP, KI)` is equivalent to SGD with
     learning rate :math:`\text{lr} K_I`.
@@ -45,8 +43,7 @@ class nuPI(torch.optim.Optimizer):
         init_type: InitType = InitType.SGD,
         maximize: bool = False,
     ):
-        r"""
-        Implements a nuPI controller as a PyTorch optimizer.
+        r"""Implements a nuPI controller as a PyTorch optimizer.
 
         The error signal used for the nuPI controller is the gradient of a cost function
         :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
@@ -186,8 +183,7 @@ def _nupi_zero_init(
     ema_nu: float,
     maximize: bool,
 ):
-    """Applies a nuPI step update to `param`"""
-
+    """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
     assert not error.is_sparse, "For sparse updates, use _sparse_nupi instead"
@@ -227,11 +223,9 @@ def _sparse_nupi_zero_init(
     ema_nu: float,
     maximize: bool,
 ):
-    """
-    Analogous to _nupi but with support for sparse gradients. This function implements
+    """Analogous to _nupi but with support for sparse gradients. This function implements
     updates based on a zero initialization scheme.
     """
-
     error = param.grad
     assert error.is_sparse, "For dense updates, use _nupi instead"
 
@@ -289,8 +283,7 @@ def _nupi_sgd_init(
     ema_nu: float,
     maximize: bool,
 ):
-    """Applies a nuPI step update to `param`"""
-
+    """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
     assert not error.is_sparse, "For sparse updates, use _sparse_nupi_* instead"
@@ -337,12 +330,10 @@ def _sparse_nupi_sgd_init(
     ema_nu: float,
     maximize: bool,
 ):
-    """
-    Analogous to _nupi but with support for sparse gradients. This function implements
+    """Analogous to _nupi but with support for sparse gradients. This function implements
     updates based on a "SGD" initialization scheme that makes the first step of nuPI
     (on each coordinate) match that of SGD.
     """
-
     error = param.grad
     assert error.is_sparse, "For dense updates, use _nupi instead"
 

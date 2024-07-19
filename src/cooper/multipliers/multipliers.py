@@ -19,8 +19,7 @@ class Multiplier(torch.nn.Module, abc.ABC):
 
     @abc.abstractmethod
     def post_step_(self):
-        """
-        Post-step function for multipliers. This function is called after each step of
+        """Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and allows for additional post-processing of the implicit
         multiplier module or its parameters.
         """
@@ -36,8 +35,7 @@ class Multiplier(torch.nn.Module, abc.ABC):
 
 
 class ExplicitMultiplier(Multiplier):
-    """
-    An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
+    """An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
     contains (explicitly) the value of the Lagrange multipliers associated with a
     :py:class:`~cooper.constraints.Constraint` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
@@ -73,7 +71,6 @@ class ExplicitMultiplier(Multiplier):
         are provided (and the shapes are consistent), `init` takes precedence.
         Otherwise, the weight is initialized to zeros of shape `(num_constraints,)`.
         """
-
         if (num_constraints is None) and (init is None):
             raise ValueError("At least one of `num_constraints` and `init` must be provided.")
         elif (num_constraints is not None) and (init is not None) and (num_constraints != init.shape[0]):
@@ -94,8 +91,7 @@ class ExplicitMultiplier(Multiplier):
 
     @torch.no_grad()
     def post_step_(self):
-        """
-        Post-step function for multipliers. This function is called after each step of
+        """Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative.
         """
@@ -108,7 +104,7 @@ class ExplicitMultiplier(Multiplier):
 
 
 class DenseMultiplier(ExplicitMultiplier):
-    """Simplest kind of trainable Lagrange multiplier.
+    r"""Simplest kind of trainable Lagrange multiplier.
 
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
     :py:class:`~cooper.constraints.Constraint`\\s for which all the constraints
@@ -127,7 +123,7 @@ class DenseMultiplier(ExplicitMultiplier):
 
 
 class IndexedMultiplier(ExplicitMultiplier):
-    """Indexed multipliers extend the functionality of
+    r"""Indexed multipliers extend the functionality of
     :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
     constraints in the :py:class:`~cooper.constraints.Constraint` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
@@ -151,7 +147,6 @@ class IndexedMultiplier(ExplicitMultiplier):
 
     def forward(self, indices: torch.Tensor):
         """Return the current value of the multiplier at the provided indices."""
-
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
             # torch.nn.functional.embedding and *not* as masks.
@@ -184,8 +179,7 @@ class ImplicitMultiplier(Multiplier):
 
     @abc.abstractmethod
     def post_step_(self):
-        """
-        This method is called after each step of the dual optimizer and allows for
+        """This method is called after each step of the dual optimizer and allows for
         additional post-processing of the implicit multiplier module or its parameters.
         For example, one may want to enforce non-negativity of the parameters of the
         implicit multiplier. Given the high flexibility of implicit multipliers, the

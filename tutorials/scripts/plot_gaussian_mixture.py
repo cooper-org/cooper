@@ -1,5 +1,4 @@
-r"""
-Linear classification with rate constraints
+r"""Linear classification with rate constraints.
 ===============================================
 
 .. note::
@@ -86,10 +85,7 @@ random.seed(0)
 
 
 def generate_mog_dataset():
-    """
-    Generate a MoG dataset on 2D, with two classes.
-    """
-
+    """Generate a MoG dataset on 2D, with two classes."""
     n_samples_per_class = 100
     dim = 2
     n_gaussians = 4
@@ -135,8 +131,7 @@ class UnconstrainedMixtureSeparation(cooper.ConstrainedMinimizationProblem):
 
 
 class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
-    """
-    Implements CMP for separating the MoG dataset with a linear predictor.
+    """Implements CMP for separating the MoG dataset with a linear predictor.
 
     Args:
         use_strict_constraints: Flag to use proxy-constraints. If ``False``, we use a

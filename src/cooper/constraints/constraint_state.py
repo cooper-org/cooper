@@ -58,8 +58,8 @@ class ConstraintState:
         """Extracts the violation and strict violation from the constraint state. If
         strict violations are not provided, patches them with the violation.
         This function also unsqueeze the violation tensors to ensure thay have at least
-        1-dimension."""
-
+        1-dimension.
+        """
         violation = self.violation
 
         if self.strict_violation is not None:
@@ -82,7 +82,8 @@ class ConstraintState:
         If strict constraint features are not provided, attempts to patch them with the
         differentiable constraint features. Similarly, if differentiable constraint
         features are not provided, attempts to patch them with the strict constraint
-        features."""
+        features.
+        """
         constraint_features = self.constraint_features
 
         if self.strict_constraint_features is not None:
