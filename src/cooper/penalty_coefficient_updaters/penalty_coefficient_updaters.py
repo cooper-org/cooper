@@ -46,7 +46,6 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         self.violation_tolerance = violation_tolerance
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
-
         _, strict_violation = constraint_state.extract_violations()
         _, strict_constraint_features = constraint_state.extract_constraint_features()
         penalty_coefficient = constraint.penalty_coefficient

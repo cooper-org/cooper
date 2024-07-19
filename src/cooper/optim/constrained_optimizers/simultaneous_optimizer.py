@@ -11,7 +11,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
     by performing simultaneous gradient updates to the primal and dual variables.
     """
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
         """Evaluates the CMPState and performs a simultaneous step on the primal and
         dual variables.
 
@@ -19,6 +19,8 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
+        if compute_cmp_state_kwargs is None:
+            compute_cmp_state_kwargs = {}
         self.zero_grad()
 
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)

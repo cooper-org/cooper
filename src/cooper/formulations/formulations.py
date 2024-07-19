@@ -45,7 +45,6 @@ class Formulation(abc.ABC):
         penalty_coefficient: Optional[PenaltyCoefficient],
         primal_or_dual: Literal["primal", "dual"],
     ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
-
         self.sanity_check_penalty_coefficient(penalty_coefficient)
 
         violation, strict_violation = constraint_state.extract_violations()
@@ -71,7 +70,6 @@ class Formulation(abc.ABC):
         multiplier: Multiplier,
         penalty_coefficient: Optional[PenaltyCoefficient],
     ) -> Optional[ContributionStore]:
-
         if not constraint_state.contributes_to_dual_update:
             return None
 
@@ -101,7 +99,6 @@ class LagrangianFormulation(Formulation):
         multiplier: Multiplier,
         penalty_coefficient: Optional[PenaltyCoefficient],
     ) -> Optional[ContributionStore]:
-
         if not constraint_state.contributes_to_primal_update:
             return None
 
@@ -133,7 +130,6 @@ class AugmentedLagrangianFormulation(Formulation):
         multiplier: Multiplier,
         penalty_coefficient: Optional[PenaltyCoefficient],
     ) -> Optional[ContributionStore]:
-
         if not constraint_state.contributes_to_primal_update:
             return None
 

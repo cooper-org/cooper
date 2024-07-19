@@ -89,14 +89,14 @@ class nuPI(torch.optim.Optimizer):
             maximize: whether to maximize or minimize the loss
         """
         if lr < 0.0:
-            raise ValueError("Invalid learning rate: {}".format(lr))
+            raise ValueError(f"Invalid learning rate: {lr}")
         if weight_decay < 0.0:
-            raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
+            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
         if not -1 < ema_nu < 1.0:
-            raise ValueError("Invalid nu value: {}".format(ema_nu))
+            raise ValueError(f"Invalid nu value: {ema_nu}")
 
         if init_type not in [InitType.ZEROS, InitType.SGD]:
-            raise ValueError("Invalid init_type: {}".format(init_type))
+            raise ValueError(f"Invalid init_type: {init_type}")
 
         if not isinstance(Kp, torch.Tensor):
             Kp = torch.tensor(Kp)
@@ -104,9 +104,9 @@ class nuPI(torch.optim.Optimizer):
             Ki = torch.tensor(Ki)
 
         if torch.any(Kp < 0.0):
-            warnings.warn("Using a negative Kp coefficient: {}".format(Kp))
+            warnings.warn(f"Using a negative Kp coefficient: {Kp}")
         if torch.any(Ki < 0.0):
-            warnings.warn("Using a negative Ki coefficient: {}".format(Kp))
+            warnings.warn(f"Using a negative Ki coefficient: {Kp}")
         if torch.all(Kp == 0.0) and torch.all(Ki == 0.0):
             warnings.warn("All PI coefficients are zero")
         if ema_nu < 0:

@@ -1,9 +1,10 @@
 """Cooper-related utilities for writing tests."""
 
 import itertools
+from collections.abc import Sequence
 from copy import deepcopy
 from enum import Enum
-from typing import Optional, Sequence, Type
+from typing import Optional
 
 import cvxpy as cp
 import torch
@@ -58,14 +59,14 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         b: Optional[torch.Tensor] = None,
         C: Optional[torch.Tensor] = None,
         d: Optional[torch.Tensor] = None,
-        ineq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
-        ineq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
-        ineq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        ineq_formulation_type: type[cooper.Formulation] = cooper.LagrangianFormulation,
+        ineq_multiplier_type: type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        ineq_penalty_coefficient_type: Optional[type[cooper.multipliers.PenaltyCoefficient]] = None,
         ineq_observed_constraint_ratio: float = 1.0,
         ineq_surrogate_noise_magnitude: float = 1e-1,
-        eq_formulation_type: Type[cooper.Formulation] = cooper.LagrangianFormulation,
-        eq_multiplier_type: Type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
-        eq_penalty_coefficient_type: Optional[Type[cooper.multipliers.PenaltyCoefficient]] = None,
+        eq_formulation_type: type[cooper.Formulation] = cooper.LagrangianFormulation,
+        eq_multiplier_type: type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        eq_penalty_coefficient_type: Optional[type[cooper.multipliers.PenaltyCoefficient]] = None,
         eq_observed_constraint_ratio: float = 1.0,
         eq_surrogate_noise_magnitude: float = 1e-1,
         device="cpu",
@@ -139,7 +140,6 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         is_sampled: bool,
         observed_constraint_ratio: float,
     ) -> cooper.ConstraintState:
-
         num_constraints = rhs.numel()
         strict_violation = torch.matmul(lhs, x) - rhs
 
@@ -252,9 +252,11 @@ def build_dual_optimizers(
     dual_parameters,
     augmented_lagrangian=False,
     dual_optimizer_class=torch.optim.SGD,
-    dual_optimizer_kwargs={"lr": 1e-2},
+    dual_optimizer_kwargs=None,
 ):
     # Make copy of this fixture since we are modifying in-place
+    if dual_optimizer_kwargs is None:
+        dual_optimizer_kwargs = {"lr": 0.01}
     dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
 
@@ -283,9 +285,10 @@ def build_cooper_optimizer(
     augmented_lagrangian: bool = False,
     alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
-    dual_optimizer_kwargs={"lr": 1e-2},
+    dual_optimizer_kwargs=None,
 ) -> cooper.optim.CooperOptimizer:
-
+    if dual_optimizer_kwargs is None:
+        dual_optimizer_kwargs = {"lr": 0.01}
     dual_optimizers = None
     cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
 

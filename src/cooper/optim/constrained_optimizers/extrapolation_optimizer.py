@@ -58,7 +58,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
@@ -68,6 +68,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
 
+        if compute_cmp_state_kwargs is None:
+            compute_cmp_state_kwargs = {}
         for call_extrapolation in (True, False):
             self.zero_grad()
             cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
