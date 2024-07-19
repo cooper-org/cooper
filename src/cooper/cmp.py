@@ -1,7 +1,8 @@
 import abc
 from collections import OrderedDict
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Literal, Optional
+from typing import Any, Literal, Optional
 
 import torch
 

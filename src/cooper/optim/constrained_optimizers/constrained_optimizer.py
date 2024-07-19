@@ -1,4 +1,3 @@
-# coding: utf8
 """
 Implementation of the :py:class:`ConstrainedOptimizer` class.
 """

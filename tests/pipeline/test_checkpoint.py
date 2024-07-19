@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 
@@ -47,7 +47,6 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
 
 
 def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
-
     x = [torch.ones(num_variables, device=device)]
     if use_multiple_primal_optimizers:
         x = x[0].split(1)

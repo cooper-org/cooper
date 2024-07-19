@@ -1,6 +1,7 @@
 """
 Implementation of the :py:class:`UnconstrainedOptimizer` class.
 """
+
 from cooper.cmp import LagrangianStore
 from cooper.optim.optimizer import CooperOptimizer, RollOut
 
@@ -18,7 +19,7 @@ class UnconstrainedOptimizer(CooperOptimizer):
             ``torch.optim.Optimizer``\\s.
     """
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the
         parameters.
 
@@ -27,6 +28,8 @@ class UnconstrainedOptimizer(CooperOptimizer):
             Since this is an unconstrained optimizer, the CMPState will just contain the loss.
         """
 
+        if compute_cmp_state_kwargs is None:
+            compute_cmp_state_kwargs = {}
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
         lagrangian_store = cmp_state.compute_primal_lagrangian()

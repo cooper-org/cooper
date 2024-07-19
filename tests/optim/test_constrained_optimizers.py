@@ -76,7 +76,7 @@ def test_alternating_primal_dual_optimizer_roll_fail_compute_violations_has_loss
             observed_constraints={cmp_instance.eq_constraint: cooper.ConstraintState(violation=torch.tensor(1.0))},
         )
 
-    setattr(cmp_instance, "compute_violations", compute_violations)
+    cmp_instance.compute_violations = compute_violations
 
     with pytest.raises(
         RuntimeError,

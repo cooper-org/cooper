@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Type
+from typing import Literal, Optional
 
 from cooper.constraints.constraint_state import ConstraintState
 from cooper.constraints.constraint_type import ConstraintType
@@ -15,10 +15,9 @@ class Constraint:
         self,
         constraint_type: ConstraintType,
         multiplier: Multiplier,
-        formulation_type: Type[Formulation] = LagrangianFormulation,
+        formulation_type: type[Formulation] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ):
-
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
         self.formulation = formulation_type(constraint_type=self.constraint_type)

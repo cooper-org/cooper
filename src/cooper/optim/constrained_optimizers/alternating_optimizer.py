@@ -35,7 +35,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}, compute_violations_kwargs: dict = {}) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: dict = None, compute_violations_kwargs: dict = None) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
         (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
@@ -84,6 +84,10 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
         """
 
+        if compute_violations_kwargs is None:
+            compute_violations_kwargs = {}
+        if compute_cmp_state_kwargs is None:
+            compute_cmp_state_kwargs = {}
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 
@@ -128,7 +132,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update
 
-    def roll(self, compute_cmp_state_kwargs: dict = {}) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
         and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
@@ -149,6 +153,8 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
 
         """
 
+        if compute_cmp_state_kwargs is None:
+            compute_cmp_state_kwargs = {}
         self.zero_grad()
         cmp_state = self.cmp.compute_cmp_state(**compute_cmp_state_kwargs)
 

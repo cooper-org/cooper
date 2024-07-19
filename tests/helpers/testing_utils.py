@@ -75,7 +75,7 @@ def validate_state_dicts(model_state_dict_1: dict, model_state_dict_2: dict) -> 
     if next(iter(model_state_dict_2.keys())).startswith("module"):
         model_state_dict_2 = {k[len("module") + 1 :]: v for k, v in model_state_dict_2.items()}
 
-    for ((k_1, val1), (k_2, val2)) in zip(model_state_dict_1.items(), model_state_dict_2.items()):
+    for (k_1, val1), (k_2, val2) in zip(model_state_dict_1.items(), model_state_dict_2.items()):
         if k_1 != k_2:
             print(f"Key mismatch: {k_1} vs {k_2}")
             return False

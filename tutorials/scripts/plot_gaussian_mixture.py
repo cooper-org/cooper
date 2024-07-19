@@ -188,7 +188,6 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
 
 
 def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_level=0.7):
-
     is_constrained = "unconstrained" not in problem_name.lower()
     use_strict_constraints = "proxy" in problem_name.lower()
 

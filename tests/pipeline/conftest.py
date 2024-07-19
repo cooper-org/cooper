@@ -80,7 +80,6 @@ def extrapolation(request, formulation_type):
     ]
 )
 def alternation_type(request, extrapolation, formulation_type):
-
     is_alternation = request.param != cooper_test_utils.AlternationType.FALSE
 
     if extrapolation and is_alternation:
