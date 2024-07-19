@@ -1,20 +1,17 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v4.6.0
     hooks:
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
--   repo: https://github.com/psf/black
-    rev: 22.3.0
+    -   id: check-toml
+    -   id: debug-statements
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.2
     hooks:
-    -   id: black
-    -   id: black-jupyter
--   repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-    - id: isort
--   repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
-    hooks:
-    -   id: flake8
-        exclude: ^docs/
+    -   id: ruff
+        types_or: [ python, pyi, jupyter ]
+        args: [ --fix ]
+    -   id: ruff-format
+        types_or: [ python, pyi, jupyter ]

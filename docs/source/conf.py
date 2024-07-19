@@ -15,7 +15,7 @@
 
 # sys.path.insert(0, os.path.abspath("."))
 
-import cooper.version
+import cooper
 
 # -- Project information -----------------------------------------------------
 
@@ -24,7 +24,7 @@ copyright = "2022, The Cooper Developers"
 author = "The Cooper Developers"
 
 # The full version, including alpha/beta/rc tags
-release = f"v{cooper.version.version}"
+release = f"v{cooper.__version__}"
 
 
 # -- General configuration ---------------------------------------------------
