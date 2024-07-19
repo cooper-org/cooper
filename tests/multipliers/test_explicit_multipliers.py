@@ -50,7 +50,7 @@ def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multipl
         multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
 
-def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
+def test_multiplier_init_and_forward(multiplier_class, init_multiplier_tensor, all_indices):
     # Ensure that the multiplier returns the correct value when called
     ineq_multiplier = multiplier_class(init=init_multiplier_tensor)
     multiplier_values = evaluate_multiplier(ineq_multiplier, all_indices)
@@ -58,7 +58,7 @@ def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_mul
     assert torch.allclose(multiplier_values, target_tensor)
 
 
-def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multiplier_tensor):
+def test_indexed_multiplier_forward_invalid_indices(init_multiplier_tensor):
     multiplier = cooper.multipliers.IndexedMultiplier(init=init_multiplier_tensor)
     indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
 
@@ -136,7 +136,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constr
     assert torch.equal(multiplier.weight, new_multiplier.weight)
 
 
-def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, num_constraints, random_seed):
+def test_save_load_multiplier(multiplier_class, init_multiplier_tensor, num_constraints, random_seed):
     """Test that the state_dict of a multiplier can be saved and loaded correctly."""
     multiplier = multiplier_class(init=init_multiplier_tensor)
     check_save_load_state_dict(multiplier, multiplier_class, num_constraints, random_seed)

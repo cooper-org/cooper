@@ -95,7 +95,7 @@ def test_alternating_primal_dual_optimizer_roll_no_compute_violations(cmp_instan
     optimizer.roll()  # This shouldn't raise any errors
 
 
-def test_extrapolation_init_fail_no_extrapolation_method(cooper_optimizer_class, cmp_instance):
+def test_extrapolation_init_fail_no_extrapolation_method(cmp_instance):
     with pytest.raises(RuntimeError, match="Some of the provided optimizers do not have an extrapolation method."):
         cooper.optim.ExtrapolationConstrainedOptimizer(
             cmp=cmp_instance,
