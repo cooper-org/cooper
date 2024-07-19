@@ -45,14 +45,12 @@ class TestConvergence:
         self.dual_lr = DUAL_LR / math.sqrt(num_variables)
 
     def test_manual_step(self, extrapolation, alternation_type):
-        """
-        Test the cooper optimizer roll methods implementation.
+        """Test the cooper optimizer roll methods implementation.
 
         This method tests the cooper optimizers by comparing the results with the manual implementation.
         The manual implementation assumes Stochastic Gradient Descent (SGD) is used for both the primal
         and dual optimizers.
         """
-
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
             pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
 
@@ -136,8 +134,7 @@ class TestConvergence:
             assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
     def _violation(self, x, strict=False):
-        """
-        Compute the constraint violations given the primal variables.
+        """Compute the constraint violations given the primal variables.
         If strict is True, the strict violations are computed.
         Otherwise, the surrogate violations are computed if the surrogates are provided.
         """

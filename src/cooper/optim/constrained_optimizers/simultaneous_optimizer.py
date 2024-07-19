@@ -1,6 +1,4 @@
-"""
-Implementation of the :py:class:`SimultaneousOptimizer` class.
-"""
+"""Implementation of the :py:class:`SimultaneousOptimizer` class."""
 
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
 from cooper.optim.optimizer import RollOut
@@ -18,7 +16,6 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
         """
-
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
         self.zero_grad()

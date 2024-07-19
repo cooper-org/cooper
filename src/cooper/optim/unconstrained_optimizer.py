@@ -1,13 +1,11 @@
-"""
-Implementation of the :py:class:`UnconstrainedOptimizer` class.
-"""
+"""Implementation of the :py:class:`UnconstrainedOptimizer` class."""
 
 from cooper.cmp import LagrangianStore
 from cooper.optim.optimizer import CooperOptimizer, RollOut
 
 
 class UnconstrainedOptimizer(CooperOptimizer):
-    """Wraps a (sequence of) ``torch.optim.Optimizer``\\s to enable handling
+    r"""Wraps a (sequence of) ``torch.optim.Optimizer``\\s to enable handling
     unconstrained problems in a way that is consistent with the
     :py:class:`~cooper.optim.ConstrainedOptimizer`\\s.
 
@@ -27,7 +25,6 @@ class UnconstrainedOptimizer(CooperOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
             Since this is an unconstrained optimizer, the CMPState will just contain the loss.
         """
-
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
         self.zero_grad()

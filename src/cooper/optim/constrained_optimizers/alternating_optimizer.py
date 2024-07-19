@@ -1,5 +1,4 @@
-"""
-Implementation of constrained optimizers based on alternation such as
+"""Implementation of constrained optimizers based on alternation such as
 :py:class:`AlternatingPrimalDualOptimizer` and :py:class:`AlternatingDualPrimalOptimizer`.
 """
 
@@ -13,14 +12,12 @@ from cooper.optim.optimizer import RollOut
 
 class BaseAlternatingOptimizer(ConstrainedOptimizer):
     def custom_sanity_checks(self):
-        """
-        Perform sanity checks on the initialization of ``AlternatingOptimizer``.
+        """Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
             UserWarning: Detected use of Augmented Lagrangian but not all dual
                 optimizers are SGD(lr=1.0).
         """
-
         if any(self.cmp.penalty_coefficients()):
             for dual_optimizer in self.dual_optimizers:
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
@@ -83,7 +80,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
                 at the updated primal iterate are used.
 
         """
-
         if compute_violations_kwargs is None:
             compute_violations_kwargs = {}
         if compute_cmp_state_kwargs is None:
@@ -152,7 +148,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
 
         """
-
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
         self.zero_grad()

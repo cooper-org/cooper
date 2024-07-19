@@ -13,9 +13,7 @@ DUAL_LR = 1e-2
 
 
 class Model(torch.nn.Module):
-    """
-    A simple model that concatenates a list of parameters.
-    """
+    """A simple model that concatenates a list of parameters."""
 
     def __init__(self, params: Sequence):
         super().__init__()

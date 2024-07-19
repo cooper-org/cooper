@@ -47,7 +47,7 @@ import torch
 
 
 class ExtragradientOptimizer(torch.optim.Optimizer):
-    """Base class for optimizers with extrapolation step.
+    r"""Base class for optimizers with extrapolation step.
 
     Args:
         params: an iterable of :class:`torch.Tensor`\\s or
@@ -64,8 +64,7 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
         raise NotImplementedError
 
     def extrapolation(self):
-        """
-        Performs the extrapolation step and saves a copy of the current
+        """Performs the extrapolation step and saves a copy of the current
         parameters for the update step.
         """
         # Check if a copy of the parameters was already made.
@@ -114,8 +113,7 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
 
 
 class ExtraSGD(ExtragradientOptimizer):
-    """
-    Implements stochastic gradient descent with extrapolation step (optionally
+    r"""Implements stochastic gradient descent with extrapolation step (optionally
     with momentum).
 
     Nesterov momentum is based on the formula from

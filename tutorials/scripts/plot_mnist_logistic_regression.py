@@ -1,5 +1,4 @@
-"""
-Training a logistic regression classifier on MNIST under a norm constraint
+"""Training a logistic regression classifier on MNIST under a norm constraint.
 =====================================================================================
 
 .. note::

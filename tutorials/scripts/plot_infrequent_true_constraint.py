@@ -1,5 +1,4 @@
-r"""
-Linear transformation between two vectors with constrained spectrum
+r"""Linear transformation between two vectors with constrained spectrum.
 ===================================================================
 
 .. note::
@@ -62,7 +61,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def create_vectors(dim_y: int, dim_z: int, seed: int = 0):
     """Create y and z such that Xy = z is true for a well-conditioned matrix X."""
-
     torch.manual_seed(seed=seed)
 
     # Create a random linear system with all singular values equal to 1.
@@ -83,7 +81,8 @@ def create_vectors(dim_y: int, dim_z: int, seed: int = 0):
 
 class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem):
     """Find a matrix X to minimize the error of a linear system, under a constraint on
-    the geometric mean of the singular values of X."""
+    the geometric mean of the singular values of X.
+    """
 
     def __init__(self, y: torch.Tensor, z: torch.Tensor, constraint_level: float = 1.0):
         super().__init__()
@@ -105,7 +104,6 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
 
     def compute_arithmetic_mean(self, X: torch.Tensor) -> torch.Tensor:
         """Compute the arithmetic mean of the singular values of X."""
-
         # We use the *arithmetic* mean of the squared singular values of X as a
         # surrogate for the true constraint given by the geometric mean of the singular
         # values of X.
@@ -116,7 +114,6 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
 
     def compute_surrogate_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
         """Compute the CMPState for a given X."""
-
         # Compute the objective
         objective = self.loss_fn(X)
 

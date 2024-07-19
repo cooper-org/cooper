@@ -16,8 +16,7 @@ class ContributionStore(NamedTuple):
 
 
 class Formulation(abc.ABC):
-    """
-    Formulations prescribe how the different constraints contribute to the primal- and
+    """Formulations prescribe how the different constraints contribute to the primal- and
     dual-differentiable Lagrangians. In other words, they define how the constraints
     affect the gradients of the Lagrangian with respect to the primal and dual variables.
     """

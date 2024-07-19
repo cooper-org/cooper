@@ -1,5 +1,4 @@
-r"""
-Finding the min-norm solution to a linear system of equations
+r"""Finding the min-norm solution to a linear system of equations.
 ==============================================================
 
 This example considers the problem of finding the min-L2-norm solution to a system of
@@ -51,7 +50,6 @@ def create_linear_system(num_equations: int, num_variable: int, seed: int = 0):
         num_equations: Number of equations in the linear system.
         num_variable: Number of variables in the linear system.
     """
-
     torch.manual_seed(seed=seed)
 
     # Create a random linear system with 1-singular values
