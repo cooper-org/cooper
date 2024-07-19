@@ -5,6 +5,8 @@ authors:
       given-names: "Jose"
     - family-names: "Ramirez"
       given-names: "Juan"
+    - family-names: "Hashemizadeh"
+      given-names: "Meraj"
 title: "Cooper: a toolkit for Lagrangian-based constrained optimization"
 date-released: 2022-03-15
 url: "https://github.com/cooper-org/cooper"
