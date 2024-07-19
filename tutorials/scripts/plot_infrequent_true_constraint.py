@@ -205,7 +205,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
 
 
 def plot_results(state_history, constraint_level):
-    fig, ax = plt.subplots(2, 2, figsize=(12, 6))
+    _, ax = plt.subplots(2, 2, figsize=(12, 6))
 
     ax[0, 0].plot(state_history["loss"])
     ax[0, 0].set_ylabel("MSE Loss")

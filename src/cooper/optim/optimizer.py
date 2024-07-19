@@ -69,9 +69,8 @@ class CooperOptimizer(abc.ABC):
         if self.dual_optimizers is None:
             if state["dual_optimizer_states"] is not None:
                 raise ValueError("Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None.")
-        else:
-            if len(state["dual_optimizer_states"]) != len(self.dual_optimizers):
-                raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
+        elif len(state["dual_optimizer_states"]) != len(self.dual_optimizers):
+            raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 
         for primal_optimizer, primal_optimizer_state in zip(self.primal_optimizers, state["primal_optimizer_states"]):
             primal_optimizer.load_state_dict(primal_optimizer_state)

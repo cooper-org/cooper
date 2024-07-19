@@ -1,5 +1,7 @@
 """Implementation of the :py:class:`ExtrapolationConstrainedOptimizer` class."""
 
+from typing import Optional
+
 import torch
 
 from cooper.optim.constrained_optimizers.constrained_optimizer import ConstrainedOptimizer
@@ -51,7 +53,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
 
-    def roll(self, compute_cmp_state_kwargs: dict = None) -> RollOut:
+    def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
         """Performs a full extrapolation step on the primal and dual variables.
 
         Note that the forward and backward computations associated with the CMPState
