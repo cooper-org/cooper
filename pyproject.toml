@@ -35,6 +35,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
+    "numpy>=1.22.0",
     "torch>=1.13.1",
 ]
 
@@ -54,7 +55,6 @@ docs = [
     "ipywidgets>=7.6.0,<8.0.0",
     "matplotlib>=3.5.0,<4.0.0",
     "myst-parser>=0.15.2",
-    "numpy>=1.22.0",
     "sphinx>=4.3.1",
     "sphinx-autobuild>=2021.3.14",
     "sphinx-autodoc-typehints>=1.12.0",
@@ -75,7 +75,6 @@ examples = [
 ]
 tests = [
     "cvxpy~=1.5.1",
-    "numpy>=1.22.0",
     "pytest~=8.2.2",
     "pytest-cov==4.1.0",
     "tox==4.11.4",
