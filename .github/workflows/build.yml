@@ -1,35 +1,35 @@
 name: build and test
 
 on:
-    workflow_dispatch:
-    push:
-        branches: [master, dev, build-workflow]
-    pull_request:
-        branches: ["*"]
+  workflow_dispatch:
+  push:
+    branches: [ master, dev, build-workflow ]
+  pull_request:
+    branches: [ "*" ]
 
 jobs:
-    build:
-        runs-on: ${{ matrix.platform }}
-        strategy:
-            matrix:
-                platform: [ubuntu-latest, macos-latest, windows-latest]
-                python-version: ["3.9", "3.10", "3.11"]
-                # No gpu workflow yet!: https://github.com/apache/singa/issues/802
+  build:
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest, macos-latest, windows-latest ]
+        python-version: [ "3.9", "3.10", "3.11" ]
+        # No gpu workflow yet!: https://github.com/apache/singa/issues/802
 
-        steps:
-            - uses: actions/checkout@v4
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-            - name: Install dependencies
-              run: |
-                  python -m pip install --upgrade pip
-                  python -m pip install tox tox-gh-actions
-            - name: Test with tox
-              run: tox
-              env:
-                  PLATFORM: ${{ matrix.platform }}
-            - name: Check code formatting
-              run: tox -e lint
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox tox-gh-actions
+      - name: Test with tox
+        run: tox
+        env:
+          PLATFORM: ${{ matrix.platform }}
+      - name: Check code formatting
+        run: tox -e lint
