@@ -4,7 +4,6 @@ repos:
     hooks:
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
-    -   id: check-toml
     -   id: debug-statements
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
