@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("cooper")
+    __version__ = version("cooper-optim")
 except PackageNotFoundError:
     # package is not installed
     import warnings
