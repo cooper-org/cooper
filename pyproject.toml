@@ -6,7 +6,7 @@ requires = [
 ]
 
 [project]
-name = "cooper"
+name = "cooper-optim"
 description = "cooper is a toolkit for Lagrangian-based constrained optimization in PyTorch"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { text = "MIT License" }
