@@ -145,7 +145,7 @@ for epoch_num in range(start_epoch, 7):
         checkpoint_path + "/checkpoint.pth",
     )
 
-del batch_ix, epoch_num, all_metrics, model, cmp, cooper_optimizer
+del batch_ix, all_metrics, model, cmp, cooper_optimizer
 
 # Post-training analysis and plotting
 all_metrics = torch.load(checkpoint_path + "/checkpoint.pth")["all_metrics"]
