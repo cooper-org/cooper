@@ -11,7 +11,7 @@ possible.
 Using `pip`, you can install the package in development mode by running:
 
 ```sh
-pip install --editable "[.dev]"
+pip install --editable ".[dev]"
 ```
 
 ## Testing
@@ -40,8 +40,7 @@ clear and has sufficient instructions to be able to reproduce the issue.
 
 ## Coding Style
 
-We use `black` for formatting `isort` for import sorting, `flake8` for
-linting. We ask for type hints for all code committed to **Cooper** and check
+We use `ruff` for linting, formatting and import sorting. We ask for type hints for all code committed to **Cooper** and check
 for compliance with `mypy`. The CI system should check of this when you submit
 your pull requests.
 
