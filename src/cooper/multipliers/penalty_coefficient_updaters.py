@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import abc
+from typing import TYPE_CHECKING
 
 import torch
 
-from cooper.constraints import Constraint, ConstraintState, ConstraintType
-from cooper.multipliers import DensePenaltyCoefficient, IndexedPenaltyCoefficient
+from cooper.multipliers.penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient
+from cooper.utils import ConstraintType
+
+if TYPE_CHECKING:
+    from cooper.constraints import Constraint, ConstraintState
 
 
 class PenaltyCoefficientUpdater(abc.ABC):

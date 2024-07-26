@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
+from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
 PRIMAL_LR = 3e-2

@@ -1,9 +1,9 @@
 from typing import Literal, Optional
 
 from cooper.constraints.constraint_state import ConstraintState
-from cooper.constraints.constraint_type import ConstraintType
 from cooper.formulations import ContributionStore, Formulation, LagrangianFormulation
 from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.utils import ConstraintType
 
 
 class Constraint:

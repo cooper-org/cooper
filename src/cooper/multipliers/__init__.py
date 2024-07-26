@@ -1,2 +1,3 @@
 from .multipliers import DenseMultiplier, ExplicitMultiplier, ImplicitMultiplier, IndexedMultiplier, Multiplier
+from .penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater, PenaltyCoefficientUpdater
 from .penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient, PenaltyCoefficient

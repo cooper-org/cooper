@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 
-from cooper.constraints.constraint_type import ConstraintType
+from cooper.utils import ConstraintType
 
 
 class Multiplier(torch.nn.Module, abc.ABC):
