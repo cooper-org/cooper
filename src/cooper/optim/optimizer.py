@@ -33,7 +33,7 @@ class CooperOptimizer(abc.ABC):
         self.dual_optimizers = ensure_sequence(dual_optimizers)
 
     def zero_grad(self):
-        r"""Sets the gradients of all optimized :py:class:`~torch.nn.parameter.Parameter`\\s
+        r"""Sets the gradients of all optimized :py:class:`~torch.nn.parameter.Parameter`\s
         to zero. This includes both the primal and dual variables.
         """
         for primal_optimizer in self.primal_optimizers:

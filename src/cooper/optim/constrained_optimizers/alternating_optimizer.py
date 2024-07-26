@@ -37,8 +37,8 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         self, compute_cmp_state_kwargs: Optional[dict] = None, compute_violations_kwargs: Optional[dict] = None
     ) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
-        updated first (:math:`x_t \\to x_{t+1}`), and the dual variables are updated
-        (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`) based on the
+        updated first (:math:`x_t \to x_{t+1}`), and the dual variables are updated
+        (:math:`\lambda_t \to \lambda_{t+1}`, :math:`\mu_t \to \mu_{t+1}`) based on the
         constraint violations at the updated primal point :math:`x_{t+1}`.
 
         Note that the constraint violations must be computed twice: once for the initial
@@ -60,13 +60,13 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             Lagrangian value contained in the LagrangianStore at the end of the roll is:
 
             .. math::
-                \mathcal{L} = f(x_t) + {\lambda_{t}}^{\\top} g(x_{t+1}) + {\mu_{t}}^{\\top} h(x_{t+1})
+                \mathcal{L} = f(x_t) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
 
             Whenever the ``compute_violations_fn`` argument is **not** provided, the
             Lagrangian value is computed exactly as:
 
             .. math::
-                \mathcal{L} = f(x_{t+1}) + {\lambda_{t}}^{\\top} g(x_{t+1}) + {\mu_{t}}^{\\top} h(x_{t+1})
+                \mathcal{L} = f(x_{t+1}) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
 
             Note that in either case, the returned Lagrangian value uses the value of
             the multipliers before their update, i.e., :math:`\lambda_t` and
@@ -133,8 +133,8 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
-        updated first (:math:`\lambda_t \\to \lambda_{t+1}`, :math:`\mu_t \\to \mu_{t+1}`),
-        and the primal variables are updated (:math:`x_t \\to x_{t+1}`) based on the
+        updated first (:math:`\lambda_t \to \lambda_{t+1}`, :math:`\mu_t \to \mu_{t+1}`),
+        and the primal variables are updated (:math:`x_t \to x_{t+1}`) based on the
         Lagrangian computed with the updated dual variables.
 
         Note that, unlike for the ``AlternatingPrimalDualOptimizer``, the constraint
@@ -145,7 +145,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
             The Lagrangian value contained in the LagrangianStore at the end of the roll is:
 
             .. math::
-                \mathcal{L} = f(x_t) + {\lambda_{t+1}}^{\\top} g(x_t) + {\mu_{t+1}}^{\\top} h(x_t)
+                \mathcal{L} = f(x_t) + {\lambda_{t+1}}^{\top} g(x_t) + {\mu_{t+1}}^{\top} h(x_t)
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.

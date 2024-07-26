@@ -7,16 +7,16 @@ from cooper.optim.optimizer import CooperOptimizer, RollOut
 
 
 class UnconstrainedOptimizer(CooperOptimizer):
-    r"""Wraps a (sequence of) ``torch.optim.Optimizer``\\s to enable handling
+    r"""Wraps a (sequence of) ``torch.optim.Optimizer``\s to enable handling
     unconstrained problems in a way that is consistent with the
-    :py:class:`~cooper.optim.ConstrainedOptimizer`\\s.
+    :py:class:`~cooper.optim.ConstrainedOptimizer`\s.
 
     Args:
         cmp: The constrained minimization problem to optimize.
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
             in this case ``primal_optimizers`` accepts a sequence of
-            ``torch.optim.Optimizer``\\s.
+            ``torch.optim.Optimizer``\s.
     """
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
