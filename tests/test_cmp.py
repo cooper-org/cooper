@@ -182,7 +182,7 @@ def test_cmp_register_duplicate_constraint(cmp_instance, eq_constraint):
 
 
 def test_cmp_register_constraint_wrong_type(cmp_instance):
-    with pytest.raises(ValueError, match="Expected a Constraint instance"):
+    with pytest.raises(TypeError, match="Expected a Constraint instance"):
         cmp_instance._register_constraint("test_constraint", object())
 
 

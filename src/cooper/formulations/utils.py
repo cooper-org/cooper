@@ -3,8 +3,8 @@ from typing import Optional, Union
 
 import torch
 
-from cooper.constraints.constraint_type import ConstraintType
 from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.utils import ConstraintType
 
 
 def evaluate_constraint_factor(
