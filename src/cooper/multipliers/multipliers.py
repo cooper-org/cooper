@@ -106,11 +106,11 @@ class ExplicitMultiplier(Multiplier):
 class DenseMultiplier(ExplicitMultiplier):
     r"""Simplest kind of trainable Lagrange multiplier.
 
-    :py:class:`~cooper.multipliers.DenseMultiplier`\\s are suitable for low to mid-scale
-    :py:class:`~cooper.constraints.Constraint`\\s for which all the constraints
+    :py:class:`~cooper.multipliers.DenseMultiplier`\s are suitable for low to mid-scale
+    :py:class:`~cooper.constraints.Constraint`\s for which all the constraints
     in the group are measured constantly.
 
-    For large-scale :py:class:`~cooper.constraints.Constraint`\\s (for example,
+    For large-scale :py:class:`~cooper.constraints.Constraint`\s (for example,
     one constraint per training example) you may consider using an
     :py:class:`~cooper.multipliers.IndexedMultiplier`.
     """
@@ -124,14 +124,14 @@ class DenseMultiplier(ExplicitMultiplier):
 
 class IndexedMultiplier(ExplicitMultiplier):
     r"""Indexed multipliers extend the functionality of
-    :py:class:`~cooper.multipliers.DenseMultiplier`\\s to cases where the number of
+    :py:class:`~cooper.multipliers.DenseMultiplier`\s to cases where the number of
     constraints in the :py:class:`~cooper.constraints.Constraint` is too large.
     This situation may arise, for example, when imposing point-wise constraints over all
     the training samples in a learning task.
 
     In such cases, it might be computationally prohibitive to measure the value for all
     the constraints in the :py:class:`~cooper.constraints.Constraint` and one may
-    typically resort to sampling. :py:class:`~cooper.multipliers.IndexedMultiplier`\\s
+    typically resort to sampling. :py:class:`~cooper.multipliers.IndexedMultiplier`\s
     enable time-efficient retrieval of the multipliers for the sampled constraints only,
     and memory-efficient sparse gradients (on GPU).
     """

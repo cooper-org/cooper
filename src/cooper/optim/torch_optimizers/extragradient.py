@@ -50,8 +50,8 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
     r"""Base class for optimizers with extrapolation step.
 
     Args:
-        params: an iterable of :class:`torch.Tensor`\\s or
-            :class:`dict`\\s. Specifies what Tensors should be optimized.
+        params: an iterable of :class:`torch.Tensor`\s or
+            :class:`dict`\s. Specifies what Tensors should be optimized.
         defaults: a dict containing default values of optimization
             options (used when a parameter group doesn't specify them).
     """
@@ -136,17 +136,17 @@ class ExtraSGD(ExtragradientOptimizer):
         Considering the specific case of Momentum, the update can be written as
 
         .. math::
-            v = \\rho \\cdot v + g \\\\
-            p = p - lr \\cdot v
+            v = \rho \cdot v + g \\
+            p = p - lr \cdot v
 
-        where :math:`p`, :math:`v`, :math:`g` and :math:`\\rho` denote the
+        where :math:`p`, :math:`v`, :math:`g` and :math:`\rho` denote the
         parameters, gradient, velocity, and momentum respectively.
 
         This is in contrast to :cite:t:`sutskever2013initialization` and
         other frameworks which employ an update of the form
 
         .. math::
-            v &= \\rho \\cdot v + lr \\cdot g \\\\
+            v &= \rho \cdot v + lr \cdot g \\
             p &= p - v
 
         The Nesterov version is analogously modified.
