@@ -35,12 +35,8 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Publish release to GitHub
-        if: steps.build.pypi == 'success'
+        if: steps.pypi.outcome == 'success'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish documentation
-        if: steps.build.pypi == 'success'
-        run: echo "TODO"  # TODO: Build docs and push to readthedocs.io
