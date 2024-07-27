@@ -12,6 +12,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -22,6 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install codecov pytest-cov
           pip install --editable '.[dev]'
+
       - name: Coverage tests
         run: pytest --cov=cooper . --cov-report term-missing
 
