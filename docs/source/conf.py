@@ -34,13 +34,13 @@ release = f"v{cooper.__version__}"
 # ones.
 extensions = [
     "myst_parser",
+    "sphinx.ext.napoleon", # napoleon on top of autodoc: https://stackoverflow.com/a/66930447 might correct some warnings
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
     "sphinx.ext.duration",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
@@ -65,6 +65,13 @@ mathjax3_config = {
     "displayAlign": "left",
 }
 
+source_suffix = ['.md']
+
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+]
 
 # Handle Latex-style references
 bibtex_encoding = "latin"
