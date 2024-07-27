@@ -7,12 +7,12 @@
     that involves using mini-batches of data.
 
 In this example, we consider a simple convex constrained optimization problem: training
-a Logistic Regression clasifier on the MNIST dataset. The model is constrained so that
+a Logistic Regression classifier on the MNIST dataset. The model is constrained so that
 the squared L2 norm of its parameters is less than 1.
 
 Although we employ a simple Logistic Regression model, the same principles can be applied
 
-This example illustrates how **Cooper** integrates with a typical PyTorch trainig
+This example illustrates how **Cooper** integrates with a typical PyTorch training
 pipeline, where:`
     - models are defined using a ``torch.nn.Module``,
     - steps loop over mini-batches of data,

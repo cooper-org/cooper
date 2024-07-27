@@ -16,7 +16,7 @@ by the vector :math:`x^*` satisfying :math:`A^{\dagger}b = x^*`, where
 
 Here we analyze this traditional problem under the framework of gradient-based
 Lagrangian optimization. We allow for the possibility that the system of equations
-is partially observed at each iterations. That is, we assume that the matrix :math:`A`
+is partially observed at each iteration. That is, we assume that the matrix :math:`A`
 and the vector :math:`b` may be sub-sampled at each iteration.
 
 .. math::
