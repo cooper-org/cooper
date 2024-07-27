@@ -37,7 +37,7 @@ under-constrained version of the problem (as illustrated in this tutorial).
 
 :cite:t:`cotter2019JMLR` propose a *proxy-Lagrangian formulation*, in which the
 non-differentiable constraints are relaxed *only when necessary*. In other
-words, the non differentiable constraint functions are used to compute the
+words, the non-differentiable constraint functions are used to compute the
 Lagrangian and constraint violations (and thus the to update the Lagrange multipliers),
 while the surrogates are used to compute gradients of the Lagrangian with respect to the
 parameters of the model.
