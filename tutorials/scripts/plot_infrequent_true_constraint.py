@@ -17,9 +17,9 @@ The problem has a constraint on the geometric mean of the singular values of :ma
 Formally,
 
 .. math::
-    \min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \\text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
+    \min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
 
-where :math:`X \in \mathbb{R}^{m \\times n}`, :math:`y \in \mathbb{R}^m`,
+where :math:`X \in \mathbb{R}^{m \times n}`, :math:`y \in \mathbb{R}^m`,
 :math:`z \in \mathbb{R}^n`, :math:`r = \min\{m, n\}`, :math:`\sigma_i(X)` denotes the
 :math:`i`-th singular value of :math:`X`, and :math:`c` is a constant.
 
