@@ -1,8 +1,7 @@
 # Tutorials
 
 ```{toctree}
-:caption: Tutorials
-:hidden: true
+:caption: List of Tutorials
 :maxdepth: 2
 
 plot_gaussian_mixture
