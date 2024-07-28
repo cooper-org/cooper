@@ -1,45 +1,74 @@
-r"""Finding the min-norm solution to a linear system of equations.
-==============================================================
+---
+jupytext:
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.3
+kernelspec:
+  display_name: Python 3
+  name: python3
+---
+
++++ {"id": "gM1i7wc_5rVy"}
+
+# Finding the min-norm solution to a linear system of equations.
 
 This example considers the problem of finding the min-L2-norm solution to a system of
 linear equations. The problem is formulated as a constrained minimization problem:
 
-.. math::
-    \min_{x}  \,\, \Vert x \Vert_2^2  \,\, s.t. \,\, Ax = b
+$$
+\min_{x}  \,\, \Vert x \Vert_2^2  \,\, s.t. \,\, Ax = b
+$$
 
-where :math:`A` is a matrix of size :math:`(m, n)` and :math:`b` is a vector of size
-:math:`(m, 1)`.
+where $A$ is a matrix of size $(m, n)$ and $b$ is a vector of size
+$(m, 1)$.
 
 This is a well-known convex problem in numerical linear algebra, whose solution is given
-by the vector :math:`x^*` satisfying :math:`A^{\dagger}b = x^*`, where
-:math:`A^{\dagger}` is the Moore-Penrose pseudo-inverse of :math:`A`.
+by the vector $x^*$ satisfying $A^{\dagger}b = x^*$, where
+$A^{\dagger}$ is the Moore-Penrose pseudo-inverse of $A$.
 
 Here we analyze this traditional problem under the framework of gradient-based
 Lagrangian optimization. We allow for the possibility that the system of equations
-is partially observed at each iteration. That is, we assume that the matrix :math:`A`
-and the vector :math:`b` may be sub-sampled at each iteration.
+is partially observed at each iteration. That is, we assume that the matrix $A$
+and the vector $b$ may be sub-sampled at each iteration.
 
-.. math::
-    \mathcal{L}(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
+$$
+\mathcal{L}(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
+$$
 
-where :math:`\lambda` is the vector of Lagrange multipliers, and :math:`D` is a
-stochastic diagonal matrix with :math:`1` on the indices corresponding to the observed
-equations and :math:`0` everywhere else.
+where $\lambda$ is the vector of Lagrange multipliers, and $D$ is a
+stochastic diagonal matrix with $1$ on the indices corresponding to the observed
+equations and $0$ everywhere else.
 
 The results below illustrate the influence of the number of observed equations on the
 convergence of the algorithm.
-"""
 
+```{code-cell} ipython3
+:id: F9UCeF845_lp
+
+%%capture
+# %pip install cooper-optim
+%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+```
+
+```{code-cell} ipython3
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 988
+id: 5FBXOQdD5rVz
+outputId: d62f29a7-196c-4c0a-e80a-a8fbb2872263
+---
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 
 import cooper
 
-style_utils.set_plot_style()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -188,7 +217,7 @@ def plot_results(state_histories) -> None:
     for exp_id, (exp_label, state_history) in enumerate(state_histories):
         [ax[exp_id, _].set_xlabel("Step") for _ in range(4)]
 
-        ax[exp_id, 0].set_ylabel(exp_label, fontsize=style_utils.MEDIUM_SIZE)
+        ax[exp_id, 0].set_ylabel(exp_label)
 
         ax[exp_id, 0].plot(state_history["step"], state_history["relative_norm"])
         ax[exp_id, 0].axhline(1, color="red", linestyle="--", alpha=0.3)
@@ -221,3 +250,4 @@ for constraint_frequency in [1.0, 0.5, 0.25]:
     state_histories.append((f"Constraint Frequency: {constraint_frequency * 100}%", state_history))
 
 plot_results(state_histories)
+```

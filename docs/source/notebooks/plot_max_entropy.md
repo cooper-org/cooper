@@ -1,38 +1,67 @@
-r"""Finding a discrete maximum entropy distribution.
-===============================================
+---
+jupytext:
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.3
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
++++ {"id": "TVGGkylR9Lp8"}
+
+# Finding a discrete maximum entropy distribution.
 
 Here we consider a simple convex optimization problem to illustrate how to use
-**Cooper**. This example is inspired by `this StackExchange question
-<https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch>`_\:
+**Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
 
 *I am trying to solve the following problem using PyTorch: given a 6-sided die
 whose average roll is known to be 4.5, what is the maximum entropy distribution
 for the faces?*
 
 Formally, we want to solve the following optimization problem:
-.. math::
-    \begin{aligned}
-    \max_{p} & -\sum_{i=1}^6 p_i \log p_i \\
-    & \sum_{i=1}^6 i p_i = 4.5 \\
-    \text{s.t.} & \sum_{i=1}^6 p_i = 1 \\
-    & p_i \geq 0 \quad \forall i
-    \end{aligned}
-where :math:`p` is the probability distribution over the faces of the die.
+
+$$
+\begin{aligned}
+\max_{p} & -\sum_{i=1}^6 p_i \log p_i \\
+& \sum_{i=1}^6 i p_i = 4.5 \\
+\text{s.t.} & \sum_{i=1}^6 p_i = 1 \\
+& p_i \geq 0 \quad \forall i
+\end{aligned}
+$$
+
+where $p$ is the probability distribution over the faces of the die.
 
 This example makes use of the $\nu$PI algorithm for improving the training dynamics of
 the dual variables. For a detailed explanation of the $\nu$PI algorithm, see the paper:
 *On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
-`ICML 2024 <https://icml.cc/virtual/2024/poster/35138>`_.
-"""
+[ICML 2024](https://icml.cc/virtual/2024/poster/35138).
 
+```{code-cell} ipython3
+:id: -DuIp2HX-Aa5
+
+%%capture
+# %pip install cooper-optim
+%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+```
+
+```{code-cell} ipython3
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 378
+id: ha7Q1fpB9Lp-
+outputId: e36d0fbd-4348-436e-c440-99d767c3bea0
+---
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 
 import cooper
-
-style_utils.set_plot_style()
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -134,3 +163,4 @@ ax2.axhline(optimal_entropy, c="gray", alpha=0.35, linestyle="dashed")
 ax2.set_title("Objective")
 
 plt.show()
+```
