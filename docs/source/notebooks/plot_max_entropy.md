@@ -12,9 +12,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "TVGGkylR9Lp8"}
-
 # Finding a discrete maximum entropy distribution.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_max_entropy.ipynb)
+
 
 Here we consider a simple convex optimization problem to illustrate how to use
 **Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
@@ -42,21 +43,12 @@ the dual variables. For a detailed explanation of the $\nu$PI algorithm, see the
 [ICML 2024](https://icml.cc/virtual/2024/poster/35138).
 
 ```{code-cell} ipython3
-:id: -DuIp2HX-Aa5
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 378
-id: ha7Q1fpB9Lp-
-outputId: e36d0fbd-4348-436e-c440-99d767c3bea0
----
 import matplotlib.pyplot as plt
 import numpy as np
 import torch

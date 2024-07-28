@@ -11,9 +11,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "0r6-Iu5mjyvU"}
-
 # Training a logistic regression classifier on MNIST under a norm constraint.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_mnist_logistic_regression.ipynb)
+
 
 :::{note}
 This example illustrates how to use **Cooper** on a simple machine learning problem
@@ -33,21 +34,12 @@ pipeline, where:
 - CUDA acceleration is used.
 
 ```{code-cell} ipython3
-:id: xbmAjmBirN7l
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 410
-id: 9jX0TLF4jyvW
-outputId: 7e1b1322-5ec1-4b40-92ac-08b27e7e41fb
----
 import os
 from collections import defaultdict
 

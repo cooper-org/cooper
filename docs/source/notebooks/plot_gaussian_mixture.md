@@ -12,9 +12,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "ytFrMx5ZDh_1"}
-
 # Linear classification with rate constraints.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_gaussian_mixture.ipynb)
+
 
 :::{note}
 This example highlights the use of proxy constraints {cite:t}`cotter2019JMLR`. Proxy
@@ -87,21 +88,12 @@ constraint. The proportion of points predicted as class 0 is 70%, thus yielding 
 feasible solution.
 
 ```{code-cell} ipython3
-:id: MhvdbV0-DnKK
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 556
-id: NTMINxkKDh_3
-outputId: 42dc600b-be23-4b7e-d2c5-1fa3fc693348
----
 import random
 
 import matplotlib.pyplot as plt
