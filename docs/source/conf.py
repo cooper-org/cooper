@@ -47,7 +47,6 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx_copybutton",
     "sphinxcontrib.bibtex",
-    # "sphinx_gallery.gen_gallery",
 ]
 
 mathjax3_config = {
@@ -94,10 +93,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = [
-    "build/html",
-
-]
+exclude_patterns = ["build"]
 
 
 # -- Options for HTML output -------------------------------------------------
