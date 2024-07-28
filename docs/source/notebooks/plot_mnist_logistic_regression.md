@@ -1,10 +1,24 @@
-"""Training a logistic regression classifier on MNIST under a norm constraint.
-=====================================================================================
+---
+jupytext:
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.3
+kernelspec:
+  display_name: Python 3
+  name: python3
+---
 
-.. note::
++++ {"id": "0r6-Iu5mjyvU"}
 
-    This example illustrates how to use **Cooper** on a simple machine learning problem
-    that involves using mini-batches of data.
+# Training a logistic regression classifier on MNIST under a norm constraint.
+
+:::{note}
+This example illustrates how to use **Cooper** on a simple machine learning problem
+that involves using mini-batches of data.
+:::
 
 In this example, we consider a simple convex constrained optimization problem: training
 a Logistic Regression classifier on the MNIST dataset. The model is constrained so that
@@ -13,24 +27,37 @@ the squared L2 norm of its parameters is less than 1.
 Although we employ a simple Logistic Regression model, the same principles can be applied
 
 This example illustrates how **Cooper** integrates with a typical PyTorch training
-pipeline, where:`
-    - models are defined using a ``torch.nn.Module``,
-    - steps loop over mini-batches of data,
-    - CUDA acceleration is used.
-"""
+pipeline, where:
+- models are defined using a ``torch.nn.Module``,
+- steps loop over mini-batches of data,
+- CUDA acceleration is used.
 
+```{code-cell} ipython3
+:id: xbmAjmBirN7l
+
+%%capture
+# %pip install cooper-optim
+%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+```
+
+```{code-cell} ipython3
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 410
+id: 9jX0TLF4jyvW
+outputId: 7e1b1322-5ec1-4b40-92ac-08b27e7e41fb
+---
 import os
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 from torchvision import datasets, transforms
 
 import cooper
 
-style_utils.set_plot_style()
 np.random.seed(0)
 torch.manual_seed(0)
 
@@ -71,7 +98,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 data_path = "./data"
 data_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 dataset = datasets.MNIST(data_path, train=True, download=True, transform=data_transforms)
-train_loader = torch.utils.data.DataLoader(dataset, batch_size=128, num_workers=4, pin_memory=torch.cuda.is_available())
+train_loader = torch.utils.data.DataLoader(dataset, batch_size=128, num_workers=2, pin_memory=torch.cuda.is_available())
 
 # Create a Logistic Regression model
 model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
@@ -171,3 +198,4 @@ ax3.set_xlabel("Batch")
 ax3.set_title("Inequality Defect")
 
 plt.show()
+```

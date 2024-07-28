@@ -1,32 +1,48 @@
-r"""Linear transformation between two vectors with constrained spectrum.
-===================================================================
+---
+jupytext:
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.3
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
 
-.. note::
++++ {"id": "9qa2upcZBKrC"}
 
-    This example highlights the use of the flags `contributes_to_primal_update` and
-    `contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
-    specify whether a constraint violation contributes to the primal or dual update. By
-    default, both flags are set to True. However, in this example, we update the primal
-    parameters based on a surrogate constraint since the true constraint is expensive to
-    compute, and difficult to differentiate. The true constraint is only computed every
-    few iterations, and the multipliers are updated based on the true constraint.
+# Linear transformation between two vectors with constrained spectrum.
 
-Consider the problem of finding the matrix :math:`X` that transforms a vector :math:`y`
-so as to minimize the mean squared error between :math:`Xy` and another vector :math:`z`.
-The problem has a constraint on the geometric mean of the singular values of :math:`X`.
+:::{note}
+This example highlights the use of the flags `contributes_to_primal_update` and
+`contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
+specify whether a constraint violation contributes to the primal or dual update. By
+default, both flags are set to True. However, in this example, we update the primal
+parameters based on a surrogate constraint since the true constraint is expensive to
+compute, and difficult to differentiate. The true constraint is only computed every
+few iterations, and the multipliers are updated based on the true constraint.
+:::
+
+Consider the problem of finding the matrix $X$ that transforms a vector $y$
+so as to minimize the mean squared error between $Xy$ and another vector $z$.
+The problem has a constraint on the geometric mean of the singular values of $X$.
 Formally,
 
-.. math::
-    \min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
+$$
+\min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
+$$
 
-where :math:`X \in \mathbb{R}^{m \times n}`, :math:`y \in \mathbb{R}^m`,
-:math:`z \in \mathbb{R}^n`, :math:`r = \min\{m, n\}`, :math:`\sigma_i(X)` denotes the
-:math:`i`-th singular value of :math:`X`, and :math:`c` is a constant.
+where $X \in \mathbb{R}^{m \times n}$, $y \in \mathbb{R}^m$,
+$z \in \mathbb{R}^n$, $r = \min\{m, n\}$, $\sigma_i(X)$ denotes the
+$i$-th singular value of $X$, and $c$ is a constant.
 
-We calculate the geometric mean of the singular values of :math:`X` by first computing
-the singular value decomposition of :math:`X`. Note that the SVD decomposition is
+We calculate the geometric mean of the singular values of $X$ by first computing
+the singular value decomposition of $X$. Note that the SVD decomposition is
 relatively expensive. However, the *arithmetic* mean of the squared singular values of
-:math:`X` can be computed cheaply as it corresponds to the trace of :math:`X X^T`.
+$X$ can be computed cheaply as it corresponds to the trace of $X X^T$.
 
 Therefore, we can use the arithmetic mean as a surrogate for the true constraint on the
 geometric mean of the singular values of X. While this choice of surrogate is not
@@ -35,22 +51,33 @@ it is a good practical heuristic.
 
 This example illustrates the ability to update the primal and dual variables at
 different frequencies. Here, we make use of the cheap surrogate constraint to update the
-primal variables at every iteration, while the multipliers are updated using the _true_
+primal variables at every iteration, while the multipliers are updated using the \_true\_
 constraint which is only observed sporadically. Note how the multiplier value remains
 constant in-between measurements of the true constraint.
 
-"""
+```{code-cell} ipython3
+:id: C1_2TzqACJm1
 
+%%capture
+# %pip install cooper-optim
+%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+```
+
+```{code-cell} ipython3
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 607
+id: rierIv7HBKrE
+outputId: ce2ff3d9-bc08-44c3-f338-52621d7298cf
+---
 import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 
 import cooper
-
-style_utils.set_plot_style()
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -213,7 +240,7 @@ def plot_results(state_history, constraint_level):
     ax[0, 0].grid(True, which="both", alpha=0.3)
 
     ax[0, 1].plot(state_history["arithmetic_mean"])
-    ax[0, 1].set_ylabel("Arith. mean sq. singular values", fontsize=style_utils.SMALL_SIZE)
+    ax[0, 1].set_ylabel("Arith. mean sq. singular values")
 
     ax[1, 0].plot(state_history["geometric_mean"])
     ax[1, 0].set_ylabel("Geometric mean")
@@ -225,7 +252,7 @@ def plot_results(state_history, constraint_level):
     ax[1, 1].axhline(0, color="red", linestyle="--", alpha=0.3)
 
     for ax_ in ax.flatten():
-        ax_.set_xlabel("Iteration", fontsize=style_utils.SMALL_SIZE)
+        ax_.set_xlabel("Iteration")
         for line in ax_.get_lines():
             line.set_linewidth(2)
 
@@ -252,3 +279,4 @@ state_history = run_experiment(
     dual_lr=dual_lr,
 )
 plot_results(state_history, constraint_level)
+```

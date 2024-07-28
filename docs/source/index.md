@@ -7,7 +7,7 @@
 :maxdepth: 2
 
 readme
-auto_tutorials/index
+notebooks/index
 ```
 
 ```{toctree}

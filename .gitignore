@@ -4,13 +4,8 @@ __pycache__/
 *$py.class
 
 # Tutorial auxiliary folder
-tutorials/data/
-tutorials/scripts/data/
-tutorials/scripts/checkpoint/
-
-# Ignore generated files for tutorial gallery
-docs/source/auto_tutorials
-docs/source/modules/
+docs/source/notebooks/data/
+docs/source/notebooks/checkpoint/
 
 # C extensions
 *.so

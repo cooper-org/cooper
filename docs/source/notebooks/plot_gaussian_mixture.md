@@ -1,30 +1,46 @@
-r"""Linear classification with rate constraints.
-===============================================
+---
+jupytext:
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.3
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
 
-.. note::
++++ {"id": "ytFrMx5ZDh_1"}
 
-    This example highlights the use of proxy constraints :cite:t:`cotter2019JMLR`. Proxy
-    constraints allow using different constraint violations for updating the primal and
-    dual variables. They are useful when the true constraint is non-differentiable, but
-    there exists a differentiable surrogate that is aligned with the original constraint.
-    This example is based on Fig. 2 of :cite:t:`cotter2019JMLR`.
+# Linear classification with rate constraints.
 
-    By default, Cooper uses the provided violation to update both the primal and dual.
-    To use proxy constraints, the user must provide a `strict_violation` in the
-    `ConstraintState` object. The `strict_violation` is used to update the dual variables,
-    while the `violation` is used to update the primal variables.
+:::{note}
+This example highlights the use of proxy constraints {cite:t}`cotter2019JMLR`. Proxy
+constraints allow using different constraint violations for updating the primal and
+dual variables. They are useful when the true constraint is non-differentiable, but
+there exists a differentiable surrogate that is aligned with the original constraint.
+This example is based on Fig. 2 of {cite:t}`cotter2019JMLR`.
+
+By default, Cooper uses the provided violation to update both the primal and dual.
+To use proxy constraints, the user must provide a `strict_violation` in the
+`ConstraintState` object. The `strict_violation` is used to update the dual variables,
+while the `violation` is used to update the primal variables.
+:::
 
 In this example we consider a linear classification problem on a synthetically generated
 mixture of Gaussians. We constrain the model to predict at least 70% of the training
 points as class blue (class 0). The optimization problem is defined as follows:
 
-.. math::
-    min_{w, b} \mathbb{E}_{(x, y) \sim \mathcal{D}} \left[ \ell(w^T x + b, y) \right]
-    s.t. \mathbb{E}_{(x, y) \sim \mathcal{D}} \mathbb{1}_{\sigma(w^T x + b) \leq 0} \geq 0.7
-where :math:`\ell` is the binary cross-entropy loss, :math:`w` and :math:`b` are the
-weights and bias of the linear model, and :math:`x` and :math:`y` are the input and
+$$
+min_{w, b} \mathbb{E}_{(x, y) \sim \mathcal{D}} \left[ \ell(w^T x + b, y) \right] s.t. \mathbb{E}_{(x, y) \sim \mathcal{D}} \mathbb{1}_{\sigma(w^T x + b) \leq 0} \geq 0.7
+$$
+
+where $\ell$ is the binary cross-entropy loss, $w$ and $b$ are the
+weights and bias of the linear model, and $x$ and $y$ are the input and
 target labels. The expectation is computed over the data distribution
-:math:`\mathcal{D}`.
+$\mathcal{D}$.
 
 Note that this constraint is not continuous on the model parameters, and so it is not
 differentiable. The typical Lagrangian approach is not applicable in this setting as
@@ -35,18 +51,20 @@ formulation, but replace the constraints with differentiable approximations or
 surrogates. However, changing the constraint functions can result in an over- or
 under-constrained version of the problem (as illustrated in this tutorial).
 
-:cite:t:`cotter2019JMLR` propose a *proxy-Lagrangian formulation*, in which the
+{cite:t}`cotter2019JMLR` propose a *proxy-Lagrangian formulation*, in which the
 non-differentiable constraints are relaxed *only when necessary*. In other
 words, the non-differentiable constraint functions are used to compute the
 Lagrangian and constraint violations (and thus the to update the Lagrange multipliers),
-while the surrogates are used to compute gradients of the Lagrangian with respect to the
-parameters of the model.
+while the surrogates are used to compute gradients of the Lagrangian with
+respect to the parameters of the model.
 
 **Surrogate.** The surrogate considered in this tutorial is the following:
-.. math::
-    P(\hat{y}=0) \geq 0.7
 
-where :math:`P(\hat{y}=0) = \mathbb{E}_{(x, y) \sim \mathcal{D}} P(\hat{y}=0 | x) = \mathbb{E}_{(x, y) \sim \mathcal{D}} 1 - \sigma(w^T x + b)`
+$$
+P(\hat{y}=0) \geq 0.7
+$$
+
+where $P(\hat{y}=0) = \mathbb{E}_{(x, y) \sim \mathcal{D}} P(\hat{y}=0 | x) = \mathbb{E}_{(x, y) \sim \mathcal{D}} 1 - \sigma(w^T x + b)$
 is the proportion of points predicted as class 0 by the model.
 
 Note that the surrogate is differentiable with respect to the model parameters, and it
@@ -56,28 +74,41 @@ class 0 leads to an increase in the proportion of points predicted as class 0.
 **Results.** The plot shows the decision boundary of the linear model trained with
 three different formulations: unconstrained, constrained with the surrogate constraint,
 and constrained with proxy constraints.
-* The proportion of points predicted as class 0 when training without constraints is
-    50%. This is to be expected, as the model is optimizing the loss over a balanced and
-    (almost) separable dataset.
-* The middle plot shows the decision boundary of the model trained with the surrogate
-    constraint. The proportion of points predicted as class 0 is 66%, which is below the
-    desired 70%. This is due to the relaxation of the constraint, which is different
-    from the original constraint.
-* The rightmost plot shows the decision boundary of the model trained with the proxy
-    constraint. The proportion of points predicted as class 0 is 70%, thus yielding a
-    feasible solution.
-"""
 
+* The proportion of points predicted as class 0 when training without constraints is
+50%. This is to be expected, as the model is optimizing the loss over a balanced and
+(almost) separable dataset.
+* The middle plot shows the decision boundary of the model trained with the surrogate
+constraint. The proportion of points predicted as class 0 is 66%, which is below the
+desired 70%. This is due to the relaxation of the constraint, which is different
+from the original constraint.
+* The rightmost plot shows the decision boundary of the model trained with the proxy
+constraint. The proportion of points predicted as class 0 is 70%, thus yielding a
+feasible solution.
+
+```{code-cell} ipython3
+:id: MhvdbV0-DnKK
+
+%%capture
+# %pip install cooper-optim
+%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+```
+
+```{code-cell} ipython3
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 556
+id: NTMINxkKDh_3
+outputId: 42dc600b-be23-4b7e-d2c5-1fa3fc693348
+---
 import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import style_utils
 import torch
 
 import cooper
-
-style_utils.set_plot_style()
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -229,9 +260,10 @@ for idx, name in enumerate(titles):
     x2 = (-1 / weight[1]) * (weight[0] * x1 + bias)
 
     # Color points according to true label
-    red, blue = style_utils.COLOR_DICT["red"], style_utils.COLOR_DICT["blue"]
+    red, blue = "#92140C", "#0035f5"
     colors = [red if _ == 1 else blue for _ in labels.flatten()]
     plot_pane(axs[idx], inputs, x1, x2, achieved_const, titles, colors)
 
 fig.suptitle("Goal: Predict at least " + str(constraint_level * 100) + "% as blue")
 plt.show()
+```
