@@ -11,9 +11,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "gM1i7wc_5rVy"}
-
 # Finding the min-norm solution to a linear system of equations.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_min_norm.ipynb)
+
 
 This example considers the problem of finding the min-L2-norm solution to a system of
 linear equations. The problem is formulated as a constrained minimization problem:
@@ -46,21 +47,12 @@ The results below illustrate the influence of the number of observed equations o
 convergence of the algorithm.
 
 ```{code-cell} ipython3
-:id: F9UCeF845_lp
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 988
-id: 5FBXOQdD5rVz
-outputId: d62f29a7-196c-4c0a-e80a-a8fbb2872263
----
 import matplotlib.pyplot as plt
 import numpy as np
 import torch

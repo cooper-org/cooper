@@ -12,9 +12,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "6p5qoCyr7WaB"}
-
 # Finding a discrete maximum entropy distribution.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_max_entropy_augmented_lagrangian.ipynb)
+
 
 Here we consider a simple convex optimization problem to illustrate how to use
 **Cooper**. This example is inspired by [this StackExchange question](https://datascience.stackexchange.com/questions/107366/how-do-you-solve-strictly-constrained-optimization-problems-with-pytorch):
@@ -39,21 +40,12 @@ where $p$ is the probability distribution over the faces of the die.
 This tutorial shows how to use the Augmented Lagrangian Method in **Cooper**.
 
 ```{code-cell} ipython3
-:id: 8GON3p1q8TEz
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 322
-id: qmxQTJ_m7WaC
-outputId: 2cb49418-4d97-4fb3-f04b-83b609bd7fae
----
 import matplotlib.pyplot as plt
 import numpy as np
 import torch

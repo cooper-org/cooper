@@ -12,9 +12,10 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "9qa2upcZBKrC"}
-
 # Linear transformation between two vectors with constrained spectrum.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_infrequent_true_constraint.ipynb)
+
 
 :::{note}
 This example highlights the use of the flags `contributes_to_primal_update` and
@@ -56,21 +57,12 @@ constraint which is only observed sporadically. Note how the multiplier value re
 constant in-between measurements of the true constraint.
 
 ```{code-cell} ipython3
-:id: C1_2TzqACJm1
-
 %%capture
 # %pip install cooper-optim
 %pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
 ```
 
 ```{code-cell} ipython3
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 607
-id: rierIv7HBKrE
-outputId: ce2ff3d9-bc08-44c3-f338-52621d7298cf
----
 import random
 
 import matplotlib.pyplot as plt
