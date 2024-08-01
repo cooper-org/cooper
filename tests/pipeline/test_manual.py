@@ -16,7 +16,7 @@ PENALTY_VIOLATION_TOLERANCE = 1e-4
 
 class TestConvergence:
     @pytest.fixture(autouse=True)
-    def setup_cmp(
+    def _setup_cmp(
         self,
         cmp,
         constraint_params,

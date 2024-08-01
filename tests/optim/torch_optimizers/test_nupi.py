@@ -152,7 +152,7 @@ def test_manual_nupi_dense_update():
     assert torch.allclose(parameter, expected_param_2)
 
 
-@pytest.mark.parametrize(["Kp", "Ki", "ema_nu"], ALL_HYPER_PARAMS)
+@pytest.mark.parametrize(("Kp", "Ki", "ema_nu"), ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
     num_multipliers = 10
@@ -275,7 +275,7 @@ def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
     assert torch.allclose(params, params_for_manual_update)
 
 
-@pytest.mark.parametrize(["Kp", "Ki", "ema_nu"], ALL_HYPER_PARAMS)
+@pytest.mark.parametrize(("Kp", "Ki", "ema_nu"), ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
     """Verify the behavior of nuPI when initialized with SGD."""
