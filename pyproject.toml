@@ -102,7 +102,6 @@ warn_unused_configs = true
 line-length = 120
 target-version = "py39"
 extend-include = ["*.ipynb"]
-extend-exclude = ["__pycache__", "docs"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["cooper", "tests"]
