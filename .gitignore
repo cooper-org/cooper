@@ -108,3 +108,6 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+
+# ruff
+.ruff_cache/
