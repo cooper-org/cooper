@@ -9,6 +9,7 @@ cooper/version.py
 # Tutorial auxiliary folder
 tutorials/data/
 tutorials/scripts/data/
+tutorials/scripts/checkpoint/
 
 # Ignore generated files for tutorial gallery
 docs/source/auto_tutorials

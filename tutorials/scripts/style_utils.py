@@ -17,7 +17,7 @@ COLOR_DICT = {
 
 
 def set_plot_style():
-    plt.style.use("seaborn-white")
+    plt.style.use("seaborn-v0_8-white")
 
     plt.rc("font", size=SMALL_SIZE)
     plt.rc("axes", titlesize=MEDIUM_SIZE)

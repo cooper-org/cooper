@@ -30,7 +30,6 @@ equations and :math:`0` everywhere else.
 The results below illustrate the influence of the number of observed equations on the
 convergence of the algorithm.
 """
-import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -117,9 +116,7 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         # to be able to update the multipliers only with the observed constraints (i.e. the
         # ones that are active in the current batch)
         constraint_type = cooper.ConstraintType.EQUALITY
-        multiplier = cooper.multipliers.IndexedMultiplier(
-            num_constraints=num_equations, constraint_type=constraint_type, device=DEVICE
-        )
+        multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_equations, device=DEVICE)
         self.eq_constraint = cooper.Constraint(
             constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
         )
@@ -152,8 +149,7 @@ def run_experiment(
     x = torch.nn.Parameter(torch.rand(num_variables, 1, device=DEVICE) / np.sqrt(num_variables))
 
     primal_optimizer = torch.optim.SGD([x], lr=primal_lr, momentum=0.9)
-    dual_params = itertools.chain.from_iterable(multiplier.parameters() for multiplier in cmp.multipliers())
-    dual_optimizer = torch.optim.SGD(dual_params, lr=dual_lr, maximize=True, foreach=False)
+    dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=dual_lr, maximize=True, foreach=False)
     cooper_optimizer = cooper.optim.SimultaneousOptimizer(
         primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
     )

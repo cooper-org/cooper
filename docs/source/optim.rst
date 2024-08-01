@@ -58,7 +58,7 @@ Primal learning rate scheduler
 
 You must instantiate the scheduler for the learning rate used by each
 ``primal_optimizer`` and call the scheduler's ``step`` method explicitly, as is
-usual in Pytorch. See :py:mod:`torch.optim.lr_scheduler` for details.
+usual in PyTorch. See :py:mod:`torch.optim.lr_scheduler` for details.
 
 Dual learning rate scheduler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,7 +68,7 @@ Dual learning rate scheduler
 When constructing a
 :py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`,
 the ``dual_scheduler`` parameter is expected to be a *partially instantiated*
-learning rate scheduler from Pytorch, for which the ``optimizer`` argument has
+learning rate scheduler from PyTorch, for which the ``optimizer`` argument has
 **not yet** been passed. The :py:meth:`cooper.optim.partial_scheduler` method
 allows you to provide a  configuration for your ``dual_scheduler``\'s
 hyperparameters. The rest of the instantiation of the ``dual_scheduler`` is

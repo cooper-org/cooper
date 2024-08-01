@@ -102,7 +102,7 @@ with a :ref:`scheduler on the dual learning rate<dual_lr_scheduler>`.
 
 As in the :ref:`default parameter updates<basic_parameter_updates>`, we
 explicitly include a negative sign in front of the dual gradient to denote the
-`maximization` performed in the dual variables, since Pytorch optimizers use a
+`maximization` performed in the dual variables, since PyTorch optimizers use a
 minimization convention. **Cooper** handles the gradient sign flip internally.
 
 
