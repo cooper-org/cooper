@@ -33,7 +33,7 @@ release = f"v{cooper.__version__}"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.napoleon", # napoleon on top of autodoc: https://stackoverflow.com/a/66930447 might correct some warnings
+    "sphinx.ext.napoleon",  # napoleon on top of autodoc: https://stackoverflow.com/a/66930447 might correct some warnings
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
@@ -59,7 +59,7 @@ mathjax3_config = {
         },
     },
     "tex2jax": {
-        "inlineMath": [["$", "$"], ["\(", "\)"]],
+        "inlineMath": [["$", "$"], [r"\(", r"\)"]],
     },
     "jax": ["input/TeX", "output/HTML-CSS"],
     "displayAlign": "left",
