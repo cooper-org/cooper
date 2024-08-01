@@ -107,6 +107,7 @@ extend-include = ["*.ipynb"]
 known-first-party = ["cooper", "tests"]
 
 [tool.ruff.lint]
+preview = true
 extend-select = [
     "ARG",    # Unused Arguments
     "B",      # Likely bugs
@@ -114,10 +115,12 @@ extend-select = [
     "E",      # PEP8 errors
     "F",      # PEP8 formatting
     "I",      # Import sorting
+    "PT",     # Pytest formatting
     "Q",      # Quotes consistency
     "TID251", # Banned API
     "UP",     # Pyupgrade
     "W",      # PEP8 warnings
+
 ]
 ignore = [
     "B028", # Stacklevel in warnings
