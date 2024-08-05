@@ -2,7 +2,7 @@
 
 import math
 from collections.abc import Iterable
-from typing import Callable
+from typing import Callable, NoReturn, Optional
 
 import torch
 
@@ -56,14 +56,14 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
             options (used when a parameter group doesn't specify them).
     """
 
-    def __init__(self, params: Iterable, defaults: dict):
+    def __init__(self, params: Iterable, defaults: dict) -> None:
         super().__init__(params, defaults)
         self.params_copy: list[torch.nn.Parameter] = []
 
-    def update(self, p, group):
+    def update(self, p: torch.Tensor, group: dict) -> NoReturn:
         raise NotImplementedError
 
-    def extrapolation(self):
+    def extrapolation(self) -> None:
         """Performs the extrapolation step and saves a copy of the current
         parameters for the update step.
         """
@@ -83,7 +83,7 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
                 # Update the current parameters
                 p.data.add_(u)
 
-    def step(self, closure: Callable = None):
+    def step(self, closure: Optional[Callable] = None) -> Optional[torch.Tensor]:
         """Performs a single optimization step.
 
         Args:
@@ -161,7 +161,7 @@ class ExtraSGD(ExtragradientOptimizer):
         weight_decay: float = 0,
         nesterov: bool = False,
         maximize: bool = False,
-    ):
+    ) -> None:
         if lr is None or lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         if momentum < 0.0:
@@ -169,24 +169,24 @@ class ExtraSGD(ExtragradientOptimizer):
         if weight_decay < 0.0:
             raise ValueError(f"Invalid weight_decay value: {weight_decay}")
 
-        defaults = dict(
-            lr=lr,
-            momentum=momentum,
-            dampening=dampening,
-            weight_decay=weight_decay,
-            nesterov=nesterov,
-            maximize=maximize,
-        )
+        defaults = {
+            "lr": lr,
+            "momentum": momentum,
+            "dampening": dampening,
+            "weight_decay": weight_decay,
+            "nesterov": nesterov,
+            "maximize": maximize,
+        }
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
         super().__init__(params, defaults)
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict) -> None:
         super(torch.optim.SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault("nesterov", False)
 
-    def update(self, p, group):
+    def update(self, p: torch.Tensor, group: dict) -> Optional[torch.Tensor]:
         weight_decay = group["weight_decay"]
         momentum = group["momentum"]
         dampening = group["dampening"]
@@ -208,10 +208,7 @@ class ExtraSGD(ExtragradientOptimizer):
             else:
                 buf = param_state["momentum_buffer"]
                 buf.mul_(momentum).add_(d_p, alpha=1 - dampening)
-            if nesterov:
-                d_p = d_p.add(momentum, buf)
-            else:
-                d_p = buf
+            d_p = d_p.add(momentum, buf) if nesterov else buf
 
         return -group["lr"] * d_p
 
@@ -240,31 +237,31 @@ class ExtraAdam(ExtragradientOptimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         maximize: bool = False,
-    ):
-        if not 0.0 <= lr:
+    ) -> None:
+        if not lr >= 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
-        if not 0.0 <= eps:
+        if not eps >= 0.0:
             raise ValueError(f"Invalid epsilon value: {eps}")
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError(f"Invalid beta parameter at index 0: {betas[0]}")
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError(f"Invalid beta parameter at index 1: {betas[1]}")
-        defaults = dict(
-            lr=lr,
-            betas=betas,
-            eps=eps,
-            weight_decay=weight_decay,
-            amsgrad=amsgrad,
-            maximize=maximize,
-        )
+        defaults = {
+            "lr": lr,
+            "betas": betas,
+            "eps": eps,
+            "weight_decay": weight_decay,
+            "amsgrad": amsgrad,
+            "maximize": maximize,
+        }
         super().__init__(params, defaults)
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict) -> None:
         super().__setstate__(state)
         for group in self.param_groups:
             group.setdefault("amsgrad", False)
 
-    def update(self, p, group):
+    def update(self, p: torch.Tensor, group: dict) -> Optional[torch.Tensor]:
         if p.grad is None:
             return None
         grad = p.grad.data

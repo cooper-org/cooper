@@ -149,8 +149,9 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
 
         return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
 
+    @staticmethod
     @torch.no_grad()
-    def compute_geometric_mean(self, X: torch.Tensor) -> torch.Tensor:
+    def compute_geometric_mean(X: torch.Tensor) -> torch.Tensor:
         return torch.linalg.svdvals(X).prod()
 
     def compute_true_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
@@ -171,10 +172,9 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
     def compute_cmp_state(self, X: torch.Tensor, true_or_surrogate: str = "true") -> cooper.CMPState:
         if true_or_surrogate == "true":
             return self.compute_true_cmp_state(X)
-        elif true_or_surrogate == "surrogate":
+        if true_or_surrogate == "surrogate":
             return self.compute_surrogate_cmp_state(X)
-        else:
-            raise ValueError("Invalid value for `true_or_surrogate`.")
+        raise ValueError("Invalid value for `true_or_surrogate`.")
 
 
 def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for_dual_update, primal_lr, dual_lr):
@@ -194,20 +194,17 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
 
     # Initial values of the loss, trace and geometric mean
     with torch.no_grad():
-        state_history = dict(
-            loss=[cmp.loss_fn(X).item()],
-            arithmetic_mean=[cmp.compute_arithmetic_mean(X).item()],
-            geometric_mean=[cmp.compute_geometric_mean(X).item()],
-            multiplier_values=[cmp.sv_constraint.multiplier.weight.item()],
-        )
+        state_history = {
+            "loss": [cmp.loss_fn(X).item()],
+            "arithmetic_mean": [cmp.compute_arithmetic_mean(X).item()],
+            "geometric_mean": [cmp.compute_geometric_mean(X).item()],
+            "multiplier_values": [cmp.sv_constraint.multiplier.weight.item()],
+        }
 
-    for iter in range(max_iter):
+    for it in range(max_iter):
         prev_X = X.clone().detach()
 
-        if iter % freq_for_dual_update == 0:
-            true_or_surrogate = "true"
-        else:
-            true_or_surrogate = "surrogate"
+        true_or_surrogate = "true" if it % freq_for_dual_update == 0 else "surrogate"
 
         cooper_optimizer.roll({"X": X, "true_or_surrogate": true_or_surrogate})
 

@@ -1,8 +1,10 @@
 from collections.abc import Sequence
-from typing import Any
+from typing import Optional
+
+from cooper.utils.typing import OneOrSequence, T
 
 
-def ensure_sequence(argument: Any):
+def ensure_sequence(argument: Optional[OneOrSequence[T]]) -> Optional[Sequence[T]]:
     """Ensures that an argument is an instance of Sequence by wrapping it into a list
     whenever necessary. When argument is None, None is returned without wrapping.
     """

@@ -17,7 +17,7 @@ class Constraint:
         multiplier: Multiplier,
         formulation_type: type[Formulation] = LagrangianFormulation,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
-    ):
+    ) -> None:
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
         self.formulation = formulation_type(constraint_type=self.constraint_type)
@@ -39,8 +39,8 @@ class Constraint:
             penalty_coefficient=self.penalty_coefficient,
         )
 
-    def __repr__(self):
-        repr = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
+    def __repr__(self) -> str:
+        repr_ = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
         if self.penalty_coefficient is not None:
-            repr += f", penalty_coefficient={self.penalty_coefficient}"
-        return f"Constraint({repr})"
+            repr_ += f", penalty_coefficient={self.penalty_coefficient}"
+        return f"Constraint({repr_})"

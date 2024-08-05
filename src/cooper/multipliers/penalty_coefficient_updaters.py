@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class PenaltyCoefficientUpdater(abc.ABC):
     """Abstract class for updating the penalty coefficient of a constraint."""
 
-    def step(self, observed_constraints: dict[Constraint, ConstraintState]):
+    def step(self, observed_constraints: dict[Constraint, ConstraintState]) -> None:
         for constraint, constraint_state in observed_constraints.items():
             # If a constraint does not contribute to the dual update, we do not update
             # its penalty coefficient.
@@ -44,7 +44,7 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             (when available) for the comparison.
     """
 
-    def __init__(self, growth_factor: float = 1.01, violation_tolerance: float = 1e-4):
+    def __init__(self, growth_factor: float = 1.01, violation_tolerance: float = 1e-4) -> None:
         if violation_tolerance < 0.0:
             raise ValueError("Violation tolerance must be non-negative.")
 

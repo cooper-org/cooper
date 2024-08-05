@@ -37,6 +37,7 @@ dynamic = [ "version" ]
 dependencies = [
     "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "torch>=1.13.1",
+    "typing-extensions>=4.8.0",
 ]
 
 [project.optional-dependencies]
@@ -108,29 +109,45 @@ known-first-party = ["cooper", "tests"]
 
 [tool.ruff.lint]
 preview = true
-extend-select = [
-    "ARG",    # Unused Arguments
-    "B",      # Likely bugs
-    #"D",     # TODO: Uncomment this line when we have docstrings for all functions
-    "E",      # PEP8 errors
-    "F",      # PEP8 formatting
-    "I",      # Import sorting
-    "PT",     # Pytest formatting
-    "Q",      # Quotes consistency
-    "TID251", # Banned API
-    "UP",     # Pyupgrade
-    "W",      # PEP8 warnings
-
-]
+select = ["ALL"]
 ignore = [
-    "B028", # Stacklevel in warnings
-    "E501", # Line length (handled by ruff-format)
-    "E731", # Lambda function
-    "W505", # Doc Line length
+    "B028",     # Stacklevel in warnings
+    "E501",     # Line length (handled by ruff-format)
+    "E731",     # Lambda function
+    "W505",     # Doc Line length
+    "D1",       # TODO: Uncomment this line when we have docstrings for all functions
+    "D205",     # 1 blank line required between summary line and description in docstrings
+    "DOC501",   # Docstring missing exceptions
+    "ISC001",   # Fixed by ruff-format
+    "COM812",   # Fixed by ruff-format
+    "FA",       # Future type annotations
+    "CPY",      # Copyright notice
+    "TRY003",   # Long Exception message
+    "SLF",      # Private (underscore) attribute access
+    "EM",       # Exception message not in seperate msg variable
+    "PLR09",    # Too many arguments
+    "PLR2004",  # Use of value instead of constant variable
+    "PLR6104",  # Forces in-place operations, for example, x += 1 instead of x = x + 1
+    "PLR6301",  # Self not used in method
+    "PLW2901",  # For loop variable is overwritten
+    "FBT",      # Boolean trap
+    "FIX",      # Fixmes
+    "TD",       # TODOs
+    "ANN401",   # Any type annotation
+    "PTH",      # Use Pathlib instead of os.path
+    "FURB140",  # Use itertools.starmap instead of list comprehension
+    "NPY002",   # numpy.random.Generator is preferred over numpy.random.seed
+    "RET504",   # Unnecessary assignment before return
+    "S101",     # Use of assert
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"tests/*" = ["ANN", "C901", "N801", "N802", "N803", "N806"]
+"docs/*" = ["ANN"]
+"docs/source/conf.py" = ["A001", "ERA001", "INP001"]
+"docs/source/notebooks/*" = ["N801", "N802", "N803", "N806"]
+"src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

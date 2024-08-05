@@ -17,11 +17,7 @@ def is_scalar(request):
 
 @pytest.fixture
 def penalty_coefficient(num_constraints, multiplier_class, is_scalar):
-    if is_scalar:
-        # Scalar penalty coefficient
-        init = torch.tensor(1.0)
-    else:
-        init = torch.ones(num_constraints)
+    init = torch.tensor(1.0) if is_scalar else torch.ones(num_constraints)
 
     if multiplier_class == cooper.multipliers.IndexedMultiplier:
         return cooper.multipliers.IndexedPenaltyCoefficient(init=init)

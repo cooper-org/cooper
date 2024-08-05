@@ -137,7 +137,7 @@ for epoch_num in range(start_epoch, 7):
             inputs, targets = inputs.cuda(non_blocking=True), targets.cuda(non_blocking=True)
 
         _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(
-            compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets)
+            compute_cmp_state_kwargs={"model": model, "inputs": inputs, "targets": targets}
         )
 
         if batch_ix % 3 == 0:

@@ -70,6 +70,7 @@ def create_linear_system(num_equations: int, num_variable: int, seed: int = 0):
     Args:
         num_equations: Number of equations in the linear system.
         num_variable: Number of variables in the linear system.
+        seed: The seed value to set for random number generation.
     """
     torch.manual_seed(seed=seed)
 
@@ -173,7 +174,7 @@ def run_experiment(
         primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer, cmp=cmp
     )
 
-    state_history = dict(step=[], relative_norm=[], multipliers=[], x_gap=[], max_abs_violation=[])
+    state_history = {"step": [], "relative_norm": [], "multipliers": [], "x_gap": [], "max_abs_violation": []}
     step_ix = 0
 
     while step_ix < num_steps:
@@ -234,7 +235,7 @@ def plot_results(state_histories) -> None:
 
 state_histories = []
 num_equations, num_variables = 100, 500
-experiment_kwargs = dict(num_steps=5000, primal_lr=1e-3, dual_lr=1e-2)
+experiment_kwargs = {"num_steps": 5000, "primal_lr": 1e-3, "dual_lr": 1e-2}
 
 for constraint_frequency in [1.0, 0.5, 0.25]:
     batch_size = int(constraint_frequency * num_equations)

@@ -74,9 +74,9 @@ class TestConvergence:
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 
-        roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
+        roll_kwargs = {"compute_cmp_state_kwargs": {"x": x}}
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            roll_kwargs["compute_violations_kwargs"] = dict(x=x)
+            roll_kwargs["compute_violations_kwargs"] = {"x": x}
 
         manual_x = torch.ones(self.num_variables, device=self.device)
         manual_multiplier = torch.zeros(self.num_constraints, device=self.device)
@@ -95,11 +95,11 @@ class TestConvergence:
             else:
                 observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
 
-            features = list(roll_out.cmp_state.observed_constraint_features())[0]
+            features = next(iter(roll_out.cmp_state.observed_constraint_features()))
             if features is None:
                 features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-            strict_features = list(roll_out.cmp_state.observed_strict_constraint_features())[0]
+            strict_features = next(iter(roll_out.cmp_state.observed_strict_constraint_features()))
             if strict_features is None:
                 strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
@@ -147,8 +147,7 @@ class TestConvergence:
         obj_grad = 2 * x
         if penalty_coeff is not None:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
-            # constraints is:
-            #  grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
+            # constraints is: grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
             violation = self._violation(x)[features]
             aux_grad = multiplier[features] + penalty_coeff[features] * violation
             if self.is_inequality:
@@ -266,9 +265,8 @@ class TestConvergence:
             return self._extragradient_roll(x, multiplier, features, strict_features)
         if alternation_type == cooper_test_utils.AlternationType.FALSE:
             return self._simultaneous_roll(x, multiplier, features, strict_features)
-        elif alternation_type == cooper_test_utils.AlternationType.DUAL_PRIMAL:
+        if alternation_type == cooper_test_utils.AlternationType.DUAL_PRIMAL:
             return self._dual_primal_roll(x, multiplier, features, strict_features, penalty_coeff)
-        elif alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
             return self._primal_dual_roll(x, multiplier, features, strict_features, penalty_coeff)
-        else:
-            raise ValueError(f"Unknown alternation type: {alternation_type}")
+        raise ValueError(f"Unknown alternation type: {alternation_type}")

@@ -15,7 +15,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
 
-    def custom_sanity_checks(self):
+    def custom_sanity_checks(self) -> None:
         """Perform sanity checks on the initialization of
         ``ExtrapolationConstrainedOptimizer``.
 
@@ -33,13 +33,13 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             )
 
     @torch.no_grad()
-    def primal_extrapolation_step(self):
+    def primal_extrapolation_step(self) -> None:
         """Perform an extrapolation step on the parameters associated with the primal variables."""
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()
 
     @torch.no_grad()
-    def dual_extrapolation_step(self):
+    def dual_extrapolation_step(self) -> None:
         """Perform an extrapolation step on the parameters associated with the dual variables.
 
         After being updated by the dual optimizer steps, the multipliers are

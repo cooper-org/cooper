@@ -50,11 +50,11 @@ class ConstraintState:
     contributes_to_primal_update: bool = True
     contributes_to_dual_update: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.strict_constraint_features is not None and self.strict_violation is None:
             raise ValueError("strict_violation must be provided if strict_constraint_features is provided.")
 
-    def extract_violations(self, do_unsqueeze=True) -> tuple[torch.Tensor, torch.Tensor]:
+    def extract_violations(self, do_unsqueeze: bool = True) -> tuple[torch.Tensor, torch.Tensor]:
         """Extracts the violation and strict violation from the constraint state. If
         strict violations are not provided, patches them with the violation.
         This function also unsqueeze the violation tensors to ensure thay have at least
@@ -62,10 +62,7 @@ class ConstraintState:
         """
         violation = self.violation
 
-        if self.strict_violation is not None:
-            strict_violation = self.strict_violation
-        else:
-            strict_violation = self.violation
+        strict_violation = self.strict_violation if self.strict_violation is not None else self.violation
 
         if do_unsqueeze:
             # If the violation is a scalar, we unsqueeze it to ensure that it has at

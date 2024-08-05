@@ -318,7 +318,6 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
     selected_indices_mask_0[selected_indices_0] = True
 
     error_0 = compute_analytic_gradient(selected_indices_0)
-    # previous_xi_values = xi_buffer[selected_indices_0].clone().detach()
 
     new_param = param.clone().detach()
     nupi_update = update_sign * LR * Ki * error_0  # First step should match GD

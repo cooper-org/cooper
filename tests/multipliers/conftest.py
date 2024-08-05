@@ -31,8 +31,7 @@ def init_multiplier_tensor(constraint_type, num_constraints, random_seed):
     raw_init = torch.randn(num_constraints, generator=generator)
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         return raw_init.relu()
-    else:
-        return raw_init
+    return raw_init
 
 
 @pytest.fixture

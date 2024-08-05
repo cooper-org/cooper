@@ -147,7 +147,8 @@ def compute_primal_quadratic_augmented_contribution(
         detached_multiplier = multiplier_value.detach()
         aux2 = torch.relu(detached_multiplier + aux1) ** 2 - detached_multiplier**2
         return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, aux2)
-    elif constraint_type == ConstraintType.EQUALITY:
+    if constraint_type == ConstraintType.EQUALITY:
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
         return linear_term + quadratic_penalty
+    return None

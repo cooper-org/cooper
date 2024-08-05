@@ -1,7 +1,8 @@
 import abc
-from typing import Optional
+from typing import Any, Optional
 
 import torch
+from typing_extensions import Self
 
 
 class PenaltyCoefficient(abc.ABC):
@@ -14,18 +15,18 @@ class PenaltyCoefficient(abc.ABC):
     expects_constraint_features: bool
     _value: Optional[torch.Tensor] = None
 
-    def __init__(self, init: torch.Tensor):
+    def __init__(self, init: torch.Tensor) -> None:
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
         self.value = init
 
     @property
-    def value(self):
+    def value(self) -> torch.Tensor:
         """Return the current value of the penalty coefficient."""
         return self._value
 
     @value.setter
-    def value(self, value: torch.Tensor):
+    def value(self, value: torch.Tensor) -> None:
         """Update the value of the penalty."""
         if value.requires_grad:
             raise ValueError("PenaltyCoefficient should not require gradients.")
@@ -36,31 +37,29 @@ class PenaltyCoefficient(abc.ABC):
         self._value = value.clone()
         self.sanity_check()
 
-    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None):
+    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None) -> Self:
         """Move the penalty to a new device and/or change its dtype."""
         self._value = self._value.to(device=device, dtype=dtype)
         return self
 
-    def state_dict(self):
+    def state_dict(self) -> dict:
         return {"value": self._value}
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict: dict) -> None:
         self._value = state_dict["value"]
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         if torch.any(self._value < 0):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.value.numel() <= 10:
             return f"{type(self).__name__}({self.value})"
-        else:
-            return f"{type(self).__name__}(shape={self.value.shape})"
+        return f"{type(self).__name__}(shape={self.value.shape})"
 
     @abc.abstractmethod
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> torch.Tensor:
         """Return the current value of the penalty coefficient."""
-        pass
 
 
 class DensePenaltyCoefficient(PenaltyCoefficient):
@@ -69,7 +68,7 @@ class DensePenaltyCoefficient(PenaltyCoefficient):
     expects_constraint_features = False
 
     @torch.no_grad()
-    def __call__(self):
+    def __call__(self) -> torch.Tensor:
         """Return the current value of the penalty coefficient."""
         return self.value.clone()
 
@@ -83,7 +82,7 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
     expects_constraint_features = True
 
     @torch.no_grad()
-    def __call__(self, indices: torch.Tensor):
+    def __call__(self, indices: torch.Tensor) -> torch.Tensor:
         """Return the current value of the penalty coefficient at the provided indices.
 
         Args:

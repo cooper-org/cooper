@@ -61,7 +61,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
-        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=model()))
+        cooper_optimizer.roll(compute_cmp_state_kwargs={"x": model()})
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
@@ -83,7 +83,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # ------------ Train for *another* 100 steps ------------
     for _ in range(100):
-        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=model()))
+        cooper_optimizer.roll(compute_cmp_state_kwargs={"x": model()})
 
     model_state_dict_200 = model.state_dict()
     cooper_optimizer_state_dict_200 = cooper_optimizer.state_dict()
@@ -116,7 +116,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
     for _ in range(100):
-        loaded_cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=loaded_model()))
+        loaded_cooper_optimizer.roll(compute_cmp_state_kwargs={"x": loaded_model()})
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts

@@ -118,14 +118,14 @@ def generate_mog_dataset():
 
     inputs, labels = [], []
 
-    for id in range(n_gaussians):
+    for idx in range(n_gaussians):
         # Generate input data by mu + x @ sqrt(cov)
         cov = np.sqrt(var) * torch.eye(dim)  # Diagonal covariance matrix
-        mu = means[id]
+        mu = means[idx]
         inputs.append(mu + torch.randn(n_samples_per_class, dim) @ cov)
 
         # Labels
-        labels.append(torch.tensor(n_samples_per_class * [1.0 if id < 2 else 0.0]))
+        labels.append(torch.tensor(n_samples_per_class * [1.0 if idx < 2 else 0.0]))
 
     return torch.cat(inputs, dim=0), torch.cat(labels, dim=0)
 
@@ -223,7 +223,7 @@ def train(problem_name, inputs, targets, num_iters=5000, lr=1e-2, constraint_lev
         cooper_optimizer = cooper.optim.UnconstrainedOptimizer(primal_optimizers=primal_optimizer, cmp=cmp)
 
     for _ in range(num_iters):
-        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(model=model, inputs=inputs, targets=targets))
+        cooper_optimizer.roll(compute_cmp_state_kwargs={"model": model, "inputs": inputs, "targets": targets})
 
     # Number of elements predicted as class 0 in the train set after training
     logits = model(inputs)

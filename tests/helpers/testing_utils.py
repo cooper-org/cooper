@@ -31,16 +31,14 @@ def compare_values(val1: Any, val2: Any) -> bool:
     if isinstance(val1, dict) and isinstance(val2, dict):
         if val1.keys() != val2.keys():
             return False
-        else:
-            return all([compare_values(val1[k], val2[k]) for k in val1.keys()])
+        return all(compare_values(val1[k], val2[k]) for k in val1)
 
     if isinstance(val1, Collection) and isinstance(val2, Collection):
         if len(val1) != len(val2):
             return False
-        return all([compare_values(ii, jj) for ii, jj in zip(val1, val2)])
+        return all(compare_values(ii, jj) for ii, jj in zip(val1, val2))
 
-    else:
-        return val1 == val2
+    return val1 == val2
 
 
 def validate_state_dicts(model_state_dict_1: dict, model_state_dict_2: dict) -> bool:
@@ -54,7 +52,6 @@ def validate_state_dicts(model_state_dict_1: dict, model_state_dict_2: dict) -> 
         return (model_state_dict_1 == {}) and (model_state_dict_2 == {})
 
     if len(model_state_dict_1) != len(model_state_dict_2):
-        print(f"Length mismatch: {len(model_state_dict_1)}, {len(model_state_dict_2)}")
         return False
 
     if isinstance(model_state_dict_1, list) and isinstance(model_state_dict_2, list):
@@ -71,11 +68,9 @@ def validate_state_dicts(model_state_dict_1: dict, model_state_dict_2: dict) -> 
 
     for (k_1, val1), (k_2, val2) in zip(model_state_dict_1.items(), model_state_dict_2.items()):
         if k_1 != k_2:
-            print(f"Key mismatch: {k_1} vs {k_2}")
             return False
 
         if not compare_values(val1, val2):
-            print(f"Attribute mismatch: {val1} vs {val2}")
             return False
 
     return True

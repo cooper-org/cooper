@@ -14,8 +14,9 @@ For a detailed explanation of the $\nu$PI algorithm, see the paper:
 """
 
 import warnings
+from collections.abc import Iterable
 from enum import Enum
-from typing import Optional
+from typing import Callable, Optional
 
 import torch
 
@@ -34,7 +35,7 @@ class InitType(Enum):
 class nuPI(torch.optim.Optimizer):
     def __init__(
         self,
-        params,
+        params: Iterable[torch.Tensor],
         lr: float,
         weight_decay: Optional[float] = 0.0,
         Kp: Optional[torch.Tensor] = 0.0,
@@ -42,7 +43,7 @@ class nuPI(torch.optim.Optimizer):
         ema_nu: float = 0.0,
         init_type: InitType = InitType.SGD,
         maximize: bool = False,
-    ):
+    ) -> None:
         r"""Implements a nuPI controller as a PyTorch optimizer.
 
         The error signal used for the nuPI controller is the gradient of a cost function
@@ -75,13 +76,13 @@ class nuPI(torch.optim.Optimizer):
             Setting :math:`K_P=1`, :math:`K_I=1` and :math:`\nu=0` corresponds to the
             optimistic gradient method.
 
-        Arguments:
+        Args:
             params: iterable of parameters to optimize or dicts defining parameter groups
             lr: learning rate
             weight_decay: weight decay (L2 penalty)
             Kp: proportional gain
             Ki: integral gain
-            nu: EMA coefficient
+            ema_nu: EMA coefficient
             init_type: initialization scheme
             maximize: whether to maximize or minimize the loss
         """
@@ -92,7 +93,7 @@ class nuPI(torch.optim.Optimizer):
         if not -1 < ema_nu < 1.0:
             raise ValueError(f"Invalid nu value: {ema_nu}")
 
-        if init_type not in [InitType.ZEROS, InitType.SGD]:
+        if init_type not in {InitType.ZEROS, InitType.SGD}:
             raise ValueError(f"Invalid init_type: {init_type}")
 
         if not isinstance(Kp, torch.Tensor):
@@ -109,29 +110,33 @@ class nuPI(torch.optim.Optimizer):
         if ema_nu < 0:
             warnings.warn("nuPI optimizer instantiated with negative EMA coefficient")
 
-        defaults = dict(
-            lr=lr, weight_decay=weight_decay, Kp=Kp, Ki=Ki, ema_nu=ema_nu, maximize=maximize, init_type=init_type
-        )
+        defaults = {
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "Kp": Kp,
+            "Ki": Ki,
+            "ema_nu": ema_nu,
+            "maximize": maximize,
+            "init_type": init_type,
+        }
 
         super().__init__(params, defaults)
 
         if len(self.param_groups) > 1 and Kp.shape != torch.Size([1]):
             raise NotImplementedError("When using multiple parameter groups, Kp and Ki must be scalars")
 
-    def disambiguate_update_function(self, is_grad_sparse, init_type):
+    @staticmethod
+    def disambiguate_update_function(is_grad_sparse: bool, init_type: InitType) -> Callable:
         if is_grad_sparse:
             if init_type == InitType.ZEROS:
                 return _sparse_nupi_zero_init
-            elif init_type == InitType.SGD:
-                return _sparse_nupi_sgd_init
-        else:
-            if init_type == InitType.ZEROS:
-                return _nupi_zero_init
-            elif init_type == InitType.SGD:
-                return _nupi_sgd_init
+            return _sparse_nupi_sgd_init
+        if init_type == InitType.ZEROS:
+            return _nupi_zero_init
+        return _nupi_sgd_init
 
     @torch.no_grad()
-    def step(self, closure=None) -> Optional[float]:
+    def step(self, closure: Optional[Callable] = None) -> Optional[float]:
         """Performs a single optimization step.
 
         Args:
@@ -162,7 +167,7 @@ class nuPI(torch.optim.Optimizer):
 
         return loss
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict: dict) -> None:
         super().load_state_dict(state_dict)
         for group in self.param_groups:
             for p in group["params"]:
@@ -182,7 +187,7 @@ def _nupi_zero_init(
     Ki: torch.Tensor,
     ema_nu: float,
     maximize: bool,
-):
+) -> None:
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
@@ -222,7 +227,7 @@ def _sparse_nupi_zero_init(
     Ki: float,
     ema_nu: float,
     maximize: bool,
-):
+) -> None:
     """Analogous to _nupi but with support for sparse gradients. This function implements
     updates based on a zero initialization scheme.
     """
@@ -282,7 +287,7 @@ def _nupi_sgd_init(
     Ki: torch.Tensor,
     ema_nu: float,
     maximize: bool,
-):
+) -> None:
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
@@ -329,7 +334,7 @@ def _sparse_nupi_sgd_init(
     Ki: float,
     ema_nu: float,
     maximize: bool,
-):
+) -> None:
     """Analogous to _nupi but with support for sparse gradients. This function implements
     updates based on a "SGD" initialization scheme that makes the first step of nuPI
     (on each coordinate) match that of SGD.

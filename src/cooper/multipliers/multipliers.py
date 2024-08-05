@@ -1,7 +1,7 @@
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 
 import abc
-from typing import Optional
+from typing import Any, Optional
 
 import torch
 
@@ -13,23 +13,21 @@ class Multiplier(torch.nn.Module, abc.ABC):
     constraint_type: ConstraintType
 
     @abc.abstractmethod
-    def forward(self, *args, **kwargs):
+    def forward(self, *args: Any, **kwargs: Any) -> torch.Tensor:
         """Return the current value of the multiplier."""
-        pass
 
     @abc.abstractmethod
-    def post_step_(self):
+    def post_step_(self) -> None:
         """Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and allows for additional post-processing of the implicit
         multiplier module or its parameters.
         """
-        pass
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         # TODO(gallego-posada): Add docstring
         pass
 
-    def set_constraint_type(self, constraint_type):
+    def set_constraint_type(self, constraint_type: ConstraintType) -> None:
         self.constraint_type = constraint_type
         self.sanity_check()
 
@@ -55,7 +53,7 @@ class ExplicitMultiplier(Multiplier):
         init: Optional[torch.Tensor] = None,
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float32,
-    ):
+    ) -> None:
         super().__init__()
 
         self.weight = self.initialize_weight(num_constraints=num_constraints, init=init, device=device, dtype=dtype)
@@ -71,26 +69,29 @@ class ExplicitMultiplier(Multiplier):
         are provided (and the shapes are consistent), `init` takes precedence.
         Otherwise, the weight is initialized to zeros of shape `(num_constraints,)`.
         """
-        if (num_constraints is None) and (init is None):
+        if num_constraints is None and init is None:
             raise ValueError("At least one of `num_constraints` and `init` must be provided.")
-        elif (num_constraints is not None) and (init is not None) and (num_constraints != init.shape[0]):
+        if num_constraints is not None and init is not None and num_constraints != init.shape[0]:
             raise ValueError(f"Inconsistent `init` shape {init.shape} and `num_constraints={num_constraints}")
-        elif init is not None:
-            assert init.dim() == 1, "init must be a 1D tensor of shape `(num_constraints,)`."
+
+        if init is not None:
+            if init.dim() != 1:
+                raise ValueError("`init` must be a 1D tensor of shape `(num_constraints,)`.")
             return torch.nn.Parameter(init.to(device=device, dtype=dtype))
-        elif num_constraints is not None:
-            return torch.nn.Parameter(torch.zeros(num_constraints, device=device, dtype=dtype))
+
+        assert num_constraints is not None
+        return torch.nn.Parameter(torch.zeros(num_constraints, device=device, dtype=dtype))
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         return self.weight.device
 
-    def sanity_check(self):
+    def sanity_check(self) -> None:
         if self.constraint_type == ConstraintType.INEQUALITY and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
     @torch.no_grad()
-    def post_step_(self):
+    def post_step_(self) -> None:
         """Post-step function for multipliers. This function is called after each step of
         the dual optimizer, and ensures that (if required) the multipliers are
         non-negative.
@@ -99,7 +100,7 @@ class ExplicitMultiplier(Multiplier):
             # Ensures non-negativity for multipliers associated with inequality constraints.
             self.weight.data = torch.relu(self.weight.data)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(num_constraints={self.weight.shape[0]})"
 
 
@@ -117,7 +118,7 @@ class DenseMultiplier(ExplicitMultiplier):
 
     expects_constraint_features = False
 
-    def forward(self):
+    def forward(self) -> torch.Tensor:
         """Return the current value of the multiplier."""
         return torch.clone(self.weight)
 
@@ -138,14 +139,20 @@ class IndexedMultiplier(ExplicitMultiplier):
 
     expects_constraint_features = True
 
-    def __init__(self, num_constraints=None, init=None, device=None, dtype=torch.float32):
+    def __init__(
+        self,
+        num_constraints: Optional[int] = None,
+        init: Optional[torch.Tensor] = None,
+        device: Optional[torch.device] = None,
+        dtype: torch.dtype = torch.float32,
+    ) -> None:
         super().__init__(num_constraints, init, device, dtype)
         if self.weight.dim() == 1:
             # To use the forward call in F.embedding, we must reshape the weight to be a
             # 2-dim tensor
             self.weight.data = self.weight.data.unsqueeze(-1)
 
-    def forward(self, indices: torch.Tensor):
+    def forward(self, indices: torch.Tensor) -> torch.Tensor:
         """Return the current value of the multiplier at the provided indices."""
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
@@ -174,15 +181,14 @@ class ImplicitMultiplier(Multiplier):
     """
 
     @abc.abstractmethod
-    def forward(self):
+    def forward(self) -> torch.Tensor:
         pass
 
     @abc.abstractmethod
-    def post_step_(self):
+    def post_step_(self) -> None:
         """This method is called after each step of the dual optimizer and allows for
         additional post-processing of the implicit multiplier module or its parameters.
         For example, one may want to enforce non-negativity of the parameters of the
         implicit multiplier. Given the high flexibility of implicit multipliers, the
         post-step function is left to be implemented by the user.
         """
-        pass

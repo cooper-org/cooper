@@ -27,10 +27,10 @@ class LagrangianStore:
         if self.lagrangian is not None:
             self.lagrangian.backward()
 
-    def observed_multiplier_values(self):
+    def observed_multiplier_values(self) -> Iterator[torch.Tensor]:
         yield from self.multiplier_values.values()
 
-    def observed_penalty_coefficient_values(self):
+    def observed_penalty_coefficient_values(self) -> Iterator[torch.Tensor]:
         yield from self.penalty_coefficient_values.values()
 
 
@@ -70,18 +70,14 @@ class CMPState:
         if len(contributing_constraints) == 0:
             if self.loss is None:
                 return LagrangianStore()
-            else:
-                # No observed constraints contribute to the Lagrangian.
-                lagrangian = self.loss.clone() if primal_or_dual == "primal" else None
-                return LagrangianStore(lagrangian=lagrangian)
+            # No observed constraints contribute to the Lagrangian.
+            lagrangian = self.loss.clone() if primal_or_dual == "primal" else None
+            return LagrangianStore(lagrangian=lagrangian)
 
-        if primal_or_dual == "primal":
-            lagrangian = self.loss.clone() if self.loss is not None else 0.0
-        else:
-            lagrangian = 0.0
+        lagrangian = (self.loss.clone() if self.loss is not None else 0.0) if primal_or_dual == "primal" else 0.0
 
-        multiplier_values = dict()
-        penalty_coefficient_values = dict()
+        multiplier_values = {}
+        penalty_coefficient_values = {}
         for constraint, constraint_state in contributing_constraints.items():
             contribution_store = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
             if contribution_store is not None:
@@ -114,19 +110,19 @@ class CMPState:
         """
         return self._compute_primal_or_dual_lagrangian(primal_or_dual="dual")
 
-    def observed_violations(self):
+    def observed_violations(self) -> Iterator[torch.Tensor]:
         for constraint_state in self.observed_constraints.values():
             yield constraint_state.violation
 
-    def observed_strict_violations(self):
+    def observed_strict_violations(self) -> Iterator[torch.Tensor]:
         for constraint_state in self.observed_constraints.values():
             yield constraint_state.strict_violation
 
-    def observed_constraint_features(self):
+    def observed_constraint_features(self) -> Iterator[torch.Tensor]:
         for constraint_state in self.observed_constraints.values():
             yield constraint_state.constraint_features
 
-    def observed_strict_constraint_features(self):
+    def observed_strict_constraint_features(self) -> Iterator[torch.Tensor]:
         for constraint_state in self.observed_constraints.values():
             yield constraint_state.strict_constraint_features
 
@@ -211,7 +207,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         }
         return state_dict
 
-    def load_state_dict(self, state_dict: dict):
+    def load_state_dict(self, state_dict: dict) -> None:
         """Loads the state of the CMP. This includes the state of the multipliers and penalty coefficients.
 
         Args:
@@ -232,8 +228,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def __getattr__(self, name: str) -> Any:
         if name in self._constraints:
             return self._constraints[name]
-        else:
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __delattr__(self, name: str) -> None:
         if name in self._constraints:
@@ -252,7 +247,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         return repr_str
 
     @abc.abstractmethod
-    def compute_cmp_state(self, *args, **kwargs) -> CMPState:
+    def compute_cmp_state(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the state of the CMP based on the current value of the primal
         parameters.
 
@@ -268,7 +263,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
         while avoiding re-computation.
         """
 
-    def compute_violations(self, *args, **kwargs) -> CMPState:
+    def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the violation of (a subset of) the constraints of the CMP based on
         the current value of the primal parameters. This function returns a
         :py:class:`cooper.problem.CMPState` collecting the values of the observed

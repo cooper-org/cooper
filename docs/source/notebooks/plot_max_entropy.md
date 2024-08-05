@@ -117,7 +117,7 @@ cooper_optimizer = cooper.optim.SimultaneousOptimizer(
 
 state_history = {}
 for i in range(3000):
-    _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs=dict(log_probs=log_probs))
+    _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs={"log_probs": log_probs})
 
     observed_violations = list(cmp_state.observed_violations())
     observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())

@@ -1,5 +1,5 @@
 import abc
-from typing import NamedTuple, Optional, TypedDict
+from typing import Any, NamedTuple, Optional, TypedDict
 
 import torch
 
@@ -27,12 +27,12 @@ class CooperOptimizer(abc.ABC):
         cmp: ConstrainedMinimizationProblem,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: Optional[OneOrSequence[torch.optim.Optimizer]] = None,
-    ):
+    ) -> None:
         self.cmp = cmp
         self.primal_optimizers = ensure_sequence(primal_optimizers)
         self.dual_optimizers = ensure_sequence(dual_optimizers)
 
-    def zero_grad(self):
+    def zero_grad(self) -> None:
         r"""Sets the gradients of all optimized :py:class:`~torch.nn.parameter.Parameter`\s
         to zero. This includes both the primal and dual variables.
         """
@@ -47,7 +47,7 @@ class CooperOptimizer(abc.ABC):
                 dual_optimizer.zero_grad(set_to_none=True)
 
     @torch.no_grad()
-    def primal_step(self):
+    def primal_step(self) -> None:
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
@@ -62,7 +62,7 @@ class CooperOptimizer(abc.ABC):
             primal_optimizer_states=primal_optimizer_states, dual_optimizer_states=dual_optimizer_states
         )
 
-    def load_state_dict(self, state: CooperOptimizerState):
+    def load_state_dict(self, state: CooperOptimizerState) -> None:
         if len(state["primal_optimizer_states"]) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 
@@ -80,6 +80,6 @@ class CooperOptimizer(abc.ABC):
                 dual_optimizer.load_state_dict(dual_optimizer_state)
 
     @abc.abstractmethod
-    def roll(self, *args, **kwargs) -> RollOut:
+    def roll(self, *args: Any, **kwargs: Any) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the parameters."""
         raise NotImplementedError

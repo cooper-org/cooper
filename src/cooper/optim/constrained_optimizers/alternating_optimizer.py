@@ -12,7 +12,7 @@ from cooper.optim.optimizer import RollOut
 
 
 class BaseAlternatingOptimizer(ConstrainedOptimizer):
-    def custom_sanity_checks(self):
+    def custom_sanity_checks(self) -> None:
         """Perform sanity checks on the initialization of ``AlternatingOptimizer``.
 
         Warns:
@@ -22,7 +22,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
         if any(self.cmp.penalty_coefficients()):
             for dual_optimizer in self.dual_optimizers:
                 all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
-                if (dual_optimizer.__class__.__name__ != "SGD") or not all([lr == 1.0 for lr in all_lrs]):
+                if (dual_optimizer.__class__.__name__ != "SGD") or not all(lr == 1.0 for lr in all_lrs):
                     warnings.warn("Detected use of Augmented Lagrangian but not all dual optimizers are SGD(lr=1.0).")
 
 

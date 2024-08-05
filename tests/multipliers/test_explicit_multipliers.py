@@ -35,6 +35,11 @@ def test_multiplier_initialization_with_inconsistent_init_shape(multiplier_class
         multiplier_class(num_constraints=num_constraints, init=torch.zeros(num_constraints + 1))
 
 
+def test_multiplier_initialization_with_init_dim(multiplier_class, num_constraints):
+    with pytest.raises(ValueError, match=r"`init` must be a 1D tensor of shape"):
+        multiplier_class(num_constraints=num_constraints, init=torch.zeros(num_constraints, 1))
+
+
 def test_multiplier_repr(multiplier_class, num_constraints):
     multiplier = multiplier_class(num_constraints=num_constraints)
     assert repr(multiplier) == f"{multiplier_class.__name__}(num_constraints={num_constraints})"

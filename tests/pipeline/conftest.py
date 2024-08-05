@@ -61,8 +61,9 @@ def penalty_coefficient_type(formulation_type, multiplier_type):
         return None
     if multiplier_type == cooper.multipliers.IndexedMultiplier:
         return cooper.multipliers.IndexedPenaltyCoefficient
-    elif multiplier_type == cooper.multipliers.DenseMultiplier:
+    if multiplier_type == cooper.multipliers.DenseMultiplier:
         return cooper.multipliers.DensePenaltyCoefficient
+    return None
 
 
 @pytest.fixture(params=[True, False])
@@ -99,7 +100,7 @@ def unconstrained_cmp(device, num_variables):
 def params(device, num_variables, use_multiple_primal_optimizers):
     x_init = torch.ones(num_variables, device=device)
     x_init = x_init.tensor_split(2) if use_multiple_primal_optimizers else [x_init]
-    params = list(map(lambda t: torch.nn.Parameter(t), x_init))
+    params = [torch.nn.Parameter(t) for t in x_init]
     return params
 
 
@@ -133,7 +134,7 @@ def cmp(
 ):
     lhs, rhs = constraint_params
 
-    cmp_kwargs = dict(num_variables=num_variables, device=device)
+    cmp_kwargs = {"num_variables": num_variables, "device": device}
     is_inequality = constraint_type == cooper.ConstraintType.INEQUALITY
     if is_inequality:
         cmp_kwargs["A"] = lhs

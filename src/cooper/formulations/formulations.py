@@ -1,5 +1,5 @@
 import abc
-from typing import Literal, NamedTuple, Optional
+from typing import Any, Literal, NamedTuple, Optional
 
 import torch
 
@@ -23,12 +23,12 @@ class Formulation(abc.ABC):
 
     expects_penalty_coefficient: bool
 
-    def __init__(self, constraint_type: ConstraintType):
-        if constraint_type not in [ConstraintType.EQUALITY, ConstraintType.INEQUALITY]:
+    def __init__(self, constraint_type: ConstraintType) -> None:
+        if constraint_type not in {ConstraintType.EQUALITY, ConstraintType.INEQUALITY}:
             raise ValueError(f"{type(self).__name__} requires either an equality or inequality constraint.")
         self.constraint_type = constraint_type
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(constraint_type={self.constraint_type})"
 
     def sanity_check_penalty_coefficient(self, penalty_coefficient: Optional[PenaltyCoefficient]) -> None:
@@ -53,7 +53,7 @@ class Formulation(abc.ABC):
             violation = strict_violation
             constraint_features = strict_constraint_features
 
-        eval_factor_kwargs = dict(constraint_features=constraint_features, expand_shape=violation.shape)
+        eval_factor_kwargs = {"constraint_features": constraint_features, "expand_shape": violation.shape}
         multiplier_value = formulation_utils.evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
         penalty_coefficient_value = None
         if self.expects_penalty_coefficient:
@@ -85,7 +85,7 @@ class Formulation(abc.ABC):
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
     @abc.abstractmethod
-    def compute_contribution_to_primal_lagrangian(self, *args, **kwargs):
+    def compute_contribution_to_primal_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
         pass
 
 

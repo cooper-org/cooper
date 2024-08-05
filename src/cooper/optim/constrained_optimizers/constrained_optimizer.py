@@ -41,13 +41,13 @@ class ConstrainedOptimizer(CooperOptimizer):
         cmp: ConstrainedMinimizationProblem,
         primal_optimizers: OneOrSequence[torch.optim.Optimizer],
         dual_optimizers: OneOrSequence[torch.optim.Optimizer],
-    ):
+    ) -> None:
         super().__init__(cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers)
         self.base_sanity_checks()
         # custom_sanity_checks are implemented in the derived classes
         self.custom_sanity_checks()
 
-    def base_sanity_checks(self):
+    def base_sanity_checks(self) -> None:
         """Perform sanity checks on the initialization of ``ConstrainedOptimizer``."""
         if self.primal_optimizers is None:
             raise TypeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
@@ -58,12 +58,11 @@ class ConstrainedOptimizer(CooperOptimizer):
                 if not param_group["maximize"]:
                     raise ValueError("Dual optimizers must be set to carry out maximization steps.")
 
-    def custom_sanity_checks(self):
+    def custom_sanity_checks(self) -> None:
         """Perform custom sanity checks on the initialization of ``ConstrainedOptimizer``."""
-        pass
 
     @torch.no_grad()
-    def dual_step(self):
+    def dual_step(self) -> None:
         """Perform a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we require
         dual optimizers which satisfy `maximize=True`.
