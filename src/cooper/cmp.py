@@ -74,7 +74,7 @@ class CMPState:
             lagrangian = self.loss.clone() if primal_or_dual == "primal" else None
             return LagrangianStore(lagrangian=lagrangian)
 
-        lagrangian = (self.loss.clone() if self.loss is not None else 0.0) if primal_or_dual == "primal" else 0.0
+        lagrangian = self.loss.clone() if primal_or_dual == "primal" and self.loss is not None else 0.0
 
         multiplier_values = {}
         penalty_coefficient_values = {}
