@@ -1,8 +1,8 @@
 [build-system]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 requires = [
-    "setuptools>=69.0.2",
-    "setuptools-scm>=8.0.4",
+    "hatchling>=1.1.0",
+    "hatch-vcs>=0.4.0",
 ]
 
 [project]
@@ -88,13 +88,18 @@ Documentation = "https://cooper.readthedocs.io"
 Repository = "https://github.com/cooper-org/cooper"
 Issues = "https://github.com/cooper-org/cooper/issues"
 
-[tool.setuptools]
-license-files = ["LICENSE"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/cooper"]
 
-[tool.setuptools.package-data]
-cooper = ["py.typed"]
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "docs",
+    ".github",
+    ".readthedocs.yaml",
+]
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
 
 [tool.mypy]
 mypy_path = "cooper"
