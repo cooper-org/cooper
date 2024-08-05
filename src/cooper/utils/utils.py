@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Optional
 
-from cooper.utils.typing import OneOrSequence, T
+from cooper.utils.annotations import OneOrSequence, T
 
 
 def ensure_sequence(argument: Optional[OneOrSequence[T]]) -> Optional[Sequence[T]]:

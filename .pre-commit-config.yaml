@@ -19,7 +19,7 @@ repos:
         files: \.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.5
+    rev: v0.5.6
     hooks:
       - id: ruff
         types_or: [ python, pyi, jupyter ]
@@ -30,6 +30,6 @@ repos:
   - repo: https://github.com/mwouts/jupytext
     rev: v1.16.3
     hooks:
-    - id: jupytext
-      files: docs/source/notebooks
-      args: [--sync]
+      - id: jupytext
+        files: docs/source/notebooks
+        args: [ --sync ]

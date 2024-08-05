@@ -33,7 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dynamic = [ "version" ]
+dynamic = ["version"]
 dependencies = [
     "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "torch>=1.13.1",
@@ -47,7 +47,7 @@ dev = [
     "pre-commit>=3.6.0",
     "pytest~=8.2.2",
     "pytest-cov==4.1.0",
-    "ruff~=0.5.5",
+    "ruff~=0.5.6",
     "tox==4.11.4",
     "twine==4.0.2",
 ]
@@ -115,9 +115,9 @@ ignore = [
     "E501",     # Line length (handled by ruff-format)
     "E731",     # Lambda function
     "W505",     # Doc Line length
-    "D1",       # TODO: Uncomment this line when we have docstrings for all functions
+    "D1",       # TODO: Remove this line when we have docstrings for all functions
     "D205",     # 1 blank line required between summary line and description in docstrings
-    "DOC501",   # Docstring missing exceptions
+    "DOC",      # Docstring missing exceptions/returns
     "ISC001",   # Fixed by ruff-format
     "COM812",   # Fixed by ruff-format
     "FA",       # Future type annotations
