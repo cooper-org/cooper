@@ -42,6 +42,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2.1",
     "cvxpy~=1.5.1",
     "mypy~=1.7.1",
     "pre-commit>=3.6.0",
