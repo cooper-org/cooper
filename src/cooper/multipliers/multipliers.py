@@ -44,7 +44,6 @@ class ExplicitMultiplier(Multiplier):
         init: Tensor used to initialize the multiplier values. This argument is mutually
             exclusive with `num_constraints`. If provided, the shape of `init` must be
             `(num_constraints,)`.
-
     """
 
     def __init__(

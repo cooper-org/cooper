@@ -82,4 +82,3 @@ class CooperOptimizer(abc.ABC):
     @abc.abstractmethod
     def roll(self, *args: Any, **kwargs: Any) -> RollOut:
         """Evaluates the objective function and performs a gradient update on the parameters."""
-        raise NotImplementedError
