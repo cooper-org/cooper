@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.penalty_coefficient_updaters import MultiplicativePenaltyCoefficientUpdater
+from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
 from tests.helpers import cooper_test_utils
 
 PRIMAL_LR = 3e-2
@@ -16,7 +16,7 @@ PENALTY_VIOLATION_TOLERANCE = 1e-4
 
 class TestConvergence:
     @pytest.fixture(autouse=True)
-    def setup_cmp(
+    def _setup_cmp(
         self,
         cmp,
         constraint_params,
@@ -45,14 +45,12 @@ class TestConvergence:
         self.dual_lr = DUAL_LR / math.sqrt(num_variables)
 
     def test_manual_step(self, extrapolation, alternation_type):
-        """
-        Test the cooper optimizer roll methods implementation.
+        """Test the cooper optimizer roll methods implementation.
 
         This method tests the cooper optimizers by comparing the results with the manual implementation.
         The manual implementation assumes Stochastic Gradient Descent (SGD) is used for both the primal
         and dual optimizers.
         """
-
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
             pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
 
@@ -76,9 +74,9 @@ class TestConvergence:
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 
-        roll_kwargs = {"compute_cmp_state_kwargs": dict(x=x)}
+        roll_kwargs = {"compute_cmp_state_kwargs": {"x": x}}
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            roll_kwargs["compute_violations_kwargs"] = dict(x=x)
+            roll_kwargs["compute_violations_kwargs"] = {"x": x}
 
         manual_x = torch.ones(self.num_variables, device=self.device)
         manual_multiplier = torch.zeros(self.num_constraints, device=self.device)
@@ -97,11 +95,11 @@ class TestConvergence:
             else:
                 observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
 
-            features = list(roll_out.cmp_state.observed_constraint_features())[0]
+            features = next(iter(roll_out.cmp_state.observed_constraint_features()))
             if features is None:
                 features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-            strict_features = list(roll_out.cmp_state.observed_strict_constraint_features())[0]
+            strict_features = next(iter(roll_out.cmp_state.observed_strict_constraint_features()))
             if strict_features is None:
                 strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
@@ -136,8 +134,7 @@ class TestConvergence:
             assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
     def _violation(self, x, strict=False):
-        """
-        Compute the constraint violations given the primal variables.
+        """Compute the constraint violations given the primal variables.
         If strict is True, the strict violations are computed.
         Otherwise, the surrogate violations are computed if the surrogates are provided.
         """
@@ -150,8 +147,7 @@ class TestConvergence:
         obj_grad = 2 * x
         if penalty_coeff is not None:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
-            # constraints is:
-            #  grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
+            # constraints is: grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
             violation = self._violation(x)[features]
             aux_grad = multiplier[features] + penalty_coeff[features] * violation
             if self.is_inequality:
@@ -269,9 +265,8 @@ class TestConvergence:
             return self._extragradient_roll(x, multiplier, features, strict_features)
         if alternation_type == cooper_test_utils.AlternationType.FALSE:
             return self._simultaneous_roll(x, multiplier, features, strict_features)
-        elif alternation_type == cooper_test_utils.AlternationType.DUAL_PRIMAL:
+        if alternation_type == cooper_test_utils.AlternationType.DUAL_PRIMAL:
             return self._dual_primal_roll(x, multiplier, features, strict_features, penalty_coeff)
-        elif alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
             return self._primal_dual_roll(x, multiplier, features, strict_features, penalty_coeff)
-        else:
-            raise ValueError(f"Unknown alternation type: {alternation_type}")
+        raise ValueError(f"Unknown alternation type: {alternation_type}")

@@ -5,7 +5,7 @@ from tests.helpers import cooper_test_utils
 
 def test_convergence_no_constraint(unconstrained_cmp, params, cooper_optimizer_no_constraint):
     for _ in range(2000):
-        cooper_optimizer_no_constraint.roll(compute_cmp_state_kwargs=dict(x=torch.cat(params)))
+        cooper_optimizer_no_constraint.roll(compute_cmp_state_kwargs={"x": torch.cat(params)})
 
     # Compute the exact solution
     x_star, _ = unconstrained_cmp.compute_exact_solution()
@@ -20,9 +20,9 @@ def test_convergence_with_constraint(
     lhs, rhs = constraint_params
 
     for _ in range(2000):
-        roll_kwargs = {"compute_cmp_state_kwargs": dict(x=torch.cat(params))}
+        roll_kwargs = {"compute_cmp_state_kwargs": {"x": torch.cat(params)}}
         if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
-            roll_kwargs["compute_violations_kwargs"] = dict(x=torch.cat(params))
+            roll_kwargs["compute_violations_kwargs"] = {"x": torch.cat(params)}
 
         roll_out = cooper_optimizer.roll(**roll_kwargs)
         if penalty_updater is not None:
@@ -37,7 +37,7 @@ def test_convergence_with_constraint(
         assert torch.allclose(torch.cat(params), x_star, atol=atol)
 
         # Check if the dual variable is close to the exact solution
-        assert torch.allclose(list(cmp.dual_parameters())[0].view(-1), lambda_star[0], atol=atol)
+        assert torch.allclose(next(iter(cmp.dual_parameters())).view(-1), lambda_star[0], atol=atol)
     else:
         # The surrogate formulation is not guaranteed to converge to the exact solution,
         # but it should be feasible

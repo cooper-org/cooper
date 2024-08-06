@@ -35,6 +35,11 @@ def test_multiplier_initialization_with_inconsistent_init_shape(multiplier_class
         multiplier_class(num_constraints=num_constraints, init=torch.zeros(num_constraints + 1))
 
 
+def test_multiplier_initialization_with_init_dim(multiplier_class, num_constraints):
+    with pytest.raises(ValueError, match=r"`init` must be a 1D tensor of shape"):
+        multiplier_class(num_constraints=num_constraints, init=torch.zeros(num_constraints, 1))
+
+
 def test_multiplier_repr(multiplier_class, num_constraints):
     multiplier = multiplier_class(num_constraints=num_constraints)
     assert repr(multiplier) == f"{multiplier_class.__name__}(num_constraints={num_constraints})"
@@ -50,7 +55,7 @@ def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multipl
         multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
 
-def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
+def test_multiplier_init_and_forward(multiplier_class, init_multiplier_tensor, all_indices):
     # Ensure that the multiplier returns the correct value when called
     ineq_multiplier = multiplier_class(init=init_multiplier_tensor)
     multiplier_values = evaluate_multiplier(ineq_multiplier, all_indices)
@@ -58,7 +63,7 @@ def test_multiplier_init_and_forward(constraint_type, multiplier_class, init_mul
     assert torch.allclose(multiplier_values, target_tensor)
 
 
-def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multiplier_tensor):
+def test_indexed_multiplier_forward_invalid_indices(init_multiplier_tensor):
     multiplier = cooper.multipliers.IndexedMultiplier(init=init_multiplier_tensor)
     indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
 
@@ -68,7 +73,8 @@ def test_indexed_multiplier_forward_invalid_indices(constraint_type, init_multip
 
 def test_equality_post_step_(constraint_type, multiplier_class, init_multiplier_tensor, all_indices):
     """Post-step for equality multipliers should be a no-op. Check that multiplier
-    values remain unchanged after calling post_step_."""
+    values remain unchanged after calling post_step_.
+    """
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         pytest.skip("")
 
@@ -135,7 +141,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constr
     assert torch.equal(multiplier.weight, new_multiplier.weight)
 
 
-def test_save_load_multiplier(constraint_type, multiplier_class, init_multiplier_tensor, num_constraints, random_seed):
+def test_save_load_multiplier(multiplier_class, init_multiplier_tensor, num_constraints, random_seed):
     """Test that the state_dict of a multiplier can be saved and loaded correctly."""
     multiplier = multiplier_class(init=init_multiplier_tensor)
     check_save_load_state_dict(multiplier, multiplier_class, num_constraints, random_seed)

@@ -15,7 +15,7 @@
 
 # sys.path.insert(0, os.path.abspath("."))
 
-import cooper.version
+import cooper
 
 # -- Project information -----------------------------------------------------
 
@@ -24,7 +24,7 @@ copyright = "2022, The Cooper Developers"
 author = "The Cooper Developers"
 
 # The full version, including alpha/beta/rc tags
-release = f"v{cooper.version.version}"
+release = f"v{cooper.__version__}"
 
 
 # -- General configuration ---------------------------------------------------
@@ -33,20 +33,20 @@ release = f"v{cooper.version.version}"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "myst_parser",
+    "sphinx.ext.napoleon",  # napoleon on top of autodoc: https://stackoverflow.com/a/66930447 might correct some warnings
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
     "sphinx.ext.duration",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
+    "myst_nb",
+    "sphinx_rtd_theme",
     "sphinx_copybutton",
     "sphinxcontrib.bibtex",
-    "sphinx_gallery.gen_gallery",
 ]
 
 mathjax3_config = {
@@ -59,12 +59,26 @@ mathjax3_config = {
         },
     },
     "tex2jax": {
-        "inlineMath": [["$", "$"], ["\(", "\)"]],
+        "inlineMath": [["$", "$"], [r"\(", r"\)"]],
     },
     "jax": ["input/TeX", "output/HTML-CSS"],
     "displayAlign": "left",
 }
 
+source_suffix = [".ipynb", ".md"]
+
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+]
+
+nb_execution_mode = "force"
+nb_execution_allow_errors = False
+nb_merge_streams = True
+
+# Notebook cell execution timeout; defaults to 30.
+nb_execution_timeout = 100
 
 # Handle Latex-style references
 bibtex_encoding = "latin"
@@ -116,18 +130,4 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
-}
-
-sphinx_gallery_conf = {
-    # path to your examples scripts
-    "examples_dirs": "../../tutorials/scripts/",
-    # "doc_module": "cooper",
-    "gallery_dirs": "auto_tutorials",  # path to save gallery generated examples
-    # "backreferences_dir": os.path.join("modules", "generated"),
-    # "show_memory": True,
-    # "reference_url": {"cooper": None},
-    # "filename_pattern": r"/plot_\.py",
-    "ignore_pattern": r"__init__\.py|.*_utils.py",
-    "line_numbers": True,
-    # "run_stale_examples": True,
 }

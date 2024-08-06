@@ -53,7 +53,6 @@ def loss_func(params):
 
 def test_i_optimizer(params, lr, Ki):
     """Verify that we can recover GD with LR = Ki * LR whenever Kp=0 and ema_nu=0."""
-
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
@@ -84,7 +83,6 @@ def test_i_optimizer(params, lr, Ki):
 
 def test_pi_optimizer(params, lr, Kp, Ki):
     """Verify that we can recover PI with whenever ema_nu=0."""
-
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
@@ -154,7 +152,7 @@ def test_manual_nupi_dense_update():
     assert torch.allclose(parameter, expected_param_2)
 
 
-@pytest.mark.parametrize(["Kp", "Ki", "ema_nu"], ALL_HYPER_PARAMS)
+@pytest.mark.parametrize(("Kp", "Ki", "ema_nu"), ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
     num_multipliers = 10
@@ -249,8 +247,7 @@ def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
 
 
 def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
-    """Verify that the first step of nuPI is equivalent to PI whenever ema_nu=0"""
-
+    """Verify that the first step of nuPI is equivalent to PI whenever ema_nu=0."""
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
@@ -278,11 +275,10 @@ def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
     assert torch.allclose(params, params_for_manual_update)
 
 
-@pytest.mark.parametrize(["Kp", "Ki", "ema_nu"], ALL_HYPER_PARAMS)
+@pytest.mark.parametrize(("Kp", "Ki", "ema_nu"), ALL_HYPER_PARAMS)
 @pytest.mark.parametrize("maximize", [True, False])
 def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
     """Verify the behavior of nuPI when initialized with SGD."""
-
     num_multipliers = 10
     multiplier_init = torch.ones(num_multipliers, device=device)
     multiplier_module = cooper.multipliers.IndexedMultiplier(init=multiplier_init)
@@ -322,7 +318,6 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
     selected_indices_mask_0[selected_indices_0] = True
 
     error_0 = compute_analytic_gradient(selected_indices_0)
-    # previous_xi_values = xi_buffer[selected_indices_0].clone().detach()
 
     new_param = param.clone().detach()
     nupi_update = update_sign * LR * Ki * error_0  # First step should match GD

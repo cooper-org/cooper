@@ -76,7 +76,7 @@ def test_alternating_primal_dual_optimizer_roll_fail_compute_violations_has_loss
             observed_constraints={cmp_instance.eq_constraint: cooper.ConstraintState(violation=torch.tensor(1.0))},
         )
 
-    setattr(cmp_instance, "compute_violations", compute_violations)
+    cmp_instance.compute_violations = compute_violations
 
     with pytest.raises(
         RuntimeError,
@@ -95,7 +95,7 @@ def test_alternating_primal_dual_optimizer_roll_no_compute_violations(cmp_instan
     optimizer.roll()  # This shouldn't raise any errors
 
 
-def test_extrapolation_init_fail_no_extrapolation_method(cooper_optimizer_class, cmp_instance):
+def test_extrapolation_init_fail_no_extrapolation_method(cmp_instance):
     with pytest.raises(RuntimeError, match="Some of the provided optimizers do not have an extrapolation method."):
         cooper.optim.ExtrapolationConstrainedOptimizer(
             cmp=cmp_instance,

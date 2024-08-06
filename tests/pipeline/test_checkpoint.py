@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 
@@ -13,9 +13,7 @@ DUAL_LR = 1e-2
 
 
 class Model(torch.nn.Module):
-    """
-    A simple model that concatenates a list of parameters.
-    """
+    """A simple model that concatenates a list of parameters."""
 
     def __init__(self, params: Sequence):
         super().__init__()
@@ -47,7 +45,6 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
 
 
 def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
-
     x = [torch.ones(num_variables, device=device)]
     if use_multiple_primal_optimizers:
         x = x[0].split(1)
@@ -64,7 +61,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # ------------ Train the model for 100 steps ------------
     for _ in range(100):
-        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=model()))
+        cooper_optimizer.roll(compute_cmp_state_kwargs={"x": model()})
 
     # Generate checkpoints after 100 steps of training
     model_state_dict_100 = model.state_dict()
@@ -86,7 +83,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # ------------ Train for *another* 100 steps ------------
     for _ in range(100):
-        cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=model()))
+        cooper_optimizer.roll(compute_cmp_state_kwargs={"x": model()})
 
     model_state_dict_200 = model.state_dict()
     cooper_optimizer_state_dict_200 = cooper_optimizer.state_dict()
@@ -119,7 +116,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # Train checkpointed model for 100 steps to reach overall 200 steps
     for _ in range(100):
-        loaded_cooper_optimizer.roll(compute_cmp_state_kwargs=dict(x=loaded_model()))
+        loaded_cooper_optimizer.roll(compute_cmp_state_kwargs={"x": loaded_model()})
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
