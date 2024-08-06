@@ -160,3 +160,6 @@ convention = "google"
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
+
+[tool.coverage.run]
+relative_files = true
