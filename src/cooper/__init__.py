@@ -2,11 +2,12 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
+from cooper.constraints import Constraint, ConstraintState
+from cooper.formulations import AugmentedLagrangianFormulation, Formulation, LagrangianFormulation
+from cooper.utils import ConstraintType
+
 from . import formulations, multipliers, optim, utils
-from .cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
-from .constraints import Constraint, ConstraintState
-from .formulations import AugmentedLagrangianFormulation, Formulation, LagrangianFormulation
-from .utils import ConstraintType
 
 try:
     __version__ = version("cooper-optim")
