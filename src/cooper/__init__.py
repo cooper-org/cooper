@@ -9,6 +9,8 @@ except PackageNotFoundError:
     import warnings
 
     warnings.warn("Could not retrieve Cooper version!")
+    del warnings
+del version, PackageNotFoundError
 
 from cooper.cmp import CMPState, ConstrainedMinimizationProblem, LagrangianStore
 from cooper.constraints import Constraint, ConstraintState
