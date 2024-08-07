@@ -3,16 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Ignore generated version file by setuptools
-cooper/version.py
-
 # Tutorial auxiliary folder
-tutorials/data/
-tutorials/scripts/data/
-
-# Ignore generated files for tutorial gallery
-docs/source/auto_tutorials
-docs/source/modules/
+docs/source/notebooks/data/
+docs/source/notebooks/checkpoint/
 
 # C extensions
 *.so
@@ -115,3 +108,6 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+
+# ruff
+.ruff_cache/

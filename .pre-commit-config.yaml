@@ -1,15 +1,35 @@
+# Install the pre-commit hooks below with
+# 'pre-commit install'
+
+# Auto-update the version of the hooks with
+# 'pre-commit autoupdate'
+
+# Run the hooks on all files with
+# 'pre-commit run --all'
+
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
     hooks:
-    -   id: end-of-file-fixer
-    -   id: trailing-whitespace
--   repo: https://github.com/psf/black
-    rev: 22.3.0
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: debug-statements
+        # only include python files
+        files: \.py$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.6
     hooks:
-    -   id: black
-    -   id: black-jupyter
--   repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+      - id: ruff
+        types_or: [ python, pyi, jupyter ]
+        args: [ --fix, --exit-non-zero-on-fix ]
+      - id: ruff-format
+        types_or: [ python, pyi, jupyter ]
+
+  - repo: https://github.com/mwouts/jupytext
+    rev: v1.16.3
     hooks:
-    - id: isort
+      - id: jupytext
+        files: docs/source/notebooks
+        args: [ --sync ]
