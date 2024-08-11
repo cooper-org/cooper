@@ -1,0 +1,47 @@
+name: Run tests
+
+on:
+  pull_request:
+  push:
+    branches: [ master ]
+
+concurrency:
+  # github.workflow: name of the workflow
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9", "3.10" ]
+        TORCH_VERSION: [ "1.13.1", "2.0.1", "2.1.2", "2.2.2", "2.3.1", "2.4.0" ]
+        include:
+          - python-version: "3.11"
+            TORCH_VERSION: [ "2.0.1", "2.1.2", "2.2.2", "2.3.1", "2.4.0" ]
+          - python-version: "3.12"
+            TORCH_VERSION: "2.4.0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies and PyTorch ${{ matrix.TORCH_VERSION }}
+        run: |
+          pip install --upgrade pip
+          pip install torch==$TORCH_VERSION '.[tests]'
+
+      - name: Launch tests
+        # Only run the unit tests, not the pipeline tests.
+        # Pipeline tests are too expensive to run for every python/PyTorch version.
+        # However, they are run as part the coverage job in the CI workflow
+        run: pytest --ignore=tests/pipeline tests
