@@ -43,43 +43,34 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "build>=1.2.1",
-    "cvxpy~=1.5.1",
-    "mypy~=1.7.1",
-    "pre-commit>=3.6.0",
-    "pytest~=8.2.2",
-    "pytest-cov==4.1.0",
-    "ruff~=0.5.6",
-    "tox==4.11.4",
-    "twine==4.0.2",
+    "cvxpy>=1.5.2",
+    "jupytext==1.16.3",
+    "mypy>=1.11.1",
+    "pre-commit>=3.7.1",
+    "pytest>=8.3.2",
+    "coverage>=7.6.1",
+    "ruff==0.5.7",
+    "twine>=5.1.1",
 ]
 docs = [
-    "ipykernel>=6.5.0,<7.0.0",
-    "ipywidgets>=7.6.0,<8.0.0",
-    "jupytext>=1.16.3",
-    "matplotlib>=3.5.0,<4.0.0",
+    "matplotlib>=3.8.4,<4.0.0",
     "myst-nb>=1.1.1",
-    "sphinx>=4.3.1",
-    "sphinx-autobuild>=2021.3.14",
-    "sphinx-autodoc-typehints>=1.12.0",
-    "sphinx-copybutton>=0.4.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "sphinxcontrib-bibtex>=2.4.1",
-    "sphinxcontrib-contentui>=0.2.5",
-    "sphinxcontrib-katex>=0.8.6",
+    "sphinx>=7.4.7",
+    "sphinx-autobuild>=2024.4.16",
+    "sphinx-autodoc-typehints>=2.2.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinxcontrib-bibtex>=2.6.2",
     "torchvision>=0.13.0,<1.0.0",
 ]
 examples = [
-    "ipykernel>=6.5.0,<7.0.0",
-    "ipywidgets>=7.6.0,<8.0.0",
-    "matplotlib>=3.5.0,<4.0.0",
-    "numpy==1.22.0",
+    "matplotlib>=3.8.4,<4.0.0",
     "torchvision>=0.13.0,<1.0.0",
 ]
 tests = [
-    "cvxpy~=1.5.1",
-    "pytest~=8.2.2",
-    "pytest-cov==4.1.0",
-    "tox==4.11.4",
+    "cvxpy>=1.5.2",
+    "pytest>=8.3.2",
+    "coverage>=7.6.1",
 ]
 
 [project.urls]
