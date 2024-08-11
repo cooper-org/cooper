@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies and PyTorch ${{ matrix.TORCH_VERSION }}
         run: |
           pip install --upgrade pip
-          pip install torch==$TORCH_VERSION '.[tests]'
+          pip install torch==${{ matrix.TORCH_VERSION }} '.[tests]'
 
       - name: Launch tests
         # Only run the unit tests, not the pipeline tests.
