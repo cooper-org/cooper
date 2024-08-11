@@ -19,13 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9", "3.10" ]
+        python-version: [ "3.9", "3.10", "3.11" ]
         TORCH_VERSION: [ "1.13.1", "2.0.1", "2.1.2", "2.2.2", "2.3.1", "2.4.0" ]
         include:
-          - python-version: "3.11"
-            TORCH_VERSION: [ "2.0.1", "2.1.2", "2.2.2", "2.3.1", "2.4.0" ]
           - python-version: "3.12"
             TORCH_VERSION: "2.4.0"
+        exclude:
+          - python-version: "3.11"
+            TORCH_VERSION: "1.13.1"
     steps:
       - uses: actions/checkout@v4
 
