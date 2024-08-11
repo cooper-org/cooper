@@ -93,7 +93,7 @@ exclude = [
 source = "vcs"
 
 [tool.mypy]
-mypy_path = "cooper"
+packages = ["cooper"]
 warn_unused_configs = true
 
 [tool.ruff]
