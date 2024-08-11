@@ -211,8 +211,7 @@ will be equivalent to performing `optimizer.step()` on all of the
 primal parameters.
 :::
 
-```{eval-rst}
-.. include:: additional_features.rst
+```{include} additional_features.md
 ```
 
 ```{eval-rst}

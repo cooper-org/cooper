@@ -8,8 +8,6 @@ In this section we provide details on using "advanced features" such as
 alternating updates, or the Augmented Lagrangian method, in conjunction with a
 {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`.
 
-______________________________________________________________________
-
 (alternating-updates)=
 
 ## Alternating updates
@@ -25,21 +23,19 @@ variables. This two-stage process is handled by **Cooper** inside the
 
 One can perform alternating updates in which the primal parameters are updated first. We
 refer to this update strategy as `cooper.optim.AlternationType.PRIMAL_DUAL`.
-.. math:
 
-```
+$$
 x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
 \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
-```
+$$
 
 Alternative, `cooper.optim.AlternationType.DUAL_PRIMAL` carries out an update of the
 dual parameters first.
-.. math:
 
-```
+$$
 \lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t}}, \lambda)|_{\lambda=\lambda_t} \right) \\
 x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_{t+1})|_{x=x_t} \right)
-```
+$$
 
 :::{important}
 Selecting `alternation_type=AlternationType.DualPrimal` does not double the number
@@ -56,8 +52,6 @@ Providing a `defect_fn` in the call to {py:meth}`ConstrainedOptimizer.step`
 allows for updating the Lagrange multiplier without having to re-evaluate
 the loss function, but rather only the constraints.
 :::
-
-______________________________________________________________________
 
 (augmented-lagrangian-const-opt)=
 
@@ -171,8 +165,6 @@ for step_id in range(1000):
     # Remember that you need to call the dual_scheduler manually!
     coop.dual_scheduler.step()
 ```
-
-______________________________________________________________________
 
 (multiple-primal-optimizers)=
 

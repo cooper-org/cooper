@@ -90,7 +90,6 @@ in Fig 1. of {cite:t}`cotter2019JMLR`.
 ```{eval-rst}
 .. autoclass:: LagrangianFormulation
     :members:
-
 ```
 
 ```{eval-rst}
@@ -144,8 +143,6 @@ in **Cooper** as a
 ```{eval-rst}
 .. autoclass:: AugmentedLagrangianFormulation
     :members:
-
-
 ```
 
 ```{eval-rst}

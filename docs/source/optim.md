@@ -95,7 +95,6 @@ directly via the dual learning rate scheduler.
 
 ```{eval-rst}
 .. automethod:: cooper.optim.partial_scheduler
-
 ```
 
 (extra-gradient-optimizers)=

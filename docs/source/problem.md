@@ -58,7 +58,6 @@ entail a compromise in the stability of the optimization process.
 ```{eval-rst}
 .. autoclass:: CMPState
     :members: as_tuple
-
 ```
 
 For details on the use of proxy-constraints and the `proxy_ineq_defect` and
