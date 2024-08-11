@@ -67,22 +67,19 @@ class CMPState:
         check_contributes_fn = lambda cs: getattr(cs, f"contributes_to_{primal_or_dual}_update")
         contributing_constraints = {c: cs for c, cs in self.observed_constraints.items() if check_contributes_fn(cs)}
 
-        if len(contributing_constraints) == 0:
-            if self.loss is None:
-                return LagrangianStore()
+        if not contributing_constraints:
             # No observed constraints contribute to the Lagrangian.
-            lagrangian = self.loss.clone() if primal_or_dual == "primal" else None
+            lagrangian = self.loss.clone() if primal_or_dual == "primal" and self.loss is not None else None
             return LagrangianStore(lagrangian=lagrangian)
 
         lagrangian = self.loss.clone() if primal_or_dual == "primal" and self.loss is not None else 0.0
-
         multiplier_values = {}
         penalty_coefficient_values = {}
+
         for constraint, constraint_state in contributing_constraints.items():
             contribution_store = constraint.compute_contribution_to_lagrangian(constraint_state, primal_or_dual)
             if contribution_store is not None:
                 lagrangian = lagrangian + contribution_store.lagrangian_contribution
-
                 multiplier_values[constraint] = contribution_store.multiplier_value
                 if contribution_store.penalty_coefficient_value is not None:
                     penalty_coefficient_values[constraint] = contribution_store.penalty_coefficient_value
