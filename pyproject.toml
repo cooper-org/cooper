@@ -1,8 +1,8 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-    "hatchling>=1.1.0",
     "hatch-vcs>=0.4.0",
+    "hatchling>=1.1.0",
 ]
 
 [project]
@@ -43,12 +43,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "build>=1.2.1",
+    "coverage>=7.6.1",
     "cvxpy>=1.5.2",
     "jupytext==1.16.3",
     "mypy>=1.11.1",
     "pre-commit>=3.7.1",
     "pytest>=8.3.2",
-    "coverage>=7.6.1",
     "ruff==0.5.7",
     "twine>=5.1.1",
 ]
@@ -68,9 +68,9 @@ examples = [
     "torchvision>=0.13.0,<1.0.0",
 ]
 tests = [
+    "coverage>=7.6.1",
     "cvxpy>=1.5.2",
     "pytest>=8.3.2",
-    "coverage>=7.6.1",
 ]
 
 [project.urls]
@@ -96,6 +96,9 @@ source = "vcs"
 packages = ["cooper"]
 warn_unused_configs = true
 
+[tool.coverage.run]
+relative_files = true
+
 [tool.ruff]
 line-length = 120
 target-version = "py39"
@@ -104,38 +107,44 @@ extend-include = ["*.ipynb"]
 [tool.ruff.lint.isort]
 known-first-party = ["cooper", "tests"]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
 ignore = [
+    "ANN401",   # Any type annotation
     "B028",     # Stacklevel in warnings
-    "E501",     # Line length (handled by ruff-format)
-    "E731",     # Lambda function
-    "W505",     # Doc Line length
+    "COM812",   # Fixed by ruff-format
     "D1",       # TODO: Remove this line when we have docstrings for all functions
     "D205",     # 1 blank line required between summary line and description in docstrings
-    "DOC",      # Docstring missing exceptions/returns
+    "E501",     # Line length (handled by ruff-format)
+    "E731",     # Lambda function
+    "FURB140",  # Use itertools.starmap instead of list comprehension
     "ISC001",   # Fixed by ruff-format
-    "COM812",   # Fixed by ruff-format
-    "FA",       # Future type annotations
-    "CPY",      # Copyright notice
-    "TRY003",   # Long Exception message
-    "SLF",      # Private (underscore) attribute access
-    "EM",       # Exception message not in seperate msg variable
+    "NPY002",   # numpy.random.Generator is preferred over numpy.random.seed
     "PLR09",    # Too many arguments
     "PLR2004",  # Use of value instead of constant variable
     "PLR6104",  # Forces in-place operations, for example, x += 1 instead of x = x + 1
     "PLR6301",  # Self not used in method
     "PLW2901",  # For loop variable is overwritten
-    "FBT",      # Boolean trap
-    "FIX",      # Fixmes
-    "TD",       # TODOs
-    "ANN401",   # Any type annotation
-    "PTH",      # Use Pathlib instead of os.path
-    "FURB140",  # Use itertools.starmap instead of list comprehension
-    "NPY002",   # numpy.random.Generator is preferred over numpy.random.seed
     "RET504",   # Unnecessary assignment before return
     "S101",     # Use of assert
+    "TRY003",   # Long Exception message
+    "W505",     # Doc Line length
+    "CPY",      # Copyright notice
+    "DOC",      # Docstring missing exceptions/returns
+    "EM",       # Exception message not in seperate msg variable
+    "FA",       # Future type annotations
+    "FBT",      # Boolean trap
+    "FIX",      # Fixmes
+    "PTH",      # Use Pathlib instead of os.path
+    "SLF",      # Private (underscore) attribute access
+    "TD",       # TODOs
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -145,12 +154,3 @@ ignore = [
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]
 "docs/source/notebooks/*" = ["N801", "N802", "N803", "N806"]
 "src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 88
-
-[tool.coverage.run]
-relative_files = true
