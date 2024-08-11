@@ -134,7 +134,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constr
     # Save to file to force reading from file so we can ensure correct loading
     with tempfile.TemporaryDirectory() as tmpdirname:
         torch.save(multiplier.state_dict(), os.path.join(tmpdirname, "multiplier.pt"))
-        state_dict = torch.load(os.path.join(tmpdirname, "multiplier.pt"))
+        state_dict = torch.load(os.path.join(tmpdirname, "multiplier.pt"), weights_only=True)
 
     new_multiplier.load_state_dict(state_dict)
 

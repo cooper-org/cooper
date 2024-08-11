@@ -77,9 +77,9 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
         del cooper_optimizer_state_dict_100
         del cmp_state_dict_100
 
-        model_state_dict_100 = torch.load(os.path.join(tmpdirname, "model.pt"))
-        cooper_optimizer_state_dict_100 = torch.load(os.path.join(tmpdirname, "cooper_optimizer.pt"))
-        cmp_state_dict_100 = torch.load(os.path.join(tmpdirname, "cmp.pt"))
+        model_state_dict_100 = torch.load(os.path.join(tmpdirname, "model.pt"), weights_only=True)
+        cooper_optimizer_state_dict_100 = torch.load(os.path.join(tmpdirname, "cooper_optimizer.pt"), weights_only=True)
+        cmp_state_dict_100 = torch.load(os.path.join(tmpdirname, "cmp.pt"), weights_only=True)
 
     # ------------ Train for *another* 100 steps ------------
     for _ in range(100):

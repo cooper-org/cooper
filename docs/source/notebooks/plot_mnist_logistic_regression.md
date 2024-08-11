@@ -121,7 +121,7 @@ if not os.path.isfile(checkpoint_path + "/checkpoint.pth"):
     start_epoch = 0
     all_metrics = defaultdict(list)
 else:
-    checkpoint = torch.load(checkpoint_path + "/checkpoint.pth")
+    checkpoint = torch.load(checkpoint_path + "/checkpoint.pth", weights_only=True)
     batch_ix = checkpoint["batch_ix"]
     start_epoch = checkpoint["epoch"] + 1
     all_metrics = checkpoint["all_metrics"]
@@ -167,7 +167,7 @@ for epoch_num in range(start_epoch, 7):
 del batch_ix, all_metrics, model, cmp, cooper_optimizer
 
 # Post-training analysis and plotting
-all_metrics = torch.load(checkpoint_path + "/checkpoint.pth")["all_metrics"]
+all_metrics = torch.load(checkpoint_path + "/checkpoint.pth", weights_only=True)["all_metrics"]
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))
 
