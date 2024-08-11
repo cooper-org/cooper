@@ -22,7 +22,6 @@ jobs:
       # artifact that contains the comment to be published
       actions: read
     steps:
-
       - name: Post comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
