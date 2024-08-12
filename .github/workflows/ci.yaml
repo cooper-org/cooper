@@ -48,6 +48,10 @@ jobs:
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # If the coverage percentage is above or equal to this value, the badge will be green.
+          MINIMUM_GREEN: 90
+          # If the coverage percentage is below this value, the badge will be red.
+          MINIMUM_ORANGE: 80
 
       - name: Store Pull Request comment to be posted
         uses: actions/upload-artifact@v4

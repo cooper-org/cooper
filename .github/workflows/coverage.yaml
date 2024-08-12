@@ -27,3 +27,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PR_RUN_ID: ${{ github.event.workflow_run.id }}
+          # If the coverage percentage is above or equal to this value, the badge will be green.
+          MINIMUM_GREEN: 90
+          # If the coverage percentage is below this value, the badge will be red.
+          MINIMUM_ORANGE: 80
