@@ -1,11 +1,17 @@
 # Cooper
 
-[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
+[![LICENSE](https://img.shields.io/pypi/l/cooper-optim)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
+[![Version](https://img.shields.io/pypi/v/cooper-optim?label=version)](https://pypi.python.org/pypi/cooper-optim)
+[![Downloads](https://static.pepy.tech/badge/cooper-optim)](https://pypi.python.org/pypi/cooper-optim)
+[![Python](https://img.shields.io/pypi/pyversions/cooper-optim)](https://pypi.python.org/pypi/cooper-optim)
 [![DOCS](https://readthedocs.org/projects/cooper/badge/?version=latest)](https://cooper.readthedocs.io/en/latest/?version=latest)
-[![Build and Test](https://github.com/cooper-org/cooper/actions/workflows/build.yml/badge.svg)](https://github.com/cooper-org/cooper/actions/workflows/build.yml)
-[![Coverage](https://codecov.io/gh/cooper-org/cooper/graph/badge.svg?token=4U41P8JCE1)](https://codecov.io/gh/cooper-org/cooper)
-[![HitCount](https://hits.dwyl.com/cooper-org/cooper.svg?style=flat-square)](https://cooper.readthedocs.io/en/latest/?version=latest)
+[![Coverage badge](https://raw.githubusercontent.com/cooper-org/cooper/python-coverage-comment-action-data/badge.svg)](https://github.com/cooper-org/cooper/tree/python-coverage-comment-action-data)
+[![Continuous Integration](https://github.com/cooper-org/cooper/actions/workflows/ci.yml/badge.svg)](https://github.com/cooper-org/cooper/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/cooper-org/cooper)](https://github.com/cooper-org/cooper)
+[![HitCount](https://img.shields.io/endpoint?url=https://hits.dwyl.com/cooper-org/cooper.json&color=brightgreen)](https://cooper.readthedocs.io/en/latest/?version=latest)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/cooper-org/cooper/issues)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/bFd7ZX4d)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 ## About
 
