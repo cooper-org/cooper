@@ -97,6 +97,10 @@ packages = ["cooper"]
 warn_unused_configs = true
 
 [tool.coverage.run]
+omit = [
+    "testing/*",
+    "tests/*",
+]
 relative_files = true
 
 [tool.ruff]
