@@ -109,7 +109,7 @@ for epoch_num in range(50):
 ### Basic Installation
 
 ```bash
-pip install git+https://github.com/cooper-org/cooper.git
+pip install cooper-optim
 ```
 
 ### Development Installation
@@ -117,12 +117,13 @@ pip install git+https://github.com/cooper-org/cooper.git
 First, clone the [repository](https://github.com/cooper-org/cooper), navigate
 to the **Cooper** root directory and install the package in development mode by running:
 
-| Setting     | Command                                  | Notes                                     |
-| ----------- | ---------------------------------------- | ----------------------------------------- |
-| Development | `pip install --editable ".[dev, tests]"` | Editable mode. Matches test environment.  |
-| Docs        | `pip install --editable ".[docs]"`       | Used to re-generate the documentation.    |
-| Tutorials   | `pip install --editable ".[examples]"`   | Install dependencies for running examples |
-| No Tests    | `pip install --editable .`               | Editable mode, without tests.             |
+| Setting     | Command                                 | Notes                                           |
+|-------------|-----------------------------------------|-------------------------------------------------|
+| No Tests    | `pip install --editable .`              | Editable mode, without tests.                   |
+| Development | `pip install --editable ".[test]"`      | Editable mode. Matches test environment.        |
+| Development | `pip install --editable ".[dev]"`       | Editable mode. Matches development environment. |
+| Tutorials   | `pip install --editable ".[notebooks]"` | Install dependencies for running notebooks.     |
+| Docs        | `pip install --editable ".[docs]"`      | Used to generate the documentation.             |
 
 ## Package structure
 
@@ -178,7 +179,7 @@ the snippet below:
 
 ```bibtex
 @misc{gallegoPosada2022cooper,
-    author={Gallego-Posada, Jose and Ramirez, Juan},
+    author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
     title={Cooper: a toolkit for Lagrangian-based constrained optimization},
     howpublished={\url{https://github.com/cooper-org/cooper}},
     year={2022}
