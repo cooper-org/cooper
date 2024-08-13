@@ -64,7 +64,7 @@ docs = [
     "sphinxcontrib-bibtex>=2.6.2",
     "torchvision>=0.13.0,<1.0.0",
 ]
-examples = [
+notebooks = [
     "matplotlib>=3.8.4,<4.0.0",
     "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "torchvision>=0.13.0,<1.0.0",
