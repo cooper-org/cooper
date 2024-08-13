@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import cooper
-from tests.helpers import testing_utils
+import testing
 
 
 def evaluate_multiplier(multiplier, all_indices):
@@ -126,7 +126,7 @@ def test_ineq_post_step_(constraint_type, multiplier_class, init_multiplier_tens
 
 
 def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constraints, random_seed):
-    generator = testing_utils.frozen_rand_generator(random_seed)
+    generator = testing.frozen_rand_generator(random_seed)
 
     multiplier_init = torch.randn(num_constraints, generator=generator)
     new_multiplier = explicit_multiplier_class(init=multiplier_init)

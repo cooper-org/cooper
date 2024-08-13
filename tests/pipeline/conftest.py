@@ -4,8 +4,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
-from tests.helpers import cooper_test_utils
+import testing
 
 PRIMAL_LR = 3e-2
 DUAL_LR = 2e-1
@@ -75,13 +74,13 @@ def extrapolation(request, formulation_type):
 
 @pytest.fixture(
     params=[
-        cooper_test_utils.AlternationType.FALSE,
-        cooper_test_utils.AlternationType.PRIMAL_DUAL,
-        cooper_test_utils.AlternationType.DUAL_PRIMAL,
+        testing.AlternationType.FALSE,
+        testing.AlternationType.PRIMAL_DUAL,
+        testing.AlternationType.DUAL_PRIMAL,
     ]
 )
 def alternation_type(request, extrapolation, formulation_type):
-    is_alternation = request.param != cooper_test_utils.AlternationType.FALSE
+    is_alternation = request.param != testing.AlternationType.FALSE
 
     if extrapolation and is_alternation:
         pytest.skip("Extrapolation is only supported for simultaneous updates.")
@@ -92,7 +91,7 @@ def alternation_type(request, extrapolation, formulation_type):
 
 @pytest.fixture
 def unconstrained_cmp(device, num_variables):
-    cmp = cooper_test_utils.SquaredNormLinearCMP(num_variables=num_variables, device=device)
+    cmp = testing.SquaredNormLinearCMP(num_variables=num_variables, device=device)
     return cmp
 
 
@@ -151,18 +150,16 @@ def cmp(
     cmp_kwargs[f"{prefix}_formulation_type"] = formulation_type
     cmp_kwargs[f"{prefix}_penalty_coefficient_type"] = penalty_coefficient_type
 
-    cmp = cooper_test_utils.SquaredNormLinearCMP(**cmp_kwargs)
+    cmp = testing.SquaredNormLinearCMP(**cmp_kwargs)
     return cmp
 
 
 @pytest.fixture
 def cooper_optimizer_no_constraint(unconstrained_cmp, params):
-    primal_optimizers = cooper_test_utils.build_primal_optimizers(
+    primal_optimizers = testing.build_primal_optimizers(
         params, primal_optimizer_kwargs=[{"lr": PRIMAL_LR} for _ in range(len(params))]
     )
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
-        cmp=unconstrained_cmp, primal_optimizers=primal_optimizers
-    )
+    cooper_optimizer = testing.build_cooper_optimizer(cmp=unconstrained_cmp, primal_optimizers=primal_optimizers)
     return cooper_optimizer
 
 
@@ -173,11 +170,11 @@ def cooper_optimizer(
     primal_optimizer_kwargs = [{"lr": PRIMAL_LR}]
     if use_multiple_primal_optimizers:
         primal_optimizer_kwargs.append({"lr": 10 * PRIMAL_LR, "betas": (0.0, 0.0), "eps": 10.0})
-    primal_optimizers = cooper_test_utils.build_primal_optimizers(
+    primal_optimizers = testing.build_primal_optimizers(
         params, extrapolation, primal_optimizer_kwargs=primal_optimizer_kwargs
     )
 
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
+    cooper_optimizer = testing.build_cooper_optimizer(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         extrapolation=extrapolation,
@@ -193,7 +190,7 @@ def cooper_optimizer(
 def penalty_updater(formulation_type):
     if formulation_type != cooper.AugmentedLagrangianFormulation:
         return None
-    penalty_updater = MultiplicativePenaltyCoefficientUpdater(
+    penalty_updater = cooper.multipliers.MultiplicativePenaltyCoefficientUpdater(
         growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
     )
     return penalty_updater

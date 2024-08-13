@@ -105,7 +105,7 @@ target-version = "py39"
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["cooper", "tests"]
+known-first-party = ["cooper"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -149,6 +149,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"testing/*" = ["ANN", "N801", "N802", "N803", "N806"]
 "tests/*" = ["ANN", "C901", "N801", "N802", "N803", "N806"]
 "docs/*" = ["ANN"]
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]

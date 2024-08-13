@@ -1,8 +1,8 @@
 import pytest
 import torch
 
+import testing
 from cooper import multipliers
-from tests.helpers import testing_utils
 
 
 @pytest.fixture(params=[1, 100])
@@ -12,7 +12,7 @@ def num_constraints(request):
 
 @pytest.fixture
 def init_tensor(num_constraints):
-    generator = testing_utils.frozen_rand_generator()
+    generator = testing.frozen_rand_generator()
     return torch.rand(num_constraints, generator=generator)
 
 

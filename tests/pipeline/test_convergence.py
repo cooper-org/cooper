@@ -1,6 +1,6 @@
 import torch
 
-from tests.helpers import cooper_test_utils
+import testing
 
 
 def test_convergence_no_constraint(unconstrained_cmp, params, cooper_optimizer_no_constraint):
@@ -21,7 +21,7 @@ def test_convergence_with_constraint(
 
     for _ in range(2000):
         roll_kwargs = {"compute_cmp_state_kwargs": {"x": torch.cat(params)}}
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == testing.AlternationType.PRIMAL_DUAL:
             roll_kwargs["compute_violations_kwargs"] = {"x": torch.cat(params)}
 
         roll_out = cooper_optimizer.roll(**roll_kwargs)

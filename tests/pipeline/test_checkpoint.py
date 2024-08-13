@@ -7,7 +7,7 @@ from collections.abc import Sequence
 import torch
 
 import cooper
-from tests.helpers import cooper_test_utils, testing_utils
+import testing
 
 DUAL_LR = 1e-2
 
@@ -33,7 +33,7 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
     A = torch.randn(num_constraints, num_variables, device=device, generator=generator)
     b = torch.randn(num_constraints, device=device, generator=generator)
 
-    return cooper_test_utils.SquaredNormLinearCMP(
+    return testing.SquaredNormLinearCMP(
         num_variables=num_variables,
         has_ineq_constraint=True,
         ineq_multiplier_type=multiplier_type,
@@ -53,8 +53,8 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
 
-    primal_optimizers = cooper_test_utils.build_primal_optimizers(list(model.parameters()))
-    cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
+    primal_optimizers = testing.build_primal_optimizers(list(model.parameters()))
+    cooper_optimizer = testing.build_cooper_optimizer(
         cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizer_kwargs={"lr": DUAL_LR}
     )
     cooper_optimizer_class = type(cooper_optimizer)
@@ -100,10 +100,10 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     loaded_model.load_state_dict(model_state_dict_100)
     loaded_model.to(device=device)
 
-    loaded_primal_optimizers = cooper_test_utils.build_primal_optimizers(list(loaded_model.parameters()))
+    loaded_primal_optimizers = testing.build_primal_optimizers(list(loaded_model.parameters()))
     loaded_dual_optimizers = None
     if any(new_cmp.constraints()):
-        loaded_dual_optimizers = cooper_test_utils.build_dual_optimizers(
+        loaded_dual_optimizers = testing.build_dual_optimizers(
             dual_parameters=new_cmp.dual_parameters(), dual_optimizer_kwargs={"lr": DUAL_LR}
         )
 
@@ -120,6 +120,6 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     # ------------ Compare checkpoint and loaded-then-trained objects ------------
     # Compare 0-200 state_dicts versus the 0-100;100-200 state_dicts
-    assert testing_utils.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
-    assert testing_utils.validate_state_dicts(loaded_cooper_optimizer.state_dict(), cooper_optimizer_state_dict_200)
-    assert testing_utils.validate_state_dicts(new_cmp.state_dict(), cmp_state_dict_200)
+    assert testing.validate_state_dicts(loaded_model.state_dict(), model_state_dict_200)
+    assert testing.validate_state_dicts(loaded_cooper_optimizer.state_dict(), cooper_optimizer_state_dict_200)
+    assert testing.validate_state_dicts(new_cmp.state_dict(), cmp_state_dict_200)

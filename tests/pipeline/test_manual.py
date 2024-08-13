@@ -5,8 +5,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
-from tests.helpers import cooper_test_utils
+import testing
 
 PRIMAL_LR = 3e-2
 DUAL_LR = 2e-1
@@ -51,14 +50,14 @@ class TestConvergence:
         The manual implementation assumes Stochastic Gradient Descent (SGD) is used for both the primal
         and dual optimizers.
         """
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
+        if alternation_type == testing.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
             pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
 
         x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=PRIMAL_LR)
 
-        cooper_optimizer = cooper_test_utils.build_cooper_optimizer(
+        cooper_optimizer = testing.build_cooper_optimizer(
             cmp=self.cmp,
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,
@@ -70,12 +69,12 @@ class TestConvergence:
 
         penalty_updater = None
         if self.is_augmented_lagrangian:
-            penalty_updater = MultiplicativePenaltyCoefficientUpdater(
+            penalty_updater = cooper.multipliers.MultiplicativePenaltyCoefficientUpdater(
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 
         roll_kwargs = {"compute_cmp_state_kwargs": {"x": x}}
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == testing.AlternationType.PRIMAL_DUAL:
             roll_kwargs["compute_violations_kwargs"] = {"x": x}
 
         manual_x = torch.ones(self.num_variables, device=self.device)
@@ -90,7 +89,7 @@ class TestConvergence:
             if self.is_augmented_lagrangian:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-            if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+            if alternation_type == testing.AlternationType.PRIMAL_DUAL:
                 observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
             else:
                 observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
@@ -197,7 +196,7 @@ class TestConvergence:
         return torch.sum(penalty_coeff[strict_features] * multiplier[strict_features] * violation)
 
     def _update_penalty_coefficients(self, x, x_prev, strict_features, alternation_type, penalty_coeff):
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == testing.AlternationType.PRIMAL_DUAL:
             strict_violation = self._violation(x, strict=True)[strict_features]
         else:
             strict_violation = self._violation(x_prev, strict=True)[strict_features]
@@ -263,10 +262,10 @@ class TestConvergence:
     def manual_roll(self, x, multiplier, features, strict_features, alternation_type, penalty_coeff, extrapolation):
         if extrapolation:
             return self._extragradient_roll(x, multiplier, features, strict_features)
-        if alternation_type == cooper_test_utils.AlternationType.FALSE:
+        if alternation_type == testing.AlternationType.FALSE:
             return self._simultaneous_roll(x, multiplier, features, strict_features)
-        if alternation_type == cooper_test_utils.AlternationType.DUAL_PRIMAL:
+        if alternation_type == testing.AlternationType.DUAL_PRIMAL:
             return self._dual_primal_roll(x, multiplier, features, strict_features, penalty_coeff)
-        if alternation_type == cooper_test_utils.AlternationType.PRIMAL_DUAL:
+        if alternation_type == testing.AlternationType.PRIMAL_DUAL:
             return self._primal_dual_roll(x, multiplier, features, strict_features, penalty_coeff)
         raise ValueError(f"Unknown alternation type: {alternation_type}")
