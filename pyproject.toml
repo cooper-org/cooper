@@ -35,7 +35,6 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "torch>=1.13.1",
     "typing-extensions>=4.8.0",
 ]
@@ -47,6 +46,7 @@ dev = [
     "cvxpy>=1.5.2",
     "jupytext==1.16.3",
     "mypy>=1.11.1",
+    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "pre-commit>=3.7.1",
     "pytest>=8.3.2",
     "ruff==0.5.7",
@@ -55,6 +55,7 @@ dev = [
 docs = [
     "matplotlib>=3.8.4,<4.0.0",
     "myst-nb>=1.1.1",
+    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "sphinx>=7.4.7",
     "sphinx-autobuild>=2024.4.16",
     "sphinx-autodoc-typehints>=2.2.3",
@@ -65,11 +66,13 @@ docs = [
 ]
 examples = [
     "matplotlib>=3.8.4,<4.0.0",
+    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "torchvision>=0.13.0,<1.0.0",
 ]
 tests = [
     "coverage>=7.6.1",
     "cvxpy>=1.5.2",
+    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "pytest>=8.3.2",
 ]
 
