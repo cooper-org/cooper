@@ -3,7 +3,8 @@
 [![LICENSE](https://img.shields.io/pypi/l/cooper-optim)](https://github.com/cooper-org/cooper/tree/master/LICENSE)
 [![Version](https://img.shields.io/pypi/v/cooper-optim?label=version)](https://pypi.python.org/pypi/cooper-optim)
 [![Downloads](https://static.pepy.tech/badge/cooper-optim)](https://pypi.python.org/pypi/cooper-optim)
-[![Python](https://img.shields.io/pypi/pyversions/cooper-optim)](https://pypi.python.org/pypi/cooper-optim)
+[![Python](https://img.shields.io/pypi/pyversions/cooper-optim.svg?style=flat&logo=python&logoColor=white&label=Python)](https://pypi.python.org/pypi/cooper-optim)
+[![PyTorch](https://img.shields.io/badge/PyTorch-1.13.1+-EE4C2C.svg?logo=pytorch)](https://pytorch.org/docs/stable/index.html)
 [![DOCS](https://readthedocs.org/projects/cooper/badge/?version=latest)](https://cooper.readthedocs.io/en/latest/?version=latest)
 [![Coverage badge](https://raw.githubusercontent.com/cooper-org/cooper/python-coverage-comment-action-data/badge.svg)](https://github.com/cooper-org/cooper/tree/python-coverage-comment-action-data)
 [![Continuous Integration](https://github.com/cooper-org/cooper/actions/workflows/ci.yml/badge.svg)](https://github.com/cooper-org/cooper/actions/workflows/ci.yml)
@@ -13,7 +14,9 @@
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/Aq5PjH8m6E)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-## About
+## What is Cooper?
+
+TODO:
 
 **Cooper** is a toolkit for Lagrangian-based constrained optimization in PyTorch.
 This library aims to encourage and facilitate the study of constrained
@@ -39,78 +42,96 @@ continue to integrate more of TFCO's features in future releases.
 ⚠️ This library is under active development. Future API changes might break backward
 compatibility. ⚠️
 
+TODO: mention MLOSS paper
+TODO: mention Cooper poster?
+
+| [**Installation**](#installation) | [**Getting Started**](#getting-started) | [**Package Structure**](#package-structure) | [**Contributions**](#contributions) | [**Acknowledgements**](#acknowledgements) | [**License**](#license) | [**How to cite Cooper**](#how-to-cite-cooper) | [**FAQ**](#faq) |
+
+
+## Installation
+
+To install the latest release of Cooper, use the following command:
+
+```bash
+pip install cooper-optim
+```
+
+To install the latest **development** version, use the following command instead:
+
+```bash
+pip install git+https://github.com/cooper-org/cooper
+```
+
 ## Getting Started
 
-Here we consider a simple convex constrained optimization problem that involves
-training a Logistic Regression clasifier on the MNIST dataset. The model is
-constrained so that the squared L2 norm of its parameters is less than 1.
+This is an abstract example on how to solve a constrained optimization problem with
+**Cooper**. You can find runnable notebooks in our [**Tutorials**](#TODO).
 
-This example illustrates how **Cooper** integrates with:
-- constructing a ``cooper.LagrangianFormulation`` and a ``cooper.SimultaneousOptimizer``
-- models defined using a ``torch.nn.Module``,
-- CUDA acceleration,
-- typical machine learning training loops,
-- extracting the value of the Lagrange multipliers from a ``cooper.LagrangianFormulation``.
+[comment]: <The user implements a \texttt{ConstrainedMinimization-} \texttt{Problem} (\CMP) holding \texttt{Constraint} objects, each in turn holding a corresponding \texttt{Multiplier}. The \CMP's \texttt{compute\_cmp\_state} method returns the objective value and constraints violations, stored in a \texttt{CMPState} dataclass. \texttt{CooperOptimizer}s wrap the primal and dual optimizers and perform updates (such as simultaneous GDA). The \texttt{roll} method of \texttt{CooperOptimizer}s is a convenience function to (i) perform a \texttt{zero\_grad} on all optimizers, (ii) compute the Lagrangian, (iii) call its \texttt{backward} and (iv) perform the primal and dual optimizer steps.>
 
-Please visit the entry in the **Tutorial Gallery** for a complete version of the code.
+-   `cooper` - base package
+    -   `problem` - abstract class for representing ConstrainedMinimizationProblems (CMPs)
+    -   `constrained_optimizer` - `torch.optim.Optimizer`-like class for handling CMPs
+    -   `lagrangian_formulation` - Lagrangian formulation of a CMP
+    -   `multipliers` - utility class for Lagrange multipliers
+    -   `optim` - aliases for PyTorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
+-   `tests` - unit tests for `cooper` components
+-   `tutorials` - source code for examples contained in the tutorial gallery
+
 
 ```python
 import cooper
 import torch
 
-train_loader = ... # Create a PyTorch Dataloader for MNIST
-loss_fn = torch.nn.CrossEntropyLoss()
 
-# Create a Logistic Regression model
-model = torch.nn.Linear(in_features=28 * 28, out_features=10, bias=True)
-if torch.cuda.is_available():
-    model = model.cuda()
-primal_optimizer = torch.optim.Adagrad(model.parameters(), lr=5e-3)
+class MyCMP(cooper.ConstrainedMinimizationProblem)
+    def __init__(self):
+        multiplier = cooper.multipliers.DenseMultiplier(num_constraints=..., device=...)
+        # By default constraints are built using `formulation_type=cooper.LagrangianFormulation`
+        self.constraint = cooper.Constraint(
+            multiplier=multiplier, constraint_type=cooper.ConstraintType.INEQUALITY
+        )
 
-# Create a Cooper formulation, and pick a PyTorch optimizer class for the dual variables
-formulation = cooper.LagrangianFormulation()
-dual_optimizer = cooper.optim.partial_optimizer(torch.optim.SGD, lr=1e-3)
+    def compute_cmp_state(self, model, inputs, targets):
+        loss = ...
+        constraint_state = cooper.ConstraintState(violation=...)
+        observed_constraints = {self.constraint, constraint_state}
 
-# Create a ConstrainedOptimizer for performing simultaneous updates based on the
-# formulation, and the selected primal and dual optimizers.
-cooper_optimizer = cooper.SimultaneousOptimizer(
-    formulation, primal_optimizer, dual_optimizer
+        return cooper.CMPState(loss=loss, observed_constraints=observed_constraints)
+
+train_loader = ...
+model = ...
+cmp = MyCMP()
+
+primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# Must set `maximize=True` since the Lagrange multipliers solve a _maximization_ problem
+dual_optimizer = torch.optim.SGD(cmp.dual_parameters(), lr=1e-2, maximize=True)
+
+cooper_optimizer = cooper.optim.SimultaneousOptimizer(
+    cmp=cmp, primal_optimizers=primal_optimizer, dual_optimizers=dual_optimizer
 )
 
-for epoch_num in range(50):
-    for batch_num, (inputs, targets) in enumerate(train_loader):
+for epoch_num in range(NUM_EPOCHS):
+    for inputs, targets in train_loader:
+        inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
 
-        if torch.cuda.is_available():
-            inputs, targets = inputs.cuda(), targets.cuda()
-
-        logits = model.forward(inputs.view(inputs.shape[0], -1))
-        loss = loss_fn(logits, targets)
-
-        sq_l2_norm = model.weight.pow(2).sum() + model.bias.pow(2).sum()
-        # Constraint defects use convention “g - \epsilon ≤ 0”
-        constraint_defect = sq_l2_norm - 1.0
-
-        # Create a CMPState object, which contains the loss and constraint defect
-        cmp_state = cooper.CMPState(loss=loss, ineq_defect=constraint_defect)
-
-        cooper_optimizer.zero_grad()
-        lagrangian = formulation.compute_lagrangian(pre_computed_state=cmp_state)
-        formulation.backward(lagrangian)
-        cooper_optimizer.step()
-
-    # We can extract the value of the Lagrange multiplier for the constraint
-    # The dual variables are stored and updated internally by Cooper
-    lag_multiplier, _ = formulation.state()
-
+        # `roll` is a convenience function that packages together the evaluation
+        # of the loss, call for gradient computation, the primal and dual updates and zero_grad
+        compute_cmp_state_kwargs = {"model": model, "inputs": inputs, "targets": targets}
+        roll_out = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
+        # `roll_out` is a struct containing the loss, last CMPState, and the primal
+        # and dual Lagrangian stores, useful for inspection and logging
 ```
 
-## Installation
 
-### Basic Installation
+## Contributions
 
-```bash
-pip install cooper-optim
-```
+Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md)
+guide prior to submitting a pull request. We use `ruff` for formatting and linting, and `mypy` for type checking.
+
+We test all pull requests. We rely on this for reviews, so please make sure any
+new code is tested. Tests for `cooper` go in the `tests` folder in the root of
+the repository.
 
 ### Development Installation
 
@@ -125,63 +146,31 @@ to the **Cooper** root directory and install the package in development mode by 
 | Tutorials   | `pip install --editable ".[notebooks]"` | Install dependencies for running notebooks.     |
 | Docs        | `pip install --editable ".[docs]"`      | Used to generate the documentation.             |
 
-## Package structure
 
--   `cooper` - base package
-    -   `problem` - abstract class for representing ConstrainedMinimizationProblems (CMPs)
-    -   `constrained_optimizer` - `torch.optim.Optimizer`-like class for handling CMPs
-    -   `lagrangian_formulation` - Lagrangian formulation of a CMP
-    -   `multipliers` - utility class for Lagrange multipliers
-    -   `optim` - aliases for PyTorch optimizers and [extra-gradient versions](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py) of SGD and Adam
--   `tests` - unit tests for `cooper` components
--   `tutorials` - source code for examples contained in the tutorial gallery
+## Acknowledgements
 
-## Contributions
-
-Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md)
-guide prior to submitting a pull request. We use `black` for formatting, `isort`
-for import sorting, `flake8` for linting, and `mypy` for type checking.
-
-We test all pull requests. We rely on this for reviews, so please make sure any
-new code is tested. Tests for `cooper` go in the `tests` folder in the root of
-the repository.
+We thank Manuel Del Verme, Daniel Otero, and Isabel Urrego for useful discussions during the early stages of **Cooper**.
 
 ## License
 
 **Cooper** is distributed under an MIT license, as found in the
 [LICENSE](https://github.com/cooper-org/cooper/tree/master/LICENSE) file.
 
-## Projects built with Cooper
 
-- J. Gallego-Posada et al. Controlled Sparsity via Constrained Optimization or: How I Learned to Stop Tuning Penalties and Love Constraints. In [NeurIPS 2022](https://arxiv.org/abs/2208.04425).
-- S. Lachapelle and S. Lacoste-Julien. Partial Disentanglement via Mechanism Sparsity. In [CLR Workshop at UAI 2022](https://arxiv.org/abs/2207.07732).
-- J. Ramirez and J. Gallego-Posada. L0onie: Compressing COINS with L0-constraints. In [Sparsity in Neural Networks Workshop 2022](https://arxiv.org/abs/2207.04144).
+## How to cite **Cooper**
 
-*If you would like your work to be highlighted in this list, please open a pull request.*
-
-## Acknowledgements
-
-**Cooper** supports the use of extra-gradient style optimizers for solving the
-min-max Lagrangian problem. We include the implementations of the
-[extra-gradient version](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py)
-of SGD and Adam by Hugo Berard.
-
-We thank Manuel del Verme for insightful discussions during the early stages of
-this library.
-
-This README follows closely the style of the [NeuralCompression](https://github.com/facebookresearch/NeuralCompression)
-repository.
-
-## How to cite this work?
-
-If you find **Cooper** useful in your research, please consider citing it using
-the snippet below:
+To cite **Cooper**, please cite [this paper](link-to-paper):
 
 ```bibtex
-@misc{gallegoPosada2022cooper,
+@misc{gallegoPosada2024cooper,
     author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
-    title={Cooper: a toolkit for Lagrangian-based constrained optimization},
+    title={{Cooper: A Library for Constrained Optimization in Deep Learning}},
     howpublished={\url{https://github.com/cooper-org/cooper}},
-    year={2022}
+    year={2024}
 }
 ```
+
+
+## FAQ
+
+### ...
