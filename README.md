@@ -84,6 +84,7 @@ import torch
 
 class MyCMP(cooper.ConstrainedMinimizationProblem):
     def __init__(self):
+        super().__init__()
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=..., device=...)
         # By default, constraints are built using `formulation_type=cooper.LagrangianFormulation`
         self.constraint = cooper.Constraint(
@@ -116,7 +117,7 @@ for epoch_num in range(NUM_EPOCHS):
         # of the loss, call for gradient computation, the primal and dual updates and zero_grad
         compute_cmp_state_kwargs = {"model": model, "inputs": inputs, "targets": targets}
         roll_out = cooper_optimizer.roll(compute_cmp_state_kwargs=compute_cmp_state_kwargs)
-        # `roll_out` is a struct containing the loss, last CMPState, and the primal
+        # `roll_out` is a namedtuple containing the loss, last CMPState, and the primal
         # and dual Lagrangian stores, useful for inspection and logging
 ```
 
@@ -214,12 +215,14 @@ TODO: emojis?
 </details>
 
 <details>
-  <summary>
+  <summary style="font-size: 1.2rem;">
     What is a good starting configuration for a Cooper optimizer (primal and dual)?
   </summary>
+  <div style="margin-left: 20px;">
     For the dual optimizer, we recommend using SGD with a learning rate not too high to avoid overshoots and setting `maximize=True`.
     <br>
     For the primal optimizer, we recommend ...
+  </div>
 </details>
 
 <details>

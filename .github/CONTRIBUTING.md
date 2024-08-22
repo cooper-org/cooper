@@ -75,26 +75,26 @@ Please follow these steps to contribute:
 9. Once you are satisfied with your change, create a commit as follows (
    [how to write a commit message](https://chris.beams.io/posts/git-commit/)):
 
-```bash
-git add file1.py file2.py ...
-git commit -m "Your commit message"
-```
+    ```bash
+    git add file1.py file2.py ...
+    git commit -m "Your commit message"
+    ```
 
-Then sync your code with the main repo:
+   Then sync your code with the main repo:
 
-```bash
-git fetch upstream
-git rebase upstream/main
-```
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    ```
 
-Finally, push your commit on your development branch and create a remote
-branch in your fork that you can use to create a pull request from:
+   Finally, push your commit on your development branch and create a remote
+   branch in your fork that you can use to create a pull request from:
 
-```bash
-git push --set-upstream origin name-of-change
-```
+    ```bash
+    git push --set-upstream origin name-of-change
+    ```
 
-9. Create a pull request from the **Cooper** repository and send it for review. The pull request should be aimed at the `dev` branch.
+10. Create a pull request from the **Cooper** repository and send it for review. The pull request should be aimed at the `dev` branch.
 
 If you have any questions, please feel free to ask in the issue you opened, or reach out via our [Discord server](https://discord.gg/Aq5PjH8m6E).
 
@@ -122,8 +122,8 @@ in `docs/source/notebooks`: one in `ipynb` format, and one in `md` format. The a
 is that it can be opened and executed directly in Colab; the advantage of the latter is that
 it makes it much easier to track diffs within version control.
 
-```
-pip install jupytext==1.16.0
+```bash
+pip install jupytext==1.16.4
 jupytext --sync docs/source/notebooks/new_tutorial.ipynb
 ```
 
@@ -134,7 +134,7 @@ To check that the markdown and ipynb files are properly synced, you may use the
 [pre-commit](https://pre-commit.com/) framework to perform the same check used
 by the GitHub CI:
 
-```
+```bash
 pip install pre-commit
 pre-commit run jupytext --all-files
 ```
