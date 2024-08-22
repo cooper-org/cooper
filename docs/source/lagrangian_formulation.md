@@ -15,7 +15,7 @@ Recall that we consider constrained minimization problems (CMPs) expressed as:
 $$
 \min_{x \in \Omega} & \,\, f(x) \\
 \text{s.t. } & \,\, g(x) \le \mathbf{0} \\
-             & \,\, h(x) = \mathbf{0}
+& \,\, h(x) = \mathbf{0}
 $$
 
 ## Lagrangian Formulation
@@ -104,7 +104,7 @@ The Augmented Lagrangian Method (ALM) considers a `sequence` of unconstrained
 minimization problems on the primal variables:
 
 $$
-L_{c_t}(x, \lambda^t) \triangleq f(x) + \lambda_{g, t}^{\top} \, g(x) + \lambda_{h, t}^{\top} \, h(x) + \frac{c_t}{2} ||g(x) \odot \mathbf{1}_{g(x_t) \ge 0 \vee \lambda_{g, t} > 0}||^2 +  \frac{c_t}{2} ||h(x_t)||^2
+L_{c_t}(x, \lambda^t) \triangleq f(x) + \lambda_{g, t}^{\top} \, g(x) + \lambda_{h, t}^{\top} \, h(x) + \frac{c_t}{2} ||g(x) \odot \mathbf{1}_{g(x_t) \ge 0 \vee \lambda_{g, t} > 0}||^2 + \frac{c_t}{2} ||h(x_t)||^2
 $$
 
 This problem is (approximately) minimized over the primal variables to obtain:
@@ -116,7 +116,10 @@ $$
 The found $x^{t+1}$ is used to update the estimate for the Lagrange multiplier:
 
 $$
-\begin{align}     \lambda_{t+1}^g &= \left[\lambda_t^g + c^t g(x^{t+1}) \right]^+ \\     \lambda_{t+1}^h &= \lambda_t^h + c^t h(x^{t+1}) \end{align}
+\begin{align}
+\lambda_{t+1}^g &= \left[\lambda_t^g + c^t g(x^{t+1}) \right]^+ \\
+\lambda_{t+1}^h &= \lambda_t^h + c^t h(x^{t+1})
+\end{align}
 $$
 
 The main advantage of the ALM compared to the quadratic penalty method
@@ -124,7 +127,7 @@ The main advantage of the ALM compared to the quadratic penalty method
 (under some reasonable assumptions), the algorithm can be successful without
 requiring the unbounded increase of the penalty parameter sequence $c^t$.
 The use of explicit estimates for the Lagrange multipliers contribute to
-avoiding the  ill-conditioning that is inherent in the quadratic penalty method.
+avoiding the ill-conditioning that is inherent in the quadratic penalty method.
 
 See $\S$ 4.2.1 in {cite:p}`bertsekas1999NonlinearProgramming` and
 $\S$ 17 in {cite:p}`nocedal2006NumericalOptimization` for a comprehensive

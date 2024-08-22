@@ -9,7 +9,7 @@
 We consider constrained minimization problems (CMPs) expressed as:
 
 $$
-\min_{x \in \Omega} & \,\, f(x) \\ \text{s.t. } & \,\, g(x) \le \mathbf{0} \\              & \,\, h(x) = \mathbf{0}
+\min_{x \in \Omega} & \,\, f(x) \\ \text{s.t. } & \,\, g(x) \le \mathbf{0} \\ & \,\, h(x) = \mathbf{0}
 $$
 
 Here $\Omega$ represents the domain of definition of the functions
@@ -20,6 +20,7 @@ function $h_i(x)$ corresponds to the scalar constraint
 $h_i(x) \le 0$.
 
 :::{admonition} Brief notes on conventions and terminology
+
 - We refer to $f$ as the **loss** or **main objective** to be minimized.
 - Many authors prefer making the constraint levels explicit (e.g.
   $g(x) \le \mathbf{\epsilon}$). To improve the readability of the

@@ -70,7 +70,7 @@ When constructing a
 the `dual_scheduler` parameter is expected to be a *partially instantiated*
 learning rate scheduler from PyTorch, for which the `optimizer` argument has
 **not yet** been passed. The {py:meth}`cooper.optim.partial_scheduler` method
-allows you to provide a  configuration for your `dual_scheduler`'s
+allows you to provide a configuration for your `dual_scheduler`'s
 hyperparameters. The rest of the instantiation of the `dual_scheduler` is
 managed internally by **Cooper**.
 

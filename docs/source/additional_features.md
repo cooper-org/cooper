@@ -86,7 +86,7 @@ This corresponds exactly to a (projected) gradient ascent update on the dual
 variables with "step size" $c_t$ on the function:
 
 $$
-\mathcal{L}_{c_t}(x_{t+1}, \lambda) \triangleq &  \, \, {\color{gray} \overbrace{ f(x_{t+1}) +\frac{c_t}{2} ||g(x_{t+1}) \odot \mathbf{1}_{g(x_{t+1}) \ge 0 \vee \lambda_{g} > 0}||^2 +  \frac{c_t}{2} ||h(x_{t+1})||^2}^{\text{do not contribute to gradient } \nabla_{\lambda} \mathcal{L}(x_{t+1}, \lambda)|_{\lambda = \lambda_t}}} \\ &  \, \, +  \lambda_{g}^{\top} \, g(x_{t+1}) + \lambda_{h}^{\top} \, h(x_{t+1})
+\mathcal{L}_{c_t}(x_{t+1}, \lambda) \triangleq & \, \, {\color{gray} \overbrace{ f(x_{t+1}) +\frac{c_t}{2} ||g(x_{t+1}) \odot \mathbf{1}_{g(x_{t+1}) \ge 0 \vee \lambda_{g} > 0}||^2 + \frac{c_t}{2} ||h(x_{t+1})||^2}^{\text{do not contribute to gradient } \nabla_{\lambda} \mathcal{L}(x_{t+1}, \lambda)|_{\lambda = \lambda_t}}} \\ & \, \, + \lambda_{g}^{\top} \, g(x_{t+1}) + \lambda_{h}^{\top} \, h(x_{t+1})
 $$
 
 Therefore, the sequence of Augmented Lagrangian coefficients can be identified
