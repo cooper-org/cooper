@@ -1,6 +1,5 @@
 # FAQ
 
-TODO: subsections here?
 TODO: emojis?
 
 <details>
@@ -11,6 +10,11 @@ TODO: emojis?
     Answer here. For convex problems or problems with special structure, suggest other libraries.
   </div>
 </details>
+
+If non convex
+Or stochastic
+Autograd differentiable objective and constraints (or non-differentiable constraints but with a surrogate)
+
 
 <details>
   <summary style="font-size: 1.2rem;">
@@ -26,19 +30,12 @@ TODO: emojis?
     Where can I learn more about constrained optimization?
   </summary>
   <div style="margin-left: 20px;">
-    You can find more on convex constrained optimization in the book <a href="https://web.stanford.edu/~boyd/cvxbook/">Convex Optimization</a> by Boyd and Vandenberghe.
-    For non-convex constrained optimization, you can check out the book <a href="http://athenasc.com/nonlinbook.html">Nonlinear Programming</a> by Bertsekas.
+    You can find more on convex constrained optimization in <a href="https://web.stanford.edu/~boyd/cvxbook/">Convex Optimization</a> by Boyd and Vandenberghe.
+    For non-convex constrained optimization, you can check out <a href="http://athenasc.com/nonlinbook.html">Nonlinear Programming</a> by Bertsekas.
   </div>
 </details>
 
-<details>
-  <summary style="font-size: 1.2rem;">
-    What kind of problems can I solve with <b>Cooper</b>?
-  </summary>
-  <div style="margin-left: 20px;">
-    <b>Cooper</b> is designed to solve constrained optimization problems in machine learning.
-  </div>
-</details>
+### Formulations
 
 <details>
   <summary style="font-size: 1.2rem;">
@@ -47,31 +44,29 @@ TODO: emojis?
   <div style="margin-left: 20px;">
     <b>Cooper</b> supports the following formulations:
     <ul>
-      <li>Lagrangian Formulation</li>
-      <li>Augmented Lagrangian Formulation</li>
+      <li><a href="https://cooper.readthedocs.io/en/latest/lagrangian_formulation.html#lagrangian-formulation">Lagrangian Formulation.</a></li>
+      <li><a href="https://cooper.readthedocs.io/en/latest/lagrangian_formulation.html#augmented-lagrangian-formulation">Augmented Lagrangian Formulation.</a></li>
     </ul>
   </div>
 </details>
 
+### Optimizers
+
 <details>
   <summary style="font-size: 1.2rem;">
-    When should I pick any of these formulations?
+    What is a good configuration for the primal optimizer?
   </summary>
   <div style="margin-left: 20px;">
-    <b>Lagrangian Formulation</b> is a good choice when ...
-    <br>
-    <b>Augmented Lagrangian Formulation</b> is a good choice when ...
+    You can use whichever optimizer you prefer for your task, e.g., SGD, Adam, ...
   </div>
 </details>
 
 <details>
   <summary style="font-size: 1.2rem;">
-    What is a good starting configuration for a Cooper optimizer (primal and dual)?
+    What is a good configuration for the dual optimizer?
   </summary>
   <div style="margin-left: 20px;">
-    For the dual optimizer, we recommend using SGD with a learning rate not too high to avoid overshoots and setting `maximize=True`.
-    <br>
-    For the primal optimizer, we recommend ...
+    For the dual optimizer, we recommend starting with SGD. If the dual learning rate is difficult to tune or if the Lagrange multipliers present oscillations, we recommend using <a href="TODO">nuPI</a>.
   </div>
 </details>
 
@@ -80,7 +75,7 @@ TODO: emojis?
     Which <b>Cooper</b> optimizer should I use?
   </summary>
   <div style="margin-left: 20px;">
-    <b>Cooper</b> provides a range of optimizers to choose from. The <b>AlternatingDualPrimalOptimizer</b> is a good starting point.
+    <b>Cooper</b> provides a range of CooperOptimizers to choose from. The <b>AlternatingDualPrimalOptimizer</b> is a good starting point. For details, <a href=https://cooper.readthedocs.io/en/latest/optim.html>see</a>.
   </div>
 </details>
 
@@ -91,7 +86,12 @@ TODO: emojis?
     Why is my problem not becoming feasible?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    There are several reasons why this might happen.
+    <ul>
+      <li>Check if the constraints are correctly implemented.</li>
+      <li>Check if the Lagrange multipliers are being updated correctly.</li>
+      <li>Check if the dual learning rate is too high.</li>
+    </ul>
   </div>
 </details>
 
@@ -110,7 +110,7 @@ TODO: emojis?
     How can I tell if <b>Cooper</b> found a "good" solution?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Check the constraint violations. If the constraints are satisfied, you have a good solution.
   </div>
 </details>
 
@@ -119,7 +119,7 @@ TODO: emojis?
     What quantities should I log for sanity-checking?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Log the loss, the constraint violations, the multiplier values, and the Lagrangian.
   </div>
 </details>
 
@@ -128,7 +128,7 @@ TODO: emojis?
     What do typical multiplier dynamics look like?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Answer here. Complementary slackness.
   </div>
 </details>
 
@@ -137,7 +137,7 @@ TODO: emojis?
     What should I do if my Lagrange multipliers diverge?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    You can try reducing the learning rates or using a different optimizer.
   </div>
 </details>
 
@@ -160,6 +160,16 @@ TODO: emojis?
 </details>
 
 ### Computational considerations
+
+<details>
+  <summary style="font-size: 1.2rem;">
+    Is <b>Cooper</b> computationally expensive?
+  </summary>
+  <div style="margin-left: 20px;">
+    Answer here.
+  </div>
+</details>
+
 
 <details>
   <summary style="font-size: 1.2rem;">
@@ -227,17 +237,3 @@ TODO: emojis?
     Answer here. TFCO is a good alternative.
   </div>
 </details>
-
-If non convex
-Or stochastic
-Autograd differentiable objective and constraints (or non-differentiable constraints but with a surrogate)
-Something about CMPState data structure
-Argue for cheap cost (for free, compared to general minmax game)
-Gradient of primal Lagrangian is autograd-friendly
-Gradient of a linear combination of functions
-Why are they useful?
-What should I do if they oscillate too much?
-What if they don’t stabilize/converge?
-Complementary slackness
-Dynamics/Solution
-Loss/Lagrangian/ConstraintViolation
