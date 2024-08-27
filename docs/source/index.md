@@ -7,6 +7,7 @@
 :maxdepth: 2
 
 readme
+faq
 notebooks/index
 ```
 
