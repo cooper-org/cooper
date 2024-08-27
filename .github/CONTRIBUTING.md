@@ -139,6 +139,33 @@ pip install pre-commit
 pre-commit run jupytext --all-files
 ```
 
+## Update documentation
+
+To rebuild the documentation, install several packages:
+
+```
+pip install -e '.[docs]'
+```
+
+And then run:
+
+```
+sphinx-build -b html docs/source docs/source/build/html -j auto
+```
+
+This can take a long time because it executes many of the notebooks in the documentation source;
+if you'd prefer to build the docs without executing the notebooks, you can run:
+
+```
+sphinx-build -b html -D nb_execution_mode=off docs/source docs/source/build/html -j auto
+```
+
+You can then see the generated documentation in `docs/source/build/html/index.html`.
+
+The `-j auto` option controls the parallelism of the build. You can use a number
+in place of `auto` to control how many CPU cores to use.
+
+
 ## License
 
 By contributing to **Cooper**, you agree that your contributions will be
