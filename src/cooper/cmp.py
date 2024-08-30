@@ -260,6 +260,19 @@ class ConstrainedMinimizationProblem(abc.ABC):
         while avoiding re-computation.
         """
 
+    def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:
+        if cmp_state.loss is not None and cmp_state.loss.grad is None:
+            raise ValueError("The loss tensor must have a valid gradient.")
+
+        for constraint, constraint_state in cmp_state.observed_constraints.items():
+            if constraint_state.violation.grad is None:
+                raise ValueError(f"The violation tensor of constraint {constraint} must have a valid gradient.")
+            if constraint_state.strict_violation.grad is not None:
+                raise ValueError(
+                    f"The strict violation tensor of constraint {constraint} has a non-null gradient: "
+                    f"{constraint_state.strict_violation.grad}."
+                )
+
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the violation of (a subset of) the constraints of the CMP based on
         the current value of the primal parameters. This function returns a
