@@ -2,14 +2,35 @@
 
 TODO: emojis?
 
-<details>
-  <summary style="font-size: 1.2rem;">
-    What types of problems can I solve with <b>Cooper</b>?
-  </summary>
-  <div style="margin-left: 20px;">
-    Answer here. For convex problems or problems with special structure, suggest other libraries.
-  </div>
-</details>
+How can I tell if Cooper found a good solution?
+  As a reference, consider the solution of the unconstrained problem, which is a lower bound on the solution to the constrained problem
+  Nuance with the fact that you may not actually solve the problem in the nonconvex case
+Primal optimization pipeline
+  Tune with unconstrained
+How to choose dual lr
+  1e-3 to start
+  If dual lr is Larger, pushing for feasibility faster.
+  Relationship between mini-batch size, and the relative frequency of multiplier updates.
+Noise
+  What is noise? Constraints are estimated stochastically
+  Also makes it tricky to determine if you are feasible.
+  Difficult to achieve feasibility
+  Consider evaluating the constraints at the epoch level/averaging out constraints
+  Increase batch size
+  Variance reduction
+
+
+**What are common pitfalls when implementing a CMP?**
+
+> * Make sure your constraints comply with **Cooper**'s  convention $g(\boldsymbol{x}) \leq 0$ for inequality constraints and $h(x) = 0$ for equality constraints. If you have a greater than or equal constraint $g(\boldsymbol{x}) \geq 0$, you should provide **Cooper** with $-g(\boldsymbol{x}) \leq 0$.
+>
+> * Make sure that the tensors corresponding to the loss and constraints have gradients. Avoid "creating **new** tensors" for packing multiple constraints in a single tensor as this could block gradient backpropagation: do not use `torch.tensor([g1, g2, ...])`; instead, use `torch.cat([g1, g2, ...])`. You can use the {py:meth}`~cooper.ConstrainedMinimizationProblem.sanity_check_cmp_state` to check this.
+>
+> * For efficiency, we suggest reusing as much of the computational graph as possible between loss and the constraints. For example, if both depend on the outputs of a neural network, we recommend performing a single forward pass and reusing the computed outputs for both the loss and the constraints.
+
+**What types of problems can I solve with <b>Cooper</b>?**
+Answer here. For convex problems or problems with special structure, suggest other libraries.
+
 
 If non convex
 Or stochastic
@@ -81,20 +102,11 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 
 ### Debugging and troubleshooting
 
-<details>
-  <summary style="font-size: 1.2rem;">
-    Why is my problem not becoming feasible?
-  </summary>
-  <div style="margin-left: 20px;">
-    There are several reasons why this might happen.
-    <ul>
-      <li>Check if the constraints are correctly implemented.</li>
-      <li>Check if the Lagrange multipliers are being updated correctly.</li>
-      <li>Check if the dual learning rate is too high.</li>
-    </ul>
-  </div>
-</details>
+**Why is my solution not becoming feasible?**
 
+> Start by assessing the feasibility of your problem. You may establish the feasibility of your problem by inspecting the constraints. Alternatively, you may try to solve a "feasibility problem" (by removing the loss). However, note that determining feasibility for a non-convex constrained optimization problem is intractable in general.
+>
+> Once you have determined your problem is feasible, monitor the progress of the model becoming feasible. If the primal parameters are not moving fast enough towards feasibility, you may need to tune (increase) the dual learning rate.
 
 <details>
   <summary style="font-size: 1.2rem;">
@@ -105,14 +117,10 @@ Autograd differentiable objective and constraints (or non-differentiable constra
   </div>
 </details>
 
-<details>
-  <summary style="font-size: 1.2rem;">
-    How can I tell if <b>Cooper</b> found a "good" solution?
-  </summary>
-  <div style="margin-left: 20px;">
-    Check the constraint violations. If the constraints are satisfied, you have a good solution.
-  </div>
-</details>
+**How can I tell if Cooper found a "good" solution?**
+> As a reference, consider the solution of the unconstrained problem, which is a lower bound on the solution to the constrained problem
+> Nuance with the fact that you may not actually solve the problem in the nonconvex case
+
 
 <details>
   <summary style="font-size: 1.2rem;">
@@ -132,14 +140,10 @@ Autograd differentiable objective and constraints (or non-differentiable constra
   </div>
 </details>
 
-<details>
-  <summary style="font-size: 1.2rem;">
-    What should I do if my Lagrange multipliers diverge?
-  </summary>
-  <div style="margin-left: 20px;">
-    You can try reducing the learning rates or using a different optimizer.
-  </div>
-</details>
+**What should I do if my Lagrange multipliers diverge?**
+> * Start by ensuring that your problem is feasible: for infeasible problems, the optimal Lagrange multipliers are infinite.
+> * Normally, the growth in the Lagrange multipliers (due to the accumulation of the violation) is accompanied by a "response" from the primal parameters moving towards feasibility. A lack of primal response could be due to the primal learning rate being too low.
+> * Having tuned the primal learning rate, a lack of primal response could indicate (i) that your problem is infeasible or (ii) that the constraint gradients are vanishing (impeding movement towards feasibility). In situation (ii), you may attempt reformulating the constraints to avoid the vanishing gradient.
 
 <details>
   <summary style="font-size: 1.2rem;">
