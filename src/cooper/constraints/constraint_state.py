@@ -6,7 +6,7 @@ import torch
 
 @dataclass
 class ConstraintState:
-    """State of a constraint describing the current constraint violation.
+    """State of a constraint, including the current constraint violation.
 
     Args:
         violation: Measurement of the constraint violation at some value of the primal
@@ -14,13 +14,13 @@ class ConstraintState:
             primal parameters.
         constraint_features: The features of the (differentiable) constraint. This is
             used to evaluate the Lagrange multiplier associated with a constraint.
-            For example, an `IndexedMultiplier` expects the indices of the constraints
-            whose Lagrange multipliers are to be retrieved; while an
-            `ImplicitMultiplier` expects general tensor-valued features for the
-            constraints. This field is not used for `DenseMultiplier`//s.
-            This can be used in conjunction with an `IndexedMultiplier` to indicate the
-            measurement of the violation for only a subset of the constraints within a
-            `Constraint`.
+            For example, an :py:class:`~cooper.multipliers.IndexedMultiplier` expects the
+            indices of the constraints whose Lagrange multipliers are to be retrieved;
+            while an :py:class:`~cooper.multipliers.ImplicitMultiplier` expects general
+            tensor-valued features for the constraints. This field is ignored for
+            :py:class:`~cooper.multipliers.DenseMultiplier`//s. This can be used in
+            conjunction with an `IndexedMultiplier` to indicate the measurement of the
+            violation for only a subset of the constraints within a `Constraint`.
         strict_violation: Measurement of the constraint violation which may be
             non-differentiable with respect to the primal parameters. When provided,
             the (necessarily differentiable) `violation` is used to compute the gradient
@@ -31,10 +31,10 @@ class ConstraintState:
         strict_constraint_features: The features of the (possibly non-differentiable)
             constraint. For more details, see `constraint_features`.
         contributes_to_primal_update: When `False`, we ignore the contribution of the
-            current observed constraint violation towards the primal Lagrangian, but
-            keep their contribution to the dual Lagrangian. In other words, the observed
-            violations affect the update for the dual variables but not the update for
-            the primal variables.
+            current observed constraint violation towards the **primal** Lagrangian, but
+            keep their contribution to the **dual** Lagrangian. In other words, the
+            observed violations affect the update for the dual variables but not the
+            update for the primal variables.
         contributes_to_dual_update: When `False`, we ignore the contribution of the
             current observed constraint violation towards the dual Lagrangian, but keep
             their contribution to the primal Lagrangian. In other words, the observed
@@ -52,13 +52,13 @@ class ConstraintState:
 
     def __post_init__(self) -> None:
         if self.strict_constraint_features is not None and self.strict_violation is None:
-            raise ValueError("strict_violation must be provided if strict_constraint_features is provided.")
+            raise ValueError("`strict_violation` must be provided if `strict_constraint_features` is provided.")
 
     def extract_violations(self, do_unsqueeze: bool = True) -> tuple[torch.Tensor, torch.Tensor]:
-        """Extracts the violation and strict violation from the constraint state. If
-        strict violations are not provided, patches them with the violation.
-        This function also unsqueeze the violation tensors to ensure thay have at least
-        1-dimension.
+        """Extracts the violation and strict violation from the constraint state as a
+        tuple. If strict violations are not provided, this function returns
+        `violation, violation`. If `do_unsqueeze` is set to `True`, this function also
+        unsqueezes the violation tensors to ensure thay have at least 1-dimension.
         """
         violation = self.violation
 
@@ -66,7 +66,8 @@ class ConstraintState:
 
         if do_unsqueeze:
             # If the violation is a scalar, we unsqueeze it to ensure that it has at
-            # least one dimension for using einsum.
+            # least one dimension. This is important since we use einsum to compute the
+            # contribution of the constraint to the Lagrangian.
             if violation.dim() == 0:
                 violation = violation.unsqueeze(0)
             if strict_violation.dim() == 0:
@@ -75,11 +76,9 @@ class ConstraintState:
         return violation, strict_violation
 
     def extract_constraint_features(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """Extracts the constraint features from the constraint state.
-        If strict constraint features are not provided, attempts to patch them with the
-        differentiable constraint features. Similarly, if differentiable constraint
-        features are not provided, attempts to patch them with the strict constraint
-        features.
+        """Extracts the constraint features from the constraint state as a tuple.
+        If strict constraint features are not provided, this function returns
+        `constraint_features, constraint_features`.
         """
         constraint_features = self.constraint_features
 

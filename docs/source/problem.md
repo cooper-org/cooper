@@ -9,31 +9,36 @@
 We consider constrained minimization problems (CMPs) expressed as:
 
 $$
-\min_{x \in \Omega} & \,\, f(x) \\ \text{s.t. } & \,\, g(x) \le \mathbf{0} \\ & \,\, h(x) = \mathbf{0}
+\min_{\mathbf{x} \in \Omega} & \,\, f(\mathbf{x}) \\ \text{s.t. }
+& \,\, \mathbf{g}(\mathbf{x}) \le \mathbf{0} \\ & \,\, \mathbf{h}(\mathbf{x}) = \mathbf{0}
 $$
 
 Here $\Omega$ represents the domain of definition of the functions
-$f, g$ and $h$. Note that $f$ is a scalar-valued function.
-We group together all the inequality and equality constraints into the
-vector-valued mappings $g$ and $h$. In other words, a component
-function $h_i(x)$ corresponds to the scalar constraint
-$h_i(x) \le 0$.
+$f, \mathbf{g}$ and $\mathbf{h}$. Note that $f$ is a scalar-valued function, whereas
+$\mathbf{g}$ and $\mathbf{h}$ are vector-valued functions. We group together all the
+inequality constraints in $\mathbf{g}$ and all the equality constraints in $\mathbf{h}$.
+In other words, a component function $h_i(x)$ corresponds to the scalar constraint
+$h_i(\mathbf{x}) = 0$.
 
 :::{admonition} Brief notes on conventions and terminology
 
-- We refer to $f$ as the **loss** or **main objective** to be minimized.
-- Many authors prefer making the constraint levels explicit (e.g.
-  $g(x) \le \mathbf{\epsilon}$). To improve the readability of the
-  code, we adopt the convention that the constraint levels have been
-  "absorbed" in the definition of the functions $g$ and $h$.
-- Based on this convention, we use the terms **defect** and **constraint violation**
-  interchangeably to denote the quantities $g(x)$ or $h(x)$. Note
+- We refer to $f$ as the **loss** or **objective** to be minimized.
+- We adopt the convention $g(\mathbf{x}) \le 0$ for inequality constraints and
+  $h(\mathbf{x}) = 0$ for equality constraints. If your constraints are different,
+  for example $g(\mathbf{x}) \ge \epsilon$, you should provide **Cooper** with
+  $\epsilon - g(\mathbf{x}) \le 0$.
+- We use the term **constraint violation** to refer to $\mathbf{g}(\mathbf{x})$ and
+    $\mathbf{h}(\mathbf{x})$.
   that equality constraints $h(x)$ are satisfied *only* when their
   defect is zero. On the other hand, a *negative* defect for an inequality
   constraint  $g(x)$ means that the constraint is *strictly* satisfied;
   while a *positive* defect means that the inequality constraint is being
   violated.
 :::
+
+## Constraints
+TODO
+
 
 ## CMP State
 
@@ -159,6 +164,8 @@ constraints (e.g. orthogonal or PSD matrices), you might consider using
 ```
 
 ## Formulation
+
+TODO: move somewhere else?
 
 Formulations denote mathematical or algorithmic techniques aimed at solving a
 specific (family of) CMP. **Cooper** is heavily (but not exclusively!) designed

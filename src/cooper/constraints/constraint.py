@@ -7,9 +7,19 @@ from cooper.utils import ConstraintType
 
 
 class Constraint:
-    """Constraint."""
+    """This class is used to define a constraint in the optimization problem.
 
-    # TODO(gallego-posada): Add documentation
+    Args:
+        constraint_type: One of `cooper.ConstraintType.EQUALITY` or
+            `cooper.ConstraintType.INEQUALITY`.
+        multiplier: The Lagrange multiplier associated with the constraint.
+        formulation_type: The type of formulation for the constrained optimization
+            problem. Must be a subclass of :py:class:`~cooper.formulations.Formulation`.
+            The default is :py:class:`~cooper.formulations.LagrangianFormulation`.
+        penalty_coefficient: The penalty coefficient used to penalize the constraint
+            violation. This is only used for some formulations, such as the
+            :py:class:`~cooper.formulations.AugmentedLagrangianFormulation`.
+    """
 
     def __init__(
         self,
