@@ -1,3 +1,5 @@
+(optim) =
+
 # Constrained Optimizer
 
 ```{eval-rst}

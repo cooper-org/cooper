@@ -1,10 +1,6 @@
-```{eval-rst}
-.. currentmodule:: cooper.problem
-```
-
 (cmp)=
 
-# Constrained Minimization Problem
+# Constrained Minimization Problems
 
 We consider constrained minimization problems (CMPs) expressed as:
 
@@ -13,40 +9,124 @@ $$
 & \,\, \mathbf{g}(\mathbf{x}) \le \mathbf{0} \\ & \,\, \mathbf{h}(\mathbf{x}) = \mathbf{0}
 $$
 
-Here $\Omega$ represents the domain of definition of the functions
-$f, \mathbf{g}$ and $\mathbf{h}$. Note that $f$ is a scalar-valued function, whereas
-$\mathbf{g}$ and $\mathbf{h}$ are vector-valued functions. We group together all the
-inequality constraints in $\mathbf{g}$ and all the equality constraints in $\mathbf{h}$.
+Here $\Omega$ represents the domain of definition of the functions $f, \mathbf{g}$ and $\mathbf{h}$. Note that $f$ is a scalar-valued function, whereas $\mathbf{g}$ and $\mathbf{h}$ are vector-valued functions. We group together all the inequality constraints in $\mathbf{g}$ and all the equality constraints in $\mathbf{h}$.
 In other words, a component function $h_i(x)$ corresponds to the scalar constraint
 $h_i(\mathbf{x}) = 0$.
 
-:::{admonition} Brief notes on conventions and terminology
+:::{admonition} Conventions and terminology
 
 - We refer to $f$ as the **loss** or **objective** to be minimized.
-- We adopt the convention $g(\mathbf{x}) \le 0$ for inequality constraints and
-  $h(\mathbf{x}) = 0$ for equality constraints. If your constraints are different,
-  for example $g(\mathbf{x}) \ge \epsilon$, you should provide **Cooper** with
-  $\epsilon - g(\mathbf{x}) \le 0$.
-- We use the term **constraint violation** to refer to $\mathbf{g}(\mathbf{x})$ and
-    $\mathbf{h}(\mathbf{x})$.
-  that equality constraints $h(x)$ are satisfied *only* when their
-  defect is zero. On the other hand, a *negative* defect for an inequality
-  constraint  $g(x)$ means that the constraint is *strictly* satisfied;
-  while a *positive* defect means that the inequality constraint is being
-  violated.
+- We adopt the convention $g(\mathbf{x}) \le 0$ for inequality constraints and $h(\mathbf{x}) = 0$ for equality constraints. If your constraints are different, for example $g(\mathbf{x}) \ge \epsilon$, you should provide **Cooper** with $\epsilon - g(\mathbf{x}) \le 0$.
+- We use the term **constraint violation** to refer to $\mathbf{g}(\mathbf{x})$ and $\mathbf{h}(\mathbf{x})$. Equality constraints $h(x)$ are satisfied *only* when their defect is zero. On the other hand, a *negative* defect for an inequality constraint $g(x)$ means that the constraint is *strictly* satisfied; while a *positive* defect means that the inequality constraint is being violated.
 :::
 
+TODO: brief intro to Lagrangian formulations and multipliers. Needed for context bellow. Define primal and dual variables.
+
+:::{warning}
+**Cooper** is primarily oriented towards **non-convex** CMPs that arise
+in many deep learning applications. That is, problems for which one of
+the functions $f, \mathbf{g}, \mathbf{h}$ is non-convex. While the techniques
+implemented in **Cooper** are applicable to convex problems as well, we
+recommend using specialized solvers for convex optimization problems whenever
+possible.
+:::
+
+In order to express CMPs, we will define the following objects:
+- {py:class}`~cooper.constraints.Constraint`: represents a group of constraints, either equality or inequality.
+- {py:class}`~cooper.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method `compute_cmp_state` that computes the loss and constraints at a given point.
+
+Moreover, in order to package the values of the loss and constraints, we will define the following objects:
+- {py:class}`~cooper.constraints.ConstraintState`: represents the state of a {py:class}`~cooper.constraints.Constraint` by packaging its violation.
+- {py:class}`~cooper.CMPState`: represents the state of a CMP at a given point. It contains the values of the loss and {py:class}`~cooper.constraints.ConstraintState` objects for some or all of its associated constraints.
+
+## Example
+
+The example below illustrates the main steps that need to be carried out to
+define a {py:class}`~cooper.ConstrainedMinimizationProblem` class. In this
+
+1. *\[Line 4\]* Define a custom class which inherits from {py:class}`~cooper.ConstrainedMinimizationProblem`.
+2. *\[Line 6\]* Define a multiplier object for the constraints.
+3. *\[Line 8\]* Define the constraint object.
+4. *\[Line 10\]* Implement the `compute_cmp_state` method that computes the loss and constraints.
+5. *\[Line 12\]* Return the information about the loss and constraints packaged into a {py:class}`~cooper.CMPState`.
+6. *\[Line 18\]* (Optional) Modularize the code to allow for evaluating the constraints **only**. This is useful for optimization algorithms that sometimes need to evaluate the constraints without computing the loss.
+
+```{code-block} python
+:emphasize-lines: 4,10,14,18,20
+:linenos: true
+
+import torch
+import cooper
+
+class MyCMP(cooper.ConstrainedMinimizationProblem):
+    def __init__(self):
+        super().__init__()
+        multiplier = cooper.multipliers.DenseMultiplier(num_constraints=..., device=...)
+        # By default, constraints are built using `formulation_type=cooper.LagrangianFormulation`
+        self.constraint = cooper.Constraint(
+            multiplier=multiplier, constraint_type=cooper.ConstraintType.INEQUALITY
+        )
+
+    def compute_cmp_state(self, model, inputs, targets):
+        loss = ...
+        cmp_state = self.compute_violations(model, inputs, targets)
+        cmp_state.loss = loss
+
+        return cmp_state
+
+    def compute_violations(self, model, inputs, targets):
+        # This method is optional. It allows for evaluating the constraints without computing the loss.
+        violation = ... # ensure that the constraint follows the convention "g <= 0"
+        constraint_state = cooper.ConstraintState(violation=...)
+        observed_constraints = {self.constraint: constraint_state}
+
+        return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
+```
+
+
 ## Constraints
-TODO
+
+{py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulation.Formulation` (for example, all with a Lagrangian formulation). For combining different types of constraints or formulations, you should use separate {py:class}`~cooper.constraints.Constraint` objects.
+
+```{eval-rst}
+.. currentmodule:: cooper.constraints
+```
 
 
-## CMP State
+```{eval-rst}
+.. autoclass:: Constraint
+    :members: as_tuple
+```
+
+In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects simply contain the value of the constraint violation. However, they can be extended to enable extra functionality:
+- **Sampled constraints**: if not all violations of a {py:class}`Constraint` are observed at every step, you can still use **Cooper** by providing the observed constraint violations in the {py:class}`~cooper.constraints.ConstraintState`. To do this, provide only the observed violations in `violation`, their corresponding indices in `constraint_features`, and make sure that you are using an {py:class}`~cooper.multipliers.IndexedMultiplier` as the multiplier associated with the constraint. **Cooper** will then know which entries to consider when computing contributions of the constraint to the Lagrangian, and which to ignore.
+- **Implicit parameterization of the Lagrange multipliers** {cite:p}`narasimhan2020multiplier`: similar to the sampled constraints case, you can use an implicit parameterization for the Lagrange multipliers (a neural network, for example). In this case, the `constraint_features` must contain the input features to the Lagrange multiplier model associated with the evaluated constraints. Implicit multipliers are discussed in more detail in {doc}`multipliers`.
+- **Proxy constraints** {cite:p}`cotter2019proxy`: in some settings, it is desirable to use different constraint violations for updating the primal and dual variables. This can be achieved by a `violation`, which will be used for updating the primal variables, and a `strict_violation`, which will be used for updating the dual variables. When following this approach, ensure that the `violation` is differentiable with respect to the primal variables. Note that proxy constraints can be used in conjunction with sampled constraints and implicit parameterization of the Lagrange multipliers, by providing both `constraint_features` and `strict_constraint_features`.
+
+```{eval-rst}
+.. autoclass:: ConstraintState
+    :members: as_tuple
+```
+
+
+## CMP objects
+
+```{eval-rst}
+.. currentmodule:: cooper
+```
+
+{py:class}`ConstrainedMinimizationProblem` objects must be implemented by the user, as exemplified in the [example](#example) above.
+
+```{eval-rst}
+.. autoclass:: ConstrainedMinimizationProblem
+    :members:
+```
+
+## CMPState
 
 We represent computationally the "state" of a CMP using a {py:class}`CMPState`
-object. A `CMPState` is a {py:class}`dataclasses.dataclass` which contains the
-information about the loss and equality/inequality violations at a given point
-$x$. If a problem has no equality or inequality constraints, these
-arguments can be omitted in the creation of the `CMPState`.
+object. A {py:class}`CMPState` is a dataclass containing the information about the
+loss and the equality/inequality violations at a given point $\mathbf{x}$. The constraints included in the `CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
 
 :::{admonition} Stochastic estimates in `CMPState`
 :class: important
@@ -64,115 +144,4 @@ entail a compromise in the stability of the optimization process.
 ```{eval-rst}
 .. autoclass:: CMPState
     :members: as_tuple
-```
-
-For details on the use of proxy-constraints and the `proxy_ineq_defect` and
-`proxy_eq_defect` attributes, please see {ref}`lagrangian_formulations`.
-
-## Constrained Minimization Problem
-
-```{eval-rst}
-.. autoclass:: ConstrainedMinimizationProblem
-    :members:
-```
-
-## Example
-
-The example below illustrates the main steps that need to be carried out to
-define a `ConstrainedMinimizationProblem` in **Cooper**.
-
-1. *\[Line 4\]* Define a custom class which inherits from {py:class}`ConstrainedMinimizationProblem`.
-2. *\[Line 10\]* Write a closure function that computes the loss and constraints.
-3. *\[Line 14\]* Note how the `misc` attribute can be use to store previous results.
-4. *\[Line 18\]* Return the information about the loss and constraints packaged into a {py:class}`CMPState`.
-5. *\[Line 18\]* (Optional) Modularize the code to allow for evaluating the constraints `only`.
-
-```{code-block} python
-:emphasize-lines: 4,10,14,18,20
-:linenos: true
-
-import torch
-import cooper
-
-class MyCustomCMP(cooper.ConstrainedMinimizationProblem):
-    def __init__(self, problem_attributes, criterion):
-        self.problem_attributes = problem_attributes
-        self.criterion = criterion
-        super().__init__()
-
-    def closure(self, model, inputs, targets):
-
-        cmp_state = self.defect_fn(model, inputs, targets)
-
-        logits = cmp_state.misc["logits"]
-        loss = self.criterion(logits, targets)
-        cmp_state.loss = loss
-
-        return cmp_state
-
-    def defect_fn(self, model, inputs, targets):
-
-        logits = model.forward(inputs)
-
-        const_level0, const_level1 = self.problem_attributes
-
-        # Remember to write the constraints using the convention "g <= 0"!
-
-        # (Greater than) Inequality that only depends on the model properties or parameters
-        # g_0 >= const_level0 --> const_level0 - g_0 <= 0
-        defect0 = const_level0 - ineq_const0(model)
-
-        # (Less than) Inequality that depends on the model's predictions
-        # g_1 <= const_level1 --> g_2  - const_level1 <= 0
-        defect1 = ineq_const1(logits) - const_level1
-
-        # We recommend using torch.stack to ensure the dependencies in the computational
-        # graph are properly preserved.
-        ineq_defect = torch.stack([defect0, defect1])
-
-        return cooper.CMPState(ineq_defect=ineq_defect, eq_defect=None, misc={'logits': logits})
-```
-
-:::{warning}
-**Cooper** is primarily oriented towards **non-convex** CMPs that arise
-in many machine/deep learning settings. That is, problems for which one of
-the functions $f, g, h$ or the set $\Omega$ is non-convex.
-
-Whenever possible, we provide references to appropriate literature
-describing convergence results for our implemented (under suitable
-assumptions). In general, however, the use of Lagrangian-based approaches
-for solving non-convex CMPs does not come with guarantees regarding
-optimality or feasibility.
-
-Some theoretical results can be obtained when considering mixed strategies
-(distributions over actions for the primal and dual players), or by relaxing
-the game-theoretic solution concept (i.e. aiming for approximate/correlated
-equilibria), even for problems which are non-convex on the primal (model)
-parameters. For more details, see the work of {cite:t}`cotter2019JMLR` and
-{cite:t}`lin2020gradient` and references therein. We plan to include some
-of these techniques in future versions of **Cooper**.
-
-If you are dealing with optimization problems under "nicely behaved" convex
-constraints (e.g. cones or $L_p$-balls) we encourage you to check out
-[CHOP](https://github.com/openopt/chop). If your problems involves "manifold"
-constraints (e.g. orthogonal or PSD matrices), you might consider using
-[GeoTorch](https://github.com/Lezcano/geotorch).
-:::
-
-```{eval-rst}
-.. currentmodule:: cooper.formulation
-```
-
-## Formulation
-
-TODO: move somewhere else?
-
-Formulations denote mathematical or algorithmic techniques aimed at solving a
-specific (family of) CMP. **Cooper** is heavily (but not exclusively!) designed
-for an easy integration of Lagrangian-based formulations. You can find more
-details in {doc}`lagrangian_formulation`.
-
-```{eval-rst}
-.. autoclass:: Formulation
-    :members:
 ```

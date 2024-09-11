@@ -17,7 +17,7 @@ notebooks/index
 :maxdepth: 2
 
 problem
-lagrangian_formulation
+formulations
 constrained_optimizer
 optim
 multipliers

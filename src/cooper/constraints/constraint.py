@@ -10,8 +10,8 @@ class Constraint:
     """This class is used to define a constraint in the optimization problem.
 
     Args:
-        constraint_type: One of `cooper.ConstraintType.EQUALITY` or
-            `cooper.ConstraintType.INEQUALITY`.
+        constraint_type: One of :py:class:`cooper.ConstraintType.EQUALITY` or
+            :py:class:`cooper.ConstraintType.INEQUALITY`.
         multiplier: The Lagrange multiplier associated with the constraint.
         formulation_type: The type of formulation for the constrained optimization
             problem. Must be a subclass of :py:class:`~cooper.formulations.Formulation`.
