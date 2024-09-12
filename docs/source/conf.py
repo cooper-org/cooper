@@ -20,7 +20,7 @@ import cooper
 # -- Project information -----------------------------------------------------
 
 project = "Cooper"
-copyright = "2022, The Cooper Developers"
+copyright = "2024, The Cooper Developers"
 author = "The Cooper Developers"
 
 # The full version, including alpha/beta/rc tags
