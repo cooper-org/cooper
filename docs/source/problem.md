@@ -2,46 +2,6 @@
 
 # Constrained Minimization Problems
 
-We consider constrained minimization problems (CMPs) expressed as:
-
-$$
-\min_{\boldsymbol{x} \in \mathbb{R}^d} & \,\, f(\boldsymbol{x}) \\ \text{s.t. }
-& \,\, \boldsymbol{g}(\boldsymbol{x}) \le \boldsymbol{0} \\ & \,\, \boldsymbol{h}(\boldsymbol{x}) = \boldsymbol{0}
-$$
-
-Note that $f$ is a scalar-valued function, whereas $\boldsymbol{g}$ and $\boldsymbol{h}$ are vector-valued functions. We group together all the inequality constraints in $\boldsymbol{g}$ and all the equality constraints in $\boldsymbol{h}$.
-In other words, a component function $h_i(x)$ corresponds to the scalar constraint
-$h_i(\boldsymbol{x}) = 0$.
-
-:::{admonition} Conventions and terminology
-
-- We refer to $f$ as the **loss** or **objective** to be minimized.
-- We adopt the convention $g(\boldsymbol{x}) \le 0$ for inequality constraints and $h(\boldsymbol{x}) = 0$ for equality constraints. If your constraints are different, for example $g(\boldsymbol{x}) \ge \epsilon$, you should provide **Cooper** with $\epsilon - g(\boldsymbol{x}) \le 0$.
-- We use the term **constraint violation** to refer to $\boldsymbol{g}(\boldsymbol{x})$ and $\boldsymbol{h}(\boldsymbol{x})$. Equality constraints $h(x)$ are satisfied *only* when their defect is zero. On the other hand, a *negative* defect for an inequality constraint $g(x)$ means that the constraint is *strictly* satisfied; while a *positive* defect means that the inequality constraint is being violated.
-:::
-
-An approach for solving general non-convex CMPs is to formulate their Lagrangian and find a min-max point:
-
-$$
-\boldsymbol{x}^*, \boldsymbol{\lambda}^*, \boldsymbol{\mu}^* = \underset{\boldsymbol{x}}{\text{argmin}} \, \, \underset{\boldsymbol{\lambda} \ge \boldsymbol{0}, \boldsymbol{\mu}}{\text{argmax}} \, \, \mathcal{L}(\boldsymbol{x}, \boldsymbol{\lambda}, \boldsymbol{\mu})
-$$
-
-where $\mathcal{L}(\boldsymbol{x}, \boldsymbol{\lambda}, \boldsymbol{\mu}) = f(\boldsymbol{x}) + \boldsymbol{\lambda}^T \boldsymbol{g}(\boldsymbol{x}) + \boldsymbol{\mu}^T \boldsymbol{h}(\boldsymbol{x})$, and $\boldsymbol{\lambda}$ and $\boldsymbol{\mu}$ are the Lagrange multipliers associated with the inequality and equality constraints, respectively.
-We refer to $\boldsymbol{x}$ as the **primal variables** of the CMP, and $\boldsymbol{\lambda}$ and $\boldsymbol{\mu}$ as the **dual variables**.
-
-An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve CMPs using the Lagrangian approach, but it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
-
-An approach for finding min-max points of the Lagrangian is doing gradient descent on the primal variables and gradient ascent on the dual variables. **Cooper** leverages PyTorch's automatic differentiation framework to do this efficiently. **Cooper** also implements variants of gradient descent-ascent such as the {py:class}`~cooper.optim.Extragradient` {cite:p}`korpelevich1976extragradient` (see {doc}`optimizers`).
-
-:::{warning}
-**Cooper** is primarily oriented towards **non-convex** CMPs that arise
-in many deep learning applications. That is, problems for which one of
-the functions $f, \boldsymbol{g}, \boldsymbol{h}$ is non-convex. While the techniques
-implemented in **Cooper** are applicable to convex problems as well, we
-recommend using specialized solvers for convex optimization problems whenever
-possible.
-:::
-
 In order to express CMPs, we will define the following objects:
 - {py:class}`~cooper.constraints.Constraint`: represents a group of constraints, either equality or inequality.
 - {py:class}`~cooper.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method `compute_cmp_state` that computes the loss and constraints at a given point.

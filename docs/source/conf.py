@@ -51,12 +51,22 @@ extensions = [
 
 mathjax3_config = {
     "extensions": ["tex2jax.js"],
-    "TeX": {
-        "Macros": {
-            "argmin": "\\DeclareMathOperator*{\\argmin}{\\mathbf{arg\\,min}}",
-            "argmax": "\\DeclareMathOperator*{\\argmin}{\\mathbf{arg\\,max}}",
-            "bs": "\\newcommand{\\bs}[1]{\\boldsymbol{#1}}",
-        },
+    "tex": {
+        "macros": {
+            "argmin": ["\\underset{#1}{\\text{argmin}}", 1],
+            "argmax": ["\\underset{#1}{\\text{argmax}}", 1],
+            "reals": "\\mathbb{R}",
+            "bs": ["\\boldsymbol{#1}", 1],
+            "vx": "\\bs{x}",
+            "vlambda": "\\bs{\\lambda}",
+            "vmu": "\\bs{\\mu}",
+            "vg": "\\bs{g}",
+            "vh": "\\bs{h}",
+            "vzero": "\\bs{0}",
+            "xstar": "\\bs{x}^*",
+            "lambdastar": "\\bs{\\lambda}^*",
+            "mustar": "\\bs{\\mu}^*",
+        }
     },
     "tex2jax": {
         "inlineMath": [["$", "$"], [r"\(", r"\)"]],

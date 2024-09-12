@@ -7,6 +7,7 @@
 :maxdepth: 2
 
 readme
+constrained_optimization
 faq
 notebooks/index
 ```
