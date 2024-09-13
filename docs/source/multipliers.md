@@ -1,6 +1,6 @@
 (multipliers)=
 
-# Multipliers
+# Multipliers and Penalty Coefficients
 
 ```{eval-rst}
 .. currentmodule:: cooper.multipliers

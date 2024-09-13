@@ -1,10 +1,12 @@
 (optim) =
 
-# Constrained Optimizer
 
 ```{eval-rst}
-.. currentmodule:: cooper.optim.constrained_optimizers.constrained_optimizer
+.. currentmodule:: cooper.optim.constrained_optimizers
 ```
+
+# Constrained Optimizer
+
 
 ## `ConstrainedOptimizer` Class
 

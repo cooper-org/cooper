@@ -41,6 +41,10 @@ $$
 where $\mathcal{L}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx)$ is the Lagrangian function associated with the constrained minimization problem. $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers associated with the inequality and equality constraints, respectively.
 We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
+:::{note}
+$\mathcal{L}(x,\lambda)$ is a concave function of $\lambda$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
+:::
+
 An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
 
 :::{admonition} Why does **Cooper** use the Lagrangian approach?
@@ -55,7 +59,7 @@ Moreover, the overhead (relative to unconstrained minimization) of storing and u
 :::
 
 :::{warning}
-**Cooper** is primarily oriented towards **nonconvex** constrained optimization problems that arise in many deep learning applications. While the techniques implemented in **Cooper** are applicable to convex problems as well, we recommend using specialized solvers for convex optimization problems whenever possible.
+**Cooper** is primarily designed for **nonconvex** constrained optimization problems that arise in many deep learning applications. While the techniques implemented in **Cooper** are applicable to convex problems as well, we recommend using specialized solvers for convex optimization problems whenever possible.
 :::
 
 ## Min-max Optimization
