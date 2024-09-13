@@ -19,6 +19,8 @@ class Formulation(abc.ABC):
     """Formulations prescribe how the different constraints contribute to the primal- and
     dual-differentiable Lagrangians. In other words, they define how the constraints
     affect the gradients of the Lagrangian with respect to the primal and dual variables.
+
+    TODO: expects_penalty_coefficient
     """
 
     expects_penalty_coefficient: bool
@@ -69,6 +71,7 @@ class Formulation(abc.ABC):
         multiplier: Multiplier,
         penalty_coefficient: Optional[PenaltyCoefficient],
     ) -> Optional[ContributionStore]:
+        """TODO(juan43ramirez): Add docstring."""
         if not constraint_state.contributes_to_dual_update:
             return None
 
@@ -86,7 +89,8 @@ class Formulation(abc.ABC):
 
     @abc.abstractmethod
     def compute_contribution_to_primal_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
-        pass
+        """TODO(juan43ramirez): Add docstring."""
+        return NotImplemented
 
 
 class LagrangianFormulation(Formulation):
@@ -118,7 +122,8 @@ class AugmentedLagrangianFormulation(Formulation):
     """Implements the Augmented Lagrangian formulation.
 
     .. warning::
-        The dual optimizers must all be SGD with a ``lr=1.0`` and ``maximize=True``.
+        The dual optimizers must all be SGD with ``lr=1.0`` and ``maximize=True`` to
+        replicate the updates of the Augmented Lagrangian *method*.
     """
 
     expects_penalty_coefficient = True
