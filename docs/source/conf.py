@@ -62,10 +62,13 @@ mathjax3_config = {
             "vmu": "\\bs{\\mu}",
             "vg": "\\bs{g}",
             "vh": "\\bs{h}",
+            "vc": "\\bs{c}",
             "vzero": "\\bs{0}",
             "xstar": "\\bs{x}^*",
             "lambdastar": "\\bs{\\lambda}^*",
             "mustar": "\\bs{\\mu}^*",
+            "gtilde": "\\tilde{\\vg}",
+            "htilde": "\\tilde{\\vh}",
         }
     },
     "tex2jax": {
