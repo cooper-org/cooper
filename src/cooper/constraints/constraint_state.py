@@ -18,7 +18,7 @@ class ConstraintState:
             indices of the constraints whose Lagrange multipliers are to be retrieved;
             while an :py:class:`~cooper.multipliers.ImplicitMultiplier` expects general
             tensor-valued features for the constraints. This field is ignored for
-            :py:class:`~cooper.multipliers.DenseMultiplier`//s. This can be used in
+            :py:class:`~cooper.multipliers.DenseMultiplier`s. This can be used in
             conjunction with an `IndexedMultiplier` to indicate the measurement of the
             violation for only a subset of the constraints within a `Constraint`.
         strict_violation: Measurement of the constraint violation which may be

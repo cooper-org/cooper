@@ -4,7 +4,7 @@
 
 ## Constrained Minimization Problems
 
-We consider constrained minimization problems (CMPs) expressed as:
+We consider constrained optimization problems expressed as:
 
 $$
 \min_{\vx \in \reals^d} & \,\, f(\vx) \\ \text{s.t. }
@@ -32,7 +32,7 @@ $h_i(\vx) = 0$.
 
 ## The Lagrangian Approach
 
-An approach for solving general nonconvex CMPs is to formulate their Lagrangian and find a min-max point:
+An approach for solving general nonconvex constrained optimization problems is to formulate their Lagrangian and find a min-max point:
 
 $$
 \xstar, \lambdastar, \mustar = \argmin{\vx \in \reals^d} \, \, \argmax{\vlambda \ge \vzero, \vmu} \, \, \mathcal{L}(\vx, \vlambda, \vmu)
@@ -41,7 +41,7 @@ $$
 where $\mathcal{L}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx)$ is the Lagrangian function associated with the constrained minimization problem. $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers associated with the inequality and equality constraints, respectively.
 We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
-An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve CMPs using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
+An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
 
 :::{admonition} Why does **Cooper** use the Lagrangian approach?
 **Cooper** is designed for solving constrained optimization problems that arise in deep learning applications. These problems are often **nonconvex** and **high-dimensional**, and may require **estimating constraints stochastically** from mini-batches of data. The Lagrangian approach is well-suited to these problems for several reasons:
@@ -55,7 +55,7 @@ Moreover, the overhead (relative to unconstrained minimization) of storing and u
 :::
 
 :::{warning}
-**Cooper** is primarily oriented towards **nonconvex** CMPs that arise in many deep learning applications. While the techniques implemented in **Cooper** are applicable to convex problems as well, we recommend using specialized solvers for convex optimization problems whenever possible.
+**Cooper** is primarily oriented towards **nonconvex** constrained optimization problems that arise in many deep learning applications. While the techniques implemented in **Cooper** are applicable to convex problems as well, we recommend using specialized solvers for convex optimization problems whenever possible.
 :::
 
 ## Min-max Optimization

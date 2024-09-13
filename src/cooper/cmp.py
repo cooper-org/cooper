@@ -100,7 +100,7 @@ class CMPState:
         """Computes and accumulates the dual-differentiable Lagrangian based on the
         contribution of the observed constraints.
 
-        Note: The dual Lagrangian contained in `LagrangianStore.lagrangian` ignores the
+        The dual Lagrangian contained in `LagrangianStore.lagrangian` ignores the
         contribution of the loss, since the objective function does not depend on the
         dual variables. Therefore, `LagrangianStore.lagrangian == 0` regardless of
         the value of `self.loss`.
@@ -248,16 +248,9 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """Computes the state of the CMP based on the current value of the primal
         parameters.
 
-        The signature of this abstract function may be changed to accommodate situations
+        The signature of this function may be changed to accommodate situations
         that require a model, (mini-batched) inputs/targets, or other arguments to be
         passed.
-
-        Structuring the CMP class around this method, enables the re-use of shared
-        sections of a computational graph. For example, consider a case where we want to
-        minimize a model's cross entropy loss subject to a constraint on the entropy of
-        its predictions. Both of these quantities depend on the predicted logits (on a
-        minibatch). This closure-centric design allows flexible problem specifications
-        while avoiding re-computation.
         """
 
     def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:
@@ -274,21 +267,21 @@ class ConstrainedMinimizationProblem(abc.ABC):
                 )
 
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
-        """Computes the violation of (a subset of) the constraints of the CMP based on
-        the current value of the primal parameters. This function returns a
+        """Computes the violation of the constraints of the CMP based on the current
+        value of the primal parameters. This function returns a
         :py:class:`cooper.problem.CMPState` collecting the values of the observed
         constraints. Note that the returned ``CMPState`` may have ``loss=None`` since,
         by design, the value of the loss is not necessarily computed when evaluating
         `only` the constraints.
 
-        The signature of this "abstract" function may be changed to accommodate
-        situations that require a model, (mini-batched) inputs/targets, or other
-        arguments to be passed.
+        The signature of this function may be changed to accommodate situations
+        that require a model, (mini-batched) inputs/targets, or other arguments to be
+        passed.
 
         Depending on the problem at hand, the computation of the constraints can be
         compartimentalized in a way that is independent of the evaluation of the loss.
-        Alternatively, :py:meth:`~.ConstrainedMinimizationProblem.compute_violations`
-        may be called during the execution of the
+        In such cases, :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` may
+        be called during the execution of the
         :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` method.
         """
         raise NotImplementedError
