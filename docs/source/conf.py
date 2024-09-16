@@ -78,6 +78,8 @@ mathjax3_config = {
     "displayAlign": "left",
 }
 
+autodoc_member_order = "bysource"
+
 source_suffix = [".ipynb", ".md"]
 
 myst_enable_extensions = [
