@@ -42,7 +42,7 @@ where $\mathcal{L}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu
 We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
 :::{note}
-$\mathcal{L}(x,\lambda)$ is a concave function of $\lambda$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
+$\mathcal{L}(\vx,\vlambda)$ is a concave function of $\vlambda$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
 :::
 
 An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
@@ -93,7 +93,8 @@ The dual updates accumulate the constraint violations. Together with the primal 
 
 With **Cooper**, you can specify {py:class}`~torch.optim.Optimizer` objects for the primal and dual updates (see {doc}`optim`), allowing you to apply familiar optimization techniques such as Adam, just as you would when training deep neural networks.
 
-## Proxy Constraints
+(proxy)=
+## Non-differentiable Constraints
 
 {cite:t}`cotter2019proxy` introduce the concept of **proxy constraints** to address problems with non-differentiable constraints. In these cases, the gradient of the Lagrangian with respect to the primal variables cannot be computed, making standard gradient descent-ascent updates inadmissible.
 

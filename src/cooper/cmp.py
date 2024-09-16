@@ -43,8 +43,8 @@ class CMPState:
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
-        observed_constraints: Dictionary with :py:class:`~.Constraint` instances as keys
-            and :py:class:`~.ConstraintState` instances as values.
+        observed_constraints: Dictionary with :py:class:`~Constraint` instances as keys
+            and :py:class:`~ConstraintState` instances as values.
         misc: Optional storage space for additional information relevant to the state of
             the CMP. This dict enables persisting the results of certain computations
             for post-processing. For example, one may want to retain the value of the
@@ -269,10 +269,10 @@ class ConstrainedMinimizationProblem(abc.ABC):
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the violation of the constraints of the CMP based on the current
         value of the primal parameters. This function returns a
-        :py:class:`cooper.problem.CMPState` collecting the values of the observed
-        constraints. Note that the returned ``CMPState`` may have ``loss=None`` since,
-        by design, the value of the loss is not necessarily computed when evaluating
-        `only` the constraints.
+        :py:class:`~.CMPState` collecting the values of the observed
+        constraints. Note that the returned :py:class:`~.CMPState` may have
+        ``loss=None`` since, by design, the value of the loss is not necessarily
+        computed when evaluating `only` the constraints.
 
         The signature of this function may be changed to accommodate situations
         that require a model, (mini-batched) inputs/targets, or other arguments to be
@@ -280,7 +280,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         Depending on the problem at hand, the computation of the constraints can be
         compartimentalized in a way that is independent of the evaluation of the loss.
-        In such cases, :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` may
+        In such cases, :py:meth:`~.ConstrainedMinimizationProblem.compute_violations` may
         be called during the execution of the
         :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` method.
         """
