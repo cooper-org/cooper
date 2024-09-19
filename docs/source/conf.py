@@ -50,7 +50,6 @@ extensions = [
 ]
 
 mathjax3_config = {
-    "extensions": ["tex2jax.js"],
     "tex": {
         "macros": {
             "argmin": ["\\underset{#1}{\\text{argmin}}", 1],
@@ -71,11 +70,6 @@ mathjax3_config = {
             "htilde": "\\tilde{\\vh}",
         }
     },
-    "tex2jax": {
-        "inlineMath": [["$", "$"], [r"\(", r"\)"]],
-    },
-    "jax": ["input/TeX", "output/HTML-CSS"],
-    "displayAlign": "left",
 }
 
 autodoc_member_order = "bysource"
@@ -87,6 +81,10 @@ myst_enable_extensions = [
     "deflist",
     "dollarmath",
 ]
+
+# For adding implicit referencing, see:
+# https://myst-parser.readthedocs.io/en/latest/syntax/cross-referencing.html#implicit-targets
+myst_heading_anchors = 6
 
 nb_execution_mode = "force"
 nb_execution_allow_errors = False
@@ -140,7 +138,6 @@ html_logo = "_static/cooper_logo_200px.png"
 
 # intersphinx maps
 intersphinx_mapping = {
-    # "python": ("https://docs.python.org/3", None),
     "python": ("https://python.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "torch": ("https://pytorch.org/docs/stable/", None),

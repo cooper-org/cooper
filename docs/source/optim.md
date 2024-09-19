@@ -2,6 +2,16 @@
 
 
 ```{eval-rst}
+.. currentmodule:: cooper.optim
+```
+
+```{eval-rst}
+.. autoclass:: CooperOptimizer
+    :members:
+```
+
+
+```{eval-rst}
 .. currentmodule:: cooper.optim.constrained_optimizers
 ```
 
@@ -88,8 +98,23 @@ $$
 Point about efficiency:
 - PrimalDual: use compute_violations
 
+```{eval-rst}
+.. autoclass:: PrimalDualOptimizer
+    :members:
+```
+
+```{eval-rst}
+.. autoclass:: DualPrimalOptimizer
+    :members:
+```
+
 
 ### Extra-gradient updates
+
+```{eval-rst}
+.. autoclass:: ExtragradientConstrainedOptimizer
+    :members:
+```
 
 
 

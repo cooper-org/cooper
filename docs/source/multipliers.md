@@ -2,9 +2,16 @@
 
 # Multipliers and Penalty Coefficients
 
+
 ```{eval-rst}
 .. currentmodule:: cooper.multipliers
 ```
+
+```{eval-rst}
+.. automodule:: cooper.multipliers
+    :members:
+```
+
 
 :::{note}
 Multipliers are mostly handled internally by the
