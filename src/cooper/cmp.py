@@ -196,6 +196,11 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for multiplier in {constraint.multiplier for constraint in self.constraints()}:
             yield from multiplier.parameters()
 
+    def to_(self, *args: str, **kwargs: str) -> None:
+        # TODO: document, test
+        for constraint in self.constraints():
+            constraint.multiplier = constraint.multiplier.to(*args, **kwargs)
+
     def state_dict(self) -> dict:
         """Returns the state of the ``cmp``. This includes the state of the multipliers and penalty coefficients."""
         state_dict = {
