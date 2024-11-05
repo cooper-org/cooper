@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# Finding a discrete maximum entropy distribution.
+# Finding a maximum entropy (discrete) distribution using the Augmented Lagrangian Method.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_max_entropy_augmented_lagrangian.ipynb)
 

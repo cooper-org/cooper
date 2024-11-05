@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# Linear transformation between two vectors with constrained spectrum.
+# Finding a linear transformation between two vectors with a constrained spectrum.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_infrequent_true_constraint.ipynb)
 
