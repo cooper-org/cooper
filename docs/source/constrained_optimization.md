@@ -42,7 +42,7 @@ where $\mathcal{L}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu
 We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
 :::{note}
-$\mathcal{L}(\vx,\vlambda)$ is a concave function of $\vlambda$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
+$\mathcal{L}(\vx,\vlambda, \vmu)$ is concave in $\vlambda$ and $\vmu$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
 :::
 
 An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangianFormulation` (see {doc}`formulations`).
@@ -84,7 +84,7 @@ $$
 
 The primal updates follow a linear combination of the gradients of the loss and constraints, with the coefficients corresponding to the Lagrange multipliers. Larger values of a Lagrange multiplier result in a stronger influence of the corresponding constraint on the primal updates, promoting feasibility. Conversely, smaller values (or zero) reduce the influence of the constraint, prioritizing loss reduction.
 
-The dual updates accumulate the constraint violations. Together with the primal updates, these ensure that the constraints are satisfied:
+On the other hand, the dual updates accumulate the constraint violations. Together with the primal updates, these ensure that the constraints are satisfied:
 - **Inequality constraints**: When a constraint is violated ($\vg(\vx) > \vzero$), the corresponding Lagrange multiplier increases to penalize the violation. If the constraint is strictly satisfied ($\vg(\vx) < \vzero$), the multiplier decreases, allowing the focus to shift toward loss reduction.
 - **Equality constraints**: For a positive (resp. negative) violation, the Lagrange multiplier increases (resp. decreases). The multiplier stabilizes when the constraint is satisfied ($\vh(\vx) = \vzero$).
 
@@ -98,17 +98,17 @@ With **Cooper**, you can specify {py:class}`~torch.optim.Optimizer` objects for 
 
 {cite:t}`cotter2019proxy` introduce the concept of **proxy constraints** to address problems with non-differentiable constraints. In these cases, the gradient of the Lagrangian with respect to the primal variables cannot be computed, making standard gradient descent-ascent updates inadmissible.
 
-Proxy constraints allow for considering a differentiable surrogate of the constraint when updating the primal variables, while still using the original non-differentiable constraint for updating the dual variables. This approach enables the use of gradient-based optimization methods for problems with non-differentiable constraints, **while still ensuring that the original non-differentiable constraints are satisfied**.
+Proxy constraints allow for considering a differentiable surrogate of the constraint when updating the primal variables, while still using the **original non-differentiable constraint for updating the dual variables**. This approach enables the use of gradient-based optimization methods for problems with non-differentiable constraints, **while still ensuring the satisfaction of the original non-differentiable constraints**.
 
 Formally, the optimization problem becomes:
 
 $$
-\xstar &\in \argmin{\vx \in \reals^d} \, \, f(\vx) + [\lambdastar]^\top \vg(\vx) + [\mustar]^\top \vh(\vx) \\
-\lambdastar, \mustar &\in \argmax{\vlambda \ge \vzero, \vmu} \, \, f(\xstar) + \vlambda^\top \gtilde(\xstar) + \vmu^\top \htilde(\xstar)
+\xstar &\in \argmin{\vx \in \reals^d} \, \, f(\vx) + [\lambdastar]^\top \gtilde(\vx) + [\mustar]^\top \htilde(\vx) \\
+\lambdastar, \mustar &\in \argmax{\vlambda \ge \vzero, \vmu} \, \, f(\xstar) + \vlambda^\top \vg(\xstar) + \vmu^\top \vh(\xstar)
 $$
 
 where $\vg(\vx) \le \vzero$ and $\vh(\vx) = \vzero$ are the non-differentiable constraints of the problem, and $\gtilde(\vx) \le \vzero$ and $\htilde(\vx) = \vzero$ are differentiable surrogates of $\vg(\vx)$ and $\vh(\vx)$, respectively.
 
 The proxy constraints problem can be solved with the same gradient descent-ascent updates as before, but using the differentiable surrogates $\gtilde(\vx)$ and $\htilde(\vx)$ for the primal updates, and the original non-differentiable constraints $\vg(\vx)$ and $\vh(\vx)$ for the dual updates.
 
-**Cooper** supports proxy constraints when a `strict_violation` is provided in the {py:class}`~cooper.constraints.ConstraintState`. Here, `strict_violation` corresponds to the violation of the original non-differentiable constraint, while violation represents the violation of the differentiable surrogate.
+**Cooper** supports proxy constraints when a `strict_violation` is provided in the {py:class}`~cooper.constraints.ConstraintState`. Here, `strict_violation` corresponds to the violation of the original non-differentiable constraint, while `violation` represents the violation of the differentiable surrogate.
