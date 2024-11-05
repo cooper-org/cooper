@@ -112,3 +112,5 @@ where $\vg(\vx) \le \vzero$ and $\vh(\vx) = \vzero$ are the non-differentiable c
 The proxy constraints problem can be solved with the same gradient descent-ascent updates as before, but using the differentiable surrogates $\gtilde(\vx)$ and $\htilde(\vx)$ for the primal updates, and the original non-differentiable constraints $\vg(\vx)$ and $\vh(\vx)$ for the dual updates.
 
 **Cooper** supports proxy constraints when a `strict_violation` is provided in the {py:class}`~cooper.constraints.ConstraintState`. Here, `strict_violation` corresponds to the violation of the original non-differentiable constraint, while `violation` represents the violation of the differentiable surrogate.
+
+While proxy constraints are mainly motivated to solve problems with non-differentiable constraints, **Cooper**'s implementation allows for more general use cases. For example, if computing the exact constraint violation is expensive, you can use a cheaper-to-compute surrogate for the more frequent primal updates, while updating the dual variables with the exact constraint violation albeit less frequently (see TODO tutorial).

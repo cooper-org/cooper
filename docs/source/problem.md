@@ -11,20 +11,19 @@ $$
 
 See {ref}`here<overview>` for a brief introduction to constrained optimization. In this section, we will discuss how to represent CMPs using **Cooper**. To do this, consider the following objects:
 - {py:class}`~cooper.constraints.Constraint`: represents a group of either equality or inequality constraints.
-- {py:class}`~cooper.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method `compute_cmp_state` that computes the loss and constraint violations at a given point.
+- {py:class}`~cooper.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` that computes the loss and constraint violations at a given point.
 
 Moreover, in order to package the values of the loss and constraints, we will define the following objects:
-- {py:class}`~cooper.constraints.ConstraintState`: represents the state of a {py:class}`~cooper.constraints.Constraint` by packaging its violation.
-- {py:class}`~cooper.CMPState`: represents the state of a CMP at a given point. It contains the values of the loss and {py:class}`~cooper.constraints.ConstraintState` objects for some (or all) of its associated constraints.
+- {py:class}`~cooper.constraints.ConstraintState`: contains the value of the constraint violation at the given iterate.
+- {py:class}`~cooper.CMPState`: contains the values of the loss and {py:class}`~cooper.constraints.ConstraintState` objects for (some or all of) its associated constraints.
 
 ## Example
 
-The example below illustrates the main steps that need to be carried out to define a {py:class}`~cooper.ConstrainedMinimizationProblem` class. In this
-
+The example below illustrates the required steps for defining a {py:class}`~cooper.ConstrainedMinimizationProblem` class for your problem. For simplicity, we illustrate the case of a single (possibly multi-dimensional) inequality constraint.
 1. **\[Line 4\]** Define a custom class which inherits from {py:class}`~cooper.ConstrainedMinimizationProblem`.
-2. **\[Line 7\]** Define a multiplier object for the constraints.
-3. **\[Lines 9-11\]** Define the constraint object.
-4. **\[Line 13\]** Implement the `compute_cmp_state` method that computes the loss and constraints.
+2. **\[Line 7\]** Instantiate a multiplier object for the constraint.
+3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type.
+4. **\[Line 13\]** Implement the {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method that evaluates the loss and constraints.
 5. **\[Line 18\]** Return the information about the loss and constraints packaged into a {py:class}`~cooper.CMPState`.
 6. **\[Line 20\]** (Optional) Modularize the code to allow for evaluating the constraints **only**. This is useful for optimization algorithms that sometimes need to evaluate the constraints without computing the loss.
 
@@ -61,11 +60,22 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 ```
 
+## Loss
+
+This is a scalar-valued `torch.Tensor` representing the loss function $f(\vx)$. TODO
+- gradient-preserving
+- just a tensor as usual
+- packed into the CMP state
+- for feasibility problems, where you only want to satisgfy constraints: optionally do None...
 
 ## Constraints
 
-{py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulation.Formulation` (for example, all with a Lagrangian formulation). For problems with different types of constraints or formulations, you should use separate {py:class}`~cooper.constraints.Constraint` objects.
+{py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulations.Formulation` (for example, a {py:class}`~cooper.formulations.LagrangianFormulation`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
 
+To construct the constraint, you must have previously instantiated a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` object will then be associated with this multiplier, which will be used to update the dual variables associated with the constraint.
+For more details on multiplier objects, see {doc}`multipliers`.
+
+<!-- TODO: multipliers and penalty coefficient links are broken-->
 ```{eval-rst}
 .. currentmodule:: cooper.constraints
 ```
@@ -78,7 +88,7 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
 ## ConstraintStates
 
 In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects simply contain the value of the constraint violation. However, they can be extended to enable extra functionality:
-- **Sampled constraints**: if not all violations of a {py:class}`Constraint` are observed at every step, you can still use **Cooper** by providing the *observed* constraint violations in the {py:class}`~cooper.constraints.ConstraintState`. To do this, provide only the observed violations in `violation`, their corresponding indices in `constraint_features`, and make sure that you are using an {py:class}`~cooper.multipliers.IndexedMultiplier` as the multiplier associated with the constraint. **Cooper** will then know which entries to consider when computing contributions of the constraint to the Lagrangian, and which to ignore.
+- **Sampled constraints**: if not all violations of a {py:class}`Constraint` are observed at every step, you can still use **Cooper** by providing the *observed* constraint violations in the {py:class}`~cooper.constraints.ConstraintState`. To do this, provide only the observed violations in `violation`, their corresponding indices in `constraint_features`, and make sure that you are using an {py:class}`~cooper.multipliers.IndexedMultiplier` as the multiplier associated with the constraint. **Cooper** will then know which entries to consider when computing contributions of the constraint to the Lagrangian, and which to ignore. Indexed multipliers are discussed in more detail in {doc}`multipliers`.
 >
 - **Implicit parameterization of the Lagrange multipliers** {cite:p}`narasimhan2020multiplier`: similar to the sampled constraints case, you can use an implicit parameterization for the Lagrange multipliers (a neural network, for example). In this case, the `constraint_features` must contain the input features to the Lagrange multiplier model associated with the evaluated constraints. Implicit multipliers are discussed in more detail in {doc}`multipliers`.
 >
