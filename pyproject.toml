@@ -99,9 +99,6 @@ source = "vcs"
 packages = ["cooper"]
 warn_unused_configs = true
 
-[tool.coverage.run]
-relative_files = true
-
 [tool.ruff]
 line-length = 120
 target-version = "py39"
