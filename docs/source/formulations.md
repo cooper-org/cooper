@@ -4,6 +4,8 @@
 .. currentmodule:: cooper.formulations
 ```
 
+# TODO: Lagrangian store
+
 # Formulations
 
 Once equipped with a {ref}`constrained minimization problem (CMP)<cmp>`, several algorithmic approaches can be adopted to find a solution. These occur in two stages: the **formulation** of the optimization problem and the choice of the **optimization algorithm** to solve it.

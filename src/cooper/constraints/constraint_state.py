@@ -9,39 +9,31 @@ class ConstraintState:
     r"""State of a constraint, including the current constraint violation.
 
     Args:
-        violation: Measurement of the constraint violation at some value of the primal
-            parameters. This is expected to be differentiable with respect to the
-            primal parameters.
-        constraint_features: The features of the (differentiable) constraint. This is
-            used to evaluate the Lagrange multiplier associated with a constraint.
-            For example, an :py:class:`~cooper.multipliers.IndexedMultiplier` expects the
-            indices of the constraints whose Lagrange multipliers are to be retrieved;
-            while an :py:class:`~cooper.multipliers.ImplicitMultiplier` expects general
-            tensor-valued features for the constraints. This can be used in
-            conjunction with an :py:class:`~cooper.multipliers.IndexedMultiplier` to
-            indicate the measurement of the violation for only a subset of the
-            constraints within a :py:class:`~cooper.constraints.Constraint`.
-            This field is ignored for :py:class:`~cooper.multipliers.DenseMultiplier`\\s.
-        strict_violation: Measurement of the constraint violation which may be
-            non-differentiable with respect to the primal parameters. When provided,
-            the (necessarily differentiable) ``violation`` is used to compute the gradient
-            of the Lagrangian with respect to the primal parameters, while the
-            ``strict_violation`` is used to compute the gradient of the Lagrangian with
-            respect to the dual parameters. For more details, see the proxy-constraint
-            proposal of :cite:t:`cotter2019JMLR`.
-        strict_constraint_features: The features of the (possibly non-differentiable)
-            constraint. For more details, see ``constraint_features``.
-        contributes_to_primal_update: When ``False``, we ignore the contribution of the
-            current observed constraint violation towards the **primal** Lagrangian, but
-            keep their contribution to the **dual** Lagrangian. In other words, the
-            observed violations affect the update for the dual variables but not the
-            update for the primal variables.
-        contributes_to_dual_update: When ``False``, we ignore the contribution of the
-            current observed constraint violation towards the dual Lagrangian, but keep
-            their contribution to the primal Lagrangian. In other words, the observed
-            violations affect the update for the primal variables but not the update
-            for the dual variables. This flag is useful for performing less frequent
-            updates of the dual variables (e.g. after several primal steps).
+        violation: The measurement of the constraint violation at some value of the primal
+            parameters. This is expected to be differentiable with respect to the primal parameters.
+        constraint_features: The features of the observed (differentiable) constraint violations,
+            used to evaluate the associated Lagrange multiplier. For example:
+
+            - An :py:class:`~cooper.multipliers.IndexedMultiplier` expects the indices of the constraints
+            whose Lagrange multipliers are to be retrieved.
+
+            - An :py:class:`~cooper.multipliers.ImplicitMultiplier` expects tensor-valued features for
+            the constraints, and can be used to measure the violation of a subset of the constraints within a
+            :py:class:`~cooper.constraints.Constraint`.
+
+            This field can also be used with an :py:class:`~cooper.multipliers.IndexedMultiplier`
+            to measure the violation of only a subset of the constraints within a :py:class:`~cooper.constraints.Constraint`.
+        strict_violation: The measurement of the constraint violation used to update the dual variables.
+            If not provided, the ``violation`` is used to update the dual variables instead.
+        strict_constraint_features: The features of the (possibly non-differentiable) constraint. For more
+            details, see ``constraint_features``.
+        contributes_to_primal_update: If ``False``, the current observed constraint violation does not contribute
+            to the **primal** Lagrangian but still contributes to the **dual** Lagrangian. This means the violations
+            affect the update for the dual variables but not the primal variables.
+        contributes_to_dual_update: If ``False``, the current observed constraint violation does not contribute
+            to the **dual** Lagrangian but still contributes to the **primal** Lagrangian. This allows for less frequent
+            updates to the dual variables (e.g., after several primal steps), affecting the update for the primal variables
+            but not the dual variables.
     """
 
     violation: torch.Tensor

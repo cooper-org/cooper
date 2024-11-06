@@ -39,14 +39,14 @@ class CMPState:
     # TODO(gallego-posada): consider adding utilities for fetching constraint features
     # pattern could look like: `get_constraint_state_attrs(self, attr_name)`
     """Represents the state of a Constrained Minimization Problem in terms of the value
-    of its loss and constraint violations/defects.
+    of its loss and constraint violations.
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
         observed_constraints: Dictionary with :py:class:`~Constraint` instances as keys
             and :py:class:`~ConstraintState` instances as values.
         misc: Optional storage space for additional information relevant to the state of
-            the ``cmp``. This dict enables persisting the results of certain computations
+            the CMP. This dict enables persisting the results of certain computations
             for post-processing. For example, one may want to retain the value of the
             predictions/logits computed over a given minibatch during the call to
             :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` to measure or
@@ -125,13 +125,21 @@ class CMPState:
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
-    """Template for constrained minimization problems."""
+    """Template for constrained minimization problems, where subclasses represent specific
+    constrained optimization problems.
+
+    :py:class:`~.Constraint` instances are automatically registered as attributes.
+
+    You must implement the :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`
+    method, which returns a :py:class:`~.CMPState` instance representing the current
+    state of the problem, including the measured loss and constraint values.
+    """
 
     def __init__(self) -> None:
         self._constraints = OrderedDict()
 
     def _register_constraint(self, name: str, constraint: Constraint) -> None:
-        """Registers a constraint with the ``cmp``.
+        """Registers a constraint with the CMP.
 
         Args:
             name: Name of the constraint.
@@ -145,32 +153,32 @@ class ConstrainedMinimizationProblem(abc.ABC):
         self._constraints[name] = constraint
 
     def constraints(self) -> Iterator[Constraint]:
-        """Return an iterator over the registered constraints of the ``cmp``."""
+        """Return an iterator over the registered constraints of the CMP."""
         yield from self._constraints.values()
 
     def named_constraints(self) -> Iterator[tuple[str, Constraint]]:
-        """Return an iterator over the registered constraints of the ``cmp``, yielding
+        """Return an iterator over the registered constraints of the CMP, yielding
         tuples of the form ``(constraint_name, constraint)``.
         """
         yield from self._constraints.items()
 
     def multipliers(self) -> Iterator[Multiplier]:
         """Returns an iterator over the multipliers associated with the registered
-        constraints of the ``cmp``.
+        constraints of the CMP.
         """
         for constraint in self.constraints():
             yield constraint.multiplier
 
     def named_multipliers(self) -> Iterator[tuple[str, Multiplier]]:
         """Returns an iterator over the multipliers associated with the registered
-        constraints of the ``cmp``, yielding tuples of the form ``(constraint_name, multiplier)``.
+        constraints of the CMP, yielding tuples of the form ``(constraint_name, multiplier)``.
         """
         for constraint_name, constraint in self.named_constraints():
             yield constraint_name, constraint.multiplier
 
     def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
         """Returns an iterator over the penalty coefficients associated with the
-        registered constraints of the ``cmp``. Constraints without penalty coefficients
+        registered constraints of the CMP. Constraints without penalty coefficients
         are skipped.
         """
         for constraint in self.constraints():
@@ -179,7 +187,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def named_penalty_coefficients(self) -> Iterator[tuple[str, PenaltyCoefficient]]:
         """Returns an iterator over the penalty coefficients associated with the
-        registered  constraints of the ``cmp``, yielding tuples of the form
+        registered  constraints of the CMP, yielding tuples of the form
         ``(constraint_name, penalty_coefficient)``. Constraints without penalty
         coefficients are skipped.
         """
@@ -189,7 +197,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def dual_parameters(self) -> Iterator[torch.nn.Parameter]:
         """Return an iterator over the parameters of the multipliers associated with the
-        registered constraints of the ``cmp``. This method is useful for instantiating the
+        registered constraints of the CMP. This method is useful for instantiating the
         dual optimizers. If a multiplier is shared by several constraints, we only
         return its parameters once.
         """
@@ -202,7 +210,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             constraint.multiplier = constraint.multiplier.to(*args, **kwargs)
 
     def state_dict(self) -> dict:
-        """Returns the state of the ``cmp``. This includes the state of the multipliers and penalty coefficients."""
+        """Returns the state of the CMP. This includes the state of the multipliers and penalty coefficients."""
         state_dict = {
             "multipliers": {name: multiplier.state_dict() for name, multiplier in self.named_multipliers()},
             "penalty_coefficients": {name: pc.state_dict() for name, pc in self.named_penalty_coefficients()},
@@ -210,10 +218,10 @@ class ConstrainedMinimizationProblem(abc.ABC):
         return state_dict
 
     def load_state_dict(self, state_dict: dict) -> None:
-        """Loads the state of the ``cmp``. This includes the state of the multipliers and penalty coefficients.
+        """Loads the state of the CMP. This includes the state of the multipliers and penalty coefficients.
 
         Args:
-            state_dict: A state dictionary containing the state of the ``cmp``.
+            state_dict: A state dictionary containing the state of the CMP.
         """
         for name, multiplier_state_dict in state_dict["multipliers"].items():
             self._constraints[name].multiplier.load_state_dict(multiplier_state_dict)
@@ -250,10 +258,10 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     @abc.abstractmethod
     def compute_cmp_state(self, *args: Any, **kwargs: Any) -> CMPState:
-        """Computes the state of the ``cmp`` based on the current value of the primal
+        """Computes the state of the CMP based on the current value of the primal
         parameters.
 
-        The signature of this function may be changed to accommodate situations
+        The signature of this function may be adjusted to accommodate situations
         that require a model, (mini-batched) inputs/targets, or other arguments to be
         passed.
         """
@@ -272,21 +280,19 @@ class ConstrainedMinimizationProblem(abc.ABC):
                 )
 
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
-        """Computes the violation of the constraints of the ``cmp`` based on the current
-        value of the primal parameters. This function returns a
-        :py:class:`~.CMPState` collecting the values of the observed
-        constraints. Note that the returned :py:class:`~.CMPState` may have
-        ``loss=None`` since, by design, the value of the loss is not necessarily
-        computed when evaluating `only` the constraints.
+        """Computes the violation of the CMP constraints based on the current value of the
+        primal parameters. This function returns a :py:class:`~.CMPState` instance
+        containing the observed constraint values. Note that the returned
+        :py:class:`~.CMPState` may have ``loss=None``, as the loss value is not
+        necessarily computed when only evaluating the constraints.
 
-        The signature of this function may be changed to accommodate situations
-        that require a model, (mini-batched) inputs/targets, or other arguments to be
-        passed.
+        The function signature may be adjusted to accommodate situations that require a
+        model, (mini-batched) inputs/targets, or other arguments.
 
-        Depending on the problem at hand, the computation of the constraints can be
-        compartimentalized in a way that is independent of the evaluation of the loss.
-        In such cases, :py:meth:`~.ConstrainedMinimizationProblem.compute_violations` may
-        be called during the execution of the
-        :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` method.
+        In some cases, the computation of constraints may be independent of loss
+        evaluation. In such situations,
+        :py:meth:`~.ConstrainedMinimizationProblem.compute_violations` can be called
+        as part of the execution of
+        :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`.
         """
         raise NotImplementedError

@@ -62,20 +62,16 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
 
 ## Loss
 
-This is a scalar-valued `torch.Tensor` representing the loss function $f(\vx)$. TODO
-- gradient-preserving
-- just a tensor as usual
-- packed into the CMP state
-- for feasibility problems, where you only want to satisgfy constraints: optionally do None...
+The {py:class}`CMPState` dataclass includes the loss, which must be a scalar `torch.Tensor` representing $f(\vx)$, and is used to update the primal variables in the optimization. For feasibility problems, where only constraint satisfaction matters, the loss should be set to `None`.
 
 ## Constraints
 
 {py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulations.Formulation` (for example, a {py:class}`~cooper.formulations.LagrangianFormulation`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
 
-To construct the constraint, you must have previously instantiated a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` object will then be associated with this multiplier, which will be used to update the dual variables associated with the constraint.
-For more details on multiplier objects, see {doc}`multipliers`.
 
-<!-- TODO: multipliers and penalty coefficient links are broken-->
+To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` will be associated to this multiplier, and the observed constraint values will be used to update the multiplier. For more details on multiplier objects, see {doc}`multipliers`.
+
+
 ```{eval-rst}
 .. currentmodule:: cooper.constraints
 ```
@@ -87,12 +83,40 @@ For more details on multiplier objects, see {doc}`multipliers`.
 
 ## ConstraintStates
 
-In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects simply contain the value of the constraint violation. However, they can be extended to enable extra functionality:
-- **Sampled constraints**: if not all violations of a {py:class}`Constraint` are observed at every step, you can still use **Cooper** by providing the *observed* constraint violations in the {py:class}`~cooper.constraints.ConstraintState`. To do this, provide only the observed violations in `violation`, their corresponding indices in `constraint_features`, and make sure that you are using an {py:class}`~cooper.multipliers.IndexedMultiplier` as the multiplier associated with the constraint. **Cooper** will then know which entries to consider when computing contributions of the constraint to the Lagrangian, and which to ignore. Indexed multipliers are discussed in more detail in {doc}`multipliers`.
+In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects simply contain the value of the constraint violation. However, they can be extended to enable extra functionality, such as constraint sampling, the use of implicit parameterizations for the Lagrange multipliers, and proxy constraints.
+
+### Sampled Constraints
+
+When not all violations of a constraint are observed at each step, **Cooper** can still handle these cases by specifying the observed constraint violations in the {py:class}`ConstraintState`. To set this up:
+
+1. Provide only the observed violations in `violation`.
+2. Include their corresponding indices in `constraint_features`.
+3. Use an {py:class}`~cooper.multipliers.IndexedMultiplier` as the multiplier associated with the constraint.
+
+This setup allows **Cooper** to selectively account for the specified constraint entries when calculating contributions to the Lagrangian, ignoring those that are not observed. More details on indexed multipliers can be found in the section on {doc}`multipliers`.
+
 >
 - **Implicit parameterization of the Lagrange multipliers** {cite:p}`narasimhan2020multiplier`: similar to the sampled constraints case, you can use an implicit parameterization for the Lagrange multipliers (a neural network, for example). In this case, the `constraint_features` must contain the input features to the Lagrange multiplier model associated with the evaluated constraints. Implicit multipliers are discussed in more detail in {doc}`multipliers`.
->
-- **Proxy constraints** {cite:p}`cotter2019proxy`: in some settings, it is desirable to use different constraint violations for updating the primal and dual variables (see {ref}`here<proxy>` for more details). This can be achieved by providing a `violation`, which will be used for updating the primal variables, and a `strict_violation`, which will be used for updating the dual variables. When following this approach, ensure that the `violation` is differentiable with respect to the primal variables. Note that proxy constraints can be used in conjunction with sampled constraints and implicit parameterization of the Lagrange multipliers, by providing both `constraint_features` and `strict_constraint_features`.
+
+### Implicit Parameterization of Lagrange Multipliers {cite:p}`narasimhan2020multiplier`
+
+**Cooper** lets you parameterize the Lagrange multipliers implicitly, for instance, by using a neural network. To achieve this:
+
+1. Implement a Lagrange multiplier model by inheriting from {py:class}`~cooper.multipliers.ImplicitMultiplier`. The model's input features will identify the constraint being evaluated, with the output corresponding to the associated Lagrange multiplier.
+2. Set the `constraint_features` in the {py:class}`ConstraintState` to include the input features for the Lagrange multiplier model, corresponding to each evaluated constraint.
+
+This enables **Cooper** to compute multipliers based on specified input features and to learn a parametric model for the Lagrange multipliers, rather than defining individual multipliers per constraint. For additional details, refer to {doc}`multipliers`.
+
+### Proxy Constraints {cite:p}`cotter2019proxy`
+
+In some cases, it may be useful to employ different constraint violations for updating the primal and dual variables (see {ref}`here<proxy>` for details). To use proxy constraints in **Cooper**:
+
+1. Specify `violation` for updating the **primal variables**. Ensure that this `violation` is differentiable with respect to the primal variables.
+2. Provide `strict_violation` for updating the **dual variables**.
+
+Proxy constraints can be combined with sampled constraints and implicit multipliers. To do so, include both `constraint_features` and `strict_constraint_features` as needed.
+
+
 
 ```{eval-rst}
 .. autoclass:: ConstraintState
@@ -105,7 +129,7 @@ In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects 
 .. currentmodule:: cooper
 ```
 
-{py:class}`ConstrainedMinimizationProblem` objects must be implemented by the user, as exemplified in the [example](#example) above.
+{py:class}`ConstrainedMinimizationProblem` objects must be implemented by the user, as shown in the [example](#example) above.
 
 ```{eval-rst}
 .. autoclass:: ConstrainedMinimizationProblem
@@ -114,12 +138,14 @@ In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects 
 
 ## CMPStates
 
-We represent computationally the "state" of a CMP using a {py:class}`CMPState` object. A {py:class}`CMPState` is a dataclass containing the information about the loss and the equality/inequality violations at a given point $\boldsymbol{x}$. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
+We represent computationally the "state" of a CMP using a {py:class}`CMPState` object. A {py:class}`CMPState` is a dataclass containing the information about the loss and the constraint violations measured at a given point. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
 
 :::{admonition} Stochastic estimates in {py:class}`CMPState`
 :class: important
 
-In problems for which computing the loss or constraints exactly is prohibitively expensive, the {py:class}`CMPState` may contain **stochastic estimates** of the loss/constraints. For example, when using mini-batches to estimate the loss and constraints.
+When computing the loss or constraints exactly is prohibitively expensive,
+the :py:class:`~.CMPState` may include **stochastic estimates**. This is often the case
+when mini-batches are used to approximate the loss and constraints.
 
 Note that, just as in the unconstrained case, these approximations can entail a compromise in the stability of the optimization process.
 :::

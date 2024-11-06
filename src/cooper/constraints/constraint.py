@@ -13,9 +13,8 @@ class Constraint:
         constraint_type: One of :py:class:`cooper.ConstraintType.EQUALITY` or
             :py:class:`cooper.ConstraintType.INEQUALITY`.
         multiplier: The Lagrange multiplier associated with the constraint.
-        formulation_type: The type of formulation for the constrained optimization
-            problem.
-            The default is :py:class:`~cooper.formulations.LagrangianFormulation`.
+        formulation_type: The formulation type for computing the constraint's contribution
+            to the Lagrangian. Defaults to :py:class:`~cooper.formulations.LagrangianFormulation`.
         penalty_coefficient: The penalty coefficient used to penalize the constraint
             violation. This is only used for formulations with
             ``Formulation.expects_penalty_coefficient=True``, such as the

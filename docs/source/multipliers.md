@@ -78,6 +78,35 @@ which employ sparse multipliers or even a model that predicts the value of the
 multiplier based on some properties or "features" of each constraint.
 
 ```{eval-rst}
-.. autoclass:: BaseMultiplier
+.. autoclass:: Multiplier
     :members:
 ```
+
+
+```{eval-rst}
+.. autoclass:: IndexedMultiplier
+    :members:
+```
+
+```{eval-rst}
+.. autoclass:: ImplicitMultiplier
+    :members:
+```
+
+
+## Penalty Coefficients
+
+
+```{eval-rst}
+.. autoclass:: PenaltyCoefficient
+    :members:
+```
+
+```{eval-rst}
+.. autoclass:: DensePenaltyCoefficient
+    :members
+```
+
+```{eval-rst}
+.. autoclass:: IndexedPenaltyCoefficient
+  :members
