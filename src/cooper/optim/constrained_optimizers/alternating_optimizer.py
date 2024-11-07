@@ -2,6 +2,7 @@
 :py:class:`AlternatingPrimalDualOptimizer` and :py:class:`AlternatingDualPrimalOptimizer`.
 """
 
+import warnings
 from typing import Optional
 
 import torch
@@ -10,7 +11,22 @@ from cooper.optim.constrained_optimizers.constrained_optimizer import Constraine
 from cooper.optim.optimizer import RollOut
 
 
-class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
+class BaseAlternatingOptimizer(ConstrainedOptimizer):
+    def custom_sanity_checks(self) -> None:
+        """Perform sanity checks on the initialization of ``AlternatingOptimizer``.
+
+        Warns:
+            UserWarning: Detected use of Augmented Lagrangian but not all dual
+                optimizers are SGD(lr=1.0).
+        """
+        if any(constraint.formulation_type.__name__ == "AugmentedLagrangian" for constraint in self.cmp.constraints()):
+            for dual_optimizer in self.dual_optimizers:
+                all_lrs = [_["lr"] for _ in dual_optimizer.param_groups]
+                if (dual_optimizer.__class__.__name__ != "SGD") or not all(lr == 1.0 for lr in all_lrs):
+                    warnings.warn("Detected use of Augmented Lagrangian but not all dual optimizers are SGD(lr=1.0).")
+
+
+class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing primal-dual alternating updates to the primal and dual variables.
     """
@@ -108,7 +124,7 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         return RollOut(loss, new_cmp_state, primal_lagrangian_store, dual_lagrangian_store)
 
 
-class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
+class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
     """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing dual-primal alternating updates to the primal and dual variables.
     """
