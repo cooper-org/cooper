@@ -144,7 +144,7 @@ We represent computationally the "state" of a CMP using a {py:class}`CMPState` o
 :class: important
 
 When computing the loss or constraints exactly is prohibitively expensive,
-the :py:class:`~.CMPState` may include **stochastic estimates**. This is often the case
+the {py:class}`CMPState` may include **stochastic estimates**. This is often the case
 when mini-batches are used to approximate the loss and constraints.
 
 Note that, just as in the unconstrained case, these approximations can entail a compromise in the stability of the optimization process.

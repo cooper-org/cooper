@@ -4,13 +4,11 @@
 .. currentmodule:: cooper.formulations
 ```
 
-# TODO: Lagrangian store
-
 # Formulations
 
-Once equipped with a {ref}`constrained minimization problem (CMP)<cmp>`, several algorithmic approaches can be adopted to find a solution. These occur in two stages: the **formulation** of the optimization problem and the choice of the **optimization algorithm** to solve it.
+Once a {ref}`constrained minimization problem (CMP)<cmp>` is defined, various algorithmic approaches can be used to find a solution. This process occurs in two stages: the **formulation** of the optimization problem and the selection of the **optimization algorithm** to solve it.
 
-This section focuses on formulations of the CMP. {ref}`Here<optim>` we discuss the algorithms for solving the formulated problem (e.g., simultaneous gradient descent-ascent).
+This section focuses on the formulations of the CMP. In {ref}`optim`, we discuss the algorithms for solving the formulated problem (for example, simultaneous gradient descent-ascent).
 
 The formulations supported by **Cooper** are of the form:
 
@@ -20,15 +18,29 @@ $$
 
 where $P$ and $Q$ are penalty functions aimed at enforcing the satisfaction of the constraints, with parameters $\vlambda$ and $\vmu$, and hyper-parameters $\vc_{\vg}$ and $\vc_{\vh}$.
 
+::: {note}
+**Cooper**'s framework for formulations supports a wide range of approaches for solving constrained optimization problems, including:
+
+- **The Lagrangian formulation**, by letting:
+
+  $$P(\vg(\vx), \vlambda, \vc_{\vg}) = \vlambda^\top \vg(\vx),$$
+
+  $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \vmu^\top \vh(\vx).$$
+
+- **The Augmented Lagrangian formulation**, by letting:
+
+  $$P(\vg(\vx), \vlambda, \vc_{\vg}) = \vlambda^\top \vg(\vx) + \frac{\vc_{\vg}}{2} ||\texttt{relu}(\vg(\vx))||^2,$$
+
+  $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \vmu^\top \vh(\vx) + \frac{\vc_{\vh}}{2} ||\vh(\vx)||^2.$$
+
+- **Penalty methods** such as the quadratic penalty method; not currently implemented.
+
+- **Interior-point methods** (not currently implemented).
+:::
+
 
 :::{warning}
-**Cooper**'s framework for formulations supports a wide range of approaches for solving constrained optimization problems, including:
-- The Lagrangian (with $\vlambda$ and $\vmu$ as Lagrange multipliers)
-- The Augmented Lagrangian (with $\vc_{\vg}$ and $\vc_{\vh}$ as penalty coefficients)
-- Penalty methods (e.g., the quadratic penalty method; not currently implemented)
-- Interior-point methods (not currently implemented)
-
-However, this framework is not exhaustive and formulations such as Sequential Quadratic Programming (SQPs) are not supported in **Cooper**.
+**Cooper**'s formulation framework is not exhaustive and formulations such as Sequential Quadratic Programming (SQPs) are not natively supported.
 :::
 
 To specify your formulation of choice, pass the corresponding class to the `formulation_type` argument of the {py:class}`~cooper.constraints.Constraint` class:
@@ -42,7 +54,7 @@ my_constraint = cooper.Constraint(
 ```
 
 :::{note}
-**Cooper** offers flexibility in that a single CMP can be solved using *different* formulations. Crucially, the choice of formulation is tied to the **constraints**, rather than the CMP itself. By specifying different {py:class}`~cooper.constraints.Constraint`s within a CMP, you can apply different formulations to each.
+**Cooper** offers flexibility in that a single CMP can be solved using *different* formulations. Crucially, the choice of formulation is tied to the **constraints**, rather than the CMP itself. By specifying different {py:class}`~cooper.constraints.Constraint` objects within a CMP, you can apply different formulations to each.
 :::
 
 ## Lagrangian Formulations
@@ -57,9 +69,10 @@ where $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers or **dual v
 
 
 :::{warning}
-There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers at its solution $\xstar$. In such cases, finding $\xstar, \lambdastar, \mustar$ as an argmin-argmax point of the Lagrangian is a futile approach to solve the problem since $\lambdastar$ and $\mustar$ do not exist.
+There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers at its solution $\xstar$. In such cases, finding $\xstar, \lambdastar, \mustar$ as an argmin-argmax point of the Lagrangian is a futile approach, since $\lambdastar$ and $\mustar$ do not exist.
 
-See {cite:t}`boyd2004convex` for conditions under which Lagrange multipliers are guaranteed to exist.
+See {cite:t}`boyd2004convex` for the conditions under which Lagrange multipliers are guaranteed to exist.
+
 :::
 
 
@@ -70,29 +83,17 @@ See {cite:t}`boyd2004convex` for conditions under which Lagrange multipliers are
 
 (augmented-lagrangian-formulation)=
 
-## Augmented Lagrangian Formulation
+## Augmented Lagrangian Formulations
 
-The Augmented Lagrangian function is a modification of the Lagrangian function that includes a quadratic penalty term on the constraints:
+The **Augmented Lagrangian** function is a modification of the Lagrangian function that includes a quadratic penalty term on the constraint violations:
 
 $$
-\mathcal{L}_{c}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx) + \frac{c}{2} ||\text{max}\{\vzero, \vg(\vx)\}||^2 + \frac{c}{2} ||\vh(\vx)||^2
+\mathcal{L}_{c}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx) + \frac{c}{2} ||\texttt{relu}(\vg(\vx))||^2 + \frac{c}{2} ||\vh(\vx)||^2,
 $$
 
 where $c > 0$ is a penalty coefficient.
 
-TODO: predoc 3
-
-The main advantage of the ALM compared to the quadratic penalty method
-(see $\S$ 4.2.1 in {cite:p}`bertsekas1999NonlinearProgramming`) is that
-(under some reasonable assumptions), the algorithm can be successful without
-requiring the unbounded increase of the penalty parameter sequence $c^t$.
-The use of explicit estimates for the Lagrange multipliers contribute to
-avoiding the ill-conditioning that is inherent in the quadratic penalty method.
-
-See $\S$ 4.2.1 in {cite:p}`bertsekas1999NonlinearProgramming` and
-$\S$ 17 in {cite:p}`nocedal2006NumericalOptimization` for a comprehensive
-treatment of the Augmented Lagrangian method.
-
+The main advantage of the Augmented Lagrangian Method (ALM) over the quadratic penalty method (see Theorem 17.5 in {cite:p}`nocedal2006NumericalOptimization`) is that, under certain assumptions, there exists a finite $\bar{c}$ such that for all $c \geq \bar{c}$, the minimizer of $\mathcal{L}_{c}(\vx, \vlambda, \vmu)$ with respect to $\vx$ corresponds to the solution of the original constrained optimization problem. This means the algorithm can succeed without needing to unboundedly increase the penalty parameter, which is often required in the quadratic penalty method.
 
 To use the Augmented Lagrangian formulation in **Cooper**, first define a penalty coefficient (see {ref}`multipliers` for details):
 
@@ -102,7 +103,7 @@ from cooper.multipliers import DensePenaltyCoefficient
 penalty_coefficient = DensePenaltyCoefficient(init=1.0)
 ```
 
-Then, pass the {py:class}`~cooper.formulation.lagrangian.AugmentedLagrangianFormulation` class and the `penalty_coefficient` to the {py:class}`~cooper.constraints.Constraint` constructor:
+Then, pass the {py:class}`~AugmentedLagrangianFormulation` class and the `penalty_coefficient` to the {py:class}`~cooper.constraints.Constraint` constructor:
 
 ```python
 my_constraint = cooper.Constraint(
@@ -114,13 +115,13 @@ my_constraint = cooper.Constraint(
 ```
 
 :::{note}
-**Cooper** also allows for having different penalty coefficients for different constraints. This can be achieved by passing a tensor of coefficients to the `init` argument of a {py:class}`~cooper.multipliers.PenaltyCoefficient`.
+**Cooper** allows for vector-valued penalty coefficients that match the size of a constraint. This can be achieved by passing a tensor of coefficients to the `init` argument of a {py:class}`~cooper.multipliers.PenaltyCoefficient`.
 :::
 
-**Cooper** also supports the use of a scheduler for the penalty coefficient. For more information, see {ref}`coefficient_updaters`.
+Since it is often desirable to increase the penalty coefficient over the optimization process, **Cooper** provides a scheduler mechanism to do so. For more information, see {ref}`coefficient_updaters`.
 
 :::{warning}
-We make a distinction between the Augmented Lagrangian function/formulation and the Augmented Lagrangian *method* $\S$4.2.1 in {cite:p}`bertsekas1999NonlinearProgramming`. The Augmented Lagrangian method is an optimization algorithm over the Augmented Lagrangian function above:
+We make a distinction between the Augmented Lagrangian *formulation* and the Augmented Lagrangian *method* ($\S$4.2.1 in {cite:p}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function above:
 
 $$
 \vx_{t+1} &\in \argmin{\vx \in \reals^d} \,\, \mathcal{L}_{c_t}(\vx, \vlambda_t, \vmu_t) \\
@@ -130,21 +131,29 @@ c_{t+1} &\ge c_t
 $$
 
 The Augmented Lagrangian method has the following distinguishing features:
-- The minimization with respect to the primal variables $\vx$ is (usually) solved completely or approximately (in contrast to taking one gradient step).
-- It uses alternating updates (the updated primal iterate $\vx_{t+1}$ is used to update the Lagrange multipliers $\vlambda_{t+1}$).
-- The dual learning rate matches the current value of the penalty coefficient $\eta_{\vlambda} = \eta_{\vmu} = c_t$.
+1. The minimization with respect to the primal variables $\vx$ is (usually) solved completely or approximately (in contrast to taking one gradient step).
+2. It uses alternating updates (the updated primal iterate $\vx_{t+1}$ is used to update the Lagrange multipliers $\vlambda_{t+1}$).
+3. The dual learning rate matches the current value of the penalty coefficient $\eta_{\vlambda} = \eta_{\vmu} = c_t$.
 
-If you are interested in using the Augmented Lagrangian method in **Cooper**, use the {py:class}`~cooper.optim.PrimalDualOptimizer` constrained optimizer and ensure that the learning rate of the dual variables is linked to the penalty coefficient by doing:
+If you wish to use the Augmented Lagrangian **Method**, follow these steps:
+1. Use an {py:class}`~AugmentedLagrangianMethodFormulation` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
+2. Use {py:class}`torch.optim.SGD` with `lr=1.0` as the optimizer for the dual variables. This ensures that the dual learning rate is simply the penalty coefficient, as opposed `lr * c_t`.
+3. Use {py:class}`~cooper.optim.PrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
+4. [Optional] Carry out multiple steps of primal optimization for every step of dual optimization to approximately minimize the Augmented Lagrangian function. For details on how to do this, see {ref}`optim`.
 
-```python
-TODO
-```
 :::
 
 
 ```{eval-rst}
 .. autoclass:: AugmentedLagrangianFormulation
     :members:
+    :exclude-members: compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
+```
+
+```{eval-rst}
+.. autoclass:: AugmentedLagrangianMethodFormulation
+    :members:
+    :exclude-members: compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
 ```
 
 ## Base Formulation Class
@@ -157,6 +166,8 @@ If you are interested in implementing your own formulation, you can inherit from
 ```
 
 ## Utils
+
+TODO: fix docstrings, say something here.
 
 ```{eval-rst}
 .. automodule:: cooper.formulations.utils

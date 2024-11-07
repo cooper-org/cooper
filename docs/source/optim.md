@@ -1,4 +1,4 @@
-(optim) =
+(optim)=
 
 
 ```{eval-rst}
