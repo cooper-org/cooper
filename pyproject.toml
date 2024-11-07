@@ -100,7 +100,6 @@ packages = ["cooper"]
 warn_unused_configs = true
 
 [tool.ruff]
-ignore = ["D415"]
 line-length = 120
 target-version = "py39"
 
@@ -119,6 +118,7 @@ ignore = [
     "COM812",   # Fixed by ruff-format
     "D1",       # TODO: Remove this line when we have docstrings for all functions
     "D205",     # 1 blank line required between summary line and description in docstrings
+    "D415",     # First line of docstrings should end with a period
     "E501",     # Line length (handled by ruff-format)
     "E731",     # Lambda function
     "FURB140",  # Use itertools.starmap instead of list comprehension
