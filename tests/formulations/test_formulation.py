@@ -16,7 +16,7 @@ def constraint_type(request):
     return request.param
 
 
-@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
+@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianMethodFormulation])
 def formulation_type(request):
     return request.param
 
@@ -83,7 +83,7 @@ def test_prepare_kwargs_for_aug_lagrangian_contribution_fails_without_penalty_co
     primal_or_dual: Literal["primal", "dual"], constraint_type, constraint_state, multiplier
 ):
     # Create an instance of AugmentedLagrangianFormulation
-    formulation = cooper.AugmentedLagrangianFormulation(constraint_type=constraint_type)
+    formulation = cooper.AugmentedLagrangianMethodFormulation(constraint_type=constraint_type)
 
     # Call _prepare_kwargs_for_lagrangian_contribution with penalty_coefficient set to None
     # Expect a ValueError to be raised
