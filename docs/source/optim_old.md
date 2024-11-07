@@ -103,7 +103,7 @@ directly via the dual learning rate scheduler.
 
 The extra-gradient method {cite:p}`korpelevich1976extragradient` is a standard
 approach for solving min-max games as those appearing in the
-{py:class}`~cooper.formulation.LagrangianFormulation`.
+{py:class}`~cooper.formulation.Lagrangian`.
 
 Given a Lagrangian $\mathcal{L}(x,\lambda)$, define the joint variable
 $\omega = (x,\lambda)$ and the "gradient" operator:

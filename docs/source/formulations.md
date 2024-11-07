@@ -49,7 +49,7 @@ To specify your formulation of choice, pass the corresponding class to the `form
 my_constraint = cooper.Constraint(
     constraint_type=cooper.ConstraintType.INEQUALITY,
     multiplier=multiplier,
-    formulation=cooper.LagrangianFormulation
+    formulation=cooper.formulations.Lagrangian
 )
 ```
 
@@ -77,7 +77,7 @@ See {cite:t}`boyd2004convex` for the conditions under which Lagrange multipliers
 
 
 ```{eval-rst}
-.. autoclass:: LagrangianFormulation
+.. autoclass:: Lagrangian
     :members:
 ```
 
@@ -103,13 +103,13 @@ from cooper.multipliers import DensePenaltyCoefficient
 penalty_coefficient = DensePenaltyCoefficient(init=1.0)
 ```
 
-Then, pass the {py:class}`~AugmentedLagrangianFormulation` class and the `penalty_coefficient` to the {py:class}`~cooper.constraints.Constraint` constructor:
+Then, pass the {py:class}`~AugmentedLagrangian` class and the `penalty_coefficient` to the {py:class}`~cooper.constraints.Constraint` constructor:
 
 ```python
 my_constraint = cooper.Constraint(
     constraint_type=cooper.ConstraintType.INEQUALITY,
     multiplier=multiplier,
-    formulation=cooper.AugmentedLagrangianFormulation,
+    formulation=cooper.formulations.AugmentedLagrangian,
     penalty_coefficient=penalty_coefficient,
 )
 ```
@@ -145,7 +145,7 @@ If you wish to use the Augmented Lagrangian **Method**, follow these steps:
 
 
 ```{eval-rst}
-.. autoclass:: AugmentedLagrangianFormulation
+.. autoclass:: AugmentedLagrangian
     :members:
     :exclude-members: compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
 ```

@@ -81,7 +81,7 @@ class Formulation(abc.ABC):
         return NotImplemented
 
 
-class LagrangianFormulation(Formulation):
+class Lagrangian(Formulation):
     r"""The Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
@@ -138,7 +138,7 @@ class LagrangianFormulation(Formulation):
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
 
-class AugmentedLagrangianFormulation(Formulation):
+class AugmentedLagrangianFunction(Formulation):
     r"""The Augmented Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
@@ -203,7 +203,7 @@ class AugmentedLagrangianFormulation(Formulation):
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
 
-class AugmentedLagrangianMethodFormulation(Formulation):
+class AugmentedLagrangian(Formulation):
     r"""The Augmented Lagrangian **Method**'s formulation implements the following primal Lagrangian:
 
     .. math::

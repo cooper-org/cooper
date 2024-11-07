@@ -85,7 +85,7 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
     def __init__(self):
         super().__init__()
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=..., device=DEVICE)
-        # By default, constraints are built using `formulation_type=cooper.LagrangianFormulation`
+        # By default, constraints are built using `formulation_type=cooper.formulations.Lagrangian`
         self.constraint = cooper.Constraint(
             multiplier=multiplier, constraint_type=cooper.ConstraintType.INEQUALITY
         )

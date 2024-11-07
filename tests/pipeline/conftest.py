@@ -49,14 +49,14 @@ def multiplier_type(request):
     return request.param
 
 
-@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
+@pytest.fixture(params=[cooper.formulations.Lagrangian, cooper.formulations.AugmentedLagrangian])
 def formulation_type(request):
     return request.param
 
 
 @pytest.fixture
 def penalty_coefficient_type(formulation_type, multiplier_type):
-    if formulation_type == cooper.LagrangianFormulation:
+    if formulation_type == cooper.formulations.Lagrangian:
         return None
     if multiplier_type == cooper.multipliers.IndexedMultiplier:
         return cooper.multipliers.IndexedPenaltyCoefficient
@@ -67,7 +67,7 @@ def penalty_coefficient_type(formulation_type, multiplier_type):
 
 @pytest.fixture(params=[True, False])
 def extrapolation(request, formulation_type):
-    if request.param and formulation_type == cooper.AugmentedLagrangianFormulation:
+    if request.param and formulation_type == cooper.formulations.AugmentedLagrangian:
         pytest.skip("Extrapolation is not supported for the Augmented Lagrangian formulation.")
     return request.param
 
@@ -84,7 +84,7 @@ def alternation_type(request, extrapolation, formulation_type):
 
     if extrapolation and is_alternation:
         pytest.skip("Extrapolation is only supported for simultaneous updates.")
-    if formulation_type == cooper.AugmentedLagrangianFormulation and not is_alternation:
+    if formulation_type == cooper.formulations.AugmentedLagrangian and not is_alternation:
         pytest.skip("Augmented Lagrangian formulation requires alternation.")
     return request.param
 
@@ -178,7 +178,7 @@ def cooper_optimizer(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         extrapolation=extrapolation,
-        augmented_lagrangian=formulation_type == cooper.AugmentedLagrangianFormulation,
+        augmented_lagrangian=formulation_type == cooper.formulations.AugmentedLagrangian,
         alternation_type=alternation_type,
         dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
         dual_optimizer_kwargs={"lr": DUAL_LR / math.sqrt(num_variables)},
@@ -188,7 +188,7 @@ def cooper_optimizer(
 
 @pytest.fixture
 def penalty_updater(formulation_type):
-    if formulation_type != cooper.AugmentedLagrangianFormulation:
+    if formulation_type != cooper.formulations.AugmentedLagrangian:
         return None
     penalty_updater = cooper.multipliers.MultiplicativePenaltyCoefficientUpdater(
         growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE

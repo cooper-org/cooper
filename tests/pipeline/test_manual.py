@@ -35,7 +35,7 @@ class TestConvergence:
 
         self.constraint_type = constraint_type
         self.use_surrogate = use_surrogate
-        self.is_augmented_lagrangian = formulation_type == cooper.AugmentedLagrangianFormulation
+        self.is_augmented_lagrangian = formulation_type == cooper.formulations.AugmentedLagrangian
         self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
         self.num_variables = num_variables
         self.num_constraints = num_constraints

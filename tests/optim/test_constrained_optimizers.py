@@ -48,7 +48,7 @@ def test_alternating_optimizer_sanity_checks(cooper_optimizer_class, cmp_instanc
 
     cmp_instance.test_constraint = cooper.Constraint(
         constraint_type=cooper.ConstraintType.EQUALITY,
-        formulation_type=cooper.AugmentedLagrangianFormulation,
+        formulation_type=cooper.formulations.AugmentedLagrangian,
         multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
         penalty_coefficient=cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(1)),
     )

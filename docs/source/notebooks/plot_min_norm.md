@@ -138,7 +138,7 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         constraint_type = cooper.ConstraintType.EQUALITY
         multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_equations, device=DEVICE)
         self.eq_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
     def compute_cmp_state(

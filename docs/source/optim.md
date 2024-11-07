@@ -233,7 +233,7 @@ will involve the following steps:
 
 1. (Optional) Iterate over your dataset and sample of mini-batch.
 2. Call {py:meth}`constrained_optimizer.zero_grad()<zero_grad>` to reset the parameters' gradients
-3. Compute the current {py:class}`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using {py:meth}`formulation.compute_lagrangian(cmp.closure, ...)<cooper.formulation.LagrangianFormulation.compute_lagrangian>`.
+3. Compute the current {py:class}`CMPState` (or estimate it with the minibatch) and calculate the Lagrangian using {py:meth}`formulation.compute_lagrangian(cmp.closure, ...)<cooper.formulation.Lagrangian.compute_lagrangian>`.
 4. Populate the primal and dual gradients with {py:meth}`formulation.backward(lagrangian)<cooper.formulation.Formulation.backward>`
 5. Perform updates on the parameters using the primal and dual optimizers based on the recently computed gradients, via a call to {py:meth}`constrained_optimizer.step()<step>`.
 :::
@@ -245,7 +245,7 @@ will involve the following steps:
 >
 > model = ModelClass(...)
 > cmp = cooper.ConstrainedMinimizationProblem(...)
-> formulation = cooper.LagrangianFormulation(...)
+> formulation = cooper.formulations.Lagrangian(...)
 >
 > primal_optimizer = torch.optim.SGD(model.parameters(), lr=primal_lr)
 > # Note that dual_optimizer is "partly instantiated", *without* parameters

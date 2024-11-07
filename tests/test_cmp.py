@@ -6,7 +6,7 @@ import torch
 import cooper
 
 
-@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianFormulation])
+@pytest.fixture(params=[cooper.formulations.Lagrangian, cooper.formulations.AugmentedLagrangian])
 def formulation_type(request):
     return request.param
 

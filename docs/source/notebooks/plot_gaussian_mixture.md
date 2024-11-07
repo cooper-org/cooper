@@ -172,7 +172,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         constraint_type = cooper.ConstraintType.INEQUALITY
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
         self.rate_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
         self.constraint_level = constraint_level

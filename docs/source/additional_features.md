@@ -41,7 +41,7 @@ $$
 Selecting `alternation_type=AlternationType.DualPrimal` does not double the number
 of backward passes through the primal parameters!
 
-When using a `LagrangianFormulation`, to obtain the gradients with respect
+When using a `Lagrangian` formulation, to obtain the gradients with respect
 to the Lagrange multipliers, it suffices to *evaluate* the constraint
 defects (through a call to
 {py:meth}`~cooper.problem.ConstrainedMinimizationProblem.closure`). This
@@ -129,7 +129,7 @@ dual_scheduler = cooper.optim.partial_scheduler(
     torch.optim.lr_scheduler.LambdaLR, lr_lambda=lambda step: math.sqrt(step / 100)
 )
 
-formulation = cooper.formulation.AugmentedLagrangianFormulation(cmp)
+formulation = cooper.formulation.AugmentedLagrangian(cmp)
 
 constrained_optimizer = cooper.ConstrainedOptimizer(
     formulation=formulation,

@@ -114,7 +114,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         constraint_type = cooper.ConstraintType.EQUALITY
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
         self.sv_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
     def loss_fn(self, X: torch.Tensor) -> torch.Tensor:

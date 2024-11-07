@@ -67,7 +67,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
         self.norm_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=multiplier,
         )
 

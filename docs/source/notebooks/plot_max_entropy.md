@@ -71,12 +71,12 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=mean_multiplier,
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=sum_multiplier,
         )
 

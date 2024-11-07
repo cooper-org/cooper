@@ -71,7 +71,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         # The mean constraint is solved using an Augmented Lagrangian formulation
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.AugmentedLagrangianFormulation,
+            formulation_type=cooper.formulations.AugmentedLagrangian,
             multiplier=mean_multiplier,
             penalty_coefficient=mean_penalty_coefficient,
         )
@@ -80,7 +80,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         # quadratic penalty term
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=sum_multiplier,
         )
 

@@ -37,7 +37,7 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
         num_variables=num_variables,
         has_ineq_constraint=True,
         ineq_multiplier_type=multiplier_type,
-        ineq_formulation_type=cooper.LagrangianFormulation,
+        ineq_formulation_type=cooper.formulations.Lagrangian,
         A=A,
         b=b,
         device=device,

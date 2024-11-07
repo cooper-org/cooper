@@ -29,7 +29,7 @@ def constraint(num_constraints, constraint_type, multiplier_class, penalty_coeff
     constraint = cooper.Constraint(
         constraint_type=constraint_type,
         multiplier=multiplier_class(num_constraints=num_constraints),
-        formulation_type=cooper.AugmentedLagrangianFormulation,
+        formulation_type=cooper.formulations.AugmentedLagrangian,
         penalty_coefficient=penalty_coefficient,
     )
     return constraint

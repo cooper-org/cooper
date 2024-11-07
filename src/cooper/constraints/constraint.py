@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 
 from cooper.constraints.constraint_state import ConstraintState
-from cooper.formulations import ContributionStore, Formulation, LagrangianFormulation
+from cooper.formulations import ContributionStore, Formulation, Lagrangian
 from cooper.multipliers import Multiplier, PenaltyCoefficient
 from cooper.utils import ConstraintType
 
@@ -14,18 +14,18 @@ class Constraint:
             :py:class:`cooper.ConstraintType.INEQUALITY`.
         multiplier: The Lagrange multiplier associated with the constraint.
         formulation_type: The formulation type for computing the constraint's contribution
-            to the Lagrangian. Defaults to :py:class:`~cooper.formulations.LagrangianFormulation`.
+            to the Lagrangian. Defaults to :py:class:`~cooper.formulations.Lagrangian`.
         penalty_coefficient: The penalty coefficient used to penalize the constraint
             violation. This is only used for formulations with
             ``Formulation.expects_penalty_coefficient=True``, such as the
-            :py:class:`~cooper.formulations.AugmentedLagrangianFormulation`.
+            :py:class:`~cooper.formulations.AugmentedLagrangian`.
     """
 
     def __init__(
         self,
         constraint_type: ConstraintType,
         multiplier: Multiplier,
-        formulation_type: type[Formulation] = LagrangianFormulation,
+        formulation_type: type[Formulation] = Lagrangian,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ) -> None:
         self.constraint_type = constraint_type

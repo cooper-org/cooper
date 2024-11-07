@@ -16,7 +16,7 @@ def constraint_type(request):
     return request.param
 
 
-@pytest.fixture(params=[cooper.LagrangianFormulation, cooper.AugmentedLagrangianMethodFormulation])
+@pytest.fixture(params=[cooper.formulations.Lagrangian, cooper.formulations.AugmentedLagrangian])
 def formulation_type(request):
     return request.param
 
@@ -82,8 +82,8 @@ def test_prepare_kwargs_for_lagrangian_contribution(
 def test_prepare_kwargs_for_aug_lagrangian_contribution_fails_without_penalty_coefficient(
     primal_or_dual: Literal["primal", "dual"], constraint_type, constraint_state, multiplier
 ):
-    # Create an instance of AugmentedLagrangianFormulation
-    formulation = cooper.AugmentedLagrangianMethodFormulation(constraint_type=constraint_type)
+    # Create an instance of AugmentedLagrangian
+    formulation = cooper.formulations.AugmentedLagrangian(constraint_type=constraint_type)
 
     # Call _prepare_kwargs_for_lagrangian_contribution with penalty_coefficient set to None
     # Expect a ValueError to be raised
@@ -100,8 +100,8 @@ def test_prepare_kwargs_for_aug_lagrangian_contribution_fails_without_penalty_co
 def test_prepare_kwargs_for_lagrangian_contribution_fails_with_penalty_coefficient(
     primal_or_dual: Literal["primal", "dual"], num_constraints, constraint_type, constraint_state, multiplier
 ):
-    # Create an instance of LagrangianFormulation
-    formulation = cooper.LagrangianFormulation(constraint_type=constraint_type)
+    # Create an instance of Lagrangian
+    formulation = cooper.formulations.Lagrangian(constraint_type=constraint_type)
 
     # Create an instance of PenaltyCoefficient
     penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(num_constraints))
