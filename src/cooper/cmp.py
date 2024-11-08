@@ -36,10 +36,8 @@ class LagrangianStore:
 
 @dataclass
 class CMPState:
-    # TODO(gallego-posada): consider adding utilities for fetching constraint features
-    # pattern could look like: `get_constraint_state_attrs(self, attr_name)`
-    """Represents the state of a Constrained Minimization Problem in terms of the value
-    of its loss and constraint violations.
+    """Represents the state of a :py:class:`~.ConstrainedMinimizationProblem` in terms of
+    the value of its loss and constraint violations.
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(x)`
@@ -102,7 +100,7 @@ class CMPState:
 
         The dual Lagrangian contained in ``LagrangianStore.lagrangian`` ignores the
         contribution of the loss, since the objective function does not depend on the
-        dual variables. Therefore, ``LagrangianStore.lagrangian == 0`` regardless of
+        dual variables. Therefore, ``LagrangianStore.lagrangian = 0`` regardless of
         the value of ``self.loss``.
         """
         return self._compute_primal_or_dual_lagrangian(primal_or_dual="dual")
@@ -128,11 +126,10 @@ class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems, where subclasses represent specific
     constrained optimization problems.
 
-    :py:class:`~.Constraint` instances are automatically registered as attributes.
-
-    You must implement the :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`
-    method, which returns a :py:class:`~.CMPState` instance representing the current
-    state of the problem, including the measured loss and constraint values.
+    Subclasses must override the :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`
+    method. This method should return a :py:class:`~.CMPState` instance that encapsulates the
+    current state of the optimization problem, including the evaluated loss and the values of
+    the constraint violations.
     """
 
     def __init__(self) -> None:
@@ -267,6 +264,10 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
     def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:
+        """Performs sanity checks on the CMP state.
+
+        This helper method is useful for ensuring that the CMP state is well-formed.
+        """
         if cmp_state.loss is not None and cmp_state.loss.grad is None:
             raise ValueError("The loss tensor must have a valid gradient.")
 
