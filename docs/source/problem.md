@@ -68,6 +68,12 @@ The {py:class}`~cooper.CMPState` dataclass includes the loss, which must be a sc
 
 {py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulations.Formulation` (for example, a {py:class}`~cooper.formulations.Lagrangian`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
 
+Constraints can be defined as either equality or inequality. This is done using the {py:class}`~cooper.ConstraintType` class.
+
+```{eval-rst}
+.. autoclass:: cooper.ConstraintType
+    :members:
+```
 
 To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` will be associated to this multiplier, and the observed constraint values will be used to update the multiplier. For more details on multiplier objects, see {doc}`multipliers`.
 
@@ -75,7 +81,6 @@ To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multip
 ```{eval-rst}
 .. currentmodule:: cooper.constraints
 ```
-
 
 ```{eval-rst}
 .. autoclass:: Constraint
@@ -118,7 +123,6 @@ In some cases, it may be useful to employ different constraint violations for up
 Proxy constraints can be combined with sampled constraints and implicit multipliers. To do so, include both `constraint_features` and `strict_constraint_features` as needed.
 
 
-
 ```{eval-rst}
 .. autoclass:: ConstraintState
 ```
@@ -139,16 +143,20 @@ Proxy constraints can be combined with sampled constraints and implicit multipli
 
 ## CMPStates
 
-We represent computationally the "state" of a CMP using a {py:class}`CMPState` object. A {py:class}`CMPState` is a dataclass containing the information about the loss and the constraint violations measured at a given point. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
+We represent the computational "state" of a CMP using a {py:class}`CMPState` object. A {py:class}`CMPState` is a dataclass containing the information about the loss and constraint violations measured at a specific point. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
 
 :::{admonition} Stochastic estimates in {py:class}`CMPState`
 :class: important
 
-When computing the loss or constraints exactly is prohibitively expensive,
+When it is prohibitively expensive to compute the loss or constraints exactly,
 the {py:class}`CMPState` may include **stochastic estimates**. This is often the case
 when mini-batches are used to approximate the loss and constraints.
 
-Note that, just as in the unconstrained case, these approximations can entail a compromise in the stability of the optimization process.
+Note that, just as in the unconstrained case, these approximations can lead to a compromise in the stability of the optimization process.
+:::
+
+:::{note}
+To ensure that your {py:class}`CMPState` is correctly constructed—with loss and constraint tensors that have gradients—you can use the {py:meth}`ConstrainedMinimizationProblem.sanity_check_cmp_state` method.
 :::
 
 ```{eval-rst}
