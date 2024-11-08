@@ -8,7 +8,7 @@
 
 Once a {ref}`constrained minimization problem (CMP)<cmp>` is defined, various algorithmic approaches can be used to find a solution. This process occurs in two stages: the **formulation** of the optimization problem and the selection of the **optimization algorithm** to solve it.
 
-This section focuses on the formulations of the CMP. In {ref}`optim`, we discuss the algorithms for solving the formulated problem (for example, simultaneous gradient descent-ascent).
+This section focuses on the formulations of the CMP. In {doc}`optim`, we discuss the algorithms for solving the formulated problem (for example, simultaneous gradient descent-ascent).
 
 The formulations supported by **Cooper** are of the form:
 
@@ -139,7 +139,7 @@ If you wish to use the Augmented Lagrangian **Method**, follow these steps:
 1. Use an {py:class}`~AugmentedLagrangianMethodFormulation` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
 2. Use {py:class}`torch.optim.SGD` with `lr=1.0` as the optimizer for the dual variables. This ensures that the dual learning rate is simply the penalty coefficient, as opposed `lr * c_t`.
 3. Use {py:class}`~cooper.optim.PrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
-4. [Optional] Carry out multiple steps of primal optimization for every step of dual optimization to approximately minimize the Augmented Lagrangian function. For details on how to do this, see {ref}`optim`.
+4. [Optional] Carry out multiple steps of primal optimization for every step of dual optimization to approximately minimize the Augmented Lagrangian function. For details on how to do this, see {doc}`optim`.
 
 :::
 
