@@ -86,6 +86,8 @@ To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multip
 .. autoclass:: Constraint
 ```
 
+(constraint-state)=
+
 ## ConstraintStates
 
 In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects contain the value of the constraint violation. However, they can be extended to enable extra functionality, such as constraint sampling, the use of implicit parameterizations for the Lagrange multipliers {cite:p}`narasimhan2020multiplier`, and proxy constraints {cite:p}`cotter2019proxy`.

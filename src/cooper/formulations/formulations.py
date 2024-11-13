@@ -17,11 +17,12 @@ class ContributionStore(NamedTuple):
 
 class Formulation(abc.ABC):
     """Formulations prescribe how the different constraints contribute to the primal- and
-    dual-differentiable Lagrangians. In other words, they define how the constraints
+    dual-differentiable Lagrangians. In other words, they prescribe how the constraints
     affect the gradients of the Lagrangian with respect to the primal and dual variables.
 
-    The ``expects_penalty_coefficient`` attribute is used to determine whether the formulation
-    considers a penalty coefficient in its computation.
+    Attributes:
+        expects_penalty_coefficient: Used to determine whether the formulation
+            requires a penalty coefficient in its computation.
     """
 
     expects_penalty_coefficient: bool
@@ -70,6 +71,9 @@ class Formulation(abc.ABC):
     def compute_contribution_to_primal_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
         """Computes the contribution of a given constraint violation to the Lagrangian used
         to update the *primal* variables.
+
+        Returns ``None`` if the constraint does not contribute to the primal update
+        (i.e., when ``ConstraintState.contributes_to_primal_update=False``).
         """
         return NotImplemented
 
@@ -77,6 +81,9 @@ class Formulation(abc.ABC):
     def compute_contribution_to_dual_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
         """Computes the contribution of a given constraint violation to the Lagrangian used
         to update the *dual* variables.
+
+        Returns ``None`` if the constraint does not contribute to the dual update
+        (i.e., when ``ConstraintState.contributes_to_dual_update=False``).
         """
         return NotImplemented
 
@@ -85,7 +92,7 @@ class Lagrangian(Formulation):
     r"""The Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx).
 
     And the following dual Lagrangian:
 
@@ -142,9 +149,10 @@ class AugmentedLagrangianFunction(Formulation):
     r"""The Augmented Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx)
-        + \vmu^{\top} \vh(\vx) + \frac{\vc}{2} \left\| \texttt{relu}(\vg(\vx)) \right\|_2^2
-        + \frac{\vc}{2} \left\| \vh(\vx) \right\|_2^2.
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
+        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
+        \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
+        \left\| \tilde{\vh}(\vx) \right\|_2^2.
 
     And the following dual Lagrangian:
 
@@ -207,11 +215,12 @@ class AugmentedLagrangian(Formulation):
     r"""The Augmented Lagrangian **Method**'s formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx)
-        + \vmu^{\top} \vh(\vx) + \frac{\vc}{2} \left\| \texttt{relu}(\vg(\vx)) \right\|_2^2
-        + \frac{\vc}{2} \left\| \vh(\vx) \right\|_2^2.
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
+        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
+        \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
+        \left\| \tilde{\vh}(\vx) \right\|_2^2,
 
-    matching that of the Augmented Lagrangian formulation. However, the dual Lagrangian
+    thus matching that of the :py:class:`AugmentedLagrangianFunction`. However, the dual Lagrangian
     is different:
 
     .. math::
@@ -220,8 +229,8 @@ class AugmentedLagrangian(Formulation):
 
     where :math:`\odot` denotes element-wise multiplication. This ensures that the
     gradients of the dual Lagrangian with respect to the multipliers are scaled by the
-    penalty coefficient, yielding an effective learning rate of dual_lr * penalty_coefficient
-    for the dual variables.
+    penalty coefficient, yielding an effective dual learning rate of
+    :math:`\eta_{\text{dual}} \cdot \vc`.
 
     .. warning::
         The dual optimizers must all be SGD with ``lr=1.0`` and ``maximize=True`` to
