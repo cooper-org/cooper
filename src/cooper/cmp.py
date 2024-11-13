@@ -261,6 +261,16 @@ class ConstrainedMinimizationProblem(abc.ABC):
         The signature of this function may be adjusted to accommodate situations
         that require a model, (mini-batched) inputs/targets, or other arguments to be
         passed.
+
+        .. note::
+            When it is prohibitively expensive to compute the loss or constraints
+            exactly, the {py:class}`CMPState` may contain **stochastic estimates**. This
+            is often the case when mini-batches are used to approximate the loss and
+            constraints.
+
+            Just as in the unconstrained case, these approximations can lead to a
+            compromise in the stability of the optimization process.
+
         """
 
     def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:

@@ -26,7 +26,8 @@ class ConstraintState:
         strict_violation: The measurement of the constraint violation used to update the dual variables.
             If not provided, the ``violation`` is used to update the dual variables instead.
         strict_constraint_features: The features of the (possibly non-differentiable) constraint. For more
-            details, see ``constraint_features``.
+            details, see ``constraint_features``. If not provided, the ``constraint_features`` are used instead.
+            ``strict_violation`` is expected when ``strict_constraint_features`` are provided.
         contributes_to_primal_update: If ``False``, the current observed constraint violation does not contribute
             to the **primal** Lagrangian but still contributes to the **dual** Lagrangian. This means the violations
             affect the update for the dual variables but not the primal variables.

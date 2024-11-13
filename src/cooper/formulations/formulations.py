@@ -85,12 +85,12 @@ class Lagrangian(Formulation):
     r"""The Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \\mathcal{L}_{\\text{primal}}(\\vx, \\vlambda, \\vmu) = f(\\vx) + \\vlambda^{\\top} \\vg(\\vx) + \\vmu^{\\top} \\vh(\\vx).
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
 
     And the following dual Lagrangian:
 
     .. math::
-        \\mathcal{L}_{\\text{dual}}(\\vx, \\vlambda, \\vmu) = \\vlambda^{\\top} \\vg(\\vx) + \\vmu^{\\top} \\vh(\\vx).
+        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
     """
 
     expects_penalty_coefficient = False
@@ -142,14 +142,14 @@ class AugmentedLagrangianFunction(Formulation):
     r"""The Augmented Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \\mathcal{L}_{\\text{primal}}(\\vx, \\vlambda, \\vmu) = f(\\vx) + \\vlambda^{\\top} \\vg(\\vx)
-        + \\vmu^{\\top} \\vh(\\vx) + \\frac{\\vc}{2} \\left\\| \\texttt{relu}(\\vg(\\vx)) \\right\\|_2^2
-        + \\frac{\\vc}{2} \\left\\| \\vh(\\vx) \\right\\|_2^2.
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx)
+        + \vmu^{\top} \vh(\vx) + \frac{\vc}{2} \left\| \texttt{relu}(\vg(\vx)) \right\|_2^2
+        + \frac{\vc}{2} \left\| \vh(\vx) \right\|_2^2.
 
     And the following dual Lagrangian:
 
     .. math::
-        \\mathcal{L}_{\\text{dual}}(\\vx, \\vlambda, \\vmu) = \\vlambda^{\\top} \\vg(\\vx) + \\vmu^{\\top} \\vh(\\vx).
+        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
     """
 
     expects_penalty_coefficient = True
@@ -207,18 +207,18 @@ class AugmentedLagrangian(Formulation):
     r"""The Augmented Lagrangian **Method**'s formulation implements the following primal Lagrangian:
 
     .. math::
-        \\mathcal{L}_{\\text{primal}}(\\vx, \\vlambda, \\vmu) = f(\\vx) + \\vlambda^{\\top} \\vg(\\vx)
-        + \\vmu^{\\top} \\vh(\\vx) + \\frac{\\vc}{2} \\left\\| \\texttt{relu}(\\vg(\\vx)) \\right\\|_2^2
-        + \\frac{\\vc}{2} \\left\\| \\vh(\\vx) \\right\\|_2^2.
+        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \vg(\vx)
+        + \vmu^{\top} \vh(\vx) + \frac{\vc}{2} \left\| \texttt{relu}(\vg(\vx)) \right\|_2^2
+        + \frac{\vc}{2} \left\| \vh(\vx) \right\|_2^2.
 
     matching that of the Augmented Lagrangian formulation. However, the dual Lagrangian
     is different:
 
     .. math::
-        \\mathcal{L}_{\\text{dual}}(\\vx, \\vlambda, \\vmu) = (\\vlambda \\odot \\vc)^{\\top} \\vg(\\vx)
-        + (\\vmu \\odot \\vc)^{\\top} \\vh(\\vx),
+        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc)^{\top} \vg(\vx)
+        + (\vmu \odot \vc)^{\top} \vh(\vx),
 
-    where :math:`\\odot` denotes element-wise multiplication. This ensures that the
+    where :math:`\odot` denotes element-wise multiplication. This ensures that the
     gradients of the dual Lagrangian with respect to the multipliers are scaled by the
     penalty coefficient, yielding an effective learning rate of dual_lr * penalty_coefficient
     for the dual variables.
