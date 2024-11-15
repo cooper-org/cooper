@@ -306,7 +306,7 @@ def test_sanity_check_cmp_state_strict_violation(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     violation = torch.tensor(1.0, requires_grad=True)
     violation.backward()
-    with pytest.raises(ValueError, match=".has a non-null gradient."):
+    with pytest.raises(ValueError, match=".must not have a gradient."):
         cmp_instance.sanity_check_cmp_state(
             cooper.CMPState(
                 observed_constraints={

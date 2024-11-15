@@ -35,14 +35,14 @@ $h_i(\vx) = 0$.
 An approach for solving general nonconvex constrained optimization problems is to formulate their Lagrangian and find a min-max point:
 
 $$
-\xstar, \lambdastar, \mustar = \argmin{\vx \in \reals^d} \, \, \argmax{\vlambda \ge \vzero, \vmu} \, \, \mathcal{L}(\vx, \vlambda, \vmu)
+\xstar, \lambdastar, \mustar = \argmin{\vx \in \reals^d} \, \, \argmax{\vlambda \ge \vzero, \vmu} \, \, \Lag(\vx, \vlambda, \vmu)
 $$
 
-where $\mathcal{L}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx)$ is the Lagrangian function associated with the constrained minimization problem. $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers associated with the inequality and equality constraints, respectively.
+where $\Lag(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx)$ is the Lagrangian function associated with the constrained minimization problem. $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers associated with the inequality and equality constraints, respectively.
 We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
 :::{note}
-$\mathcal{L}(\vx,\vlambda, \vmu)$ is concave in $\vlambda$ and $\vmu$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
+$\Lag(\vx,\vlambda, \vmu)$ is concave in $\vlambda$ and $\vmu$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
 :::
 
 An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem. **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.AugmentedLagrangian` (see {doc}`formulations`).
@@ -67,9 +67,9 @@ Moreover, the overhead (relative to unconstrained minimization) of storing and u
 A simple approach for finding min-max points of the Lagrangian is doing gradient descent on the primal variables and gradient ascent on the dual variables. Simultaneous **gradient descent-ascent** has the following updates:
 
 $$
-\vx_{t+1} &= \vx_t - \eta_{\vx} \nabla_{\vx} \mathcal{L}(\vx_t, \vlambda_t, \vmu_t) \\
-\vlambda_{t+1} &= \left [ \vlambda_t + \eta_{\vlambda} \nabla_{\vlambda} \mathcal{L}(\vx_t, \vlambda_t, \vmu_t) \right ]_+ \\
-\vmu_{t+1} &= \vmu_t + \eta_{\vmu} \nabla_{\vmu} \mathcal{L}(\vx_t, \vlambda_t, \vmu_t)
+\vx_{t+1} &= \vx_t - \eta_{\vx} \nabla_{\vx} \Lag(\vx_t, \vlambda_t, \vmu_t) \\
+\vlambda_{t+1} &= \left [ \vlambda_t + \eta_{\vlambda} \nabla_{\vlambda} \Lag(\vx_t, \vlambda_t, \vmu_t) \right ]_+ \\
+\vmu_{t+1} &= \vmu_t + \eta_{\vmu} \nabla_{\vmu} \Lag(\vx_t, \vlambda_t, \vmu_t)
 $$
 
 where $\eta_{\vx}, \eta_{\vlambda}, \eta_{\vmu}$ are the step sizes for the primal and dual variables. The projection operator $[\cdot]_+$ ensures that the dual variables associated with the inequality constraints remain non-negative.

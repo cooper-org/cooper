@@ -36,19 +36,20 @@ class LagrangianStore:
 
 @dataclass
 class CMPState:
-    """Represents the state of a :py:class:`~.ConstrainedMinimizationProblem` in terms of
-    the value of its loss and constraint violations.
+    r"""Represents the state of a :py:class:`~.ConstrainedMinimizationProblem` in terms of
+    the value of its loss and constraint violations at point :math:`\vx_t`.
 
     Args:
-        loss: Value of the loss or main objective to be minimized :math:`f(x)`
+        loss: Value of the loss or main objective to be minimized :math:`f(\vx_t)`.
         observed_constraints: Dictionary with :py:class:`~Constraint` instances as keys
-            and :py:class:`~ConstraintState` instances as values.
+            and :py:class:`~ConstraintState` instances as values (containing tensors
+            :math:`\vg(\vx_t)` and :math:`\vh(\vx_t)`).
         misc: Optional storage space for additional information relevant to the state of
-            the CMP. This dict enables persisting the results of certain computations
-            for post-processing. For example, one may want to retain the value of the
-            predictions/logits computed over a given minibatch during the call to
-            :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` to measure or
-            log training statistics.
+            the CMP. This dictionary enables persisting the results of certain
+            computations for post-processing. For example, one may want to retain the
+            value of the predictions/logits computed over a given minibatch during the
+            call to :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state` to
+            measure or log training statistics.
     """
 
     loss: Optional[torch.Tensor] = None
@@ -264,7 +265,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         .. note::
             When it is prohibitively expensive to compute the loss or constraints
-            exactly, the {py:class}`CMPState` may contain **stochastic estimates**. This
+            exactly, the :py:class:`CMPState` may contain **stochastic estimates**. This
             is often the case when mini-batches are used to approximate the loss and
             constraints.
 
@@ -285,10 +286,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             if constraint_state.violation.grad is None:
                 raise ValueError(f"The violation tensor of constraint {constraint} must have a valid gradient.")
             if constraint_state.strict_violation.grad is not None:
-                raise ValueError(
-                    f"The strict violation tensor of constraint {constraint} has a non-null gradient: "
-                    f"{constraint_state.strict_violation.grad}."
-                )
+                raise ValueError(f"The strict violation tensor of constraint {constraint} must not have a gradient.")
 
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the violation of the CMP constraints based on the current value of the

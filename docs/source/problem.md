@@ -92,7 +92,9 @@ To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multip
 
 In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects contain the value of the constraint violation. However, they can be extended to enable extra functionality, such as constraint sampling, the use of implicit parameterizations for the Lagrange multipliers {cite:p}`narasimhan2020multiplier`, and proxy constraints {cite:p}`cotter2019proxy`.
 
+:::
 ### Constraint Sampling
+:::
 
 **Cooper** can handle cases where only a subset of {py:class}`Constraint` violations are observed at each step.
 For instance, in problems with a large number of constraints, where assessing feasibility is costly (e.g., requiring evaluation across an entire dataset), it can be more efficient to evaluate only a subset of constraints per iteration.
@@ -106,8 +108,9 @@ Consider the case of an $n$-dimensional constraint, where only $m \leq n$ entrie
 
 This setup allows **Cooper** to selectively account for the specified constraint entries when calculating contributions to the Lagrangian, ignoring those that are not observed. More details on indexed multipliers can be found in the section on {doc}`multipliers`.
 
+:::
 ### Implicit Parameterization of Lagrange Multipliers {cite:p}`narasimhan2020multiplier`
-
+:::
 
 **Cooper** enables implicit parameterization of the Lagrange multipliers, for example, by using a neural network.
 This allows **Cooper** to compute multipliers based on specified input features and to learn a parametric model for the multipliers, rather than defining them individually for each constraint.
@@ -121,7 +124,9 @@ Given input features for a constraint, the model will map the input features to 
 
 For additional details, refer to {doc}`multipliers`.
 
+:::
 ### Proxy Constraints {cite:p}`cotter2019proxy`
+:::
 
 It is often the case that constrained optimization problems involve non-differentiable constraints. This non-differentiability precludes the use of gradient-based primal-dual optimization methods.
 The **proxy constraints** technique introduced by {cite:t}`cotter2019proxy` leverages a differentiable surrogate of the constraint when performing the primal updates, while preserving the original (non-differentiable) constraint for updating the dual variables (see {ref}`here<proxy>` for details).
@@ -139,7 +144,7 @@ Proxy constraints can be combined with sampled constraints and implicit multipli
 ```
 
 
-## CMPs
+## Constrained Minimization Problems (CMPs)
 
 ```{eval-rst}
 .. currentmodule:: cooper
@@ -149,7 +154,7 @@ Proxy constraints can be combined with sampled constraints and implicit multipli
 
 CMPs represent constrained optimization problems and provide methods to compute the problem’s state, {py:class}`CMPState`, which includes the loss and constraints at a given point. The methods to be implemented are {py:meth}`~ConstrainedMinimizationProblem.compute_cmp_state` and, optionally, {py:meth}`~ConstrainedMinimizationProblem.compute_violations`.
 
-Additionally, CMPs serve as an interface between the user and **Cooper**, enabling access to constraints, multipliers, and penalty coefficients via methods such as {py:meth}`~ConstrainedMinimizationProblem.constraints`, {py:meth}`~ConstrainedMinimizationProblem.multipliers`, and {py:meth}`~ConstrainedMinimizationProblem.penalty_coefficients`.
+Additionally, CMPs serve as an interface between the user and **Cooper**, enabling access to {py:meth}`~ConstrainedMinimizationProblem.constraints`, {py:meth}`~ConstrainedMinimizationProblem.multipliers`, and {py:meth}`~ConstrainedMinimizationProblem.penalty_coefficients`.
 
 
 ```{eval-rst}
@@ -159,7 +164,8 @@ Additionally, CMPs serve as an interface between the user and **Cooper**, enabli
 
 ## CMPStates
 
-We represent the computational "state" of a CMP using a {py:class}`CMPState` object. A {py:class}`CMPState` is a dataclass containing the information about the loss and constraint violations measured at a specific point. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
+
+A {py:class}`CMPState` is a dataclass containing the information about the loss and constraint violations measured at a specific point. The constraints included in the {py:class}`CMPState` must be passed as a dictionary, where the keys are the {py:class}`Constraint` objects and the values are the associated {py:class}`ConstraintState` objects.
 
 
 :::{note}

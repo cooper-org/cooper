@@ -123,7 +123,7 @@ for epoch_num in range(NUM_EPOCHS):
 
 ## Contributions
 
-Please read our [CONTRIBUTING](https://github.com/cooper-org/cooper/tree/master/.github/CONTRIBUTING.md) guide prior to submitting a pull request. We use `ruff` for formatting and linting, and `mypy` for type checking.
+Please read our [CONTRIBUTING](https://cooper.readthedocs.io/en/master/notebooks/CONTRIBUTING.html) guide prior to submitting a pull request. We use `ruff` for formatting and linting, and `mypy` for type checking.
 
 ## Acknowledgements
 

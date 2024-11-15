@@ -92,12 +92,12 @@ class Lagrangian(Formulation):
     r"""The Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx).
+        \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top} \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx).
 
     And the following dual Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
+        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
     """
 
     expects_penalty_coefficient = False
@@ -149,7 +149,7 @@ class AugmentedLagrangianFunction(Formulation):
     r"""The Augmented Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
+        \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
         \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
         \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
         \left\| \tilde{\vh}(\vx) \right\|_2^2.
@@ -157,7 +157,9 @@ class AugmentedLagrangianFunction(Formulation):
     And the following dual Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
+        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
+
+    TODO: Add tests for this formulation.
     """
 
     expects_penalty_coefficient = True
@@ -215,7 +217,7 @@ class AugmentedLagrangian(Formulation):
     r"""The Augmented Lagrangian **Method**'s formulation implements the following primal Lagrangian:
 
     .. math::
-        \mathcal{L}_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
+        \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
         \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
         \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
         \left\| \tilde{\vh}(\vx) \right\|_2^2,
@@ -224,7 +226,7 @@ class AugmentedLagrangian(Formulation):
     is different:
 
     .. math::
-        \mathcal{L}_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc)^{\top} \vg(\vx)
+        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc)^{\top} \vg(\vx)
         + (\vmu \odot \vc)^{\top} \vh(\vx),
 
     where :math:`\odot` denotes element-wise multiplication. This ensures that the

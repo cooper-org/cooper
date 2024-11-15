@@ -51,7 +51,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             Since the ``compute_violations_fn`` argument allows to avoid re-evaluating
             the objective function, we may not have enough information to exactly
             compute the value of the Lagrangian before the dual update
-            :math:`\mathcal{L}(x_{t+1}, \lambda_t, \mu_t)`, since only the constraints are
+            :math:`\Lag(x_{t+1}, \lambda_t, \mu_t)`, since only the constraints are
             evaluated at the new primal point :math:`x_{t+1}`.
 
             Thus we `approximate the Lagrangian` by using the objective function
@@ -60,13 +60,13 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             Lagrangian value contained in the LagrangianStore at the end of the roll is:
 
             .. math::
-                \mathcal{L} = f(x_t) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
+                \Lag = f(x_t) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
 
             Whenever the ``compute_violations_fn`` argument is **not** provided, the
             Lagrangian value is computed exactly as:
 
             .. math::
-                \mathcal{L} = f(x_{t+1}) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
+                \Lag = f(x_{t+1}) + {\lambda_{t}}^{\top} g(x_{t+1}) + {\mu_{t}}^{\top} h(x_{t+1})
 
             Note that in either case, the returned Lagrangian value uses the value of
             the multipliers before their update, i.e., :math:`\lambda_t` and
@@ -145,7 +145,7 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
             The Lagrangian value contained in the LagrangianStore at the end of the roll is:
 
             .. math::
-                \mathcal{L} = f(x_t) + {\lambda_{t+1}}^{\top} g(x_t) + {\mu_{t+1}}^{\top} h(x_t)
+                \Lag = f(x_t) + {\lambda_{t+1}}^{\top} g(x_t) + {\mu_{t+1}}^{\top} h(x_t)
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.

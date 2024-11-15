@@ -10,6 +10,7 @@ readme
 constrained_optimization
 faq
 notebooks/index
+CONTRIBUTING
 ```
 
 ```{toctree}

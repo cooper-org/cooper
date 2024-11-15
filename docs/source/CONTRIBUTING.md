@@ -1,10 +1,15 @@
+(contributing)=
+
 # Contributing to **Cooper**
 
 We encourage contributions to **Cooper**.
 
 Some things that we would like to see in the future, but have not yet had time to implement, are:
 
+TODO:
 - More tutorials showing how to use **Cooper** in non-deep learning applications.
+- Implementing **Penalty methods** such as the quadratic penalty method; not currently implemented.
+- Implementing **Interior-point methods** (not currently implemented).
 
 ## How to contribute
 

@@ -105,11 +105,11 @@ The extra-gradient method {cite:p}`korpelevich1976extragradient` is a standard
 approach for solving min-max games as those appearing in the
 {py:class}`~cooper.formulation.Lagrangian`.
 
-Given a Lagrangian $\mathcal{L}(x,\lambda)$, define the joint variable
+Given a Lagrangian $\Lag(x,\lambda)$, define the joint variable
 $\omega = (x,\lambda)$ and the "gradient" operator:
 
 $$
-F(\omega) = [\nabla_x \mathcal{L}(x,\lambda), -\nabla_{\lambda} \mathcal{L}(x,\lambda)]^{\top}
+F(\omega) = [\nabla_x \Lag(x,\lambda), -\nabla_{\lambda} \Lag(x,\lambda)]^{\top}
 $$
 
 The extra-gradient update can be summarized as:

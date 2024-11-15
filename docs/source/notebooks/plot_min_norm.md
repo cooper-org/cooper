@@ -36,7 +36,7 @@ is partially observed at each iteration. That is, we assume that the matrix $A$
 and the vector $b$ may be sub-sampled at each iteration.
 
 $$
-\mathcal{L}(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
+\Lag(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
 $$
 
 where $\lambda$ is the vector of Lagrange multipliers, and $D$ is a

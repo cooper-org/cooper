@@ -12,8 +12,11 @@ def evaluate_constraint_factor(
     constraint_features: Optional[torch.Tensor],
     expand_shape: tuple[int, ...],
 ) -> torch.Tensor:
-    """Evaluate the Lagrange multiplier or penalty coefficient associated with a
-    constraint.
+    """Evaluate a Lagrange multiplier or penalty coefficient.
+
+    This function evaluates the value of the multiplier or penalty coefficient for a
+    constraint. If the module expects constraint features, it is called with the
+    constraint features as an argument. Otherwise, it is called without arguments.
 
     Args:
         module: Multiplier or penalty coefficient module.
@@ -49,8 +52,7 @@ def compute_primal_weighted_violation(
     primal variables.
 
     Args:
-        constraint_factor_value: The value of the multiplier or penalty coefficient for
-            the constraint.
+        constraint_factor_value: Tensor of constraint factor values.
         violation: Tensor of constraint violations.
     """
     # When computing the gradient of the Lagrangian with respect to the primal
@@ -63,29 +65,27 @@ def compute_primal_weighted_violation(
 def compute_dual_weighted_violation(
     multiplier_value: torch.Tensor, violation: torch.Tensor, penalty_coefficient_value: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
-    """Computes the sum of constraint violations weighted by the associated constraint
+    r"""Computes the sum of constraint violations weighted by the associated constraint
     factors (multipliers or penalty coefficients), while preserving the gradient for the
-    dual variables.
+    dual variables :math:`\vlambda` and :math:`\vmu`.
 
     When computing the gradient of the Lagrangian with respect to the dual variables, we
-    only need the _value_ of the constraint violation and not its gradient. So we detach
-    the violation to avoid computing its gradient. Note that this enables the use of
-    non-differentiable constraints for updating the multipliers.
-
-    This insight was originally presented by Cotter et al. in the paper "Optimization
-    with Non-Differentiable Constraints with Applications to Fairness, Recall, Churn,
-    and Other Goals" under the name of "proxy" constraints.
-    (https://jmlr.org/papers/v20/18-616.html, Sec. 4.2)
+    only need the *value* of the constraint violation and not its gradient. To achieve
+    this, the violation is detached to avoid backpropagating through it and
+    unintentionally computing its gradient with respect to the primal variables
+    :math:`\vx`. This approach allows the use of non-differentiable constraints when
+    updating the multipliers. This insight, termed "proxy" constraints, was introduced
+    by :cite:t:`cotter2019proxy` (Sec. 4.2).
 
     When both the constraint factor and the penalty coefficient are provided, the
-    contribution for each violation is weighted by both the value of the multiplier and
-    the penalty coefficient. This way, the gradient with respect to the multiplier is
-    the constraint violation times the penalty coefficient, as required by the updates
-    of the Augmented Lagrangian Method. See Eq. 5.62 in Nonlinear Programming by
-    Bertsekas (2016).
+    contribution of each violation is weighted by both the multiplier's value and the
+    penalty coefficient. This ensures that the gradient with respect to the multiplier
+    is the constraint violation times the penalty coefficient, as required by the
+    updates of the Augmented Lagrangian Method, implemented in
+    :py:class:`AugmentedLagrangian` (See Eq. 5.62 in :cite:t:`bertsekas1999nonlinear`).
 
     Args:
-        multiplier_value: The value of the multiplier for the constraint.
+        multiplier_value: Tensor of multiplier values.
         violation: Tensor of constraint violations.
         penalty_coefficient_value: Tensor of penalty coefficient values.
     """
@@ -103,12 +103,19 @@ def compute_quadratic_penalty(
     penalty_coefficient_value: torch.Tensor, violation: torch.Tensor, constraint_type: ConstraintType
 ) -> Optional[torch.Tensor]:
     r"""Computes the contribution of a constraint in the quadratic-penalty formulation.
-    This corresponds to Eq 17.7 in Nocedal and Wright (2006). Let us denote the equality
+    This corresponds to Eq 17.7 in :cite:t:`nocedal2006NumericalOptimization`. Let us denote the equality
     and inequality constraints by :math:`h_i(x)` and :math:`g_i(x)`, respectively. Let
-    the :math:`\rho` denote the penalty coefficient.
+    the :math:`c_h` and :math:`c_g` denote the penalty coefficients.
 
     .. math::
-        \frac{\rho}{2} ||h(x)||_2^2 + \frac{\rho}{2} ||\texttt{relu}(g(x))||_2^2
+        \frac{c_h}{2} ||\vh(\vx)||_2^2 + \frac{c_g}{2} ||\texttt{relu}(\vg(\vx))||_2^2
+
+    Args:
+        penalty_coefficient_value: Tensor of penalty coefficient values.
+        violation: Tensor of constraint violations.
+        constraint_type: Type of constraint. One of `ConstraintType.INEQUALITY` or
+            `ConstraintType.EQUALITY`.
+
     """
     clamped_violation = torch.relu(violation) if constraint_type == ConstraintType.INEQUALITY else violation
     return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, clamped_violation**2)
@@ -123,7 +130,7 @@ def compute_primal_quadratic_augmented_contribution(
     r"""Computes the quadratic-augmented contribution of a constraint to the Lagrangian.
 
     When the constraint is an inequality constraint, the quadratic penalty is computed
-    following Eqs 17.64 and 17.65 in Numerical Optimization by Nocedal and Wright (2006).
+    following Eqs 17.64 and 17.65 in Numerical Optimization by :cite:t:`nocedal2006NumericalOptimization`.
     Note that Nocedal and Wright use a "greater-than-or-equal to zero" convention for
     their constraints, which reverses some of the signs below. Denoting the current
     multiplier by :math:`\lambda` and the penalty coefficient by :math:`\rho`, we obtain
@@ -136,10 +143,17 @@ def compute_primal_quadratic_augmented_contribution(
     this corresponds to the multiplier update after a step of projected gradient ascent.
 
     In the case of equality constraints, the quadratic-augmented contribution is computed
-    following Eq 17.36 in Numerical Optimization by Nocedal and Wright (2006):
+    following Eq 17.36 in :cite:t:`nocedal2006NumericalOptimization`:
 
     .. math::
         \lambda^{\top} \text{violation}+ \frac{rho}{2} ||violation||_2^2
+
+    Args:
+        multiplier_value: Tensor of multiplier values.
+        penalty_coefficient_value: Tensor of penalty coefficient values.
+        violation: Tensor of constraint violations.
+        constraint_type: Type of constraint. One of `ConstraintType.INEQUALITY` or
+            `ConstraintType.EQUALITY`.
 
     """
     if constraint_type == ConstraintType.INEQUALITY:

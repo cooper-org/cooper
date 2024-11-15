@@ -25,16 +25,16 @@ One can perform alternating updates in which the primal parameters are updated f
 refer to this update strategy as `cooper.optim.AlternationType.PRIMAL_DUAL`.
 
 $$
-x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
-\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
+x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \Lag_{c_t}(x, \lambda_t)|_{x=x_t} \right)\\
+\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \Lag({\color{red} x_{t+1}}, \lambda)|_{\lambda=\lambda_t} \right)
 $$
 
 Alternative, `cooper.optim.AlternationType.DUAL_PRIMAL` carries out an update of the
 dual parameters first.
 
 $$
-\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t}}, \lambda)|_{\lambda=\lambda_t} \right) \\
-x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_{t+1})|_{x=x_t} \right)
+\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \Lag({\color{red} x_{t}}, \lambda)|_{\lambda=\lambda_t} \right) \\
+x_{t+1} &= \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \Lag_{c_t}(x, \lambda_{t+1})|_{x=x_t} \right)
 $$
 
 :::{important}
@@ -67,7 +67,7 @@ precision, **Cooper** implements a version of the Augmented Lagrangian method
 where the primal variables are updated using a gradient-based step.
 
 $$
-x_{t+1} = \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \mathcal{L}_{c_t}(x, \lambda_t)|_{x=x_t} \right)
+x_{t+1} = \texttt{primal_optimizers_update} \left( x_{t}, \nabla_{x} \Lag_{c_t}(x, \lambda_t)|_{x=x_t} \right)
 $$
 
 The new primal variables are then used to perform an
@@ -86,14 +86,14 @@ This corresponds exactly to a (projected) gradient ascent update on the dual
 variables with "step size" $c_t$ on the function:
 
 $$
-\mathcal{L}_{c_t}(x_{t+1}, \lambda) \triangleq & \, \, {\color{gray} \overbrace{ f(x_{t+1}) +\frac{c_t}{2} ||g(x_{t+1}) \odot \mathbf{1}_{g(x_{t+1}) \ge 0 \vee \lambda_{g} > 0}||^2 + \frac{c_t}{2} ||h(x_{t+1})||^2}^{\text{do not contribute to gradient } \nabla_{\lambda} \mathcal{L}(x_{t+1}, \lambda)|_{\lambda = \lambda_t}}} \\ & \, \, + \lambda_{g}^{\top} \, g(x_{t+1}) + \lambda_{h}^{\top} \, h(x_{t+1})
+\Lag_{c_t}(x_{t+1}, \lambda) \triangleq & \, \, {\color{gray} \overbrace{ f(x_{t+1}) +\frac{c_t}{2} ||g(x_{t+1}) \odot \mathbf{1}_{g(x_{t+1}) \ge 0 \vee \lambda_{g} > 0}||^2 + \frac{c_t}{2} ||h(x_{t+1})||^2}^{\text{do not contribute to gradient } \nabla_{\lambda} \Lag(x_{t+1}, \lambda)|_{\lambda = \lambda_t}}} \\ & \, \, + \lambda_{g}^{\top} \, g(x_{t+1}) + \lambda_{h}^{\top} \, h(x_{t+1})
 $$
 
 Therefore, the sequence of Augmented Lagrangian coefficients can be identified
 with a {ref}`scheduler on the dual learning rate<dual_lr_scheduler>`.
 
 $$
-\lambda_{t+1} = \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({\color{red} x_{t+1}}, \lambda_t) , \texttt{lr} = c_t\right)
+\lambda_{t+1} = \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \Lag({\color{red} x_{t+1}}, \lambda_t) , \texttt{lr} = c_t\right)
 $$
 
 As in the {ref}`default parameter updates<basic_parameter_updates>`, we

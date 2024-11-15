@@ -52,6 +52,7 @@ extensions = [
 mathjax3_config = {
     "tex": {
         "macros": {
+            "Lag": "\\mathcal{L}",
             "argmin": ["\\underset{#1}{\\text{argmin}}", 1],
             "argmax": ["\\underset{#1}{\\text{argmax}}", 1],
             "reals": "\\mathbb{R}",

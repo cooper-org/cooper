@@ -83,8 +83,8 @@ for inputs, targets in train_loader:
 A simple approach to updating the primal and dual parameters is to perform **simultaneous** updates. According to the choice of primal and dual optimizers, the updates are performed as follows:
 
 $$
-x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}(x, \lambda_t)|_{x=x_t} \right)\\
-\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({x_{t}}, \lambda)|_{\lambda=\lambda_t} \right)
+x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \Lag(x, \lambda_t)|_{x=x_t} \right)\\
+\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \Lag({x_{t}}, \lambda)|_{\lambda=\lambda_t} \right)
 $$
 
 ```{eval-rst}
@@ -281,8 +281,8 @@ descent-ascent updates (according to the choice of primal and dual optimizers).
 Formally,
 
 $$
-x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \mathcal{L}(x, \lambda_t)|_{x=x_t} \right)\\
-\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \mathcal{L}({x_{t}}, \lambda)|_{\lambda=\lambda_t} \right)
+x_{t+1} &= \texttt{primal_optimizer_update} \left( x_{t}, \nabla_{x} \Lag(x, \lambda_t)|_{x=x_t} \right)\\
+\lambda_{t+1} &= \texttt{dual_optimizer_update} \left( \lambda_{t}, {\color{red} \mathbf{-}} \nabla_{\lambda} \Lag({x_{t}}, \lambda)|_{\lambda=\lambda_t} \right)
 $$
 
 :::{note}
