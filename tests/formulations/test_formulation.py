@@ -128,18 +128,20 @@ def test_compute_contribution_to_lagrangian(
     # Create an instance of a Formulation
     formulation = formulation_type(constraint_type=constraint_type)
 
+    kwargs = {"constraint_state": constraint_state}
+    if formulation.expects_penalty_coefficient:
+        kwargs["penalty_coefficient"] = penalty_coefficient
+    if formulation.expects_multiplier:
+        kwargs["multiplier"] = multiplier
+
     # Call compute_contribution_to_dual_lagrangian
-    dual_contribution_store = formulation.compute_contribution_to_dual_lagrangian(
-        constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=penalty_coefficient
-    )
+    dual_contribution_store = formulation.compute_contribution_to_dual_lagrangian(**kwargs)
 
     # Check that the returned value is of the correct type
     assert isinstance(dual_contribution_store, cooper.formulations.ContributionStore)
 
     # Call compute_contribution_to_primal_lagrangian
-    primal_contribution_store = formulation.compute_contribution_to_primal_lagrangian(
-        constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=penalty_coefficient
-    )
+    primal_contribution_store = formulation.compute_contribution_to_primal_lagrangian(**kwargs)
     # Check that the returned value is of the correct type
     assert isinstance(primal_contribution_store, cooper.formulations.ContributionStore)
 
@@ -150,13 +152,17 @@ def test_compute_contribution_to_lagrangian_returns_none_when_constraint_state_d
     # Create an instance of a Formulation
     formulation = formulation_type(constraint_type=constraint_type)
 
+    kwargs = {"constraint_state": constraint_state}
+    if formulation.expects_penalty_coefficient:
+        kwargs["penalty_coefficient"] = penalty_coefficient
+    if formulation.expects_multiplier:
+        kwargs["multiplier"] = multiplier
+
     # Set contributes_to_dual_update to False
     constraint_state.contributes_to_dual_update = False
 
     # Call compute_contribution_to_dual_lagrangian
-    dual_contribution_store = formulation.compute_contribution_to_dual_lagrangian(
-        constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=penalty_coefficient
-    )
+    dual_contribution_store = formulation.compute_contribution_to_dual_lagrangian(**kwargs)
 
     # Check that the returned value is None
     assert dual_contribution_store is None
@@ -165,9 +171,7 @@ def test_compute_contribution_to_lagrangian_returns_none_when_constraint_state_d
     constraint_state.contributes_to_primal_update = False
 
     # Call compute_contribution_to_primal_lagrangian
-    primal_contribution_store = formulation.compute_contribution_to_primal_lagrangian(
-        constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=penalty_coefficient
-    )
+    primal_contribution_store = formulation.compute_contribution_to_primal_lagrangian(**kwargs)
 
     # Check that the returned value is None
     assert primal_contribution_store is None
