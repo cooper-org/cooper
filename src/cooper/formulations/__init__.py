@@ -4,4 +4,5 @@ from .formulations import (
     ContributionStore,
     Formulation,
     Lagrangian,
+    QuadraticPenalty,
 )

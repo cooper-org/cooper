@@ -152,3 +152,4 @@ ignore = [
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]
 "docs/source/notebooks/*" = ["N801", "N802", "N803", "N806"]
 "src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
+"src/cooper/formulations/formulations.py" = ["ARG002"]

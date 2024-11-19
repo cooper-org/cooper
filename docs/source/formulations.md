@@ -14,19 +14,18 @@ $$
 
 various algorithmic approaches can be used to find a solution. The process involves two stages: first, selecting a **formulation** for the optimization problem, and second, choosing the **optimization algorithm** to solve that formulated problem.
 
-This section focuses on the **formulations** of the CMP. A formulation is a mathematical representation of the constrained optimization problem, involving a *scalarization* of the objective function and constraints. Examples of formulations include the {py:class}`Lagrangian` and {py:class}`AugmentedLagrangian` formulations.
+This section focuses on the **formulations** of the CMP. A formulation is a mathematical representation of the constrained optimization problem, involving a *scalarization* of the objective function and constraints (see Sec. 4.7.4 in {cite:t}`boyd2004convex`). Examples of formulations include the {py:class}`Lagrangian` and {py:class}`AugmentedLagrangian` formulations.
 
 ## Formulations in **Cooper**
 
 The formulations supported by **Cooper** are of the form:
 
 $$
-\min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, f(\vx) + P(\vg(\vx), \vlambda, \vc_{\vg}) + Q(\vh(\vx), \vmu, \vc_{\vh}),
+\min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx,\vlambda, \vmu) \triangleq f(\vx) + P(\vg(\vx), \vlambda, \vc_{\vg}) + Q(\vh(\vx), \vmu, \vc_{\vh}),
 $$
 
-where $P$ and $Q$ are functions aimed at enforcing the satisfaction of the constraints, with learnable parameters $\vlambda$ and $\vmu$, and hyper-parameters $\vc_{\vg} \geq 0$ and $\vc_{\vh} \geq 0$.
+where $P$ and $Q$ are functions aimed at enforcing the satisfaction of the constraints, with decision variables $\vx$, $\vlambda$ and $\vmu$, and hyper-parameters $\vc_{\vg} \geq 0$ and $\vc_{\vh} \geq 0$.
 
-::: {note}
 **Cooper**'s framework for formulations supports a wide range of approaches for solving constrained optimization problems, including:
 
 - **The Lagrangian formulation** {cite}`arrow1958studies`, by letting:
@@ -35,41 +34,52 @@ where $P$ and $Q$ are functions aimed at enforcing the satisfaction of the const
 
   $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \vmu^\top \vh(\vx).$$
 
+  This results in the usual Lagrangian function:
 
-- **The Augmented Lagrangian formulation** {cite}`bertsekas_1975`, by letting:
+  $$\Lag(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx).$$
 
-  $$P(\vg(\vx), \vlambda, \vc_{\vg}) = \vlambda^\top \vg(\vx) + \frac{\vc_{\vg}}{2} ||\texttt{relu}(\vg(\vx))||_2^2,$$
 
-  $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \vmu^\top \vh(\vx) + \frac{\vc_{\vh}}{2} ||\vh(\vx)||_2^2.$$
+- **The Quadratic Penalty Formulation** {cite:t}`nocedal2006NumericalOptimization`, by letting:
+
+  $$P(\vg(\vx), \vlambda, \vc_{\vg}) = \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2,$$
+  $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.$$
+
+  This results in the Quadratic Penalty function:
+
+  $$\Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.$$
+
+
+- **The Augmented Lagrangian formulation** {cite}`bertsekas_1975` combines the Lagrangian function with a quadratic penalty term, yielding:
+
+    $$\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu) = \Lag(\vx, \vlambda, \vmu) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.$$
 
 For other formulations that could be implemented in future versions of **Cooper**, see {ref}`contributing`.
-:::
 
 :::{warning}
 Sequential Quadratic Programming (SQP) is not supported under **Cooper**'s formulation framework.
 :::
 
 ### Multipliers
-The auxiliary variables $\vlambda \geq \vzero$ and $\vmu$, refered to as *Lagrange multipliers* or *dual variables*, are used to enforce the constraints. Consider a Lagrangian formulation of the CMP {cite:p}`arrow1958studies`:
+The decision variables $\vlambda \geq \vzero$ and $\vmu$, refered to as *Lagrange multipliers* or *dual variables*, are used to enforce the constraints. Consider the Lagrangian formulation:
 
 $$
 \Lag(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx).
 $$
 
-where $\Lag$ is the Lagrangian function. Here, the maximization over $\vlambda$ and $\vmu$ **enforces** the constraints by assigning an objective value of $\infty$ to infeasible points:
+The maximization of the Lagrangian over $\vlambda$ and $\vmu$ **enforces** the constraints by assigning an objective value of $\infty$ to infeasible points:
 
 $$
 \min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx, \vlambda, \vmu) = \min_{\vx \in \reals^d} \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
 $$
 
 ### Penalty Coefficients
-The hyper-parameters $\vc_{\vg}$ and $\vc_{\vh}$, refered to as *penalty coefficients*, are used to penalize constraint violations. For a quadratic penalty formulation (see Sec. 17.1 in {cite:t}`nocedal2006NumericalOptimization`):
+The hyper-parameters $\vc_{\vg}$ and $\vc_{\vh}$, refered to as *penalty coefficients*, are used to penalize constraint violations. Consider a quadratic penalty formulation:
 
 $$
-    \min_{\vx \in \reals^d} \,\, f(\vx) + \frac{\vc_{\vg}}{2} ||\texttt{relu}(\vg(\vx))||_2^2 + \frac{\vc_{\vh}}{2} ||\vh(\vx)||_2^2,
+    \min_{\vx \in \reals^d} \,\, f(\vx) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.
 $$
 
-Here as $\vc_{\vg}$ and $\vc_{\vh}$​ approach infinity, the quadratic penalty formulation becomes equivalent to the original constrained optimization problem.
+As $\vc_{\vg}, \vc_{\vh} \rightarrow \infty$, a solution to the quadratic penalty problem approaches a solution to the original constrained optimization problem.
 
 For details on how Lagrange multipliers and penalty coefficients are implemented in **Cooper**, see {ref}`multipliers`.
 
