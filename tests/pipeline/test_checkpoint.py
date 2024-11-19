@@ -108,9 +108,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
         )
 
     loaded_cooper_optimizer = cooper_optimizer_class(
-        cmp=new_cmp,
-        primal_optimizers=loaded_primal_optimizers,
-        dual_optimizers=loaded_dual_optimizers,
+        cmp=new_cmp, primal_optimizers=loaded_primal_optimizers, dual_optimizers=loaded_dual_optimizers
     )
     loaded_cooper_optimizer.load_state_dict(cooper_optimizer_state_dict_100)
 

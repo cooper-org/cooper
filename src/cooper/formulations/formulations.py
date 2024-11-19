@@ -112,18 +112,13 @@ class Lagrangian(Formulation):
     expects_penalty_coefficient = False
 
     def compute_contribution_to_primal_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
+        self, constraint_state: ConstraintState, multiplier: Multiplier
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_primal_update:
             return None
 
         violation, multiplier_value, _ = self._prepare_kwargs_for_lagrangian_contribution(
-            constraint_state=constraint_state,
-            multiplier=multiplier,
-            penalty_coefficient=None,
-            primal_or_dual="primal",
+            constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=None, primal_or_dual="primal"
         )
         lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
             constraint_factor_value=multiplier_value, violation=violation
@@ -132,18 +127,13 @@ class Lagrangian(Formulation):
         return ContributionStore(lagrangian_contribution, multiplier_value, None)
 
     def compute_contribution_to_dual_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
+        self, constraint_state: ConstraintState, multiplier: Multiplier
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_dual_update:
             return None
 
         violation, multiplier_value, _ = self._prepare_kwargs_for_lagrangian_contribution(
-            constraint_state=constraint_state,
-            multiplier=multiplier,
-            penalty_coefficient=None,
-            primal_or_dual="dual",
+            constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=None, primal_or_dual="dual"
         )
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=None
@@ -186,7 +176,9 @@ class QuadraticPenalty(Formulation):
         return ContributionStore(lagrangian_contribution, None, penalty_coefficient_value)
 
     def compute_contribution_to_dual_lagrangian(
-        self, constraint_state: ConstraintState, penalty_coefficient: PenaltyCoefficient
+        self,
+        constraint_state: ConstraintState,  # noqa: ARG002
+        penalty_coefficient: PenaltyCoefficient,  # noqa: ARG002
     ) -> Optional[ContributionStore]:
         """TODO"""
         return None
@@ -213,10 +205,7 @@ class AugmentedLagrangianFunction(Formulation):
     expects_penalty_coefficient = True
 
     def compute_contribution_to_primal_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
-        penalty_coefficient: PenaltyCoefficient,
+        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_primal_update:
             return None
@@ -237,10 +226,7 @@ class AugmentedLagrangianFunction(Formulation):
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
     def compute_contribution_to_dual_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
-        penalty_coefficient: PenaltyCoefficient,
+        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_dual_update:
             return None
@@ -291,10 +277,7 @@ class AugmentedLagrangian(Formulation):
     expects_penalty_coefficient = True
 
     def compute_contribution_to_primal_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
-        penalty_coefficient: PenaltyCoefficient,
+        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_primal_update:
             return None
@@ -315,10 +298,7 @@ class AugmentedLagrangian(Formulation):
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
 
     def compute_contribution_to_dual_lagrangian(
-        self,
-        constraint_state: ConstraintState,
-        multiplier: Multiplier,
-        penalty_coefficient: PenaltyCoefficient,
+        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
     ) -> Optional[ContributionStore]:
         if not constraint_state.contributes_to_dual_update:
             return None

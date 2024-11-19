@@ -76,10 +76,7 @@ def test_lagrangian_store_backward_none():
 
 def test_lagrangian_store_observed_multiplier_values(eq_constraint, ineq_constraint):
     lagrangian_store = cooper.LagrangianStore(
-        multiplier_values={
-            eq_constraint: torch.tensor(1.0),
-            ineq_constraint: torch.tensor(2.0),
-        }
+        multiplier_values={eq_constraint: torch.tensor(1.0), ineq_constraint: torch.tensor(2.0)}
     )
     observed_values = list(lagrangian_store.observed_multiplier_values())
     assert observed_values == [torch.tensor(1.0), torch.tensor(2.0)]
@@ -87,10 +84,7 @@ def test_lagrangian_store_observed_multiplier_values(eq_constraint, ineq_constra
 
 def test_lagrangian_store_observed_penalty_coefficient_values(eq_constraint, ineq_constraint):
     lagrangian_store = cooper.LagrangianStore(
-        penalty_coefficient_values={
-            eq_constraint: torch.tensor(3.0),
-            ineq_constraint: torch.tensor(4.0),
-        }
+        penalty_coefficient_values={eq_constraint: torch.tensor(3.0), ineq_constraint: torch.tensor(4.0)}
     )
     observed_values = list(lagrangian_store.observed_penalty_coefficient_values())
     assert observed_values == [torch.tensor(3.0), torch.tensor(4.0)]
@@ -155,8 +149,7 @@ def test_observed_strict_violations(cmp_state, eq_constraint):
 
 def test_observed_constraint_features(cmp_state, eq_constraint):
     constraint_state = cooper.ConstraintState(
-        violation=torch.tensor(0.0),
-        constraint_features=torch.tensor(0, dtype=torch.long),
+        violation=torch.tensor(0.0), constraint_features=torch.tensor(0, dtype=torch.long)
     )
     cmp_state.observed_constraints[eq_constraint] = constraint_state
     constraint_features = list(cmp_state.observed_constraint_features())
@@ -234,10 +227,7 @@ def test_cmp_named_penalty_coefficients(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     named_penalty_coefficients = list(cmp_instance.named_penalty_coefficients())
     assert len(named_penalty_coefficients) == 1
-    assert named_penalty_coefficients[0] == (
-        "test_constraint",
-        eq_constraint.penalty_coefficient,
-    )
+    assert named_penalty_coefficients[0] == ("test_constraint", eq_constraint.penalty_coefficient)
 
 
 def test_cmp_dual_parameters(cmp_instance, eq_constraint):
@@ -296,9 +286,7 @@ def test_sanity_check_cmp_state_violation(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     with pytest.raises(ValueError, match="The violation tensor of constraint .*"):
         cmp_instance.sanity_check_cmp_state(
-            cooper.CMPState(
-                observed_constraints={eq_constraint: cooper.ConstraintState(violation=torch.tensor(1.0))},
-            )
+            cooper.CMPState(observed_constraints={eq_constraint: cooper.ConstraintState(violation=torch.tensor(1.0))})
         )
 
 
@@ -311,6 +299,6 @@ def test_sanity_check_cmp_state_strict_violation(cmp_instance, eq_constraint):
             cooper.CMPState(
                 observed_constraints={
                     eq_constraint: cooper.ConstraintState(violation=violation, strict_violation=violation)
-                },
+                }
             )
         )

@@ -73,11 +73,7 @@ def extrapolation(request, formulation_type):
 
 
 @pytest.fixture(
-    params=[
-        testing.AlternationType.FALSE,
-        testing.AlternationType.PRIMAL_DUAL,
-        testing.AlternationType.DUAL_PRIMAL,
-    ]
+    params=[testing.AlternationType.FALSE, testing.AlternationType.PRIMAL_DUAL, testing.AlternationType.DUAL_PRIMAL]
 )
 def alternation_type(request, extrapolation, formulation_type):
     is_alternation = request.param != testing.AlternationType.FALSE

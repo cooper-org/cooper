@@ -35,9 +35,7 @@ def cooper_optimizer(cooper_optimizer_class, cmp_instance, primal_params):
 def test_load_state_dict_mismatch_primal(cooper_optimizer, cooper_optimizer_class, cmp_instance, primal_params):
     state = cooper_optimizer.state_dict()
     new_optimizer = cooper_optimizer_class(
-        cmp_instance,
-        [torch.optim.SGD([primal_params], lr=0.1) for _ in range(2)],
-        cooper_optimizer.dual_optimizers,
+        cmp_instance, [torch.optim.SGD([primal_params], lr=0.1) for _ in range(2)], cooper_optimizer.dual_optimizers
     )
 
     with pytest.raises(

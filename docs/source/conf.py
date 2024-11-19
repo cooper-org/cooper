@@ -70,18 +70,14 @@ mathjax3_config = {
             "gtilde": "\\tilde{\\vg}",
             "htilde": "\\tilde{\\vh}",
         }
-    },
+    }
 }
 
 autodoc_member_order = "bysource"
 
 source_suffix = [".ipynb", ".md"]
 
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "dollarmath",
-]
+myst_enable_extensions = ["colon_fence", "deflist", "dollarmath"]
 
 # For adding implicit referencing, see:
 # https://myst-parser.readthedocs.io/en/latest/syntax/cross-referencing.html#implicit-targets

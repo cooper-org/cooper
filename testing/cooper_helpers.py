@@ -216,10 +216,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
 
 def build_primal_optimizers(
-    params: Sequence[torch.nn.Parameter],
-    extrapolation=False,
-    primal_optimizer_class=None,
-    primal_optimizer_kwargs=None,
+    params: Sequence[torch.nn.Parameter], extrapolation=False, primal_optimizer_class=None, primal_optimizer_kwargs=None
 ):
     """Builds a list of primal optimizers for the given parameters.
 
@@ -244,10 +241,7 @@ def build_primal_optimizers(
 
 
 def build_dual_optimizers(
-    dual_parameters,
-    augmented_lagrangian=False,
-    dual_optimizer_class=torch.optim.SGD,
-    dual_optimizer_kwargs=None,
+    dual_parameters, augmented_lagrangian=False, dual_optimizer_class=torch.optim.SGD, dual_optimizer_kwargs=None
 ):
     # Make copy of this fixture since we are modifying in-place
     if dual_optimizer_kwargs is None:
@@ -306,9 +300,7 @@ def build_cooper_optimizer(
             cooper_optimizer_class = cooper.optim.SimultaneousOptimizer
 
     cooper_optimizer = cooper_optimizer_class(
-        cmp=cmp,
-        primal_optimizers=primal_optimizers,
-        dual_optimizers=dual_optimizers,
+        cmp=cmp, primal_optimizers=primal_optimizers, dual_optimizers=dual_optimizers
     )
 
     return cooper_optimizer

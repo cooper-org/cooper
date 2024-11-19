@@ -56,14 +56,7 @@ def test_i_optimizer(params, lr, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params],
-        lr=lr,
-        Ki=Ki,
-        Kp=0.0,
-        ema_nu=0.0,
-        weight_decay=0.0,
-        maximize=False,
-        init_type=InitType.ZEROS,
+        params=[params], lr=lr, Ki=Ki, Kp=0.0, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.ZEROS
     )
 
     for _ in range(100):
@@ -86,14 +79,7 @@ def test_pi_optimizer(params, lr, Kp, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params],
-        lr=lr,
-        Ki=Ki,
-        Kp=Kp,
-        ema_nu=0.0,
-        weight_decay=0.0,
-        maximize=False,
-        init_type=InitType.ZEROS,
+        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.ZEROS
     )
 
     previous_grad = torch.zeros_like(params)
@@ -173,13 +159,7 @@ def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
         return (Ki + (1 - ema_nu) * Kp) * error - (1 - ema_nu) * Kp * previous_xi
 
     optimizer = nuPI(
-        multiplier_module.parameters(),
-        lr=LR,
-        Kp=Kp,
-        Ki=Ki,
-        ema_nu=ema_nu,
-        maximize=maximize,
-        init_type=InitType.ZEROS,
+        multiplier_module.parameters(), lr=LR, Kp=Kp, Ki=Ki, ema_nu=ema_nu, maximize=maximize, init_type=InitType.ZEROS
     )
 
     def do_optimizer_step(indices):
@@ -251,14 +231,7 @@ def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params],
-        lr=lr,
-        Ki=Ki,
-        Kp=Kp,
-        ema_nu=0.0,
-        weight_decay=0.0,
-        maximize=False,
-        init_type=InitType.SGD,
+        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.SGD
     )
 
     optimizer.zero_grad()
@@ -294,13 +267,7 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
         return multiplier_module(indices).reshape(-1, 1).clone().detach()
 
     optimizer = nuPI(
-        multiplier_module.parameters(),
-        lr=LR,
-        Kp=Kp,
-        Ki=Ki,
-        ema_nu=ema_nu,
-        maximize=maximize,
-        init_type=InitType.SGD,
+        multiplier_module.parameters(), lr=LR, Kp=Kp, Ki=Ki, ema_nu=ema_nu, maximize=maximize, init_type=InitType.SGD
     )
 
     def do_optimizer_step(indices):
