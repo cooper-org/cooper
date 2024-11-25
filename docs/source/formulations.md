@@ -96,7 +96,7 @@ $$
 $$ -->
 
 
-## **Cooper**'s Formulations
+## Formulations in **Cooper**
 
 ### Lagrangian Formulations
 
@@ -113,13 +113,12 @@ $$
 \Lag(\vx, \vlambda, \vmu) \triangleq f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx),
 $$
 
-where $\vlambda \geq \vzero$ and $\vmu$ are the Lagrange multipliers or **dual variables** associated with the inequality and equality constraints, respectively.
-The Lagrangian function is a linear combination of the objective function and the constraints, with the Lagrange multipliers acting as trainable weights on the constraints.
+which corresponds to a linear combination of the objective function and the constraints, with the Lagrange multipliers acting as trainable weights on the constraints.
 
 :::{warning}
-There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers at its solution, $\xstar$. In such cases, attempting to find $\xstar$, $\lambdastar$, and $\mustar$ as an argmin-argmax point of the Lagrangian is ineffective, as $\lambdastar$ and $\mustar$ may not exist.
-
-See {cite:t}`boyd2004convex` for conditions under which Lagrange multipliers are guaranteed to exist.
+There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers $\lambdastar$, and $\mustar$ at a solution $\xstar$.
+Nevertheless, in practice, many non-convex problems are successfully solved using the Lagrangian approach.
+For conditions under which Lagrange multipliers are guaranteed to exist, see {cite:t}`boyd2004convex`.
 :::
 
 
