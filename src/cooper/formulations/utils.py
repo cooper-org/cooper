@@ -14,9 +14,8 @@ def evaluate_constraint_factor(
 ) -> torch.Tensor:
     """Evaluate a Lagrange multiplier or penalty coefficient.
 
-    This function evaluates the value of the multiplier or penalty coefficient for a
-    constraint. If the module expects constraint features, it is called with the
-    constraint features as an argument. Otherwise, it is called without arguments.
+    If the module expects constraint features, it is called with the constraint features
+    as an argument. Otherwise, it is called without arguments.
 
     Args:
         module: Multiplier or penalty coefficient module.
@@ -47,9 +46,10 @@ def evaluate_constraint_factor(
 def compute_primal_weighted_violation(
     constraint_factor_value: torch.Tensor, violation: torch.Tensor
 ) -> Optional[torch.Tensor]:
-    """Computes the sum of constraint violations weighted by the associated constraint
-    factors (multipliers or penalty coefficients), while preserving the gradient for the
-    primal variables.
+    r"""Weighted sum of constraint violations using their associated multipliers,
+    preserving only the gradient for the primal variables :math:`\vx`. This corresponds
+    to :math:`\vlambda .\text{detach}()^{\top} \vg(\vx)` for inequality constraints or
+    :math:`\vmu .\text{detach}()^{\top} \vh(\vx)` for equality constraints.
 
     Args:
         constraint_factor_value: Tensor of constraint factor values.
@@ -65,24 +65,21 @@ def compute_primal_weighted_violation(
 def compute_dual_weighted_violation(
     multiplier_value: torch.Tensor, violation: torch.Tensor, penalty_coefficient_value: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
-    r"""Computes the sum of constraint violations weighted by the associated constraint
-    factors (multipliers or penalty coefficients), while preserving the gradient for the
-    dual variables :math:`\vlambda` and :math:`\vmu`.
+    r"""If a penalty coefficient is *not* provided, computes the sum of weighted constraint
+    violations while preserving the gradient for the dual variables :math:`\vlambda`
+    only. That is:
 
-    When computing the gradient of the Lagrangian with respect to the dual variables, we
-    only need the *value* of the constraint violation and not its gradient. To achieve
-    this, the violation is detached to avoid backpropagating through it and
-    unintentionally computing its gradient with respect to the primal variables
-    :math:`\vx`. This approach allows the use of non-differentiable constraints when
-    updating the multipliers. This insight, termed "proxy" constraints, was introduced
-    by :cite:t:`cotter2019proxy` (Sec. 4.2).
+    .. math::
+        \vlambda^{\top} \vg(\vx).\text{detach}() \text{ or } \vmu^{\top} \vh(\vx).\text{detach}()
 
-    When both the constraint factor and the penalty coefficient are provided, the
-    contribution of each violation is weighted by both the multiplier's value and the
-    penalty coefficient. This ensures that the gradient with respect to the multiplier
-    is the constraint violation times the penalty coefficient, as required by the
-    updates of the Augmented Lagrangian Method, implemented in
-    :py:class:`AugmentedLagrangian` (See Eq. 5.62 in :cite:t:`bertsekas1999nonlinear`).
+    If a penalty coefficient is provided, the contribution of each violation is further
+    multiplied by its associated penalty coefficient, ensuring that the gradient with
+    respect to the multiplier is the constraint violation times the penalty coefficient.
+    This results in:
+
+    Todo:
+    .. math::
+        \vlambda^{\top} \rho \vg(\vx).\text{detach()} \text{ or } \vmu^{\top} \rho \vh(\vx).\text{detach()}
 
     Args:
         multiplier_value: Tensor of multiplier values.

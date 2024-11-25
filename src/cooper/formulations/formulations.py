@@ -180,7 +180,9 @@ class QuadraticPenalty(Formulation):
         constraint_state: ConstraintState,  # noqa: ARG002
         penalty_coefficient: PenaltyCoefficient,  # noqa: ARG002
     ) -> Optional[ContributionStore]:
-        """TODO"""
+        """The Quadratic Penalty formulation does not involve dual variables and
+        therefore does not implement a dual Lagrangian (returns ``None``).
+        """
         return None
 
 
