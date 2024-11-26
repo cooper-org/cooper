@@ -25,6 +25,8 @@ $$
 
 where $P$ and $Q$ are functions aimed at enforcing the satisfaction of the constraints.
 
+In {doc}`optim`, we discuss the algorithms used to solve the formulated problem, such as simultaneous gradient descent-ascent ({py:class}`~cooper.optim.SimultaneousOptimizer`).
+
 :::{admonition} Multipliers and Penalty Coefficients
 :class: note
 
@@ -43,7 +45,15 @@ Sequential Quadratic Programming (SQP) is not supported under **Cooper**'s formu
 
 ## Example
 
-To specify your formulation of choice, pass the corresponding class (see [Classes](#classes) below) to the `formulation_type` argument of the {py:class}`~cooper.constraints.Constraint` class. For example, to use the {py:class}`Lagrangian` formulation, you would write:
+To specify your formulation of choice, pass the corresponding class to the `formulation_type` argument of the {py:class}`~cooper.constraints.Constraint` class. For example, to use the {py:class}`Lagrangian` formulation, you would first define a multiplier (see {ref}`multipliers` for more details):
+
+```python
+from cooper.multipliers import DenseMultiplier
+
+multiplier = DenseMultiplier(num_constraints=...)
+```
+
+Then, pass the {py:class}`~Lagrangian` class and the `multiplier` to the {py:class}`~cooper.constraints.Constraint` constructor:
 
 ```{code-block} python
 :emphasize-lines: 4
@@ -55,46 +65,40 @@ my_constraint = cooper.Constraint(
 )
 ```
 
+If you consider a formulation that requires penalty coefficients, you can first instantiate a {py:class}`~cooper.multipliers.PenaltyCoefficient`:
+
+```python
+from cooper.multipliers import DensePenaltyCoefficient
+
+penalty_coefficient = DensePenaltyCoefficient(init=torch.tensor(...))
+```
+
+And then pass the desired formulation and the penalty coefficient to the {py:class}`~cooper.constraints.Constraint` constructor:
+
+```{code-block} python
+:emphasize-lines: 4
+
+my_constraint = cooper.Constraint(
+    constraint_type=cooper.ConstraintType.INEQUALITY,
+    formulation=cooper.formulations.QuadraticPenalty,
+    penalty_coefficient=penalty_coefficient,
+)
+```
+
+Some formulations may require both multipliers and penalty coefficients. In such cases, you can pass both to the {py:class}`~cooper.constraints.Constraint` constructor.
+
 :::{note}
 
 Different formulations may be better suited to different constraints.
-**Cooper** enables specifying a formulation type for each constraint separately, allowing the use of multiple formulations within the same CMP.
+**Cooper** enables specifying a formulation type for each constraint separately, allowing the use of multiple formulations within the same constrained optimization problem.
 :::
 
 
-
-## Solving a Formulation
-In {doc}`optim`, we discuss the algorithms used to solve the formulated problem, such as simultaneous gradient descent-ascent ({py:class}`~cooper.optim.SimultaneousOptimizer`).
 
 ## Primal and Dual Lagrangians
 
 To support {ref}`proxy`, **Cooper** formulations internally calculate two Lagrangian terms, $\Lag_{\text{primal}}$ and $\Lag_{\text{dual}}$. The *primal* term, $\Lag_{\text{primal}}$, considers differentiable constraint violations $\tilde{\vg}(\vx)$ and $\tilde{\vh}(\vx)$, while the *dual* term, $\Lag_{\text{dual}}$, considers the (potentially non-differentiable) true constraint violations $\vg(\vx)$ and $\vh(\vx)$.
 For details on how **Cooper** represents these constraint violations, see {ref}`constraint-state`.
-
-
-<!--
-$$
-\Lag(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx).
-$$
-
-The maximization of the Lagrangian over $\vlambda$ and $\vmu$ **enforces** the constraints by assigning an objective value of $\infty$ to infeasible points:
-
-$$
-\min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx, \vlambda, \vmu) = \min_{\vx \in \reals^d} \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
-$$
-
-The hyper-parameters $\vc_{\vg} \geq \vzero$ and $\vc_{\vh} \geq \vzero$, refered to as *penalty coefficients*, are used to penalize constraint violations. Consider a quadratic penalty formulation:
-
-$$
-    \min_{\vx \in \reals^d} \,\, \Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.
-$$
-
-As $\vc_{\vg}, \vc_{\vh} \rightarrow \infty$, a solution to the quadratic penalty problem approaches a solution to the original constrained optimization problem:
-
-$$
-\lim_{\vc_{\vg}, \vc_{\vh} \rightarrow \infty}  \,\, \Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) =  \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
-$$ -->
-
 
 ## Formulations in **Cooper**
 
@@ -115,9 +119,16 @@ $$
 
 which corresponds to a linear combination of the objective function and the constraints, with the Lagrange multipliers acting as trainable weights on the constraints.
 
+The maximization of the Lagrangian over $\vlambda$ and $\vmu$ *enforces* the constraints by assigning an objective value of $\infty$ to infeasible points:
+
+$$
+\min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx, \vlambda, \vmu) = \min_{\vx \in \reals^d} \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
+$$
+
+
 :::{warning}
-There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers $\lambdastar$, and $\mustar$ at a solution $\xstar$.
-Nevertheless, in practice, many non-convex problems are successfully solved using the Lagrangian approach.
+There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers $\lambdastar$ and $\mustar$ at a solution $\xstar$.
+Nevertheless, in practice, many non-convex problems are successfully solved using the Lagrangian approach {cite:p}`elenter2022lagrangian, gallego2022controlled, hounie2023automatic, sohrabi2024pi, dai2024safe`
 For conditions under which Lagrange multipliers are guaranteed to exist, see {cite:t}`boyd2004convex`.
 :::
 
@@ -129,7 +140,7 @@ For conditions under which Lagrange multipliers are guaranteed to exist, see {ci
 
 ### Quadratic Penalty Formulations
 
-The Quadratic Penalty formulation {cite}`nocedal2006NumericalOptimization` penalizes constraint violations via quadratic terms:
+The Quadratic Penalty formulation (see Sec. 17.1 in {cite}`nocedal2006NumericalOptimization`) penalizes constraint violations via quadratic terms:
 
 $$P(\vg(\vx), \vlambda, \vc_{\vg}) = \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2,$$
 $$Q(\vh(\vx), \vmu, \vc_{\vh}) = \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2,$$
@@ -139,32 +150,12 @@ This results in the Quadratic Penalty function:
 
   $$\Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.$$
 
-To use the Quadratic Penalty formulation in **Cooper**, first define a penalty coefficient (see {ref}`multipliers` for details):
 
-```python
-from cooper.multipliers import DensePenaltyCoefficient
+The penalty coefficients are used to penalize constraint violations. As $\vc_{\vg}, \vc_{\vh} \rightarrow \infty$, a solution to the quadratic penalty problem approaches a solution to the original constrained optimization problem:
 
-penalty_coefficient = DensePenaltyCoefficient(init=torch.tensor(1.0))
-```
-
-Then, pass the {py:class}`~QuadraticPenalty` class and the `penalty_coefficient` to the {py:class}`~cooper.constraints.Constraint` constructor:
-
-```{code-block} python
-:emphasize-lines: 4
-
-my_constraint = cooper.Constraint(
-    constraint_type=cooper.ConstraintType.INEQUALITY,
-    formulation=cooper.formulations.QuadraticPenalty,
-    penalty_coefficient=penalty_coefficient,
-)
-```
-
-:::{note}
-**Cooper** supports vector-valued penalty coefficients that match the size of a constraint. This can be done by passing a tensor of coefficients to the `init` argument of a {py:class}`~cooper.multipliers.PenaltyCoefficient`, where each element corresponds to a penalty coefficient for an individual constraint.
-:::
-
-Since it is often desirable to increase the penalty coefficient over the optimization process, **Cooper** provides a scheduler mechanism to do so. For more information, see {ref}`coefficient_updaters`.
-
+$$
+\lim_{\vc_{\vg}, \vc_{\vh} \rightarrow \infty}  \,\, \Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) =  \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
+$$
 
 ```{eval-rst}
 .. autoclass:: QuadraticPenalty
@@ -178,14 +169,14 @@ Since it is often desirable to increase the penalty coefficient over the optimiz
 The **Augmented Lagrangian** function {cite}`bertsekas_1975` is a generalization of the Lagrangian function that includes a quadratic penalty term on the constraint violations:
 
 $$
-\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu) = \Lag(\vx, \vlambda, \vmu) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.,
+\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu) = \Lag(\vx, \vlambda, \vmu) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.
 $$
 
-The main advantage of the Augmented Lagrangian Method (ALM) over the quadratic penalty method (see Theorem 17.5 in {cite:t}`nocedal2006NumericalOptimization`) is that, under certain assumptions, there exists a finite $\bar{c}$ such that for all $c \geq \bar{c}$, the minimizer of $\Lag_{c}(\vx, \vlambda, \vmu)$ with respect to $\vx$ corresponds to the solution of the original constrained optimization problem. This allows the algorithm to succeed without $c \rightarrow \infty$, a requirement often present in the quadratic penalty method.
+The main advantage of the Augmented Lagrangian Method (ALM) over the quadratic penalty method (see Theorem 17.5 in {cite:t}`nocedal2006NumericalOptimization`) is that, under certain assumptions, there exists a finite $\bar{c}$ such that for all $c \geq \bar{c}$, the minimizer of $\Lag_{c}(\vx, \vlambda, \vmu)$ with respect to $\vx$ corresponds to the solution of the original constrained optimization problem $\xstar$. This allows the algorithm to succeed without requiring $c \rightarrow \infty$, as is often the case with the quadratic penalty method.
 
 
 :::{warning}
-We make a distinction between the Augmented Lagrangian *formulation* ({py:class}`~AugmentedLagrangianFunction`) and the Augmented Lagrangian *method* ({py:class}`~AugmentedLagrangian`, $\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function defined above, with the following update rules:
+We make a distinction between the Augmented Lagrangian *formulation* ({py:class}`~AugmentedLagrangianFunction`) and the Augmented Lagrangian *method* ({py:class}`~AugmentedLagrangian`, $\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$, with the following updates:
 
 $$
 \vx_{t+1} &\in \argmin{\vx \in \reals^d} \,\, \Lag_{c_t}(\vx, \vlambda_t, \vmu_t) \\
@@ -203,7 +194,7 @@ If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the
 1. Use an {py:class}`~AugmentedLagrangian` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
 2. Use {py:class}`torch.optim.SGD` with `lr=1.0` as the optimizer for the dual variables. This ensures that the dual learning rate is simply the penalty coefficient, as opposed `lr * c_t`.
 3. Use {py:class}`~cooper.optim.PrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
-4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. For details on how to do this, see {doc}`optim`.
+4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. See {doc}`optim` for details on how to implement this.
 
 :::
 
@@ -229,7 +220,7 @@ If you are interested in implementing your own formulation, you can inherit from
 
 ```{eval-rst}
 .. autoclass:: Formulation
-    :members: expects_penalty_coefficient, compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
+    :members: expects_multiplier, expects_penalty_coefficient, compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
 ```
 
 ### Utils

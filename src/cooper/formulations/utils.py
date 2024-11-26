@@ -46,10 +46,10 @@ def evaluate_constraint_factor(
 def compute_primal_weighted_violation(
     constraint_factor_value: torch.Tensor, violation: torch.Tensor
 ) -> Optional[torch.Tensor]:
-    r"""Weighted sum of constraint violations using their associated multipliers,
+    r"""A weighted sum of constraint violations using their associated multipliers,
     preserving only the gradient for the primal variables :math:`\vx`. This corresponds
-    to :math:`\vlambda .\text{detach}()^{\top} \vg(\vx)` for inequality constraints or
-    :math:`\vmu .\text{detach}()^{\top} \vh(\vx)` for equality constraints.
+    to :math:`\vlambda .\texttt{detach}()^{\top} \vg(\vx)` for inequality constraints or
+    :math:`\vmu .\texttt{detach}()^{\top} \vh(\vx)` for equality constraints.
 
     Args:
         constraint_factor_value: Tensor of constraint factor values.
@@ -66,20 +66,22 @@ def compute_dual_weighted_violation(
     multiplier_value: torch.Tensor, violation: torch.Tensor, penalty_coefficient_value: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     r"""If a penalty coefficient is *not* provided, computes the sum of weighted constraint
-    violations while preserving the gradient for the dual variables :math:`\vlambda`
-    only. That is:
+    violations while preserving the gradient for the dual variables :math:`\vlambda` and
+    :math:`\vmu` only. That is:
 
     .. math::
-        \vlambda^{\top} \vg(\vx).\text{detach}() \text{ or } \vmu^{\top} \vh(\vx).\text{detach}()
+        \vlambda^{\top} \vg(\vx).\texttt{detach}() \text{ or } \vmu^{\top}
+        \vh(\vx).\texttt{detach}()
 
     If a penalty coefficient is provided, the contribution of each violation is further
     multiplied by its associated penalty coefficient, ensuring that the gradient with
     respect to the multiplier is the constraint violation times the penalty coefficient.
     This results in:
 
-    Todo:
     .. math::
-        \vlambda^{\top} \rho \vg(\vx).\text{detach()} \text{ or } \vmu^{\top} \rho \vh(\vx).\text{detach()}
+        (\vlambda \odot \vc_{\vg})^{\top} \vg(\vx) \text{ or } (\vmu \odot
+        \vc_{\vh})^{\top} \vh(\vx)
+
 
     Args:
         multiplier_value: Tensor of multiplier values.
@@ -99,19 +101,18 @@ def compute_dual_weighted_violation(
 def compute_quadratic_penalty(
     penalty_coefficient_value: torch.Tensor, violation: torch.Tensor, constraint_type: ConstraintType
 ) -> Optional[torch.Tensor]:
-    r"""Computes the contribution of a constraint in the quadratic-penalty formulation.
-    This corresponds to Eq 17.7 in :cite:t:`nocedal2006NumericalOptimization`. Let us denote the equality
-    and inequality constraints by :math:`h_i(x)` and :math:`g_i(x)`, respectively. Let
-    the :math:`c_h` and :math:`c_g` denote the penalty coefficients.
+    r"""A weighted sum of *squared* constraint violations using their associated penalty
+    coefficients. This yields:
 
     .. math::
-        \frac{c_h}{2} ||\vh(\vx)||_2^2 + \frac{c_g}{2} ||\texttt{relu}(\vg(\vx))||_2^2
+        \frac{1}{2} \, \vc_{\vg}^{\top} \texttt{relu}(\vg(\vx))^2 \text{ or }
+        \frac{1}{2} \, \vc_{\vh}^{\top} \vh(\vx)^2
 
     Args:
         penalty_coefficient_value: Tensor of penalty coefficient values.
         violation: Tensor of constraint violations.
-        constraint_type: Type of constraint. One of `ConstraintType.INEQUALITY` or
-            `ConstraintType.EQUALITY`.
+        constraint_type: Type of constraint. One of ``ConstraintType.INEQUALITY`` or
+            ``ConstraintType.EQUALITY``.
 
     """
     clamped_violation = torch.relu(violation) if constraint_type == ConstraintType.INEQUALITY else violation

@@ -21,8 +21,10 @@ class Formulation(abc.ABC):
     affect the gradients of the Lagrangian with respect to the primal and dual variables.
 
     Attributes:
-        expects_penalty_coefficient: Used to determine whether the formulation
-            requires a penalty coefficient in its computation.
+        expects_multiplier (bool): Used to determine whether the formulation requires a
+            multiplier.
+        expects_penalty_coefficient (bool): Used to determine whether the formulation
+            requires a penalty coefficient.
     """
 
     expects_multiplier: bool
@@ -77,8 +79,8 @@ class Formulation(abc.ABC):
 
     @abc.abstractmethod
     def compute_contribution_to_primal_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
-        """Computes the contribution of a given constraint violation to the Lagrangian used
-        to update the *primal* variables.
+        """Computes the contribution of a given constraint violation to the *primal*
+        Lagrangian.
 
         Returns ``None`` if the constraint does not contribute to the primal update
         (i.e., when ``ConstraintState.contributes_to_primal_update=False``).
@@ -87,8 +89,8 @@ class Formulation(abc.ABC):
 
     @abc.abstractmethod
     def compute_contribution_to_dual_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
-        """Computes the contribution of a given constraint violation to the Lagrangian used
-        to update the *dual* variables.
+        """Computes the contribution of a given constraint violation to the *dual*
+        Lagrangian.
 
         Returns ``None`` if the constraint does not contribute to the dual update
         (i.e., when ``ConstraintState.contributes_to_dual_update=False``).
@@ -146,9 +148,11 @@ class QuadraticPenalty(Formulation):
     r"""The Quadratic Penalty formulation implements the following primal Lagrangian:
 
     .. math::
-        \Lag_{\text{primal}} = f(\vx) + \vc \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \vc \left\| \tilde{\vh}(\vx) \right\|_2^2.
+        \Lag_{\text{primal}} = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
+        \texttt{relu}(\tilde{\vg}(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \,
+        \tilde{\vh}(\vx)^2.
 
-    It does not implement a dual Lagrangian since it does not consider multipliers
+    It does not implement a dual Lagrangian since it does not consider dual variables.
 
     """
 
@@ -191,9 +195,9 @@ class AugmentedLagrangianFunction(Formulation):
 
     .. math::
         \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
-        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
-        \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
-        \left\| \tilde{\vh}(\vx) \right\|_2^2.
+        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
+        \texttt{relu}(\tilde{\vg}(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \,
+        \tilde{\vh}(\vx)^2.
 
     And the following dual Lagrangian:
 
@@ -254,16 +258,16 @@ class AugmentedLagrangian(Formulation):
 
     .. math::
         \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
-        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{\vc}{2}
-        \left\| \texttt{relu}(\tilde{\vg}(\vx)) \right\|_2^2 + \frac{\vc}{2}
-        \left\| \tilde{\vh}(\vx) \right\|_2^2,
+        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
+        \texttt{relu}(\tilde{\vg}(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \,
+        \tilde{\vh}(\vx)^2.
 
     thus matching that of the :py:class:`AugmentedLagrangianFunction`. However, the dual Lagrangian
     is different:
 
     .. math::
-        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc)^{\top} \vg(\vx)
-        + (\vmu \odot \vc)^{\top} \vh(\vx),
+        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc_{\vg})^{\top}
+        \vg(\vx) +  (\vmu \odot \vc_{\vh})^{\top} \vh(\vx),
 
     where :math:`\odot` denotes element-wise multiplication. This ensures that the
     gradients of the dual Lagrangian with respect to the multipliers are scaled by the
