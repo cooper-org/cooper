@@ -7,8 +7,22 @@ from cooper.optim.optimizer import RollOut
 
 
 class SimultaneousOptimizer(ConstrainedOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     by performing simultaneous gradient updates to the primal and dual variables.
+
+    According to the choice of primal and dual optimizers, the updates are performed as follows:
+
+    .. math::
+        \vx_{t+1} &= \texttt{primal_optimizer_update} \left( \vx_{t}, \nabla_{\vx}
+            \Lag(\vx, \vlambda_t, \vmu_t)|_{\vx=\vx_t} \right) \\
+
+        \vlambda_{t+1} &= \left[ \texttt{dual_optimizer_update} \left( \vlambda_{t},
+            \nabla_{\vlambda} \Lag({\vx_{t}}, \vlambda, \vmu_t)|_{\vlambda=\vlambda_t}
+            \right) \right]_+ \\
+
+        \vmu_{t+1} &= \texttt{dual_optimizer_update} \left( \vmu_{t}, \nabla_{\vmu}
+            \Lag({\vx_{t}}, \vlambda_t, \vmu)|_{\vmu=\vmu_t} \right)
+
     """
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
