@@ -1,5 +1,6 @@
 """Implementation of the :py:class:`ConstrainedOptimizer` class."""
 
+import abc
 import torch
 
 from cooper.cmp import ConstrainedMinimizationProblem
@@ -7,7 +8,7 @@ from cooper.optim.optimizer import CooperOptimizer
 from cooper.utils import OneOrSequence
 
 
-class ConstrainedOptimizer(CooperOptimizer):
+class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
     r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
     given a provided :py:class:`~cooper.formulation.Formulation`.
 
@@ -79,3 +80,9 @@ class ConstrainedOptimizer(CooperOptimizer):
         # multipliers for inequality constraints are non-negative.
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
+
+    @abc.abstractmethod
+    def roll(*args, **kwargs):
+        """TODO
+        """
+        pass

@@ -25,7 +25,7 @@ class UnconstrainedOptimizer(CooperOptimizer):
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
-            Since this is an unconstrained optimizer, the CMPState will just contain the loss.
+                Since this is an unconstrained optimizer, the CMPState will just contain the loss.
         """
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}

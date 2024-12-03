@@ -96,7 +96,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
         self.primal_step()
 
         # Update dual variables based on constraint violations at new primal point
-        self.zero_grad()
         with torch.no_grad():
             # Note that the dual variables do not intervene in the computation of the
             # CMP state. This means we can skip gradient computation wrt the primal
@@ -163,7 +162,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
 
         # Update primal variables based on the Lagrangian at the new dual point, and the
         # objective and constraint violations measured at the old primal point.
-        self.zero_grad()
         primal_lagrangian_store = cmp_state.compute_primal_lagrangian()
         primal_lagrangian_store.backward()
         self.primal_step()

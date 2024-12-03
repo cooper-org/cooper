@@ -92,7 +92,7 @@ nb_execution_timeout = 100
 
 # Handle Latex-style references
 bibtex_encoding = "latin"
-bibtex_reference_style = "author_year"
+bibtex_reference_style = "label"
 bibtex_bibfiles = ["references.bib"]
 
 todo_include_todos = True

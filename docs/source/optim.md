@@ -1,6 +1,10 @@
 (optim)=
 
 
+```{eval-rst}
+.. currentmodule:: cooper.optim
+```
+
 
 # Optim
 
@@ -9,37 +13,59 @@ The optim module contains classes and functions for solving constrained minimiza
 This module is divided into three main parts:
 - [Constrained Optimizers](#constrained-optimizers): for solving *constrained* minimization problems.
 - [Unconstrained Optimizers](#unconstrained-optimizers): for solving *unconstrained* minimization problems.
-- [Torch Optimizers](#torch-optimizers): **Cooper** implementations of useful {py:class}`torch.optim.Optimizer` objects not found in the PyTorch library.
+- [Torch Optimizers](#torch-optimizers): **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes useful for solving CMPs that are not part of PyTorch.
 
 ## Quick Start
 
 
-A {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` performs parameter updates to solve a {py:class}`~cooper.ConstrainedMinimizationProblem`.
+A {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` performs parameter updates to solve a {py:class}`~cooper.ConstrainedMinimizationProblem`. This class wraps two {py:class}`torch.optim.Optimizer` objects: one for the *primal* parameters $\vx$ and one for the *dual* parameters $\vlambda$ and $\vmu$. We refer to these as the primal and dual optimizers, respectively.
 
-This class wraps two {py:class}`torch.optim.Optimizer` objects: one for the *primal* parameters $\vx$ and one for the *dual* parameters $\vlambda$ and $\vmu$. Constrained optimizers define procedures for calling the {py:meth}`~torch.optim.Optimizer.step()` method of each optimizer. This procedure is implemented through the {py:meth}`~cooper.optim.CooperOptimizer.roll()` method.
+
+
+:::{admonition} Constrained Optimizers in **Cooper**
+:class: note
 
 **Cooper** implements the following subclasses of {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`:
 
 - {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer`: Updates the primal and dual parameters simultaneously.
-- {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer`: Alternates updates, starting with the primal parameters followed by the dual parameters.
-- {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`: Alternates updates, starting with the dual parameters followed by the primal parameters.
-- {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`: Utilizes the extragradient method for updates.
+- {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer`: Performs alternating updates, starting with the primal parameters followed by the dual parameters.
+- {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`: Performs alternating updates, starting with the dual parameters followed by the primal parameters.
+- {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`: Performs extragradient updates {cite:p}`korpelevich1976extragradient`.
+
+:::
 
 All {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s expect the following arguments:
 - `cmp`: a {py:class}`~cooper.ConstrainedMinimizationProblem`.
 - `primal_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the primal parameters.
-- `dual_optimizer`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the dual parameters.
+- `dual_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the dual parameters.
+
+### The `roll()` Method
+
+{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects define a `roll()` method that prescribes how and when to call the {py:meth}`~torch.optim.Optimizer.step()` method of the primal and dual optimizers.
+As the procedures for performing updates on the parameters of a CMP can be complex, the `roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the `roll()` method, instead of the individual `step()` methods of the primal and dual optimizers.
+
+
+PyTorch considers the `zero_grad() -> forward() -> backward() -> step()`
+
+Alt Primal Dual and Extragradient require re-evaluating the loss and constraints after an initial update. Then we require access to the compute cmp state function itself.
+
+```{eval-rst}
+.. automethod:: cooper.optim.optimizer.CooperOptimizer.roll
+```
+
+RollOut
 
 :::{admonition} Unconstrained problems in **Cooper**
 :class: note
 
-For handling **unconstrained** problems in a consistent way, we provide an
-{py:class}`~cooper.optim.UnconstrainedOptimizer` class. {py:class}`~cooper.optim.UnconstrainedOptimizer`s do not expect a `dual_optimizer`.
+To accommodate the solution of unconstrained problems using **Cooper**, we provide a {py:class}`~cooper.optim.UnconstrainedOptimizer` class. This is useful for handling both unconstrained problems, as well as formulations of constrained problems without dual variables (e.g., the {py:class}`~cooper.formulations.QuadraticPenalty` formulation). This design allows the use of the `roll()` interface regardless of whether the problem is constrained or unconstrained.
+
 :::
 
 ### Example
 
-To use a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, follow these steps:
+To use a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` with a {py:class}`~cooper.formulations.Lagrangian` formulation, follow these steps:
+
 - **\[Line 8\]**: Instantiate a `primal_optimizer` for the primal parameters.
 - **\[Line 12\]**: Instantiate a `dual_optimizer` for the dual parameters. Set `maximize=True` since the dual parameters maximize the Lagrangian.
     :::{admonition} Extracting the dual parameters
@@ -47,19 +73,19 @@ To use a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, 
 
     Similar to {py:meth}`torch.nn.Module.parameters()`, {py:class}`~cooper.ConstrainedMinimizationProblem` objects provide a helper method for extracting the dual parameters for all of its associated constraints: {py:meth}`cooper.ConstrainedMinimizationProblem.dual_parameters()`.
     :::
-- **\[Lines 17-21\]**: Instantiate a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, passing the `cmp`, `primal_optimizer`, and `dual_optimizer` as arguments.
-- **\[Line 28\]**: Use the `roll` method to perform a *single* call to the `step` method of both the primal and dual optimizers.
+- **\[Lines 16-20\]**: Instantiate a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, passing the `cmp`, `primal_optimizer`, and `dual_optimizer` as arguments.
+- **\[Line 26\]**: Use the `roll` method to perform a *single* call to the `step` method of both the primal and dual optimizers.
 
 
 ```{code-block} python
-:emphasize-lines: 8, 12, 17-21, 28
+:emphasize-lines: 8, 12, 16-20, 26
 :linenos: true
 
 import torch
 import cooper
 
-train_loader = ...
-model = ... # a PyTorch model
+train_loader = ... # PyTorch DataLoader
+model = ... # PyTorch model
 cmp = ... # containing `Constraint`s and their associated `Multiplier`s
 
 primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -80,7 +106,6 @@ for inputs, targets in train_loader:
     # kwargs used by `cmp.compute_cmp_state` method to compute the loss and constraints.
     kwargs = {"model": model, "inputs": inputs, "targets": targets}
 
-    # roll is a convenience method that
     constrained_optimizer.roll(compute_cmp_state_kwargs={"model": model, "inputs": inputs, "targets": targets})
 ```
 
