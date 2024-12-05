@@ -13,7 +13,15 @@ class CooperOptimizerState(TypedDict):
 
 
 class RollOut(NamedTuple):
-    """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`."""
+    """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`.
+    
+    Args:
+        loss (:py:class:`torch.Tensor`): Value of the objective function.
+        cmp_state (:py:class:`~cooper.cmp.CMPState`): State of the CMP.
+        primal_lagrangian_store (:py:class:`~cooper.LagrangianStore`): LagrangianStore for the primal Lagrangian.
+        dual_lagrangian_store (:py:class:`~cooper.LagrangianStore`): LagrangianStore for the dual Lagrangian.
+    
+    """
 
     loss: torch.Tensor
     cmp_state: CMPState

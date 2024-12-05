@@ -27,8 +27,39 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing primal-dual alternating updates to the primal and dual variables.
+    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    by performing alternating updates, starting with the primal variables.
+
+    TODO: Note that in order to update the dual variables, since the primal variables have
+    been updated, the CMPState must be recomputed to evaluate the constraint violations
+
+    According to the choice of primal and dual optimizers, updates are performed as follows:
+
+    .. math::
+        \vx_{t+1} &= \texttt{primal_optimizer_update} \left( \vx_{t}, \nabla_{\vx}
+            \Lag_{\text{primal}}(\vx, \vlambda_t, \vmu_t)|_{\vx=\vx_t} \right)
+
+        \vlambda_{t+1} &= \left[ \texttt{dual_optimizer_update} \left( \vlambda_{t},
+            \nabla_{\vlambda} \Lag_{\text{dual}}({\vx_{\color{red} t+1}}, \vlambda, \vmu_t)|_{\vlambda=\vlambda_t}
+            \right) \right]_+
+
+        \vmu_{t+1} &= \texttt{dual_optimizer_update} \left( \vmu_{t}, \nabla_{\vmu}
+            \Lag_{\text{dual}}({\vx_{\color{red} t+1}}, \vlambda_t, \vmu)|_{\vmu=\vmu_t} \right)
+
+    For instance, when employing simultaneous projected gradient descent-ascent on a
+    :py:class:`~cooper.formulations.Lagrangian` formulation, the updates are as follows:
+
+    .. math::
+        \vx_{t+1} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f(\vx_t) + \vlambda_t^\top
+            \nabla_{\vx} \vg(\vx_t) + \vmu_t^\top \nabla_{\vx} \vh(\vx_t) \right ],
+
+        \vlambda_{t+1} &= \left [ \vlambda_t + \eta_{\vlambda}  \vg(\vx_{\color{red} t+1})  \right ]_+,
+
+        \vmu_{t+1} &= \vmu_t + \eta_{\vmu} \vh(\vx_{\color{red} t+1}),
+
+    where :math:`\eta_{\vx}`, :math:`\eta_{\vlambda}`, and :math:`\eta_{\vmu}` are step
+    sizes.
+
     """
 
     # TODO(gallego-posada): Add equations to illustrate the alternating update

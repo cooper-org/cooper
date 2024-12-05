@@ -13,7 +13,14 @@ from cooper.multipliers import Multiplier, PenaltyCoefficient
 @dataclass
 class LagrangianStore:
     """Stores the value of the (primal or dual) Lagrangian, as well as the multiplier
-    and penalty coefficient values for the observed constraints.
+    and penalty coefficient values for the *observed* constraints.
+
+    Args:
+        lagrangian: Value of the Lagrangian.
+        multiplier_values: Value of the multipliers associated with the observed
+            constraints.
+        penalty_coefficient_values: Value of the penalty coefficients associated with
+            the observed constraints.
     """
 
     lagrangian: Optional[torch.Tensor] = None

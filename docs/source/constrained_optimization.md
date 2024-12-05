@@ -93,6 +93,26 @@ On the other hand, the dual updates accumulate the constraint violations. Togeth
 
 With **Cooper**, you can specify {py:class}`~torch.optim.Optimizer` objects for the primal and dual updates (see {doc}`optim`), allowing you to apply familiar optimization techniques such as Adam, just as you would when training deep neural networks.
 
+### Optimality Conditions
+
+TODO
+
+Looking for a stationary point of the Lagrangian
+Primal and dual conditions
+
+
+These are equivalent to the **Karush-Kuhn-Tucker (KKT) conditions** for the original constrained minimization problem {cite:p}`boyd2004convex`.
+
+:::{admonition} Terminating Conditions
+:class: tip
+
+
+The primal updates do not exclusively follow the gradient of the loss. Therefore, it is common for the loss to *increase* during the initial phase of the optimization, as this is often required to satisfy the constraints. After becoming feasible, however, the loss is expected to decrease until an equilibrium is reached.
+
+The presented algorithm looks for a stationary point of the Lagrangian. Therefore, to ensure convergence, you should check that the gradient of the Lagrangian with respect to the primal variables $\vx$ is close to zero, and that complimentary slackness holds for the dual variables: $\vlambda \circ \vg = \vzero$ and $\vmu \circ \vh = \vzero$.
+:::
+
+
 (proxy)=
 ## Non-differentiable Constraints
 

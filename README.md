@@ -68,6 +68,7 @@ To use **Cooper**, you need to:
   - {py:meth}`backward` on the Lagrangian,
   - {py:meth}`~torch.optim.Optimizer.step` on both optimizers.
 
+To access the value of the loss, constraint violations, and Lagrangian terms, you can inspect the returned {py:class}`~cooper.optim.RollOut` object from the call to {py:meth}`~cooper.optim.CooperOptimizer.roll`.
 
 ### Example
 

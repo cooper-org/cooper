@@ -8,7 +8,7 @@
 
 # Optim
 
-The optim module contains classes and functions for solving constrained minimization problems (CMPs).
+The `cooper.optim` module contains classes and functions for solving constrained minimization problems (CMPs).
 
 This module is divided into three main parts:
 - [Constrained Optimizers](#constrained-optimizers): for solving *constrained* minimization problems.
@@ -39,21 +39,6 @@ All {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s expec
 - `primal_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the primal parameters.
 - `dual_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the dual parameters.
 
-### The `roll()` Method
-
-{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects define a `roll()` method that prescribes how and when to call the {py:meth}`~torch.optim.Optimizer.step()` method of the primal and dual optimizers.
-As the procedures for performing updates on the parameters of a CMP can be complex, the `roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the `roll()` method, instead of the individual `step()` methods of the primal and dual optimizers.
-
-
-PyTorch considers the `zero_grad() -> forward() -> backward() -> step()`
-
-Alt Primal Dual and Extragradient require re-evaluating the loss and constraints after an initial update. Then we require access to the compute cmp state function itself.
-
-```{eval-rst}
-.. automethod:: cooper.optim.optimizer.CooperOptimizer.roll
-```
-
-RollOut
 
 :::{admonition} Unconstrained problems in **Cooper**
 :class: note
@@ -61,6 +46,44 @@ RollOut
 To accommodate the solution of unconstrained problems using **Cooper**, we provide a {py:class}`~cooper.optim.UnconstrainedOptimizer` class. This is useful for handling both unconstrained problems, as well as formulations of constrained problems without dual variables (e.g., the {py:class}`~cooper.formulations.QuadraticPenalty` formulation). This design allows the use of the `roll()` interface regardless of whether the problem is constrained or unconstrained.
 
 :::
+
+### The `roll()` Method
+
+{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects define a `roll()` method that prescribes how and when to update the primal and dual parameters. This method is used to perform a single iteration of the optimization algorithm, following PyTorch's `zero_grad() -> forward() -> backward() -> step()` approach.
+
+The `roll()` method is responsible for:
+- **Zeroing Gradients**: Calling `primal_optimizer.zero_grad()` and `dual_optimizer.zero_grad()`.
+- **Forward Computations**:
+  1. Computing the problem's {py:class}`~cooper.CMPState` by calling {py:meth}`cooper.ConstrainedMinimizationProblem.compute_cmp_state()`.
+  2. Calculating the primal and dual Lagrangians.
+- **Backward** Calling {py:meth}`torch.Tensor.backward()` on the Lagrangian terms.
+- **Step**: 
+  1. Calling {py:meth}`torch.optim.Optimizer.step()` on the primal and dual optimizers.
+  2. Projecting the dual-variables associated with inequality constraints to the non-negative orthant by calling {py:meth}`cooper.multipliers.Multiplier.post_step_()`.
+
+As the procedures for performing updates on the parameters of a CMP can be complex, the `roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the `roll()` method, instead of the individual `step()` methods of the primal and dual optimizers.
+
+```{eval-rst}
+.. automethod:: cooper.optim.CooperOptimizer.roll
+```
+
+The `roll()` method returns a {py:class}`~cooper.optim.RollOut` object. This includes the computed loss, {py:class}`~cooper.CMPState`, and the primal and dual Lagrangians (packed into {py:class}`~cooper.LagrangianStore` objects). This information can be useful for logging and debugging purposes.
+
+For example, to access the primal Lagrangian you can use the following code snippet:
+
+```python
+roll_out = constrained_optimizer.roll(compute_cmp_state_kwargs={...})
+primal_lagrangian = roll_out.primal_lagrangian_store.lagrangian
+```
+
+```{eval-rst}
+.. autoclass:: cooper.optim.RollOut
+```
+
+```{eval-rst}
+.. autoclass:: cooper.LagrangianStore
+```
+
 
 ### Example
 
@@ -122,7 +145,7 @@ for inputs, targets in train_loader:
 :::{admonition} Projected $\vlambda$ Updates
 :class: note
 
-To ensure the non-negativity of Lagrange multipliers associated with inequality constraints, all {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s call the {py:meth}`cooper.multipliers.Multiplier.post_step()` method after dual parameter updates, which projects the multipliers onto the non-negative orthant.
+To ensure the non-negativity of Lagrange multipliers associated with inequality constraints, all {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s call the {py:meth}`cooper.multipliers.Multiplier.post_step_()` method after dual parameter updates, which projects the multipliers onto the non-negative orthant.
 
 :::
 
