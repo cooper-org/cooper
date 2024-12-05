@@ -152,6 +152,7 @@ To ensure the non-negativity of Lagrange multipliers associated with inequality 
 
 ### Simultaneous Optimizer
 
+A simple approach to solving CMPs is to update the primal and dual parameters simultaneously. This is the approach taken by the {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer` class.
 
 ```{eval-rst}
 .. autoclass:: SimultaneousOptimizer
@@ -161,21 +162,36 @@ To ensure the non-negativity of Lagrange multipliers associated with inequality 
 
 ### Alternating Optimizers
 
-Point about efficiency:
-- PrimalDual: use compute_violations
-
-```{eval-rst}
-.. autoclass:: AlternatingPrimalDualOptimizer
-    :members:
-```
+Alternating updates enjoy enhanced convergence guarantees for min-max optimization problems under certain assumptions {cite:p}`gidel2018variational,zhang2022near`. In the context of constrained optimization, these benefits can be achieved *without additional computational costs* (see {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`). This motivates the implementation of the {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` and {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` classes.
 
 ```{eval-rst}
 .. autoclass:: AlternatingDualPrimalOptimizer
     :members:
 ```
 
+```{eval-rst}
+.. autoclass:: AlternatingPrimalDualOptimizer
+    :members:
+```
 
 ### Extragradient
+
+The extragradient method {cite:p}`korpelevich1976extragradient` is a well-established approach for solving min-max optimization problems. It offers convergence for a broader class of problems compared to simultaneous or alternating gradient descent-ascent {cite:p}`gidel2018variational` and reduces oscillations in parameter updates.  
+
+However, a key drawback of the extragradient method is its computational cost: it requires **two forward and backward passes per iteration** and additional memory to store a copy of the optimization variables. In other words, each iteration is twice as expensive as a standard gradient descent-ascent iteration.
+
+This approach is implemented in the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer` class.
+
+:::{admonition} Extragradient-compatible optimizers
+:class: warning
+
+Not all {py:class}`torch.optim.Optimizer`s are compatible with the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`. Primal and dual optimizers used with this class must implement both a `step()` method and an `extrapolation()` method. The `extrapolation()` method performs the extrapolation step of the algorithm.  
+
+To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.constrained_optimizers.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).  
+
+When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()` method will simultaneously call the `extrapolation()` and `step()` methods for both the primal and dual optimizers.
+:::
+
 
 ```{eval-rst}
 .. autoclass:: ExtrapolationConstrainedOptimizer
@@ -234,10 +250,22 @@ Description of the zero_grad -> forward -> Lagrangian -> backward -> step -> pro
     :members:
 ```
 
+(extragradient-optimizers)=
 
 ### Extragradient Optimizers
 
 Credit to original implementations
+
+The implementations of {py:class}`~cooper.optim.ExtraSGD` and
+{py:class}`~cooper.optim.ExtraAdam` included in **Cooper** are minor edits from
+those originally written by [Hugo Berard](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py).
+{cite:t}`gidel2018variational` provides a concise presentation of the
+extra-gradient in the context of solving Variational Inequality Problems.
+
+```{eval-rst}
+.. autoclass:: ExtragradientOptimizer
+    :members:
+```
 
 ```{eval-rst}
 .. autoclass:: ExtraSGD
@@ -248,3 +276,5 @@ Credit to original implementations
 .. autoclass:: ExtraAdam
     :members:
 ```
+
+TODO: base class

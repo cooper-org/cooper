@@ -93,9 +93,13 @@ On the other hand, the dual updates accumulate the constraint violations. Togeth
 
 With **Cooper**, you can specify {py:class}`~torch.optim.Optimizer` objects for the primal and dual updates (see {doc}`optim`), allowing you to apply familiar optimization techniques such as Adam, just as you would when training deep neural networks.
 
-### Optimality Conditions
+## Optimality Conditions
 
 TODO
+
+Main question: when do I stop?
+
+NOTE: subsection on approximately-stationary point of the Lagrangian for non-convex problems
 
 Looking for a stationary point of the Lagrangian
 Primal and dual conditions

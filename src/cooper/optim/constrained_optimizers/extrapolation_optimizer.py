@@ -9,11 +9,77 @@ from cooper.optim.optimizer import RollOut
 
 
 class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
-    """Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    by performing extrapolation updates to the primal and dual variables.
-    """
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem` by performing
+    extrapolation updates to the primal and dual variables.
 
-    # TODO(gallego-posada): Add equations to illustrate the extrapolation updates
+    Given the choice of primal and dual optimizers, an *extrapolation* step is performed
+    first:
+
+    .. math::
+
+        \vx_{t+\frac{1}{2}} &= \texttt{primal_optimizer_update} \left( \vx_{t},
+            \nabla_{\vx} \Lag_{\text{primal}}(\vx, \vlambda_t, \vmu_t)|_{\vx=\vx_t}
+            \right)
+
+        \vlambda_{t+\frac{1}{2}} &= \left[ \texttt{dual_optimizer_update} \left(
+            \vlambda_{t}, \nabla_{\vlambda} \Lag_{\text{dual}}({\vx_{t}}, \vlambda,
+            \vmu_t) |_{\vlambda=\vlambda_t} \right) \right]_+
+
+        \vmu_{t+\frac{1}{2}} &= \texttt{dual_optimizer_update} \left( \vmu_{t},
+            \nabla_{\vmu} \Lag_{\text{dual}}({\vx_{t}}, \vlambda_{t}, \vmu)
+            |_{\vmu=\vmu_t} \right).
+
+    This is followed by an *update* step, which modifies the primal and dual variables
+    at step :math:`t`, based on the gradients *computed at the extrapolated points*
+    :math:`t+\frac{1}{2}`:
+
+    .. math::
+
+        \vx_{t+1} &= \texttt{primal_optimizer_update} \left( \vx_{t}, \nabla_{\vx}
+            \Lag_{\text{primal}} \left(\vx, \vlambda_{\color{red} t+\frac{1}{2}},
+            \vmu_{\color{red} t+\frac{1}{2}} \right)|_{\vx=\vx_{\color{red}
+            t+\frac{1}{2}}} \right)
+
+        \vlambda_{t+1} &= \left[ \texttt{dual_optimizer_update} \left(
+            \vlambda_{t}, \nabla_{\vlambda} \Lag_{\text{dual}} \left({\vx_{\color{red}
+            t+\frac{1}{2}}}, \vlambda, \vmu_{\color{red} t+\frac{1}{2}} \right)
+            |_{\vlambda=\vlambda_{\color{red} t+\frac{1}{2}}}\right) \right]_+
+
+        \vmu_{t+1} &= \texttt{dual_optimizer_update} \left( \vmu_{t}, \nabla_{\vmu}
+            \Lag_{\text{dual}}\left({\vx_{\color{red} t+\frac{1}{2}}},
+            \vlambda_{\color{red} t+\frac{1}{2}}, \vmu \right) |_{\vmu=\vmu_{\color{red}
+            t+\frac{1}{2}}} \right).
+
+    For example, if the primal optimizer is gradient descent and the dual optimizer is
+    gradient ascent, the extrapolation step leads to:
+
+    .. math::
+
+        \vx_{t+\frac{1}{2}} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f(\vx_t) +
+            \vlambda_t^\top \nabla_{\vx} \vg(\vx_t) + \vmu_t^\top \nabla_{\vx}
+            \vh(\vx_t) \right ],
+
+        \vlambda_{t+\frac{1}{2}} &= \left [ \vlambda_t + \eta_{\vlambda}  \vg(\vx_{t})
+            \right ]_+,
+
+        \vmu_{t+\frac{1}{2}} &= \vmu_t + \eta_{\vmu} \vh(\vx_t).
+
+    The update step then yields:
+
+    .. math::
+
+        \vx_{t+1} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f(\vx_{\color{red}
+            t+\frac{1}{2}}) + \vlambda_{\color{red} t+\frac{1}{2}}^\top \nabla_{\vx}
+            \vg(\vx_{\color{red} t+\frac{1}{2}}) + \vmu_{\color{red} t+\frac{1}{2}
+            }^\top \nabla_{\vx} \vh(\vx_{\color{red} t+\frac{1}{2}}) \right ],
+
+        \vlambda_{t+1} &= \left [ \vlambda_{t+\frac{1}{2}} + \eta_{\vlambda}
+            \vg(\vx_{\color{red} t+\frac{1}{2}}) \right ]_+,
+
+        \vmu_{t+1} &= \vmu_{t+\frac{1}{2}} + \eta_{\vmu} \vh(\vx_{\color{red}
+            t+\frac{1}{2}}).
+
+    """
 
     def custom_sanity_checks(self) -> None:
         """Perform sanity checks on the initialization of
