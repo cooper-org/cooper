@@ -27,7 +27,7 @@ class BaseAlternatingOptimizer(ConstrainedOptimizer):
 
 
 class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
-    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem`
     by performing alternating updates, starting with the primal variables.
 
     According to the choice of primal and dual optimizers, updates are performed as follows:
@@ -79,20 +79,25 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
             objective function value :math:`f(\vx_{t+1})`. To reduce computational
             overhead, the user can implement the
             :py:meth:`cooper.ConstrainedMinimizationProblem.compute_violations()`
-            method and pass the ``compute_violations_kwargs`` argument to ``roll()``.
-            This approach ensures that only the constraint violations are computed at
-            :math:`\vx_{t+1}`, without constructing a computational graph over the
-            primal variables.
+            method and pass the ``compute_violations_kwargs`` argument to
+            :py:meth:`roll()`. This approach ensures that only the constraint violations
+            are computed at :math:`\vx_{t+1}`, without constructing a computational
+            graph over the primal variables.
 
 
         Args:
-            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state``
+            compute_cmp_state_kwargs: Keyword arguments to pass to the
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
                 method.
 
-            compute_violations_kwargs: Keyword arguments to pass to the ``compute_violations``
-                method. When the ``compute_violations`` method is implemented, it takes
-                precedence over the ``compute_cmp_state`` for the update of the dual
-                variables. If not implemented, the violation measured by ``compute_cmp_state``
+            compute_violations_kwargs: Keyword arguments to pass to the
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
+                method. When 
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
+                is implemented, it takes precedence over
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
+                for the dual update. If not implemented, the violations measured by
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
                 at the updated primal iterate are used.
 
         Returns:
@@ -101,13 +106,14 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
             - loss (:py:class:`~torch.Tensor`):
                 The most recent loss value at the end of the roll. If
-                ``compute_violations()`` was used, returns :math:`f(\vx_{t})`.
-                Otherwise, returns the recomputed loss at the updated primal point
-                :math:`f(\vx_{t+1})`.
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
+                was used, returns :math:`f(\vx_{t})`. Otherwise, returns the recomputed
+                loss at the updated primal point :math:`f(\vx_{t+1})`.
             - cmp_state (:py:class:`~cooper.CMPState`):
                 The CMP state at :math:`\vx_{\color{red} t+1}`. Note that if
-                ``compute_violations`` is used, the loss at :math:`\vx_{t+1}` is not
-                computed and ``cmp_state.loss`` will be ``None``.
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
+                is used, the loss at :math:`\vx_{t+1}` is not computed and
+                ``cmp_state.loss`` will be ``None``.
             - primal_lagrangian_store (:py:class:`~cooper.LagrangianStore`):
                 The primal Lagrangian store at :math:`\vx_{t}`,
                 :math:`\vlambda_t` and :math:`\vmu_t`.
@@ -156,7 +162,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
 
 class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
-    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem`
     by performing alternating updates, starting with the dual variables.
 
     According to the choice of primal and dual optimizers, updates are performed as
@@ -197,16 +203,17 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first.
 
-        Both the primal and dual updates depend on the :py:class:`~cooper.CMPState`at
+        Both the primal and dual updates depend on the :py:class:`~cooper.CMPState` at
         the current primal iterate :math:`\vx_{t}`. Consequently, although the primal
         update uses the updated dual variables :math:`\vlambda_{t+1}` and
         :math:`\vmu_{t+1}`, the :py:class:`~cooper.CMPState` does not need to be
         recomputed after the dual update. As a result, the computational cost of this
-        method matches that of the :py:class:`~cooper.optim.SimultaneousOptimizer`.
+        method matches that of the :py:class:`~cooper.optim.constrained_optimizers.SimultaneousOptimizer`.
 
         Args:
-            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state``
-                method.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
+                method
 
         Returns:
 

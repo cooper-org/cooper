@@ -7,7 +7,7 @@ from cooper.optim.optimizer import RollOut
 
 
 class SimultaneousOptimizer(ConstrainedOptimizer):
-    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem`
     by performing simultaneous gradient updates to the primal and dual variables.
 
     According to the choice of primal and dual optimizers, the updates are performed as follows:

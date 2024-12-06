@@ -13,7 +13,7 @@ import torch
 # maximization steps.
 # * We slightly modify the docstrings to comply with our style guide.
 #
-# TODO(juan43ramirez): The implementations below manually apply SGD and Adam updates.
+# TODO(juan43ramirez): The implementations below "manually" apply SGD and Adam updates.
 # Alternatively, we could carry out updates using functional implementations of SGD and
 # Adam from `torch.optim`. This way, we can easily stay up-to-date with the community
 # approved implementations of these optimizers.

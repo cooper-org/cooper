@@ -9,31 +9,27 @@ from cooper.utils import OneOrSequence
 
 
 class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
-    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    given a provided :py:class:`~cooper.formulation.Formulation`.
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem`.
 
-    A ``ConstrainedOptimizer`` includes one or more
+    A :py:class:`ConstrainedOptimizer` includes one or more
     :class:`torch.optim.Optimizer`\s for the primal variables. It also includes
     one or more :class:`torch.optim.Optimizer`\s for the dual variables.
 
     For handling unconstrained problems in a consistent way, we provide an
-    :py:class:`~cooper.optim.UnconstrainedOptimizer`. Please refer to the documentation
-    of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
-    :py:class:`~cooper.formulation.Formulation` classes for further details on
-    handling unconstrained problems.
+    :py:class:`~cooper.optim.UnconstrainedOptimizer`.
 
     Args:
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
             in this case ``primal_optimizers`` accepts a list of
-            ``torch.optim.Optimizer``\s.
+            :py:class:`torch.optim.Optimizer`\s.
 
         dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
             multipliers associated with the constraints). An iterable of
-            ``torch.optim.Optimizer``\s can be passed to handle the case of several
-            ``~cooper.constraints.Constraint``\s. If dealing with an unconstrained
-            problem, please use a
-            :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
+            :py:class:`torch.optim.Optimizer`\s can be passed to handle the case of
+            several :py:class:`~cooper.constraints.Constraint`\s. If dealing with an
+            unconstrained problem, please use an
+            :py:class:`~cooper.optim.UnconstrainedOptimizer` instead.
 
     """
 
@@ -83,6 +79,5 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
 
     @abc.abstractmethod
     def roll(*args, **kwargs):
-        """TODO
-        """
+        """Perform a full update step on the primal and dual variables."""
         pass

@@ -47,27 +47,27 @@ To accommodate the solution of unconstrained problems using **Cooper**, we provi
 
 :::
 
-### The `roll()` Method
+### The {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` Method
 
-{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects define a `roll()` method that prescribes how and when to update the primal and dual parameters. This method is used to perform a single iteration of the optimization algorithm, following PyTorch's `zero_grad() -> forward() -> backward() -> step()` approach.
+{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects define a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method that prescribes how and when to update the primal and dual parameters. This method is used to perform a single iteration of the optimization algorithm, following PyTorch's `zero_grad() -> forward() -> backward() -> step()` approach.
 
-The `roll()` method is responsible for:
+The {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method is responsible for:
 - **Zeroing Gradients**: Calling `primal_optimizer.zero_grad()` and `dual_optimizer.zero_grad()`.
 - **Forward Computations**:
   1. Computing the problem's {py:class}`~cooper.CMPState` by calling {py:meth}`cooper.ConstrainedMinimizationProblem.compute_cmp_state()`.
   2. Calculating the primal and dual Lagrangians.
 - **Backward** Calling {py:meth}`torch.Tensor.backward()` on the Lagrangian terms.
-- **Step**: 
+- **Step**:
   1. Calling {py:meth}`torch.optim.Optimizer.step()` on the primal and dual optimizers.
   2. Projecting the dual-variables associated with inequality constraints to the non-negative orthant by calling {py:meth}`cooper.multipliers.Multiplier.post_step_()`.
 
-As the procedures for performing updates on the parameters of a CMP can be complex, the `roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the `roll()` method, instead of the individual `step()` methods of the primal and dual optimizers.
+As the procedures for performing updates on the parameters of a CMP can be complex, the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method, instead of the individual {py:meth}`~torch.optim.Optimizer.step()` methods of the primal and dual optimizers.
 
 ```{eval-rst}
 .. automethod:: cooper.optim.CooperOptimizer.roll
 ```
 
-The `roll()` method returns a {py:class}`~cooper.optim.RollOut` object. This includes the computed loss, {py:class}`~cooper.CMPState`, and the primal and dual Lagrangians (packed into {py:class}`~cooper.LagrangianStore` objects). This information can be useful for logging and debugging purposes.
+The {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method returns a {py:class}`~cooper.optim.RollOut` object. This includes the computed loss, {py:class}`~cooper.CMPState`, and the primal and dual Lagrangians (packed into {py:class}`~cooper.LagrangianStore` objects). This information can be useful for logging and debugging purposes.
 
 For example, to access the primal Lagrangian you can use the following code snippet:
 
@@ -97,7 +97,7 @@ To use a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` w
     Similar to {py:meth}`torch.nn.Module.parameters()`, {py:class}`~cooper.ConstrainedMinimizationProblem` objects provide a helper method for extracting the dual parameters for all of its associated constraints: {py:meth}`cooper.ConstrainedMinimizationProblem.dual_parameters()`.
     :::
 - **\[Lines 16-20\]**: Instantiate a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, passing the `cmp`, `primal_optimizer`, and `dual_optimizer` as arguments.
-- **\[Line 26\]**: Use the `roll` method to perform a *single* call to the `step` method of both the primal and dual optimizers.
+- **\[Line 26\]**: Use the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method to perform a *single* call to the {py:meth}`~torch.optim.Optimizer.step()` method of both the primal and dual optimizers.
 
 
 ```{code-block} python
@@ -145,10 +145,16 @@ for inputs, targets in train_loader:
 :::{admonition} Projected $\vlambda$ Updates
 :class: note
 
-To ensure the non-negativity of Lagrange multipliers associated with inequality constraints, all {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s call the {py:meth}`cooper.multipliers.Multiplier.post_step_()` method after dual parameter updates, which projects the multipliers onto the non-negative orthant.
+To ensure the non-negativity of Lagrange multipliers associated with inequality constraints, all {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s call the {py:meth}`cooper.multipliers.Multiplier.post_step_()` method after dual parameter updates, which projects inequality multipliers onto the non-negative orthant.
 
 :::
 
+### Base Class
+
+```{eval-rst}
+.. autoclass:: cooper.optim.constrained_optimizers.ConstrainedOptimizer
+    :members: roll, dual_step
+```
 
 ### Simultaneous Optimizer
 
@@ -176,7 +182,7 @@ Alternating updates enjoy enhanced convergence guarantees for min-max optimizati
 
 ### Extragradient
 
-The extragradient method {cite:p}`korpelevich1976extragradient` is a well-established approach for solving min-max optimization problems. It offers convergence for a broader class of problems compared to simultaneous or alternating gradient descent-ascent {cite:p}`gidel2018variational` and reduces oscillations in parameter updates.  
+The extragradient method {cite:p}`korpelevich1976extragradient` is a well-established approach for solving min-max optimization problems. It offers convergence for a broader class of problems compared to simultaneous or alternating gradient descent-ascent {cite:p}`gidel2018variational` and reduces oscillations in parameter updates.
 
 However, a key drawback of the extragradient method is its computational cost: it requires **two forward and backward passes per iteration** and additional memory to store a copy of the optimization variables. In other words, each iteration is twice as expensive as a standard gradient descent-ascent iteration.
 
@@ -185,11 +191,11 @@ This approach is implemented in the {py:class}`~cooper.optim.constrained_optimiz
 :::{admonition} Extragradient-compatible optimizers
 :class: warning
 
-Not all {py:class}`torch.optim.Optimizer`s are compatible with the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`. Primal and dual optimizers used with this class must implement both a `step()` method and an `extrapolation()` method. The `extrapolation()` method performs the extrapolation step of the algorithm.  
+Not all {py:class}`torch.optim.Optimizer`s are compatible with the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`. Primal and dual optimizers used with this class must implement both a {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` method and an {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method. The {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method performs the extrapolation step of the algorithm.
 
-To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.constrained_optimizers.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).  
+To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).
 
-When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()` method will simultaneously call the `extrapolation()` and `step()` methods for both the primal and dual optimizers.
+When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()` method will simultaneously call the {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` and {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` methods of the primal and dual optimizers.
 :::
 
 
@@ -198,28 +204,66 @@ When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.
     :members:
 ```
 
+## Unconstrained Optimizers
+
+The {py:class}`~cooper.optim.UnconstrainedOptimizer` class provides an interface based on the {py:meth}`~cooper.optim.CooperOptimizer.roll()` method for parameter updates in **unconstrained** optimization problems. This class is implemented to maintain consistency with the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` class.
 
 
-### Base Class
+:::{admonition} Unconstrained formulations of constrained problems
+:class: note
 
-How to implement a custom optimizer
+Unconstrained problems can arise from certain constrained problem formulations, such as the {py:class}`~cooper.formulations.QuadraticPenalty` formulation, which does not require dual variables. In these cases, **Cooper** expects the CMP's {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()` method to return a {py:class}`~cooper.CMPState` object containing *both the loss and constraints*. However, the {py:class}`~cooper.Constraint`s should not have any associated {py:class}`~cooper.multipliers.Multiplier`s.
 
-Description of the zero_grad -> forward -> Lagrangian -> backward -> step -> projection
+:::
+
+The {py:meth}`~cooper.optim.UnconstrainedOptimizer.roll()` method of the {py:class}`~cooper.optim.UnconstrainedOptimizer` class performs the following steps:
+
+- **Zeroing Gradients**: Calls `primal_optimizer.zero_grad()`.
+- **Forward Computation**:
+   1. Computes the problem's {py:class}`~cooper.CMPState` by invoking {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`.
+   2. Calculates the primal Lagrangian.
+- **Backward Propagation**: Calls {py:meth}`~torch.Tensor.backward()` on the Lagrangian term.
+- **Optimization Step**: Invokes {py:meth}`~torch.optim.Optimizer.step()` on the primal optimizer.
 
 
-```{eval-rst}
-.. autoclass:: cooper.optim.constrained_optimizers.ConstrainedOptimizer
-    :members:
+### Example
+
+To solve a {py:class}`~cooper.ConstrainedMinimizationProblem` using a {py:class}`~cooper.formulations.QuadraticPenalty` formulation, follow these steps:
+
+```python
+import torch
+import cooper
+
+train_loader = ... # PyTorch DataLoader
+model = ... # PyTorch model
+cmp = ... # containing `Constraint`s and their associated `PenaltyCoefficient`s
+
+primal_optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+unconstrained_optimizer = cooper.UnconstrainedOptimizer(
+    cmp=cmp,
+    primal_optimizer=primal_optimizer,
+)
+
+for inputs, targets in train_loader:
+    # kwargs used by `cmp.compute_cmp_state` method to compute the loss and constraints.
+    kwargs = {"model": model, "inputs": inputs, "targets": targets}
+
+    unconstrained_optimizer.roll(compute_cmp_state_kwargs=kwargs)
 ```
-
-
-
-
-## **Cooper** Optimizer Base Class
 
 ```{eval-rst}
 .. currentmodule:: cooper.optim
 ```
+
+```{eval-rst}
+.. autoclass:: UnconstrainedOptimizer
+    :members:
+```
+
+### **Cooper** Optimizer Base Class
+
+{py:class}`CooperOptimizer` is the base class for all **Cooper** optimizers. It provides a consistent interface for performing parameter updates across all **Cooper** optimizers. Both {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` and {py:class}`~cooper.optim.UnconstrainedOptimizer` inherit from this class.
 
 ```{eval-rst}
 .. autoclass:: CooperOptimizer
@@ -227,16 +271,10 @@ Description of the zero_grad -> forward -> Lagrangian -> backward -> step -> pro
 ```
 
 
-## Unconstrained Optimizers
-
-
-```{eval-rst}
-.. autoclass:: UnconstrainedOptimizer
-    :members:
-```
-
-
 ## Torch Optimizers
+
+
+TODO
 
 ```{eval-rst}
 .. currentmodule:: cooper.optim.torch_optimizers

@@ -30,7 +30,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             |_{\vmu=\vmu_t} \right).
 
     This is followed by an *update* step, which modifies the primal and dual variables
-    at step :math:`t`, based on the gradients *computed at the extrapolated points*
+    from step :math:`t`, based on the gradients *computed at the extrapolated points*
     :math:`t+\frac{1}{2}`:
 
     .. math::
@@ -68,10 +68,11 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     .. math::
 
-        \vx_{t+1} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f(\vx_{\color{red}
-            t+\frac{1}{2}}) + \vlambda_{\color{red} t+\frac{1}{2}}^\top \nabla_{\vx}
-            \vg(\vx_{\color{red} t+\frac{1}{2}}) + \vmu_{\color{red} t+\frac{1}{2}
-            }^\top \nabla_{\vx} \vh(\vx_{\color{red} t+\frac{1}{2}}) \right ],
+        \vx_{t+1} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f \left(\vx_{\color{red}
+            t+\frac{1}{2}}\right) + \vlambda_{\color{red} t+\frac{1}{2}}^\top
+            \nabla_{\vx} \vg \left(\vx_{\color{red} t+\frac{1}{2}} \right) +
+            \vmu_{\color{red} t+\frac{1}{2}}^\top \nabla_{\vx} \vh\left(\vx_{\color{red}
+            t+\frac{1}{2}} \right) \right ],
 
         \vlambda_{t+1} &= \left [ \vlambda_{t+\frac{1}{2}} + \eta_{\vlambda}
             \vg(\vx_{\color{red} t+\frac{1}{2}}) \right ]_+,
@@ -82,12 +83,11 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     """
 
     def custom_sanity_checks(self) -> None:
-        """Perform sanity checks on the initialization of
-        ``ExtrapolationConstrainedOptimizer``.
-
+        """
         Raises:
-            RuntimeError: Tried to construct an ExtrapolationConstrainedOptimizer but
-                some of the provided optimizers do not have an extrapolation method.
+            RuntimeError: Tried to construct an
+                :py:class:`ExtrapolationConstrainedOptimizer` but some of the provided
+                optimizers do not have an extrapolation method.
         """
         are_primal_extra_optims = [hasattr(_, "extrapolation") for _ in self.primal_optimizers]
         are_dual_extra_optims = [hasattr(_, "extrapolation") for _ in self.dual_optimizers]
@@ -100,13 +100,15 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
 
     @torch.no_grad()
     def primal_extrapolation_step(self) -> None:
-        """Perform an extrapolation step on the parameters associated with the primal variables."""
+        """Perform an extrapolation step on the parameters associated with the primal
+        variables."""
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()
 
     @torch.no_grad()
     def dual_extrapolation_step(self) -> None:
-        """Perform an extrapolation step on the parameters associated with the dual variables.
+        """Perform an extrapolation step on the parameters associated with the dual
+        variables.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
@@ -120,13 +122,16 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             multiplier.post_step_()
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
-        """Performs a full extrapolation step on the primal and dual variables.
+        """Performs a full update step on the primal and dual variables.
 
-        Note that the forward and backward computations associated with the CMPState
-        and Lagrangian are carried out twice, since we compute an "extra" gradient.
+        Note that the forward and backward computations associated with the
+        :py:class:`cooper.CMPState` and the primal and dual Lagrangians are carried out
+        twice, since we compute an "extra" gradient.
 
         Args:
-            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
+                method.
         """
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
