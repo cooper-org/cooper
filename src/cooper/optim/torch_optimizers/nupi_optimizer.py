@@ -2,15 +2,6 @@ r"""The nuPI optimizer is a first-order optimization algorithm proposed in the p
 "On PI controllers for updating Lagrange multipliers in constrained optimization." by
 Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
 Jose Gallego-Posada.
-
-nuPI generalizes various popular first-order optimization algorithms, including gradient
-descent, gradient descent with Polyak and Nesterov momentum, the optimistic gradient
-method, and PI controllers. It's benefits when updating Lagrange multipliers in
-Lagrangian constrained optimization are discussed in the paper.
-
-For a detailed explanation of the $\nu$PI algorithm, see the paper:
-*On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
-`ICML 2024 <https://openreview.net/forum?id=1khG2xf1yt>`_.
 """
 
 import warnings
@@ -45,6 +36,8 @@ class nuPI(torch.optim.Optimizer):
         maximize: bool = False,
     ) -> None:
         r"""Implements a nuPI controller as a PyTorch optimizer.
+
+        TODO
 
         The error signal used for the nuPI controller is the gradient of a cost function
         :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
