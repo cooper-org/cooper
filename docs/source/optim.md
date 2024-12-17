@@ -280,17 +280,17 @@ for inputs, targets in train_loader:
 
 PyTorch provides implementations of many popular optimizers for solving unconstrained minimization problems. **Cooper** extends PyTorch's functionality by offering optimizers tailored for min-max optimization problems. These optimizers are applicable for formulations of constrained optimization problems that involve Lagrange multipliers, such as the {py:class}`~cooper.formulations.Lagrangian` and {py:class}`~cooper.formulations.AugmentedLagrangian` formulations.
 
-The following optimizers are implemented in **Cooper**:  
-- {py:class}`~cooper.optim.torch_optimizers.nuPI`: The $\nu$PI optimizer, as introduced by {cite:t}`sohrabi2024nupi`.  
-- {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer`: A base class for optimizers compatible with {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`, **Cooper**'s implementation of the extragradient method.  
-- Specific instances of the {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` class, such as the {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam` optimizers.  
+The following optimizers are implemented in **Cooper**:
+- {py:class}`~cooper.optim.torch_optimizers.nuPI`: The $\nu$PI optimizer, as introduced by {cite:t}`sohrabi2024nupi`.
+- {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer`: A base class for optimizers compatible with {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`, **Cooper**'s implementation of the extragradient method.
+- Specific instances of the {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` class, such as the {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam` optimizers.
 
 
 ### $\nu$PI
 
 The $\nu$PI optimizer is a first-order optimization algorithm introduced by {cite:t}`sohrabi2024nupi`. It generalizes several popular first-order optimization techniques, including gradient descent, gradient descent with Polyak momentum {cite:p}`polyak1964some`, Nesterov accelerated gradient {cite:p}`nesterov1983method`, the optimistic gradient method {cite:p}`popov1980modification`, and Proportional-Integral (PI) controllers.
 
-The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the value of the Lagrange multipliers, leading to more stable convergence to feasible solutions. For a detailed discussion on the $\nu$PI algorithm, see the ICML 2024 paper [On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization](https://openreview.net/forum?id=1khG2xf1yt).  
+The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the value of the Lagrange multipliers, leading to more stable convergence to feasible solutions. For a detailed discussion on the $\nu$PI algorithm, see the ICML 2024 paper [On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization](https://openreview.net/forum?id=1khG2xf1yt).
 
 
 ```{eval-rst}

@@ -83,7 +83,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     """
 
     def custom_sanity_checks(self) -> None:
-        """
+        """Perform custom sanity checks on the initialization of the optimizer.
+
         Raises:
             RuntimeError: Tried to construct an
                 :py:class:`ExtrapolationConstrainedOptimizer` but some of the provided
@@ -101,7 +102,8 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     @torch.no_grad()
     def primal_extrapolation_step(self) -> None:
         """Perform an extrapolation step on the parameters associated with the primal
-        variables."""
+        variables.
+        """
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.extrapolation()
 

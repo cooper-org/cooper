@@ -1,2 +1,2 @@
-from .extragradient import ExtraAdam, ExtraSGD, ExtragradientOptimizer
+from .extragradient import ExtraAdam, ExtragradientOptimizer, ExtraSGD
 from .nupi_optimizer import nuPI

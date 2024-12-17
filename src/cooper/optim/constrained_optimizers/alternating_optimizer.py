@@ -92,7 +92,7 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
 
             compute_violations_kwargs: Keyword arguments to pass to the
                 :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
-                method. When 
+                method. When
                 :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
                 is implemented, it takes precedence over
                 :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
@@ -216,7 +216,6 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
                 method
 
         Returns:
-
             :py:class:`~cooper.optim.optimizer.RollOut`: A named tuple containing the
             following objects:
 

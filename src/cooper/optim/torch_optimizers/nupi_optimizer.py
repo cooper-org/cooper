@@ -37,8 +37,7 @@ class nuPI(torch.optim.Optimizer):
     ) -> None:
         r"""Implements a nuPI controller as a PyTorch optimizer.
 
-        TODO
-
+        Todo:
         The error signal used for the nuPI controller is the gradient of a cost function
         :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
         as the control variable, and the gradient of :math:`L` as the error signal. The
