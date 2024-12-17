@@ -12,6 +12,12 @@
     :members:
 ```
 
+- Multipliers
+  - Dense
+  - Indexed
+  - Implicit
+  - Example
+
 
 :::{note}
 Multipliers are mostly handled internally by the

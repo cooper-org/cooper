@@ -32,7 +32,7 @@ In {doc}`optim`, we discuss the algorithms used to solve the formulated problem,
 
 Formulations may rely on the introduction of additional decision variables or hyper-parameters aimed at enforcing the constraints. The decision variables $\vlambda \geq \vzero$ and $\vmu$ are referred to as *Lagrange multipliers* or *dual variables*. The hyper-parameters $\vc_{\vg} \geq \vzero$ and $\vc_{\vh} \geq \vzero$, are known as *penalty coefficients*.
 
-For details on how Lagrange multipliers and penalty coefficients are implemented in **Cooper**, see {ref}`multipliers`.
+For more details, see {ref}`multipliers`.
 :::
 
 **Cooper**'s framework for formulations supports a wide range of approaches for solving constrained optimization problems, including the {py:class}`Lagrangian`, {py:class}`QuadraticPenalty`, and {py:class}`AugmentedLagrangian` formulations.
