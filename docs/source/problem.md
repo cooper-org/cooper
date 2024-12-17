@@ -66,14 +66,26 @@ The {py:class}`~cooper.CMPState` dataclass includes the loss, which must be a sc
 
 ## Constraints
 
-{py:class}`~cooper.constraints.Constraint` objects are used to group similar constraints together. While it is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object, they must share the same type (i.e., all equality or all inequality constraints) and all must be handled through the same {py:class}`~cooper.formulations.Formulation` (for example, a {py:class}`~cooper.formulations.Lagrangian`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
+{py:class}`~cooper.constraints.Constraint` objects allows grouping similar constraints together. Constraints can be classified as either equality or inequality.
 
-Constraints can be defined as either equality or inequality. This is done using the {py:class}`~cooper.ConstraintType` class.
+It is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object. However, all constraints under a {py:class}`~cooper.constraints.Constraint` must share the same `constraint_type` (all equality or all inequality constraints) and must be handled using the same `formulation_type` (a subclass of a {py:class}`~cooper.formulations.Formulation`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
 
 ```{eval-rst}
 .. autoclass:: cooper.ConstraintType
     :members:
 ```
+
+:::{admonition} Grouping constraints
+:class: note
+
+**Cooper** allows arbitrary groupings of constraints into {py:class}`~cooper.constraints.Constraint` objects.
+However, for computational or logging purposes it is sometimes desirable to group constraints according to problem-dependent structures.
+
+For example, consider a problem with $m + n$ constraints.
+One could create a _single_ {py:class}`~cooper.constraints.Constraint` object along with a _single_ {py:class}`~cooper.multipliers.Multiplier`.
+Alternatively, one could create two ({py:class}`~cooper.constraints.Constraint`, {py:class}`~cooper.multipliers.Multiplier`) pairs for handling the groups of $m$ and $n$ constraints separately.
+
+:::
 
 To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` will be associated to this multiplier, and the observed constraint values will be used to update the multiplier. For more details on multiplier objects, see {doc}`multipliers`.
 
