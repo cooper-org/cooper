@@ -87,7 +87,7 @@ def test_constraint_state_initialization(
 
 def test_constraint_state_initialization_failure(violation, strict_constraint_features):
     with pytest.raises(
-        ValueError, match="`strict_violation` must be provided if `strict_constraint_features` is provided."
+        ValueError, match=r"`strict_violation` must be provided if `strict_constraint_features` is provided."
     ):
         cooper.ConstraintState(violation=violation, strict_constraint_features=strict_constraint_features)
 

@@ -1,8 +1,8 @@
 """Optimizers based on extra-gradient."""
 
 import math
-from collections.abc import Iterable
-from typing import Callable, NoReturn, Optional
+from collections.abc import Callable, Iterable
+from typing import NoReturn, Optional
 
 import torch
 

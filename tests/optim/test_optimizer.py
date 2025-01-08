@@ -39,7 +39,7 @@ def test_load_state_dict_mismatch_primal(cooper_optimizer, cooper_optimizer_clas
     )
 
     with pytest.raises(
-        ValueError, match="The number of primal optimizers does not match the number of primal optimizer states."
+        ValueError, match=r"The number of primal optimizers does not match the number of primal optimizer states."
     ):
         new_optimizer.load_state_dict(state)
 
@@ -52,7 +52,7 @@ def test_load_state_dict_mismatch_dual(cooper_optimizer, cooper_optimizer_class)
     new_optimizer = cooper.optim.UnconstrainedOptimizer(cooper_optimizer.cmp, cooper_optimizer.primal_optimizers)
 
     with pytest.raises(
-        ValueError, match="Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None."
+        ValueError, match=r"Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None."
     ):
         new_optimizer.load_state_dict(state)
 
@@ -72,6 +72,6 @@ def test_load_state_dict_mismatch_dual_count(cooper_optimizer, cooper_optimizer_
     )
 
     with pytest.raises(
-        ValueError, match="The number of dual optimizers does not match the number of dual optimizer states."
+        ValueError, match=r"The number of dual optimizers does not match the number of dual optimizer states."
     ):
         new_optimizer.load_state_dict(state)

@@ -34,7 +34,7 @@ def test_constrained_optimizer_init_fail_no_dual_optimizer(cooper_optimizer_clas
 
 
 def test_constrained_optimizer_init_fail_dual_optimizer_not_maximize(cooper_optimizer_class, cmp_instance):
-    with pytest.raises(ValueError, match="Dual optimizers must be set to carry out maximization steps."):
+    with pytest.raises(ValueError, match=r"Dual optimizers must be set to carry out maximization steps."):
         cooper_optimizer_class(
             cmp=cmp_instance,
             primal_optimizers=torch.optim.SGD([torch.ones(1, requires_grad=True)], lr=0.1),
@@ -80,7 +80,8 @@ def test_alternating_primal_dual_optimizer_roll_fail_compute_violations_has_loss
 
     with pytest.raises(
         RuntimeError,
-        match="Expected `compute_violations` to not populate the loss. Please provide this value for the `compute_cmp_state` instead.",
+        match=r"Expected `compute_violations` to not populate the loss. "
+        r"Please provide this value for the `compute_cmp_state` instead.",
     ):
         optimizer.roll()
 
@@ -96,7 +97,7 @@ def test_alternating_primal_dual_optimizer_roll_no_compute_violations(cmp_instan
 
 
 def test_extrapolation_init_fail_no_extrapolation_method(cmp_instance):
-    with pytest.raises(RuntimeError, match="Some of the provided optimizers do not have an extrapolation method."):
+    with pytest.raises(RuntimeError, match=r"Some of the provided optimizers do not have an extrapolation method."):
         cooper.optim.ExtrapolationConstrainedOptimizer(
             cmp=cmp_instance,
             primal_optimizers=torch.optim.SGD([torch.ones(1, requires_grad=True)], lr=0.1),

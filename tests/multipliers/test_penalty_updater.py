@@ -36,7 +36,7 @@ def constraint(num_constraints, constraint_type, multiplier_class, penalty_coeff
 
 
 def test_initialization_with_negative_violation_tolerance():
-    with pytest.raises(ValueError, match="Violation tolerance must be non-negative."):
+    with pytest.raises(ValueError, match=r"Violation tolerance must be non-negative."):
         MultiplicativePenaltyCoefficientUpdater(growth_factor=1.01, violation_tolerance=-1e-4)
 
 

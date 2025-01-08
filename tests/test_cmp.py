@@ -278,13 +278,13 @@ def test_repr(cmp_instance, eq_constraint):
 
 
 def test_sanity_check_cmp_state_loss(cmp_instance):
-    with pytest.raises(ValueError, match="The loss tensor must have a valid gradient."):
+    with pytest.raises(ValueError, match=r"The loss tensor must have a valid gradient."):
         cmp_instance.sanity_check_cmp_state(cooper.CMPState(loss=torch.tensor(1.0)))
 
 
 def test_sanity_check_cmp_state_violation(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
-    with pytest.raises(ValueError, match="The violation tensor of constraint .*"):
+    with pytest.raises(ValueError, match=r"The violation tensor of constraint .*"):
         cmp_instance.sanity_check_cmp_state(
             cooper.CMPState(observed_constraints={eq_constraint: cooper.ConstraintState(violation=torch.tensor(1.0))})
         )
@@ -294,7 +294,7 @@ def test_sanity_check_cmp_state_strict_violation(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     violation = torch.tensor(1.0, requires_grad=True)
     violation.backward()
-    with pytest.raises(ValueError, match=".must not have a gradient."):
+    with pytest.raises(ValueError, match=r".must not have a gradient."):
         cmp_instance.sanity_check_cmp_state(
             cooper.CMPState(
                 observed_constraints={

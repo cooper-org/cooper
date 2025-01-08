@@ -5,9 +5,9 @@ Jose Gallego-Posada.
 """
 
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 
