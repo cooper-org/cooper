@@ -25,7 +25,7 @@ $$
 
 where $P$ and $Q$ are functions aimed at enforcing the satisfaction of the constraints.
 
-In {doc}`optim`, we discuss the algorithms used to solve the formulated problem, such as simultaneous gradient descent-ascent ({py:class}`~cooper.optim.SimultaneousOptimizer`).
+In {doc}`optim`, we discuss the second stage: the choice of algorithm used to solve a formulation, including variants of simultaneous gradient descent-ascent ({py:class}`~cooper.optim.SimultaneousOptimizer`).
 
 :::{admonition} Multipliers and Penalty Coefficients
 :class: note
