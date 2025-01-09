@@ -193,7 +193,7 @@ This approach is implemented in the {py:class}`~cooper.optim.constrained_optimiz
 
 Not all {py:class}`torch.optim.Optimizer`s are compatible with the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`. Primal and dual optimizers used with this class must implement both a {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` method and an {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method. The {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method performs the extrapolation step of the algorithm.
 
-To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).
+To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).
 
 When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()` method will simultaneously call the {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` and {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` methods of the primal and dual optimizers.
 :::
