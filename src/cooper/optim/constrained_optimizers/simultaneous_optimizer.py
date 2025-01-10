@@ -23,7 +23,7 @@ class SimultaneousOptimizer(ConstrainedOptimizer):
         \vmu_{t+1} &= \texttt{dual_optimizer_update} \left( \vmu_{t}, \nabla_{\vmu}
             \Lag_{\text{dual}}({\vx_{t}}, \vlambda_t, \vmu)|_{\vmu=\vmu_t} \right)
 
-    For instance, when employing simultaneous projected gradient descent-ascent on a
+    For instance, when the primal/dual updates are gradient descent/ascent on a
     :py:class:`~cooper.formulations.Lagrangian` formulation, the updates are as follows:
 
     .. math::

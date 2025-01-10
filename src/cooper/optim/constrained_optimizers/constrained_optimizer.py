@@ -16,8 +16,8 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
     :class:`torch.optim.Optimizer`\s for the primal variables. It also includes
     one or more :class:`torch.optim.Optimizer`\s for the dual variables.
 
-    For handling unconstrained problems in a consistent way, we provide an
-    :py:class:`~cooper.optim.UnconstrainedOptimizer`.
+    For handling unconstrained problems in a consistent way, we provide the
+    :py:class:`~cooper.optim.UnconstrainedOptimizer` class.
 
     Args:
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
@@ -26,7 +26,7 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
             :py:class:`torch.optim.Optimizer`\s.
 
         dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
-            multipliers associated with the constraints). An iterable of
+            multipliers associated with the constraints). A sequence of
             :py:class:`torch.optim.Optimizer`\s can be passed to handle the case of
             several :py:class:`~cooper.constraints.Constraint`\s. If dealing with an
             unconstrained problem, please use an
@@ -63,7 +63,7 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
     def dual_step(self) -> None:
         """Perform a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we require
-        dual optimizers which satisfy `maximize=True`.
+        dual optimizers which satisfy ``maximize=True``.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).

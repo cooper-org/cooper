@@ -158,7 +158,7 @@ To ensure the non-negativity of Lagrange multipliers associated with inequality 
 
 ### Simultaneous Optimizer
 
-A simple approach to solving CMPs is to update the primal and dual parameters simultaneously. This is the approach taken by the {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer` class.
+A simple approach to solving CMPs is to update the primal and dual parameters simultaneously. This is the approach taken by the {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer` class {cite:p}`arrow1958studies`.
 
 ```{eval-rst}
 .. autoclass:: SimultaneousOptimizer
@@ -168,7 +168,7 @@ A simple approach to solving CMPs is to update the primal and dual parameters si
 
 ### Alternating Optimizers
 
-Alternating updates enjoy enhanced convergence guarantees for min-max optimization problems under certain assumptions {cite:p}`gidel2018variational,zhang2022near`. In the context of constrained optimization, these benefits can be achieved *without additional computational costs* (see {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`). This motivates the implementation of the {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` and {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` classes.
+Alternating updates enjoy enhanced convergence guarantees for min-max optimization problems under certain assumptions {cite:p}`gidel2018variational,zhang2022near`. In the context of constrained optimization, these benefits can be achieved *without additional computational costs* relative to simultaneous updates (see {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`). This motivates the implementation of the {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` and {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` classes.
 
 ```{eval-rst}
 .. autoclass:: AlternatingDualPrimalOptimizer

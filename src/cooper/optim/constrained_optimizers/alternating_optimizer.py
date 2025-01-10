@@ -57,6 +57,24 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     where :math:`\eta_{\vx}`, :math:`\eta_{\vlambda}`, and :math:`\eta_{\vmu}` are step
     sizes.
 
+    This optimizer computes constraint violations *twice*: at :math:`\vx_{t}` for the
+    initial primal update, and again at the updated primal point :math:`\vx_{t+1}`
+    to update the dual variables. The former are used to compute the primal
+    Lagrangian :math:`\Lag_{\text{primal}}` while the latter are used to compute the
+    dual Lagrangian :math:`\Lag_{\text{dual}}`.
+
+    .. admonition:: Reducing computational overhead in primal-dual alternating updates
+        :class: note
+
+        To update the dual variables, only the constraint violations
+        :math:`\vg(\vx_{\color{red} t+1})` and :math:`\vh(\vx_{\color{red} t+1})` are
+        required, not the objective function value :math:`f(\vx_{\color{red} t+1})`. To
+        reduce computational overhead, the user can implement the
+        :py:meth:`cooper.ConstrainedMinimizationProblem.compute_violations()`
+        method and pass the ``compute_violations_kwargs`` argument to
+        :py:meth:`roll()`. This approach ensures that only the constraint violations
+        are computed at :math:`\vx_{\color{red} t+1}`, without constructing a computational
+        graph over the primal variables.
     """
 
     def roll(
@@ -64,26 +82,6 @@ class AlternatingPrimalDualOptimizer(BaseAlternatingOptimizer):
     ) -> RollOut:
         r"""Performs a primal-dual alternating step where the primal variables are
         updated first.
-
-        This method computes constraint violations *twice*: at :math:`\vx_{t}` for the
-        initial primal update, and again at the updated primal point :math:`\vx_{t+1}`
-        to update the dual variables. The former are used to compute the primal
-        Lagrangian :math:`\Lag_{\text{primal}}` while the latter are used to compute the
-        dual Lagrangian :math:`\Lag_{\text{dual}}`.
-
-        .. admonition:: Reducing computational overhead in primal-dual alternating updates
-            :class: note
-
-            To update the dual variables, only the constraint violations
-            :math:`\vg(\vx_{t+1})` and :math:`\vh(\vx_{t+1})` are required, not the
-            objective function value :math:`f(\vx_{t+1})`. To reduce computational
-            overhead, the user can implement the
-            :py:meth:`cooper.ConstrainedMinimizationProblem.compute_violations()`
-            method and pass the ``compute_violations_kwargs`` argument to
-            :py:meth:`roll()`. This approach ensures that only the constraint violations
-            are computed at :math:`\vx_{t+1}`, without constructing a computational
-            graph over the primal variables.
-
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the
@@ -191,24 +189,25 @@ class AlternatingDualPrimalOptimizer(BaseAlternatingOptimizer):
         \vmu_{t+1} &= \vmu_t + \eta_{\vmu} \vh(\vx_t),
 
         \vx_{t+1} &= \vx_t - \eta_{\vx} \left [ \nabla_{\vx} f(\vx_t) +
-            \vlambda_{t+1}^\top \nabla_{\vx} \vg(\vx_t) + \vmu_{t+1}^\top \nabla_{\vx}
-            \vh(\vx_t) \right ],
+            \vlambda_{\color{red} t+1}^\top \nabla_{\vx} \vg(\vx_t) +
+            \vmu_{\color{red} t+1}^\top \nabla_{\vx} \vh(\vx_t) \right ],
 
     where :math:`\eta_{\vx}`, :math:`\eta_{\vlambda}`, and :math:`\eta_{\vmu}` are step
     sizes.
 
+    .. note::
+        Both the primal and dual updates depend on the :py:class:`~cooper.CMPState` at
+        the current primal iterate :math:`\vx_{t}`. Consequently, although the primal
+        update uses the updated dual variables :math:`\vlambda_{\color{red} t+1}` and
+        :math:`\vmu_{\color{red} t+1}`, the :py:class:`~cooper.CMPState` does not need
+        to be recomputed after the dual update. As a result, the computational cost of
+        this optimizer matches that of the
+        :py:class:`~cooper.optim.constrained_optimizers.SimultaneousOptimizer`.
     """
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
         r"""Performs a dual-primal alternating step where the dual variables are
         updated first.
-
-        Both the primal and dual updates depend on the :py:class:`~cooper.CMPState` at
-        the current primal iterate :math:`\vx_{t}`. Consequently, although the primal
-        update uses the updated dual variables :math:`\vlambda_{t+1}` and
-        :math:`\vmu_{t+1}`, the :py:class:`~cooper.CMPState` does not need to be
-        recomputed after the dual update. As a result, the computational cost of this
-        method matches that of the :py:class:`~cooper.optim.constrained_optimizers.SimultaneousOptimizer`.
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the
