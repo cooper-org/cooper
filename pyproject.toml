@@ -49,7 +49,7 @@ dev = [
     "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "pre-commit>=3.7.1",
     "pytest>=8.3.2",
-    "ruff==0.8.6",
+    "ruff==0.9.1",
     "twine>=5.1.1",
 ]
 docs = [
@@ -101,7 +101,6 @@ warn_unused_configs = true
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
