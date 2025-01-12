@@ -12,7 +12,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem` by performing
     extrapolation updates to the primal and dual variables.
 
-    Given the choice of primal and dual optimizers, an *extrapolation* step is performed
+    Given the choice of primal and dual optimizers, an **extrapolation** step is performed
     first:
 
     .. math::
@@ -29,7 +29,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
             \nabla_{\vmu} \Lag_{\text{dual}}({\vx_{t}}, \vlambda_{t}, \vmu)
             |_{\vmu=\vmu_t} \right).
 
-    This is followed by an *update* step, which modifies the primal and dual variables
+    This is followed by an **update** step, which modifies the primal and dual variables
     from step :math:`t`, based on the gradients *computed at the extrapolated points*
     :math:`t+\frac{1}{2}`:
 
@@ -80,6 +80,12 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
         \vmu_{t+1} &= \vmu_{t+\frac{1}{2}} + \eta_{\vmu} \vh(\vx_{\color{red}
             t+\frac{1}{2}}).
 
+    The :py:meth:`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()`
+    will simultaneously call the
+    :py:meth:`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()`
+    and :py:meth:`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()`
+    methods of the primal and dual optimizers.
+
     """
 
     def custom_sanity_checks(self) -> None:
@@ -126,9 +132,11 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
         """Performs a full update step on the primal and dual variables.
 
-        Note that the forward and backward computations associated with the
-        :py:class:`cooper.CMPState` and the primal and dual Lagrangians are carried out
-        twice, since we compute an "extra" gradient.
+        Note that the forward and backward computations are carried out
+        *twice*, as part of the
+        :py:meth:`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()`
+        and :py:meth:`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()`
+        calls.
 
         Args:
             compute_cmp_state_kwargs: Keyword arguments to pass to the

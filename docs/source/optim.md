@@ -140,7 +140,13 @@ for inputs, targets in train_loader:
 ```
 
 
-{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects are used to solve {py:class}`~cooper.ConstrainedMinimizationProblem`s (CMPs). This is achieved via gradient-based optimization of the primal and dual parameters.
+{py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` objects are used to solve {py:class}`~cooper.ConstrainedMinimizationProblem`s (CMPs) whose chosen formulation involves dual variables. This is achieved via gradient-based optimization of the primal and dual parameters.
+
+:::{admonition} Unconstrained formulations of constrained problems
+:class: warning
+
+For solving problems via formulations that do not require dual variables, such as the {py:class}`~cooper.formulations.QuadraticPenalty` formulation, use the {py:class}`~cooper.optim.UnconstrainedOptimizer` class.
+:::
 
 :::{admonition} Projected $\vlambda$ Updates
 :class: note
@@ -184,7 +190,7 @@ Alternating updates enjoy enhanced convergence guarantees for min-max optimizati
 
 The extragradient method {cite:p}`korpelevich1976extragradient` is a well-established approach for solving min-max optimization problems. It offers convergence for a broader class of problems compared to simultaneous or alternating gradient descent-ascent {cite:p}`gidel2018variational` and reduces oscillations in parameter updates.
 
-However, a key drawback of the extragradient method is its computational cost: it requires **two forward and backward passes per iteration** and additional memory to store a copy of the optimization variables. In other words, each iteration is twice as expensive as a standard gradient descent-ascent iteration.
+However, a key drawback of the extragradient method is its computational cost as it requires **two forward and backward passes per iteration** and additional memory to store a copy of the optimization variables. In other words, each iteration is twice as expensive as a simultaneous gradient descent-ascent iteration.
 
 This approach is implemented in the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer` class.
 
@@ -194,8 +200,6 @@ This approach is implemented in the {py:class}`~cooper.optim.constrained_optimiz
 Not all {py:class}`torch.optim.Optimizer`s are compatible with the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`. Primal and dual optimizers used with this class must implement both a {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` method and an {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method. The {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` method performs the extrapolation step of the algorithm.
 
 To ensure compatibility, optimizers can inherit from {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` (see {ref}`extragradient-optimizers` for details).
-
-When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer.roll()` method will simultaneously call the {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.extrapolation()` and {py:meth}`~cooper.optim.torch_optimizers.ExtragradientOptimizer.step()` methods of the primal and dual optimizers.
 :::
 
 
@@ -206,15 +210,7 @@ When extrapolation-capable optimizers are provided, the {py:meth}`~cooper.optim.
 
 ## Unconstrained Optimizers
 
-The {py:class}`~cooper.optim.UnconstrainedOptimizer` class provides an interface based on the {py:meth}`~cooper.optim.CooperOptimizer.roll()` method for parameter updates in **unconstrained** optimization problems. This class is implemented to maintain consistency with the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` class.
-
-
-:::{admonition} Unconstrained formulations of constrained problems
-:class: note
-
-Unconstrained problems can arise from certain constrained problem formulations, such as the {py:class}`~cooper.formulations.QuadraticPenalty` formulation, which does not require dual variables. In these cases, **Cooper** expects the CMP's {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()` method to return a {py:class}`~cooper.CMPState` object containing *both the loss and constraints*. However, the {py:class}`~cooper.Constraint`s should not have any associated {py:class}`~cooper.multipliers.Multiplier`s.
-
-:::
+The {py:class}`~cooper.optim.UnconstrainedOptimizer` class provides an interface based on the {py:meth}`~cooper.optim.CooperOptimizer.roll()` method for parameter updates in unconstrained **minimization** problems. This class is implemented to maintain consistency with the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` class.
 
 The {py:meth}`~cooper.optim.UnconstrainedOptimizer.roll()` method of the {py:class}`~cooper.optim.UnconstrainedOptimizer` class performs the following steps:
 
@@ -261,68 +257,11 @@ for inputs, targets in train_loader:
     :members:
 ```
 
-### **Cooper** Optimizer Base Class
+## **Cooper** Optimizer Base Class
 
-{py:class}`CooperOptimizer` is the base class for all **Cooper** optimizers. It provides a consistent interface for performing parameter updates across all **Cooper** optimizers. Both {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` and {py:class}`~cooper.optim.UnconstrainedOptimizer` inherit from this class.
+{py:class}`CooperOptimizer` is the base class for all **Cooper** optimizers, offering a unified interface for parameter updates. Both {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` and {py:class}`~cooper.optim.UnconstrainedOptimizer` inherit from this class.
 
 ```{eval-rst}
 .. autoclass:: CooperOptimizer
     :members:
 ```
-
-
-## Torch Optimizers
-
-
-```{eval-rst}
-.. currentmodule:: cooper.optim.torch_optimizers
-```
-
-PyTorch provides implementations of many popular optimizers for solving unconstrained minimization problems. **Cooper** extends PyTorch's functionality by offering optimizers tailored for min-max optimization problems. These optimizers are applicable for formulations of constrained optimization problems that involve Lagrange multipliers, such as the {py:class}`~cooper.formulations.Lagrangian` and {py:class}`~cooper.formulations.AugmentedLagrangian` formulations.
-
-The following optimizers are implemented in **Cooper**:
-- {py:class}`~cooper.optim.torch_optimizers.nuPI`: The $\nu$PI optimizer, as introduced by {cite:t}`sohrabi2024nupi`.
-- {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer`: A base class for optimizers compatible with {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`, **Cooper**'s implementation of the extragradient method.
-- Specific instances of the {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` class, such as the {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam` optimizers.
-
-
-### $\nu$PI
-
-The $\nu$PI optimizer is a first-order optimization algorithm introduced by {cite:t}`sohrabi2024nupi`. It generalizes several popular first-order optimization techniques, including gradient descent, gradient descent with Polyak momentum {cite:p}`polyak1964some`, Nesterov accelerated gradient {cite:p}`nesterov1983method`, the optimistic gradient method {cite:p}`popov1980modification`, and Proportional-Integral (PI) controllers.
-
-The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the value of the Lagrange multipliers, leading to more stable convergence to feasible solutions. For a detailed discussion on the $\nu$PI algorithm, see the ICML 2024 paper [On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization](https://openreview.net/forum?id=1khG2xf1yt).
-
-
-```{eval-rst}
-.. autoclass:: nuPI
-    :members: __init__, step
-```
-
-(extragradient-optimizers)=
-
-### Extragradient Optimizers
-
-Credit to original implementations
-
-The implementations of {py:class}`~cooper.optim.ExtraSGD` and
-{py:class}`~cooper.optim.ExtraAdam` included in **Cooper** are minor edits from
-those originally written by [Hugo Berard](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py).
-{cite:t}`gidel2018variational` provides a concise presentation of the
-extra-gradient in the context of solving Variational Inequality Problems.
-
-```{eval-rst}
-.. autoclass:: ExtragradientOptimizer
-    :members:
-```
-
-```{eval-rst}
-.. autoclass:: ExtraSGD
-    :members:
-```
-
-```{eval-rst}
-.. autoclass:: ExtraAdam
-    :members:
-```
-
-TODO: base class

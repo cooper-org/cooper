@@ -8,7 +8,7 @@ from cooper.optim.optimizer import CooperOptimizer, RollOut
 
 class UnconstrainedOptimizer(CooperOptimizer):
     r"""Wraps a (sequence of) :py:class:`torch.optim.Optimizer`\s to enable handling
-    unconstrained problems in a way that is consistent with
+    unconstrained minimization problems in a way that is consistent with
     :py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`\s.
 
     Args:

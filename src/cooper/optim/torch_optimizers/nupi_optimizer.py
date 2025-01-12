@@ -1,6 +1,6 @@
-r"""The nuPI optimizer is a first-order optimization algorithm proposed in the paper
-"On PI controllers for updating Lagrange multipliers in constrained optimization." by
-Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
+"""The nuPI optimizer is a first-order optimization algorithm proposed in the ICML 2024
+paper *On PI controllers for updating Lagrange multipliers in constrained optimization*
+by Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
 Jose Gallego-Posada.
 """
 
@@ -15,8 +15,9 @@ import torch
 class InitType(Enum):
     r"""nuPI initialization types. This is used to determine how to initialize the
     error and derivative terms of the nuPI controller. The initialization scheme
-    `SGD` ensures that the first step of `nuPI(KP, KI)` is equivalent to SGD with
-    learning rate :math:`\text{lr} K_I`.
+    ``SGD`` ensures that the first step of ``nuPI(KP, KI)`` is equivalent to SGD with
+    learning rate :math:`\eta \times K_I`. The ``ZEROS`` scheme yields a first step which
+    corresponds to SGD with a learning rate of :math:`\eta \times (K_P + K_I)`.
     """
 
     ZEROS = 0
@@ -35,14 +36,30 @@ class nuPI(torch.optim.Optimizer):
         init_type: InitType = InitType.SGD,
         maximize: bool = False,
     ) -> None:
-        r"""Implements a nuPI controller as a PyTorch optimizer.
+        r"""Implements a ``nuPI`` controller as a PyTorch optimizer.
 
-        Todo:
-        The error signal used for the nuPI controller is the gradient of a cost function
-        :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
-        as the control variable, and the gradient of :math:`L` as the error signal. The
-        error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
-        the function :math:`L_t` may change over time.
+        Controllers are designed to guide a system toward a desired state by adjusting a
+        control variable. They operate by measuring the error—the difference between the
+        desired state and the current state—and use this error to modify the control
+        variable, which then influences the system.
+
+        The error signal for this controller is derived from the gradient of a loss
+        function :math:`L` being optimized with respect to a parameter :math:`\vtheta`.
+        Here, :math:`\vtheta` serves as the control variable, while the **gradient** of
+        :math:`L` acts as the error signal. At time :math:`t`, the error signal is
+        defined as :math:`\ve_t = \nabla L_t(\vtheta_t)`. The control goal of setting
+        :math:`\nabla L_t(\vtheta_t) = 0` corresponds to finding a stationary point of
+        the loss function, thus minimizing (or maximizing) it.
+
+        .. note::
+            When applied to the Lagrange multipliers of a constrained optimization
+            problem, the control state :math:`\nabla L_t(\vtheta_t)` corresponds to the
+            gradient of the Lagrangian function with respect to the multipliers (e.g.,
+            :math:`\nabla_{\vlambda} \Lag(\vx, \vlambda) = \vg(\vx)` for inequality
+            constrained problems). Setting this gradient to (less than or equal to) zero
+            corresponds to finding a point that satisfies the constraints.
+
+        TODO: Stuff below; Also, address inequality constraints
 
         When ``maximize=False``, the parameter update is multiplied by :math:`-1` before
         being applied.
@@ -51,11 +68,11 @@ class nuPI(torch.optim.Optimizer):
 
         .. math::
             \xi_t &= \nu \xi_{t-1} + (1 - \nu) e_t \\
-            \theta_1 &= \theta_0 - \text{lr} (K_P \xi_0 + K_I e_0) \\
-            \theta_{t+1} &= \theta_t - \text{lr} (K_I e_t + K_P (\xi_t - \xi_{t-1})),
+            \theta_1 &= \theta_0 - \eta (K_P \xi_0 + K_I e_0) \\
+            \theta_{t+1} &= \theta_t - \eta (K_I e_t + K_P (\xi_t - \xi_{t-1})),
 
         where :math:`K_P`, :math:`K_I` are the proportional and integral gains,
-        respectively. We keep the learning rate :math:`\text{lr}` as a separate
+        respectively. We keep the learning rate :math:`\eta` as a separate
         parameter to facilitate comparison with other optimizers.
 
         .. note::
@@ -63,7 +80,7 @@ class nuPI(torch.optim.Optimizer):
 
         .. note::
             Setting :math:`K_P=0`, :math:`K_I=1` and :math:`\nu=0` corresponds to SGD
-            with learning rate :math:`\text{lr}`.
+            with learning rate :math:`\eta`.
 
             Setting :math:`K_P=1`, :math:`K_I=1` and :math:`\nu=0` corresponds to the
             optimistic gradient method.
@@ -76,7 +93,7 @@ class nuPI(torch.optim.Optimizer):
             Ki: integral gain
             ema_nu: EMA coefficient
             init_type: initialization scheme
-            maximize: whether to maximize or minimize the loss
+            maximize: maximize the objective with respect to the params, instead of minimizing
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
