@@ -36,13 +36,11 @@ The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the
 
 ### Extragradient Optimizers
 
-Credit to original implementations
-
 The implementations of {py:class}`~cooper.optim.ExtraSGD` and
 {py:class}`~cooper.optim.ExtraAdam` included in **Cooper** are minor edits from
 those originally written by [Hugo Berard](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py).
 {cite:t}`gidel2018variational` provides a concise presentation of the
-extra-gradient in the context of solving Variational Inequality Problems.
+extra-gradient algorithm in the context of solving Variational Inequality Problems.
 
 ```{eval-rst}
 .. autoclass:: ExtragradientOptimizer

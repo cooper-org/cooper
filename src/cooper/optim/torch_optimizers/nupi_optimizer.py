@@ -36,64 +36,84 @@ class nuPI(torch.optim.Optimizer):
         init_type: InitType = InitType.SGD,
         maximize: bool = False,
     ) -> None:
-        r"""Implements a ``nuPI`` controller as a PyTorch optimizer.
+        r"""Implements the ``nuPI`` controller as a PyTorch optimizer.
 
         Controllers are designed to guide a system toward a desired state by adjusting a
-        control variable. They operate by measuring the error—the difference between the
-        desired state and the current state—and use this error to modify the control
-        variable, which then influences the system.
+        control variable. This is achieved by measuring the error, which is the
+        difference between the desired and current states, and using this error to
+        modify the control variable, thereby influencing the system.
 
-        The error signal for this controller is derived from the gradient of a loss
-        function :math:`L` being optimized with respect to a parameter :math:`\vtheta`.
-        Here, :math:`\vtheta` serves as the control variable, while the **gradient** of
-        :math:`L` acts as the error signal. At time :math:`t`, the error signal is
-        defined as :math:`\ve_t = \nabla L_t(\vtheta_t)`. The control goal of setting
-        :math:`\nabla L_t(\vtheta_t) = 0` corresponds to finding a stationary point of
-        the loss function, thus minimizing (or maximizing) it.
+        For this controller, the error signal is derived from the gradient of a loss
+        function :math:`L` being optimized with respect to a parameter
+        :math:`\vtheta`. Here, :math:`\vtheta` acts as the control variable, while the
+        **gradient** of :math:`L` serves as the error signal, defined as
+        :math:`\ve_t = \nabla L_t(\vtheta_t)`. The control objective of setting
+        :math:`\nabla L_t(\vtheta_t) = 0` corresponds to finding a stationary point
+        of the loss function, thereby minimizing (or maximizing) it.
 
         .. note::
-            When applied to the Lagrange multipliers of a constrained optimization
+            When applied to the Lagrange multipliers of a constrained minimization
             problem, the control state :math:`\nabla L_t(\vtheta_t)` corresponds to the
             gradient of the Lagrangian function with respect to the multipliers (e.g.,
-            :math:`\nabla_{\vlambda} \Lag(\vx, \vlambda) = \vg(\vx)` for inequality
-            constrained problems). Setting this gradient to (less than or equal to) zero
-            corresponds to finding a point that satisfies the constraints.
+            :math:`\nabla_{\vlambda} \Lag(\vx, \vlambda) = \vg(\vx)` for
+            inequality-constrained problems). Setting this gradient to (less than or
+            equal to) zero corresponds to finding a point that satisfies the
+            constraints.
 
-        TODO: Stuff below; Also, address inequality constraints
+        The ``nuPI`` controller updates parameters as follows:
+
+        .. math::
+            \vxi_t &= \nu \vxi_{t-1} + (1 - \nu) \ve_t, \\
+            \vtheta_1 &= \vtheta_0 - \eta (K_P \vxi_0 + K_I \ve_0), \\
+            \vtheta_{t+1} &= \vtheta_t - \eta (K_I \ve_t + K_P (\vxi_t - \vxi_{t-1}))
+
+        Here, :math:`\vxi_t` is a smoothed version of the error signal (:math:`\ve_t`),
+        using an exponential moving average (EMA) with coefficient :math:`\nu`.
+        :math:`K_P` and :math:`K_I` are the proportional and integral gains,
+        respectively, while the learning rate :math:`\eta` is kept separate
+        to allow comparison with other optimizers.
+
+        Weight decay is applied based only on the error signal :math:`\ve_t`, following
+        a similar approach to PyTorch's AdamW optimizer.
 
         When ``maximize=False``, the parameter update is multiplied by :math:`-1` before
         being applied.
 
-        The execution of the nuPI controller is given by:
+        **Initialization Schemes**:
+        The initialization of the ``nuPI`` controller requires specifying the initial
+        smoothed error signal, :math:`\vxi_{-1}`, which impacts the first parameter
+        update. Two initialization schemes are available:
 
-        .. math::
-            \xi_t &= \nu \xi_{t-1} + (1 - \nu) e_t \\
-            \theta_1 &= \theta_0 - \eta (K_P \xi_0 + K_I e_0) \\
-            \theta_{t+1} &= \theta_t - \eta (K_I e_t + K_P (\xi_t - \xi_{t-1})),
+        - ``InitType.ZEROS``: Initializes :math:`\vxi_{-1} = \vzero`. The first update rule becomes:
 
-        where :math:`K_P`, :math:`K_I` are the proportional and integral gains,
-        respectively. We keep the learning rate :math:`\eta` as a separate
-        parameter to facilitate comparison with other optimizers.
+            .. math::
+                \vtheta_1 = \vtheta_0 - \eta (K_P \ve_0 + K_I \ve_0) = \vtheta_0 - \eta (K_P + K_I) \ve_0.
+
+        - ``InitType.SGD``: Initializes :math:`\vxi_{-1} = \ve_0`, producing a first step identical to SGD:
+
+            .. math::
+                \vxi_0 &= \ve_0, \\
+                \vtheta_1 &= \vtheta_0 - \eta (K_P \ve_0 + K_I \ve_0) = \vtheta_0 - \eta K_I \ve_0.
 
         .. note::
-            The optimizer state is initialized with :math:`\xi_{-1} = 0`.
+            nuPI(:math:`\eta`, :math:`K_P=0`, :math:`K_I=1`, :math:`\nu=0`) corresponds
+            to SGD with learning rate :math:`\eta`.
 
-        .. note::
-            Setting :math:`K_P=0`, :math:`K_I=1` and :math:`\nu=0` corresponds to SGD
-            with learning rate :math:`\eta`.
-
-            Setting :math:`K_P=1`, :math:`K_I=1` and :math:`\nu=0` corresponds to the
-            optimistic gradient method.
+            nuPI(:math:`\eta`, :math:`K_P=1`, :math:`K_I=1`, :math:`\nu=0`) corresponds
+            to the optimistic gradient method :cite:p:`popov1980modification`.
 
         Args:
-            params: iterable of parameters to optimize or dicts defining parameter groups
-            lr: learning rate
-            weight_decay: weight decay (L2 penalty)
-            Kp: proportional gain
-            Ki: integral gain
-            ema_nu: EMA coefficient
-            init_type: initialization scheme
-            maximize: maximize the objective with respect to the params, instead of minimizing
+            params: iterable of parameters to optimize, or dicts defining parameter groups.
+            lr: learning rate.
+            weight_decay: weight decay (L2 penalty). Defaults to 0.
+            Kp: proportional gain. Defaults to 0.
+            Ki: integral gain. Defaults to 1.
+            ema_nu: EMA coefficient for the smoothed error signal. Defaults to 0,
+                meaning no smoothing is applied.
+            init_type: initialization scheme for :math:`\vxi_{-1}`. Defaults to
+                ``InitType.SGD``, which matches the first step of SGD.
+            maximize: whether to maximize the objective with respect to the parameters
+                instead of minimizing. Defaults to ``False``.
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
