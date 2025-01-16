@@ -10,10 +10,11 @@
 
 The `cooper.optim` module contains classes and functions for solving constrained minimization problems (CMPs).
 
-This module is divided into three main parts:
+This module is divided into two main parts:
 - [Constrained Optimizers](#constrained-optimizers): for solving *constrained* minimization problems.
 - [Unconstrained Optimizers](#unconstrained-optimizers): for solving *unconstrained* minimization problems.
-- [Torch Optimizers](#torch-optimizers): **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes useful for solving CMPs that are not part of PyTorch.
+
+The [Torch Optimizers]{ref}`torch-optimizers` section describes **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes tailored for solving CMPs that are not available in PyTorch.
 
 ## Quick Start
 

@@ -67,6 +67,7 @@ mathjax3_config = {
             "vg": r"\bs{g}",
             "vh": r"\bs{h}",
             "vc": r"\bs{c}",
+            "vv": r"\bs{v}",
             "vzero": r"\bs{0}",
             "xstar": r"\bs{x}^*",
             "lambdastar": r"\bs{\lambda}^*",

@@ -47,7 +47,7 @@ import torch
 
 
 class ExtragradientOptimizer(torch.optim.Optimizer):
-    r"""Base class for optimizers with extrapolation step.
+    r"""Base class for :class:`torch.optim.Optimizer`\s with an ``extrapolation`` step.
 
     Args:
         params: an iterable of :class:`torch.Tensor`\s or
@@ -113,11 +113,30 @@ class ExtragradientOptimizer(torch.optim.Optimizer):
 
 
 class ExtraSGD(ExtragradientOptimizer):
-    r"""Implements stochastic gradient descent with extrapolation step (optionally
-    with momentum).
+    r"""Extrapolation-compatible implementation of SGD with momentum.
 
-    Nesterov momentum is based on the formula from
-    :cite:t:`sutskever2013initialization`.
+    .. note::
+        The implementation of SGD with Momentum/Nesterov subtly differs from
+        :cite:p:`sutskever2013initialization` and implementations in some other
+        frameworks.
+
+        Considering the specific case of Momentum, the update can be written as:
+
+        .. math::
+            \vv_{t+1} = \rho \cdot \vv_t + \nabla_{\vtheta} L(\vtheta_t) \\
+            \vtheta_{t+1} = \vtheta_t - \eta \cdot \vv_{t+1},
+
+        where :math:`\vtheta`, :math:`\vv`, :math:`\nabla_{\vtheta} L` and :math:`\rho`
+        denote the parameters, velocity, gradient and momentum respectively.
+
+        This is in contrast to :cite:p:`sutskever2013initialization` and
+        other frameworks which employ an update of the form:
+
+        .. math::
+            \vv_{t+1} &= \rho \cdot \vv_t + \eta \cdot \nabla_{\vtheta} L(\vtheta_t) \\
+            \vtheta_{t+1} &= \vtheta_t - \vv_{t+1}.
+
+        The Nesterov version is modified analogously.
 
     Args:
         params: Iterable of parameters to optimize or dicts defining parameter
@@ -128,28 +147,6 @@ class ExtraSGD(ExtragradientOptimizer):
         dampening: Dampening for momentum.
         nesterov: If ``True``, enables Nesterov momentum.
 
-    .. note::
-        The implementation of SGD with Momentum/Nesterov subtly differs from
-        :cite:t:`sutskever2013initialization`. and implementations in some other
-        frameworks.
-
-        Considering the specific case of Momentum, the update can be written as
-
-        .. math::
-            v = \rho \cdot v + g \\
-            p = p - lr \cdot v
-
-        where :math:`p`, :math:`v`, :math:`g` and :math:`\rho` denote the
-        parameters, gradient, velocity, and momentum respectively.
-
-        This is in contrast to :cite:t:`sutskever2013initialization` and
-        other frameworks which employ an update of the form
-
-        .. math::
-            v &= \rho \cdot v + lr \cdot g \\
-            p &= p - v
-
-        The Nesterov version is analogously modified.
     """
 
     def __init__(
@@ -225,7 +222,7 @@ class ExtraAdam(ExtragradientOptimizer):
         eps : Term added to the denominator to improve numerical stability.
         weight_decay: Weight decay (L2 penalty).
         amsgrad: Flag to use the AMSGrad variant of this algorithm from
-            :cite:t:`reddi2018amsgrad`.
+            :cite:p:`reddi2018amsgrad`.
     """
 
     def __init__(

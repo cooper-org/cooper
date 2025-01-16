@@ -36,11 +36,11 @@ The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the
 
 ### Extragradient Optimizers
 
-The implementations of {py:class}`~cooper.optim.ExtraSGD` and
-{py:class}`~cooper.optim.ExtraAdam` included in **Cooper** are minor edits from
-those originally written by [Hugo Berard](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py).
-{cite:t}`gidel2018variational` provides a concise presentation of the
-extra-gradient algorithm in the context of solving Variational Inequality Problems.
+Extragradient optimizers are PyTorch optimizers equipped with an `extrapolation` method, allowing them to be used alongside the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`.
+
+In **Cooper**, we implement two extragradient optimizers: {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam`. We also provide a base class, {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer`, that can be used to create custom extragradient optimizers.
+
+The implementations of {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam` in **Cooper** are based on minor modifications to the original implementations by [Hugo Berard](https://github.com/GauthierGidel/Variational-Inequality-GAN/blob/master/optim/extragradient.py). For a concise overview of the extra-gradient algorithm and its application to solving Variational Inequality Problems, refer to {cite:p}`gidel2018variational`.
 
 ```{eval-rst}
 .. autoclass:: ExtragradientOptimizer
@@ -56,5 +56,3 @@ extra-gradient algorithm in the context of solving Variational Inequality Proble
 .. autoclass:: ExtraAdam
     :members:
 ```
-
-TODO: base class
