@@ -1,38 +1,28 @@
 (multipliers)=
 
-# Multipliers and Penalty Coefficients
-
+# Multipliers
 
 ```{eval-rst}
 .. currentmodule:: cooper.multipliers
 ```
 
-```{eval-rst}
-.. automodule:: cooper.multipliers
-    :members:
+Multiplier objects represent the dual variables of the optimization problem: :math:`\vlambda` and :math:`\vnu`. 
+
+## Example
+
+[Dense Multipliers](#Dense-Multipliers) can be initialized in one of the following ways:
+
+```python
+import cooper 
+
+multiplier = cooper.DenseMultiplier(num_constraints=3, device=torch.device("cuda"))
 ```
 
-- Multipliers
-  - Dense
-  - Indexed
-  - Implicit
-  - Example
+```python
+import cooper 
 
-
-:::{note}
-Multipliers are mostly handled internally by the
-{py:class}`~cooper.formulation.Formulation`s. This handling includes:
-
-- Their initialization in the
-  {py:meth}`~cooper.formulation.lagrangian.BaseLagrangianFormulation.create_state`
-  method of {py:class}`~cooper.formulation.lagrangian.BaseLagrangianFormulation`.
-- Ensuring that their shape and device matches that of the constraint
-  defects provided by the {py:class}`~cooper.problem.CMPState` of the
-  considered {py:class}`~cooper.problem.ConstrainedMinimizationProblem`.
-- Using them for computing Lagrangians in the
-  {py:meth}`~cooper.formulation.lagrangian.LagrangianFormulation.compute_lagrangian`
-  method of {py:class}`~cooper.formulation.lagrangian.LagrangianFormulation`.
-:::
+multiplier = cooper.DenseMultiplier(init=torch.ones(3), device=torch.device("cuda"))
+```
 
 ## Constructing a DenseMultiplier
 
@@ -68,12 +58,41 @@ or equality constraint, and thus whether the multiplier value must be
 lower-bounded by zero or not. `positive=True` corresponds to inequality
 constraints, while `positive=False` corresponds to equality constraints.
 
+
+
+
+
+## Base Class
+
+```{eval-rst}
+.. autoclass:: Multiplier
+    :members:
+```
+
+## Explicit (Non-Parametric) Multipliers
+
+```{eval-rst}
+.. autoclass:: ExplicitMultiplier
+    :members:
+```
+
+### Dense Multipliers
+
 ```{eval-rst}
 .. autoclass:: DenseMultiplier
     :members:
 ```
 
-## Extensions
+
+### Indexed Multipliers
+
+```{eval-rst}
+.. autoclass:: IndexedMultiplier
+    :members:
+```
+
+
+## Implicit (Parametric) Multipliers
 
 Certain optimization problems involve a very large number of constraints. For
 example, in a learning task one might impose a constraint *per data-point*.
@@ -84,42 +103,6 @@ which employ sparse multipliers or even a model that predicts the value of the
 multiplier based on some properties or "features" of each constraint.
 
 ```{eval-rst}
-.. autoclass:: Multiplier
-    :members:
-```
-
-
-```{eval-rst}
-.. autoclass:: IndexedMultiplier
-    :members:
-```
-
-```{eval-rst}
 .. autoclass:: ImplicitMultiplier
     :members:
 ```
-
-
-## Penalty Coefficients
-
-
-```{eval-rst}
-.. autoclass:: PenaltyCoefficient
-    :members:
-```
-
-```{eval-rst}
-.. autoclass:: DensePenaltyCoefficient
-    :members
-```
-
-```{eval-rst}
-.. autoclass:: IndexedPenaltyCoefficient
-  :members
-
-
-:::{note}
-**Cooper** supports vector-valued penalty coefficients that match the size of a constraint. This can be done by passing a tensor of coefficients to the `init` argument of a {py:class}`~cooper.multipliers.PenaltyCoefficient`, where each element corresponds to a penalty coefficient for an individual constraint.
-:::
-
-Since it is often desirable to increase the penalty coefficient over the optimization process, **Cooper** provides a scheduler mechanism to do so. For more information, see {ref}`coefficient_updaters`.

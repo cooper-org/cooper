@@ -24,6 +24,7 @@ constrained_optimizer
 optim
 torch_optimizers
 multipliers
+penalty_coefficients
 ```
 
 ```{toctree}
