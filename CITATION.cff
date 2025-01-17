@@ -10,5 +10,5 @@ authors:
     - family-names: "Lacoste-Julien"
       given-names: "Simon"
 title: "Cooper: A Library for Constrained Optimization in Deep Learning"
-date-released: 2024-09-01
+date-released: 2025-01-01
 url: "https://github.com/cooper-org/cooper"

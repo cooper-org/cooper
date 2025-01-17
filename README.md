@@ -140,11 +140,11 @@ We thank Manuel Del Verme, Daniel Otero, and Isabel Urrego for useful discussion
 To cite **Cooper**, please cite [this paper](link-to-paper):
 
 ```bibtex
-@misc{gallegoPosada2024cooper,
+@misc{gallegoPosada2025cooper,
     author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
     title={{Cooper: A Library for Constrained Optimization in Deep Learning}},
     howpublished={\url{https://github.com/cooper-org/cooper}},
-    year={2024}
+    year={2025}
 }
 ```
 

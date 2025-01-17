@@ -6,20 +6,20 @@
 .. currentmodule:: cooper.multipliers
 ```
 
-Multiplier objects represent the dual variables of the optimization problem: :math:`\vlambda` and :math:`\vnu`. 
+Multiplier objects represent the dual variables of the optimization problem: :math:`\vlambda` and :math:`\vnu`.
 
 ## Example
 
 [Dense Multipliers](#Dense-Multipliers) can be initialized in one of the following ways:
 
 ```python
-import cooper 
+import cooper
 
 multiplier = cooper.DenseMultiplier(num_constraints=3, device=torch.device("cuda"))
 ```
 
 ```python
-import cooper 
+import cooper
 
 multiplier = cooper.DenseMultiplier(init=torch.ones(3), device=torch.device("cuda"))
 ```
