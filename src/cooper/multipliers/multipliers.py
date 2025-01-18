@@ -24,7 +24,11 @@ class Multiplier(torch.nn.Module, abc.ABC):
         """
 
     def sanity_check(self) -> None:
-        # TODO(gallego-posada): Add docstring
+        """Perform a sanity check on the multiplier. This method is called after setting
+        the constraint type and ensures consistency between the multiplier and the
+        constraint type. For example, multipliers for inequality constraints must be
+        non-negative.
+        """
         pass
 
     def set_constraint_type(self, constraint_type: ConstraintType) -> None:
@@ -40,10 +44,13 @@ class ExplicitMultiplier(Multiplier):
 
     Args:
         num_constraints: Number of constraints associated with the multiplier. This
-            argument is mutually exclusive with `init`.
+            argument is mutually exclusive with ``init``.
         init: Tensor used to initialize the multiplier values. This argument is mutually
-            exclusive with `num_constraints`. If provided, the shape of `init` must be
-            `(num_constraints,)`.
+            exclusive with ``num_constraints``. If provided, the shape of ``init`` must
+            be ``(num_constraints,)``.
+        device: Device for the multiplier. If ``None``, the device is inferred from the
+            ``init`` tensor or the default device.
+        dtype: Data type for the multiplier. Default is ``torch.float32``.
     """
 
     def __init__(
@@ -64,9 +71,10 @@ class ExplicitMultiplier(Multiplier):
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float32,
     ) -> torch.Tensor:
-        """Initialize the weight of the multiplier. If both `init` and `num_constraints`
-        are provided (and the shapes are consistent), `init` takes precedence.
-        Otherwise, the weight is initialized to zeros of shape `(num_constraints,)`.
+        """Initialize the weight of the multiplier. If both ``init`` and
+        ``num_constraints`` are provided (and the shapes are consistent), ``init`` takes
+        precedence. Otherwise, the weight is initialized to :py:func:`torch.zeros` of
+        shape ``(num_constraints,)``.
         """
         if num_constraints is None and init is None:
             raise ValueError("At least one of `num_constraints` and `init` must be provided.")
@@ -91,9 +99,8 @@ class ExplicitMultiplier(Multiplier):
 
     @torch.no_grad()
     def post_step_(self) -> None:
-        """Post-step function for multipliers. This function is called after each step of
-        the dual optimizer, and ensures that (if required) the multipliers are
-        non-negative.
+        """Ensures (in-place) that multipliers associated with inequality constraints remain non-negative. This function
+        is called after each step of the dual optimizer.
         """
         if self.constraint_type == ConstraintType.INEQUALITY:
             # Ensures non-negativity for multipliers associated with inequality constraints.
@@ -104,15 +111,8 @@ class ExplicitMultiplier(Multiplier):
 
 
 class DenseMultiplier(ExplicitMultiplier):
-    r"""Simplest kind of trainable Lagrange multiplier.
-
-    :py:class:`~cooper.multipliers.DenseMultiplier`\s are suitable for low to mid-scale
-    :py:class:`~cooper.constraints.Constraint`\s for which all the constraints
-    in the group are measured constantly.
-
-    For large-scale :py:class:`~cooper.constraints.Constraint`\s (for example,
-    one constraint per training example) you may consider using an
-    :py:class:`~cooper.multipliers.IndexedMultiplier`.
+    r""":py:class:`~cooper.multipliers.ExplicitMultiplier` for dense constraints which
+    are all evaluated on every optimization step.
     """
 
     expects_constraint_features = False
@@ -123,17 +123,8 @@ class DenseMultiplier(ExplicitMultiplier):
 
 
 class IndexedMultiplier(ExplicitMultiplier):
-    r"""Indexed multipliers extend the functionality of
-    :py:class:`~cooper.multipliers.DenseMultiplier`\s to cases where the number of
-    constraints in the :py:class:`~cooper.constraints.Constraint` is too large.
-    This situation may arise, for example, when imposing point-wise constraints over all
-    the training samples in a learning task.
-
-    In such cases, it might be computationally prohibitive to measure the value for all
-    the constraints in the :py:class:`~cooper.constraints.Constraint` and one may
-    typically resort to sampling. :py:class:`~cooper.multipliers.IndexedMultiplier`\s
-    enable time-efficient retrieval of the multipliers for the sampled constraints only,
-    and memory-efficient sparse gradients (on GPU).
+    r""":py:class:`~cooper.multipliers.ExplicitMultiplier` for indexed constraints which
+    are evaluated only for a subset of constraints on every optimization step.
     """
 
     expects_constraint_features = True
@@ -152,7 +143,12 @@ class IndexedMultiplier(ExplicitMultiplier):
             self.weight.data = self.weight.data.unsqueeze(-1)
 
     def forward(self, indices: torch.Tensor) -> torch.Tensor:
-        """Return the current value of the multiplier at the provided indices."""
+        """Return the current value of the multiplier at the provided indices.
+
+        Args:
+            indices: Indices of the multipliers to return. The shape of ``indices`` must
+                be ``(num_indices,)``.
+        """
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
             # torch.nn.functional.embedding and *not* as masks.
@@ -167,16 +163,10 @@ class IndexedMultiplier(ExplicitMultiplier):
 
 
 class ImplicitMultiplier(Multiplier):
-    """An implicit multiplier is a :py:class:`~torch.nn.Module` that computes the value
+    """An implicit multiplier is a :py:class:`torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
     :py:class:`~cooper.constraints.Constraint` based on "features" for each
-    constraint. The multiplier is _implicitly_  represented by the features of its
-    associated constraint as well as the computation that takes place in the
-    :py:meth:`~cooper.multipliers.ImplicitMultiplier.forward` method.
-
-    Thanks to their functional nature, implicit multipliers can allow for
-    (approximately) representing _infinitely_ many constraints. This feature is based on
-    the Lagrange "multiplier model" proposed by :cite:p:`narasimhan2020multiplier`.
+    constraint. The multiplier is *implicitly* represented by its parameters.
     """
 
     @abc.abstractmethod
@@ -187,7 +177,4 @@ class ImplicitMultiplier(Multiplier):
     def post_step_(self) -> None:
         """This method is called after each step of the dual optimizer and allows for
         additional post-processing of the implicit multiplier module or its parameters.
-        For example, one may want to enforce non-negativity of the parameters of the
-        implicit multiplier. Given the high flexibility of implicit multipliers, the
-        post-step function is left to be implemented by the user.
         """
