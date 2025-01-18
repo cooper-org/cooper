@@ -76,5 +76,3 @@ def test_compute_quadratic_penalty(num_constraints, constraint_type):
 
     result = cooper.formulations.utils.compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
     assert torch.allclose(result, 0.5 * torch.dot(penalty_coefficient_value, clamped_violation**2))
-
-

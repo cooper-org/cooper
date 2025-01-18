@@ -117,4 +117,3 @@ def compute_quadratic_penalty(
     """
     clamped_violation = torch.relu(violation) if constraint_type == ConstraintType.INEQUALITY else violation
     return 0.5 * torch.einsum("i...,i...->", penalty_coefficient_value, clamped_violation**2)
-

@@ -29,7 +29,6 @@ class Multiplier(torch.nn.Module, abc.ABC):
         constraint type. For example, multipliers for inequality constraints must be
         non-negative.
         """
-        pass
 
     def set_constraint_type(self, constraint_type: ConstraintType) -> None:
         self.constraint_type = constraint_type
