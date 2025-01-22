@@ -20,7 +20,6 @@ CONTRIBUTING
 
 problem
 formulations
-constrained_optimizer
 optim
 torch_optimizers
 multipliers
