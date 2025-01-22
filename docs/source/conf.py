@@ -121,7 +121,6 @@ html_theme = "sphinx_rtd_theme"
 html_theme_options = {
     "analytics_id": "",
     "logo_only": False,
-    "display_version": True,
     "collapse_navigation": True,
     "sticky_navigation": True,
     "navigation_with_keys": True,
