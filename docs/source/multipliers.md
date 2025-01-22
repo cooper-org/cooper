@@ -31,7 +31,7 @@ We provide two types of explicit multipliers: {py:class}`~cooper.multipliers.Den
 To initialize an {py:class}`~cooper.multipliers.ExplicitMultiplier`, you need to specify either the number of associated constraints or provide an initial value for each multiplier. For example:
 
 ```python
-multiplier = cooper.DenseMultiplier(
+multiplier = cooper.multipliers.DenseMultiplier(
     num_constraints=3,
     device=torch.device("cuda")
 )
@@ -40,7 +40,7 @@ multiplier = cooper.DenseMultiplier(
 or
 
 ```python
-multiplier = cooper.DenseMultiplier(
+multiplier = cooper.multipliers.DenseMultiplier(
     init=torch.ones(3),
     device=torch.device("cuda"),
 )
@@ -83,7 +83,7 @@ To use an {py:class}`~cooper.multipliers.IndexedMultiplier`, after computing the
 observed_constraint_tensor = torch.tensor([0, 2, 4])
 observed_constraint_indices = torch.tensor([0, 11, 17])
 
-constraint_state = ConstraintState(
+constraint_state = cooper.ConstraintState(
     violation=observed_constraint_tensor,
     constraint_features=observed_constraint_indices
 )
