@@ -24,7 +24,12 @@ class PenaltyCoefficientUpdater(abc.ABC):
 
     @abc.abstractmethod
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
-        pass
+        """Update the penalty coefficient of a constraint.
+
+        Args:
+            constraint: The constraint for which the penalty coefficient is updated.
+            constraint_state: The constraint state of the constraint.
+        """
 
 
 class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):

@@ -38,14 +38,25 @@ class PenaltyCoefficient(abc.ABC):
         self.sanity_check()
 
     def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None) -> Self:
-        """Move the penalty to a new device and/or change its dtype."""
+        """Move the penalty coefficient to a new device and/or change its dtype.
+
+        Args:
+            device: The desired device of the penalty coefficient.
+            dtype: The desired dtype of the penalty coefficient.
+        """
         self._value = self._value.to(device=device, dtype=dtype)
         return self
 
     def state_dict(self) -> dict:
+        """Return the current state of the penalty coefficient."""
         return {"value": self._value}
 
     def load_state_dict(self, state_dict: dict) -> None:
+        """Load the state of the penalty coefficient.
+
+        Args:
+            state_dict: Dictionary containing the state of the penalty coefficient.
+        """
         self._value = state_dict["value"]
 
     def sanity_check(self) -> None:
