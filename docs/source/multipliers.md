@@ -8,13 +8,21 @@
 
 Multiplier objects represent the dual variables $\vlambda$ and $\vmu$ of the constrained optimization problem. They are required by certain formulations, such as the {py:class}`~cooper.formulations.Lagrangian` and {py:class}`~cooper.formulations.AugmentedLagrangian` formulations.
 
-In **Cooper**, multipliers inherit from {py:class}`torch.nn.Module`, ensuring compatibility with PyTorch's autograd capabilities. In particular, multipliers are evaluated using a {py:meth}`~cooper.multipliers.Multiplier.forward` method.
+For a generic formulation $\Lag$ the dual variables correspond to the inner maximization:
 
-This module provides the following main classes:
-- **{py:class}`~cooper.multipliers.DenseMultiplier`**: Models each multiplier individually.
-- **{py:class}`~cooper.multipliers.IndexedMultiplier`**: Similar to `DenseMultiplier` but allows fetching and updating multipliers by index. Useful when constraints are sampled, and thus the required multipliers change at each iteration.
+$$
+\min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx,\vlambda, \vmu).
+$$
+
+In **Cooper**, multipliers are {py:class}`torch.nn.Module`s, ensuring compatibility with PyTorch's autograd capabilities. In particular, multipliers are evaluated using a {py:meth}`~cooper.multipliers.Multiplier.forward` call.
+
+The `cooper.multipliers` module provides the following types of multipliers:
+- **{py:class}`~cooper.multipliers.DenseMultiplier`**: Represents each multiplier individually, such that each entry of the multiplier vector corresponds to a separate {py:class}`~cooper.constraints.Constraint`.
+- **{py:class}`~cooper.multipliers.IndexedMultiplier`**: Similar to {py:class}`~cooper.multipliers.DenseMultiplier` but allows fetching and updating multipliers by index. Useful when constraints are sampled, and thus the required multipliers change at each iteration.
 - **{py:class}`~cooper.multipliers.ImplicitMultiplier`**: Models multipliers implicitly as a function of some features of the constraints. Suitable when the number of constraints is very large, making it impractical or impossible to explicitly maintain a Lagrange multiplier for each constraint.
 
+
+![multipliers](_static/multipliers.svg)
 
 ## Explicit (Non-Parametric) Multipliers
 
