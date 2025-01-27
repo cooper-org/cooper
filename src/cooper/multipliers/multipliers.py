@@ -24,7 +24,7 @@ class Multiplier(torch.nn.Module, abc.ABC):
         """
 
     def sanity_check(self) -> None:
-        """Perform a sanity check on the multiplier. This method is called after setting
+        """Perform sanity checks on the multiplier. This method is called after setting
         the constraint type and ensures consistency between the multiplier and the
         constraint type. For example, multipliers for inequality constraints must be
         non-negative.
@@ -36,17 +36,15 @@ class Multiplier(torch.nn.Module, abc.ABC):
 
 
 class ExplicitMultiplier(Multiplier):
-    """An explicit multiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
-    contains (explicitly) the value of the Lagrange multipliers associated with a
+    """An ExplicitMultiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
+    explicitly contains the value of the Lagrange multipliers associated with a
     :py:class:`~cooper.constraints.Constraint` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
     Args:
-        num_constraints: Number of constraints associated with the multiplier. This
-            argument is mutually exclusive with ``init``.
-        init: Tensor used to initialize the multiplier values. This argument is mutually
-            exclusive with ``num_constraints``. If provided, the shape of ``init`` must
-            be ``(num_constraints,)``.
+        num_constraints: Number of constraints associated with the multiplier.
+        init: Tensor used to initialize the multiplier values. If both ``init`` and
+            ``num_constraints`` are provided, ``init`` must have shape ``(num_constraints,)``.
         device: Device for the multiplier. If ``None``, the device is inferred from the
             ``init`` tensor or the default device.
         dtype: Data type for the multiplier. Default is ``torch.float32``.
@@ -93,13 +91,15 @@ class ExplicitMultiplier(Multiplier):
         return self.weight.device
 
     def sanity_check(self) -> None:
+        """Ensures multipliers for inequality constraints are non-negative."""
         if self.constraint_type == ConstraintType.INEQUALITY and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
 
     @torch.no_grad()
     def post_step_(self) -> None:
-        """Ensures (in-place) that multipliers associated with inequality constraints remain non-negative. This function
-        is called after each step of the dual optimizer.
+        """Projects (in-place) multipliers associated with inequality constraints so
+        that they remain non-negative. This function is called after each dual optimizer
+        step.
         """
         if self.constraint_type == ConstraintType.INEQUALITY:
             # Ensures non-negativity for multipliers associated with inequality constraints.
@@ -110,14 +110,14 @@ class ExplicitMultiplier(Multiplier):
 
 
 class DenseMultiplier(ExplicitMultiplier):
-    r""":py:class:`~cooper.multipliers.ExplicitMultiplier` for dense constraints which
-    are all evaluated on every optimization step.
+    r"""Sub-class of :py:class:`~cooper.multipliers.ExplicitMultiplier` for constraints
+    that are all evaluated at every optimization step.
     """
 
     expects_constraint_features = False
 
     def forward(self) -> torch.Tensor:
-        """Return the current value of the multiplier."""
+        """Returns the current value of the multiplier."""
         return torch.clone(self.weight)
 
 

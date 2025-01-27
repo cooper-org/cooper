@@ -11,7 +11,7 @@ $$
 
 See {ref}`here<overview>` for a brief introduction to constrained optimization. In this section, we will discuss how to represent CMPs using **Cooper**. To do this, consider the following objects:
 - {py:class}`~cooper.constraints.Constraint`: represents a group of either equality or inequality constraints.
-- {py:class}`~cooper.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` that computes the loss and constraint violations at a given point.
+- {py:class}`~cooper.cmp.ConstrainedMinimizationProblem`: represents the constrained minimization problem itself. It must include a method {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` that computes the loss and constraint violations at a given point.
 
 Moreover, in order to package the values of the loss and constraints, we will define the following objects:
 - {py:class}`~cooper.constraints.ConstraintState`: contains the value of the constraint violation at the given iterate.
@@ -19,8 +19,8 @@ Moreover, in order to package the values of the loss and constraints, we will de
 
 ## Example
 
-The example below illustrates the required steps for defining a {py:class}`~cooper.ConstrainedMinimizationProblem` class for your problem. For simplicity, we illustrate the case of a single (possibly multi-dimensional) inequality constraint.
-1. **\[Line 4\]** Define a custom class which inherits from {py:class}`~cooper.ConstrainedMinimizationProblem`.
+The example below illustrates the required steps for defining a {py:class}`~cooper.cmp.ConstrainedMinimizationProblem` class for your problem. For simplicity, we illustrate the case of a single (possibly multi-dimensional) inequality constraint.
+1. **\[Line 4\]** Define a custom class which inherits from {py:class}`~cooper.cmp.ConstrainedMinimizationProblem`.
 2. **\[Line 7\]** Instantiate a multiplier object for the constraint.
 3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type.
 4. **\[Line 13\]** Implement the {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method that evaluates the loss and constraints.
@@ -62,7 +62,7 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
 
 ## Loss
 
-The {py:class}`~cooper.CMPState` dataclass includes the loss, which must be a scalar `torch.Tensor` representing $f(\vx)$, and is used to update the primal variables in the optimization. For feasibility problems, where only constraint satisfaction matters, the loss should be set to `None`.
+The {py:class}`~cooper.CMPState` dataclass includes the loss, which must be a scalar {py:class}`torch.Tensor` representing $f(\vx)$, and is used to update the primal variables in the optimization. For feasibility problems, where only constraint satisfaction matters, the loss should be set to `None`.
 
 ## Constraints
 

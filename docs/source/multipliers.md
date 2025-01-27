@@ -38,28 +38,57 @@ where $\vlambda = [\lambda_i]_{i=1}^m$ and $\vmu = [\mu_i]_{i=1}^n$ are the Lagr
 {py:class}`~cooper.multipliers.ExplicitMultiplier` objects represent the vectors $\vlambda$ and $\vmu$ directly, by storing *one decision variable per constraint*.
 **Cooper** provides two types of explicit multipliers: {py:class}`~cooper.multipliers.DenseMultiplier` and {py:class}`~cooper.multipliers.IndexedMultiplier`.
 
-To initialize an {py:class}`~cooper.multipliers.ExplicitMultiplier`, you need to specify either the number of associated constraints or provide an initial value for each multiplier. For example:
+### Initialization
+
+To create an {py:class}`~cooper.multipliers.ExplicitMultiplier`, you need to specify either the number of associated constraints or provide an initial value for each multiplier entry. We illustrate the construction of multiplier objects below. Note that the syntax is consistent between {py:class}`~cooper.multipliers.DenseMultiplier` and {py:class}`~cooper.multipliers.IndexedMultiplier`.
 
 ```python
+# When specifying the number of constraints, all multipliers are initialized to zero
 multiplier = cooper.multipliers.DenseMultiplier(
     num_constraints=3,
-    device=torch.device("cuda")
+    device=torch.device("cpu"),
+    dtype=torch.float32,
+)
+
+# When `init` is provided, `num_constraints` is inferred from its shape
+multiplier = cooper.multipliers.IndexedMultiplier(
+    init=torch.ones(7),
+    device=torch.device("cuda"),
+    dtype=torch.float16,
 )
 ```
 
-or
+### Evaluating an {py:class}`~cooper.multipliers.ExplicitMultiplier`
+
+**Cooper** stores the values of the multipliers in the `weight` attribute.
+Accessing the `weight` tensor directly can be useful for inspecting the multipliers to ensure proper behavior.
+
+
+However, to take advantage of the autograd functionality from PyTorch, we recommend evaluating the multipliers via their {py:meth}`~cooper.multipliers.ExplicitMultiplier.forward` method. For example:
+```python
+# `DenseMultiplier`s do not require arguments during evaluation
+multiplier_value = multiplier()
+
+# `IndexedMultiplier`s require indices for evaluation
+indices = torch.tensor([0, 2, 4, 6])
+multiplier_value = multiplier(indices)
+```
+
+### Using a multiplier with a {py:class}`~cooper.constraints.Constraint` and {py:class}`~cooper.cmp.ConstrainedMinimizationProblem`
+
+{py:class}`~cooper.constraints.Constraint`s in **Cooper** must be associated with a {py:class}`~cooper.multipliers.Multiplier` object. To achieve this, provide a {py:class}`~cooper.multipliers.Multiplier` to the {py:class}`~cooper.constraints.Constraint` constructor.
+For instance:
 
 ```python
-multiplier = cooper.multipliers.DenseMultiplier(
-    init=torch.ones(3),
-    device=torch.device("cuda"),
+constraint = cooper.Constraint(
+    multiplier=multiplier,
+    constraint_type=cooper.ConstraintType.INEQUALITY,
 )
 ```
 
-When specifying the number of constraints, all multipliers are initialized to zero. If an initial value is provided, the number of constraints is inferred from the length of the provided tensor.
+{py:class}`~cooper.cmp.ConstrainedMinimizationProblem` objects provide helper functions to iterate over all the multipliers associated with their constraints. See {py:func}`~cooper.cmp.ConstrainedMinimizationProblem.multipliers` for more details.
 
-To evaluate an {py:class}`~cooper.multipliers.ExplicitMultiplier` while preserving the computational graph, you can use its {py:meth}`~cooper.multipliers.ExplicitMultiplier.forward` method.
-
+[Constrained Minimization Problems](problem.md#constrained-minimization-problems) for more details.
 
 ```{eval-rst}
 .. autoclass:: ExplicitMultiplier
@@ -68,9 +97,13 @@ To evaluate an {py:class}`~cooper.multipliers.ExplicitMultiplier` while preservi
 
 ### Dense Multipliers
 
-{py:class}`~cooper.multipliers.DenseMultiplier`s implement a `forward()` method that expects no arguments and returns all multipliers as a single tensor.  {py:class}`~cooper.multipliers.DenseMultiplier` objects are suitable for problems with a small to medium number of constraints, where all constraints in the group are measured at each iteration.
+{py:class}`~cooper.multipliers.DenseMultiplier` objects are suitable for problems with a small to medium number of constraints, where all constraints are measured/observed at each iteration.
+We name this type of multiplier *dense* as all multipliers are used at every optimization step (e.g. in the computation of the Lagrangian), rather than just a subset thereof.
 
-For large-scale {py:class}`~cooper.constraints.Constraint` objects (e.g., one constraint per training example), or problems where constraints are sampled and not all are observed at once, consider using an {py:class}`~cooper.multipliers.IndexedMultiplier` instead.
+{py:class}`~cooper.multipliers.DenseMultiplier` is effectively a wrapper around a {py:class}`torch.Tensor` object to provide an interface that is consistent with other types of multipliers.
+{py:class}`~cooper.multipliers.DenseMultiplier`s implement a {py:meth}`~cooper.multipliers.DenseMultiplier.forward` method that returns all multipliers as a single tensor. This method expects no arguments.
+
+For large-scale {py:class}`~cooper.constraints.Constraint` objects (e.g., one constraint per training example), or problems where constraints are sampled and not all are observed at once, consider using an {py:class}`~cooper.multipliers.IndexedMultiplier` or {py:class}`~cooper.multipliers.ImplicitMultiplier` instead.
 
 
 ```{eval-rst}
@@ -81,11 +114,14 @@ For large-scale {py:class}`~cooper.constraints.Constraint` objects (e.g., one co
 
 ### Indexed Multipliers
 
+Like {py:class}`~cooper.multipliers.DenseMultiplier`s, {py:class}`~cooper.multipliers.IndexedMultiplier`s represent the multiplier tensors directly, but allow efficiently accessing and updating specific entries *by index*.
+
+{py:class}`~cooper.multipliers.IndexedMultiplier` objects are designed for situations where only a subset of constraints are observed at each iteration, rather than all constraints. This approach is especially useful when the number of constraints is large, such as in tasks where a constraint is imposed for each data point. In these cases, measuring all constraints at once can be computationally prohibitive.
+
 
 
 {py:class}`~cooper.multipliers.IndexedMultiplier` objects model $\vlambda$ and $\vmu$ explicitly, just like {py:class}`~cooper.multipliers.DenseMultiplier`s, but allow fetching and updating them *by index*. Given indices `idx`, the {py:meth}`~cooper.multipliers.IndexedMultiplier.forward()` method of an {py:class}`~cooper.multipliers.IndexedMultiplier` object returns the multipliers corresponding to the indices in `idx`. {py:class}`~cooper.multipliers.IndexedMultiplier`s enable time-efficient retrieval of the multipliers for the sampled constraints only, and memory-efficient sparse gradients (on GPU).
 
-{py:class}`~cooper.multipliers.IndexedMultiplier` objects are designed for situations where only a subset of constraints are observed at each iteration, rather than all constraints. This approach is especially useful when the number of constraints is large, such as in tasks where a constraint is imposed for each data point. In these cases, measuring all constraints at once can be computationally prohibitive.
 
 To use an {py:class}`~cooper.multipliers.IndexedMultiplier`, after computing the constraints you must provide the observed constraint indices to the `constraint_features` argument of the {py:meth}`~cooper.constraints.ConstraintState`. **Cooper** will then know which multipliers to fetch and update during optimization. For example, if you measured the constraints at indices 0, 11, and 17, you would set the `constraint_features` attribute as follows:
 
