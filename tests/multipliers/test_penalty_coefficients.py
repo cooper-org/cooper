@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import testing
-from cooper import multipliers
+from cooper import penalty_coefficients
 
 
 @pytest.fixture(params=[1, 100])
@@ -16,7 +16,7 @@ def init_tensor(num_constraints):
     return torch.rand(num_constraints, generator=generator)
 
 
-@pytest.fixture(params=[multipliers.DensePenaltyCoefficient, multipliers.IndexedPenaltyCoefficient])
+@pytest.fixture(params=[penalty_coefficients.DensePenaltyCoefficient, penalty_coefficients.IndexedPenaltyCoefficient])
 def penalty_coefficient_class(request):
     return request.param
 
@@ -66,7 +66,7 @@ def test_penalty_coefficient_repr(penalty_coefficient):
 
 
 def test_indexed_penalty_coefficient_forward_invalid_indices(num_constraints, init_tensor):
-    penalty_coefficient = multipliers.IndexedPenaltyCoefficient(init_tensor)
+    penalty_coefficient = penalty_coefficients.IndexedPenaltyCoefficient(init_tensor)
     indices = torch.arange(num_constraints, dtype=torch.float32)
 
     with pytest.raises(ValueError, match=r"Indices must be of type torch.long."):

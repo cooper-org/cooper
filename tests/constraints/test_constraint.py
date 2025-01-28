@@ -28,7 +28,7 @@ def multiplier(num_constraints):
 def penalty_coefficient(num_constraints, formulation_type):
     if formulation_type == cooper.formulations.Lagrangian:
         return None
-    return cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ def test_constraint_sanity_check_penalty_coefficient_unexpected_penalty_coeffici
             constraint_type=constraint_type,
             multiplier=multiplier,
             formulation_type=cooper.formulations.Lagrangian,
-            penalty_coefficient=cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(num_constraints)),
+            penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints)),
         )
 
 
@@ -82,7 +82,7 @@ def test_constraint_sanity_check_penalty_coefficient_negative_penalty_coefficien
             constraint_type=constraint_type,
             multiplier=multiplier,
             formulation_type=cooper.formulations.AugmentedLagrangian,
-            penalty_coefficient=cooper.multipliers.DensePenaltyCoefficient(init=-torch.ones(10)),
+            penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=-torch.ones(10)),
         )
 
 

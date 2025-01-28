@@ -50,7 +50,7 @@ def test_alternating_optimizer_sanity_checks(cooper_optimizer_class, cmp_instanc
         constraint_type=cooper.ConstraintType.EQUALITY,
         formulation_type=cooper.formulations.AugmentedLagrangian,
         multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
-        penalty_coefficient=cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(1)),
+        penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(1)),
     )
 
     with pytest.warns(

@@ -2,7 +2,8 @@ from typing import Literal, Optional
 
 from cooper.constraints.constraint_state import ConstraintState
 from cooper.formulations import ContributionStore, Formulation, Lagrangian
-from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.multipliers import Multiplier
+from cooper.penalty_coefficients import PenaltyCoefficient
 from cooper.utils import ConstraintType
 
 

@@ -7,7 +7,8 @@ from typing import Any, Literal, Optional
 import torch
 
 from cooper.constraints import Constraint, ConstraintState
-from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.multipliers import Multiplier
+from cooper.penalty_coefficients import PenaltyCoefficient
 
 
 @dataclass

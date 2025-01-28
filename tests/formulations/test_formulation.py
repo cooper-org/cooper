@@ -35,7 +35,7 @@ def multiplier(num_constraints):
 def penalty_coefficient(num_constraints, formulation_type):
     if not formulation_type.expects_penalty_coefficient:
         return None
-    return cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
 
 
 def test_formulation_init(constraint_type, formulation_type):
@@ -104,7 +104,7 @@ def test_prepare_kwargs_for_lagrangian_contribution_fails_with_penalty_coefficie
     formulation = cooper.formulations.Lagrangian(constraint_type=constraint_type)
 
     # Create an instance of PenaltyCoefficient
-    penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
 
     # Call _prepare_kwargs_for_lagrangian_contribution with penalty_coefficient set to a value
     # Expect a ValueError to be raised

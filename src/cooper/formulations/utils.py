@@ -3,7 +3,8 @@ from typing import Optional, Union
 
 import torch
 
-from cooper.multipliers import Multiplier, PenaltyCoefficient
+from cooper.multipliers import Multiplier
+from cooper.penalty_coefficients import PenaltyCoefficient
 from cooper.utils import ConstraintType
 
 

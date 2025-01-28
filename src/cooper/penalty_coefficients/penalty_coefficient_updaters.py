@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import torch
 
-from cooper.multipliers.penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient
+from cooper.penalty_coefficients.penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient
 from cooper.utils import ConstraintType
 
 if TYPE_CHECKING:

@@ -69,7 +69,7 @@ class TestConvergence:
 
         penalty_updater = None
         if self.is_augmented_lagrangian:
-            penalty_updater = cooper.multipliers.MultiplicativePenaltyCoefficientUpdater(
+            penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
 

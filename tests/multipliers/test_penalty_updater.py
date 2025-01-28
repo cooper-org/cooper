@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
+from cooper.penalty_coefficients import MultiplicativePenaltyCoefficientUpdater
 
 
 @pytest.fixture(params=[1, 100])
@@ -20,8 +20,8 @@ def penalty_coefficient(num_constraints, multiplier_class, is_scalar):
     init = torch.tensor(1.0) if is_scalar else torch.ones(num_constraints)
 
     if multiplier_class == cooper.multipliers.IndexedMultiplier:
-        return cooper.multipliers.IndexedPenaltyCoefficient(init=init)
-    return cooper.multipliers.DensePenaltyCoefficient(init=init)
+        return cooper.penalty_coefficients.IndexedPenaltyCoefficient(init=init)
+    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=init)
 
 
 @pytest.fixture

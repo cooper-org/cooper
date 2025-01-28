@@ -51,7 +51,7 @@ import numpy as np
 import torch
 
 import cooper
-from cooper.multipliers import MultiplicativePenaltyCoefficientUpdater
+from cooper.penalty_coefficients import DensePenaltyCoefficient, MultiplicativePenaltyCoefficientUpdater
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -65,7 +65,7 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
         self.target_mean = target_mean
 
         mean_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
-        mean_penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor([1.0], device=DEVICE))
+        mean_penalty_coefficient = DensePenaltyCoefficient(torch.tensor([1.0], device=DEVICE))
         sum_multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
 
         # The mean constraint is solved using an Augmented Lagrangian formulation

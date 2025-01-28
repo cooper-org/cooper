@@ -59,9 +59,9 @@ def penalty_coefficient_type(formulation_type, multiplier_type):
     if formulation_type == cooper.formulations.Lagrangian:
         return None
     if multiplier_type == cooper.multipliers.IndexedMultiplier:
-        return cooper.multipliers.IndexedPenaltyCoefficient
+        return cooper.penalty_coefficients.IndexedPenaltyCoefficient
     if multiplier_type == cooper.multipliers.DenseMultiplier:
-        return cooper.multipliers.DensePenaltyCoefficient
+        return cooper.penalty_coefficients.DensePenaltyCoefficient
     return None
 
 
@@ -186,7 +186,7 @@ def cooper_optimizer(
 def penalty_updater(formulation_type):
     if formulation_type != cooper.formulations.AugmentedLagrangian:
         return None
-    penalty_updater = cooper.multipliers.MultiplicativePenaltyCoefficientUpdater(
+    penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
         growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
     )
     return penalty_updater

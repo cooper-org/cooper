@@ -15,7 +15,7 @@ def formulation_type(request):
 def penalty_coefficient(formulation_type):
     if not formulation_type.expects_penalty_coefficient:
         return None
-    return cooper.multipliers.DensePenaltyCoefficient(torch.ones(1))
+    return cooper.penalty_coefficients.DensePenaltyCoefficient(torch.ones(1))
 
 
 @pytest.fixture
@@ -215,7 +215,7 @@ def test_cmp_named_multipliers(cmp_instance, eq_constraint):
 
 
 def test_cmp_penalty_coefficients(cmp_instance, eq_constraint):
-    eq_constraint.penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0))
+    eq_constraint.penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(torch.tensor(1.0))
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     penalty_coefficients = list(cmp_instance.penalty_coefficients())
     assert len(penalty_coefficients) == 1
@@ -223,7 +223,7 @@ def test_cmp_penalty_coefficients(cmp_instance, eq_constraint):
 
 
 def test_cmp_named_penalty_coefficients(cmp_instance, eq_constraint):
-    eq_constraint.penalty_coefficient = cooper.multipliers.DensePenaltyCoefficient(torch.tensor(1.0))
+    eq_constraint.penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(torch.tensor(1.0))
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     named_penalty_coefficients = list(cmp_instance.named_penalty_coefficients())
     assert len(named_penalty_coefficients) == 1
