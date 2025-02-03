@@ -135,7 +135,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
     """Template for constrained minimization problems, where subclasses represent specific
     constrained optimization problems.
 
-    Subclasses must override the :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`
+    Subclasses must override the
+    :py:meth:`CMP.compute_cmp_state<.ConstrainedMinimizationProblem.compute_cmp_state>`
     method. This method should return a :py:class:`~.CMPState` instance that encapsulates the
     current state of the optimization problem, including the evaluated loss and the values of
     the constraint violations.
@@ -315,8 +316,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         In some cases, the computation of constraints may be independent of loss
         evaluation. In such situations,
-        :py:meth:`~.ConstrainedMinimizationProblem.compute_violations` can be called
+        :py:meth:`CMP.compute_violations<.ConstrainedMinimizationProblem.compute_violations>` can be called
         as part of the execution of
-        :py:meth:`~.ConstrainedMinimizationProblem.compute_cmp_state`.
+        :py:meth:`CMP.compute_cmp_state<.ConstrainedMinimizationProblem.compute_cmp_state>`.
         """
         raise NotImplementedError

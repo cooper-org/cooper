@@ -25,6 +25,31 @@ The diagram below illustrates the operation of the different multipliers types. 
 
 ![multipliers](_static/multipliers.svg)
 
+% Duplicating "Linking constraints and multipliers" on problem.md
+
+:::{admonition} Linking constraints and multipliers
+:class: hint
+
+{py:class}`~cooper.constraints.Constraint` objects must have an associated {py:class}`~cooper.multipliers.Multiplier` if the problem formulation requires it (see the {py:attr}`~cooper.formulations.Formulation.expects_multiplier` attribute of a {py:class}`~cooper.formulations.Formulation` sub-class). To achieve this, a {py:class}`~cooper.multipliers.Multiplier` object should be provided to the {py:class}`~cooper.constraints.Constraint` constructor.
+
+```python
+multiplier = ...
+constraint = cooper.Constraint(
+    multiplier=multiplier,
+    constraint_type=cooper.ConstraintType.INEQUALITY,
+    formulation_type=cooper.formulations.Lagrangian,
+)
+```
+:::
+
+
+:::{note}
+
+The helper methods {py:meth}`CMP.multipliers<.ConstrainedMinimizationProblem.multipliers>` and {py:meth}`CMP.named_multipliers<.ConstrainedMinimizationProblem.named_multipliers>` enable iterating over the multipliers associated with the constraints registered with a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`.
+See [Registering constraints in a CMP](#registering-constraints) for more details.
+:::
+
+
 ## Explicit (Non-Parametric) Multipliers
 
 Consider the following Lagrangian formulation of a constrained optimization problem:
@@ -73,27 +98,6 @@ multiplier_value = multiplier()
 indices = torch.tensor([0, 2, 4, 6])
 multiplier_value = multiplier(indices)
 ```
-
-% Duplicating "Linking constraints and multipliers" on problem.md
-
-:::{admonition} Linking constraints and multipliers
-:class: hint
-
-{py:class}`~cooper.constraints.Constraint` objects must have an associated {py:class}`~cooper.multipliers.Multiplier` if the problem formulation requires it. see the {py:attr}`~cooper.formulations.Formulation.expects_multiplier` attribute of a {py:class}`~cooper.formulations.Formulation`. To achieve this, a {py:class}`~cooper.multipliers.Multiplier` object should be provided to the {py:class}`~cooper.constraints.Constraint` constructor.
-
-```python
-constraint = cooper.Constraint(
-    multiplier=multiplier,
-    constraint_type=cooper.ConstraintType.INEQUALITY,
-    formulation_type=cooper.formulations.Lagrangian,
-)
-```
-
-:::
-
-{py:class}`~cooper.cmp.ConstrainedMinimizationProblem` objects provide helper functions to iterate over all the multipliers associated with their constraints. See {py:func}`~cooper.cmp.ConstrainedMinimizationProblem.multipliers` for more details.
-
-[Constrained Minimization Problems](problem.md#constrained-minimization-problems) for more details.
 
 ```{eval-rst}
 .. autoclass:: ExplicitMultiplier
