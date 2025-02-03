@@ -150,10 +150,17 @@ class ConstrainedMinimizationProblem(abc.ABC):
         Args:
             name: Name of the constraint.
             constraint: Constraint instance to be registered.
+
+        Raises:
+            TypeError: If attribute value is not a constraint.
+            ValueError: If constraint with `name` already exists.
         """
         if not isinstance(constraint, Constraint):
             raise TypeError(f"Expected a Constraint instance, got {type(constraint)}")
         if name in self._constraints:
+            # Allowing for constraint value changes could alter operation of the
+            # optimizers. Users would need to re-build the optimizer to ensure the
+            # multipliers for the new constraint are accessible to the optimizer.
             raise ValueError(f"Constraint with name {name} already exists")
 
         self._constraints[name] = constraint

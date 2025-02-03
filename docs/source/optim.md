@@ -95,7 +95,7 @@ To use a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` w
     :::{admonition} Extracting the dual parameters
     :class: tip
 
-    Similar to {py:meth}`torch.nn.Module.parameters()`, {py:class}`~cooper.ConstrainedMinimizationProblem` objects provide a helper method for extracting the dual parameters for all of its associated constraints: {py:meth}`cooper.ConstrainedMinimizationProblem.dual_parameters()`.
+    Similar to {py:meth}`torch.nn.Module.parameters()`, {py:class}`~cooper.ConstrainedMinimizationProblem` objects provide the helper method {py:meth}`~cooper.ConstrainedMinimizationProblem.dual_parameters()` for extracting the dual parameters for all of its registered constraints.
     :::
 - **\[Lines 16-20\]**: Instantiate a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, passing the `cmp`, `primal_optimizer`, and `dual_optimizer` as arguments.
 - **\[Line 26\]**: Use the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method to perform a *single* call to the {py:meth}`~torch.optim.Optimizer.step()` method of both the primal and dual optimizers.

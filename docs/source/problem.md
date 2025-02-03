@@ -22,7 +22,7 @@ Moreover, in order to package the values of the loss and constraints, we will de
 The example below illustrates the required steps for defining a {py:class}`~cooper.cmp.ConstrainedMinimizationProblem` class for your problem. For simplicity, we illustrate the case of a single (possibly multi-dimensional) inequality constraint.
 1. **\[Line 4\]** Define a custom class which inherits from {py:class}`~cooper.cmp.ConstrainedMinimizationProblem`.
 2. **\[Line 7\]** Instantiate a multiplier object for the constraint.
-3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type.
+3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type. Note that {py:class}`~cooper.constraints.Constraint`s must be "registered" as attributes of the CMP.
 4. **\[Line 13\]** Implement the {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method that evaluates the loss and constraints.
 5. **\[Line 18\]** Return the information about the loss and constraints packaged into a {py:class}`~cooper.CMPState`.
 6. **\[Line 20\]** (Optional) Modularize the code to allow for evaluating the constraints **only**. This is useful for optimization algorithms that sometimes need to evaluate the constraints without computing the loss.
@@ -39,7 +39,7 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
         super().__init__()
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=..., device=...)
         # By default, constraints are built using `formulation_type=cooper.formulations.Lagrangian`
-        self.constraint = cooper.Constraint(
+        self.my_constraint = cooper.Constraint(
             multiplier=multiplier, constraint_type=cooper.ConstraintType.INEQUALITY
         )
 
@@ -55,7 +55,7 @@ class MyCMP(cooper.ConstrainedMinimizationProblem):
         # computing the loss.
         violation = ... # ensure that the constraint follows the convention "g <= 0"
         constraint_state = cooper.ConstraintState(violation=...)
-        observed_constraints = {self.constraint: constraint_state}
+        observed_constraints = {self.my_constraint: constraint_state}
 
         return cooper.CMPState(loss=None, observed_constraints=observed_constraints)
 ```
@@ -84,11 +84,51 @@ However, for computational or logging purposes it is sometimes desirable to grou
 For example, consider a problem with $m + n$ constraints.
 One could create a _single_ {py:class}`~cooper.constraints.Constraint` object along with a _single_ {py:class}`~cooper.multipliers.Multiplier`.
 Alternatively, one could create two ({py:class}`~cooper.constraints.Constraint`, {py:class}`~cooper.multipliers.Multiplier`) pairs for handling the groups of $m$ and $n$ constraints separately.
-
 :::
 
-To construct the constraint, instantiate a {py:class}`~cooper.multipliers.Multiplier` object. The {py:class}`~cooper.constraints.Constraint` will be associated to this multiplier, and the observed constraint values will be used to update the multiplier. For more details on multiplier objects, see {doc}`multipliers`.
+% Duplicating "Linking constraints and multipliers" on multipliers.md
 
+:::{admonition} Linking constraints and multipliers
+:class: hint
+
+{py:class}`~cooper.constraints.Constraint` objects must have an associated {py:class}`~cooper.multipliers.Multiplier` if the problem formulation requires it. see the {py:attr}`~cooper.formulations.Formulation.expects_multiplier` attribute of a {py:class}`~cooper.formulations.Formulation`. To achieve this, a {py:class}`~cooper.multipliers.Multiplier` object should be provided to the {py:class}`~cooper.constraints.Constraint` constructor.
+
+```python
+constraint = cooper.Constraint(
+    multiplier=multiplier,
+    constraint_type=cooper.ConstraintType.INEQUALITY,
+    formulation_type=cooper.formulations.Lagrangian,
+)
+```
+:::
+
+:::{admonition} Registering constraints in a CMP
+:class: warning
+
+When initializing the CMP, {py:class}`~cooper.constraints.Constraint`s should be defined as attributes.
+We refer to this process as "registering" the constraints with the CMP. Utilities such as {py:meth}`~cooper.ConstrainedMinimizationProblem.constraints` and {py:meth}`~cooper.ConstrainedMinimizationProblem.named_constraints` enable iteration over the registered constraints.
+
+Moreover, the utility method {py:meth}`~cooper.ConstrainedMinimizationProblem.dual_parameters` returns the {py:class}`torch.nn.parameter.Parameter`s of the multipliers for the constraints registered with the CMP. This facilitates the instantiation of the `dual_optimizer` required by the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`. See the [Optim](optim.md#example) module for further details.
+
+```python
+class MyCMP(cooper.ConstrainedMinimizationProblem):
+    def __init__(self):
+        super().__init__()
+        self.constraint_1 = cooper.Constraint(...)
+        self.constraint_2 = cooper.Constraint(...)
+
+cmp = MyCMP()
+
+# Constraints can also be registered "on the fly"
+cmp.constraint_3 = cooper.Constraint(...)
+
+# Inspect constraints known to the CMP
+print([constraint_name for constraint_name, constraint in cmp.named_constraints()])
+
+# Output:
+# ["constraint_1", "constraint_2", "constraint_3"]
+```
+:::
 
 ```{eval-rst}
 .. currentmodule:: cooper.constraints

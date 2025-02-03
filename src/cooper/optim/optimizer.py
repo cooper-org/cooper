@@ -30,6 +30,11 @@ class RollOut(NamedTuple):
 
 
 class CooperOptimizer(abc.ABC):
+    # TODO(gallego-posada): Write docstring
+
+    # TODO(gallego-posada): Why do we need to pass CMP here? Clarify and document
+    # What is the reason beyond just being able to call compute_cmp_state()?
+
     def __init__(
         self,
         cmp: ConstrainedMinimizationProblem,

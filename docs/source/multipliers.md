@@ -74,17 +74,22 @@ indices = torch.tensor([0, 2, 4, 6])
 multiplier_value = multiplier(indices)
 ```
 
-### Using a multiplier with a {py:class}`~cooper.constraints.Constraint` and {py:class}`~cooper.cmp.ConstrainedMinimizationProblem`
+% Duplicating "Linking constraints and multipliers" on problem.md
 
-{py:class}`~cooper.constraints.Constraint`s in **Cooper** must be associated with a {py:class}`~cooper.multipliers.Multiplier` object. To achieve this, provide a {py:class}`~cooper.multipliers.Multiplier` to the {py:class}`~cooper.constraints.Constraint` constructor.
-For instance:
+:::{admonition} Linking constraints and multipliers
+:class: hint
+
+{py:class}`~cooper.constraints.Constraint` objects must have an associated {py:class}`~cooper.multipliers.Multiplier` if the problem formulation requires it. see the {py:attr}`~cooper.formulations.Formulation.expects_multiplier` attribute of a {py:class}`~cooper.formulations.Formulation`. To achieve this, a {py:class}`~cooper.multipliers.Multiplier` object should be provided to the {py:class}`~cooper.constraints.Constraint` constructor.
 
 ```python
 constraint = cooper.Constraint(
     multiplier=multiplier,
     constraint_type=cooper.ConstraintType.INEQUALITY,
+    formulation_type=cooper.formulations.Lagrangian,
 )
 ```
+
+:::
 
 {py:class}`~cooper.cmp.ConstrainedMinimizationProblem` objects provide helper functions to iterate over all the multipliers associated with their constraints. See {py:func}`~cooper.cmp.ConstrainedMinimizationProblem.multipliers` for more details.
 
