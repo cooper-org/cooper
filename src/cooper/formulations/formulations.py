@@ -223,10 +223,8 @@ class AugmentedLagrangianFunction(Formulation):
             penalty_coefficient=penalty_coefficient,
             primal_or_dual="primal",
         )
-        lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
-            constraint_factor_value=multiplier_value, violation=violation
-        )
-        lagrangian_contribution += formulation_utils.compute_quadratic_penalty(
+        lagrangian_contribution = formulation_utils.compute_primal_quadratic_augmented_contribution(
+            multiplier_value=multiplier_value,
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
             constraint_type=self.constraint_type,
@@ -297,10 +295,8 @@ class AugmentedLagrangian(Formulation):
             penalty_coefficient=penalty_coefficient,
             primal_or_dual="primal",
         )
-        lagrangian_contribution = formulation_utils.compute_primal_weighted_violation(
-            constraint_factor_value=multiplier_value, violation=violation
-        )
-        lagrangian_contribution += formulation_utils.compute_quadratic_penalty(
+        lagrangian_contribution = formulation_utils.compute_primal_quadratic_augmented_contribution(
+            multiplier_value=multiplier_value,
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
             constraint_type=self.constraint_type,
