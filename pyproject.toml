@@ -55,6 +55,7 @@ dev = [
 docs = [
     "enum-tools[sphinx]>=0.12.0",
     "matplotlib>=3.8.4,<4.0.0",
+    "seaborn>=0.11.2",
     "myst-nb>=1.1.1",
     "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
     "sphinx>=7.4.7",

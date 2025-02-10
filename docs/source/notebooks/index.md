@@ -9,5 +9,6 @@ plot_infrequent_true_constraint
 plot_max_entropy
 plot_max_entropy_augmented_lagrangian
 plot_min_norm
+plot_dag_learning
 plot_mnist_logistic_regression
 ```
