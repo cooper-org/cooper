@@ -291,9 +291,14 @@ class ConstrainedMinimizationProblem(abc.ABC):
         """
 
     def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:
-        """Performs sanity checks on the CMP state.
+        """Performs sanity checks on the CMP state. This helper method is useful for
+        ensuring that the CMP state is well-formed.
 
-        This helper method is useful for ensuring that the CMP state is well-formed.
+        Raises:
+            ValueError: If the loss tensor does not have a valid gradient.
+            ValueError: If the violation tensor of any constraint does not have a valid gradient.
+            ValueError: If the strict violation tensor of any constraint has a gradient.
+
         """
         if cmp_state.loss is not None and cmp_state.loss.grad is None:
             raise ValueError("The loss tensor must have a valid gradient.")

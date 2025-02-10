@@ -26,6 +26,10 @@ class Formulation(abc.ABC):
             multiplier.
         expects_penalty_coefficient (bool): Used to determine whether the formulation
             requires a penalty coefficient.
+
+    Raises:
+        ValueError: If the constraint type is not equality or inequality.
+
     """
 
     expects_multiplier: bool
@@ -40,12 +44,22 @@ class Formulation(abc.ABC):
         return f"{type(self).__name__}(constraint_type={self.constraint_type})"
 
     def sanity_check_multiplier(self, multiplier: Optional[Multiplier]) -> None:
+        """Ensures that the multiplier is provided if and only if it is expected.
+
+        Raises:
+            ValueError: If a multiplier is expected but not provided, or vice versa.
+        """
         if self.expects_multiplier and multiplier is None:
             raise ValueError(f"{type(self).__name__} expects a multiplier but none was provided.")
         if not self.expects_multiplier and multiplier is not None:
             raise ValueError(f"Received unexpected multiplier for {type(self).__name__}.")
 
     def sanity_check_penalty_coefficient(self, penalty_coefficient: Optional[PenaltyCoefficient]) -> None:
+        """Ensures that the penalty is provided if and only if it is expected.
+
+        Raises:
+            ValueError: If a penalty coefficient is expected but not provided, or vice versa.
+        """
         if self.expects_penalty_coefficient and penalty_coefficient is None:
             raise ValueError(f"{type(self).__name__} expects a penalty coefficient but none was provided.")
         if not self.expects_penalty_coefficient and penalty_coefficient is not None:
@@ -57,10 +71,38 @@ class Formulation(abc.ABC):
         multiplier: Optional[Multiplier],
         penalty_coefficient: Optional[PenaltyCoefficient],
         primal_or_dual: Literal["primal", "dual"],
-    ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
-        self.sanity_check_multiplier(multiplier)
-        self.sanity_check_penalty_coefficient(penalty_coefficient)
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """Prepares the arguments for the computation of the Lagrangian contribution.
 
+        Depending on the chosen formulation, the contribution of a constraint to the
+        Lagrangian would require different inputs. This method processes a
+        :py:class:`cooper.constraints.constraint_state.ConstraintState` and prepares
+        the necessary information to compute the contribution to the Lagrangian.
+
+        This method extracts and patches the constraint violations and features depending
+        on the information available. For example, no `strict_violation` is provided,
+        the call to `extract_violations` will return the same tensor for both `violation`
+        and `strict_violation` (with the latter tensor having been detached).
+
+        It also evaluates the constraint factors (multiplier and penalty coefficient
+        modules) using the constraint features (if provided).
+
+        Args:
+            constraint_state: The :py:class:`cooper.constraints.constraint_state.ConstraintState`
+                object.
+            multiplier: The multiplier module.
+            penalty_coefficient: The penalty coefficient module.
+            primal_or_dual: If `"primal"`, we prepare the arguments to compute the
+                primal-differentiable contribution to the Lagrangian. Analogous for
+                the case of `"dual"`.
+
+        Returns:
+            A tuple containing the following objects:
+
+            If `primal_or_dual == "primal"`:
+                - violation: The observed constraint violations tensor.
+                - multiplier_value: The evaluated multiplier factor.
+        """
         violation, strict_violation = constraint_state.extract_violations()
         constraint_features, strict_constraint_features = constraint_state.extract_constraint_features()
 
@@ -69,7 +111,11 @@ class Formulation(abc.ABC):
             constraint_features = strict_constraint_features
 
         eval_factor_kwargs = {"constraint_features": constraint_features, "expand_shape": violation.shape}
-        multiplier_value = formulation_utils.evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+
+        multiplier_value = None
+        if self.expects_multiplier:
+            multiplier_value = formulation_utils.evaluate_constraint_factor(module=multiplier, **eval_factor_kwargs)
+
         penalty_coefficient_value = None
         if self.expects_penalty_coefficient:
             penalty_coefficient_value = formulation_utils.evaluate_constraint_factor(
@@ -120,6 +166,7 @@ class Lagrangian(Formulation):
         if not constraint_state.contributes_to_primal_update:
             return None
 
+        # Third return is `penalty_coefficient_value` which is always `None` for this formulation.
         violation, multiplier_value, _ = self._prepare_kwargs_for_lagrangian_contribution(
             constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=None, primal_or_dual="primal"
         )
@@ -135,6 +182,7 @@ class Lagrangian(Formulation):
         if not constraint_state.contributes_to_dual_update:
             return None
 
+        # Third return is `penalty_coefficient_value` which is always `None` for this formulation.
         violation, multiplier_value, _ = self._prepare_kwargs_for_lagrangian_contribution(
             constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=None, primal_or_dual="dual"
         )
@@ -166,12 +214,14 @@ class QuadraticPenalty(Formulation):
         if not constraint_state.contributes_to_primal_update:
             return None
 
+        # Second return is `multiplier_value` which is always `None` for this formulation.
         violation, _, penalty_coefficient_value = self._prepare_kwargs_for_lagrangian_contribution(
             constraint_state=constraint_state,
             multiplier=None,
             penalty_coefficient=penalty_coefficient,
             primal_or_dual="primal",
         )
+
         lagrangian_contribution = formulation_utils.compute_quadratic_penalty(
             penalty_coefficient_value=penalty_coefficient_value,
             violation=violation,
