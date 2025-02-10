@@ -8,6 +8,8 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 
 class CooperOptimizerState(TypedDict):
+    """Stores the state of a :py:class:`~cooper.optim.cooper_optimizer.CooperOptimizer`."""
+
     primal_optimizer_states: list[dict]
     dual_optimizer_states: Optional[list[dict]]
 
@@ -30,10 +32,29 @@ class RollOut(NamedTuple):
 
 
 class CooperOptimizer(abc.ABC):
-    # TODO(gallego-posada): Write docstring
+    r"""Base class for :py:class:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer`
+    and :py:class:`~cooper.optim.UnconstrainedOptimizer`\s.
 
-    # TODO(gallego-posada): Why do we need to pass CMP here? Clarify and document
-    # What is the reason beyond just being able to call compute_cmp_state()?
+    Args:
+        cmp: The constrained minimization problem to be optimized. Providing the CMP
+            as an argument for the constructor allows the optimizer to call the
+            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
+            method. Additionally, in the case of a constrained optimizer, the CMP
+            enables access to the multipliers'
+            :py:meth:`~cooper.multipliers.Multiplier.post_step_` method which must be
+            called after the multiplier update.
+
+        primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
+            a model). The primal parameters can be partitioned into multiple optimizers,
+            in this case ``primal_optimizers`` accepts a list of
+            :py:class:`torch.optim.Optimizer`\s.
+
+        dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
+            multipliers associated with the constraints). A sequence of
+            :py:class:`torch.optim.Optimizer`\s can be passed to handle the case of
+            several :py:class:`~cooper.constraints.Constraint`\s.
+    """
 
     def __init__(
         self,
@@ -65,6 +86,11 @@ class CooperOptimizer(abc.ABC):
             primal_optimizer.step()
 
     def state_dict(self) -> CooperOptimizerState:
+        r"""Return the state of the optimizer as a
+        :py:class:`~cooper.optim.cooper_optimizer.CooperOptimizerState`. This method
+        relies on the internal :py:meth:`~torch.optim.Optimizer.state_dict` method of
+        the corresponding primal or dual optimizers.
+        """
         primal_optimizer_states = [optimizer.state_dict() for optimizer in self.primal_optimizers]
 
         dual_optimizer_states = None

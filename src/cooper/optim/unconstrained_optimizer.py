@@ -12,10 +12,14 @@ class UnconstrainedOptimizer(CooperOptimizer):
     :py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`\s.
 
     Args:
-        cmp: The constrained minimization problem to optimize.
+        cmp: The constrained minimization problem to be optimized. Providing the CMP
+            as an argument for the constructor allows the optimizer to call the
+            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
+            method.
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
-            in this case ``primal_optimizers`` accepts a sequence of
+            in this case ``primal_optimizers`` accepts a list of
             :py:class:`torch.optim.Optimizer`\s.
     """
 
