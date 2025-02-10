@@ -14,19 +14,28 @@ def num_constraints(request):
     return request.param
 
 
-@pytest.fixture(params=[cooper.formulations.Lagrangian, cooper.formulations.AugmentedLagrangian])
+@pytest.fixture(
+    params=[
+        cooper.formulations.Lagrangian,
+        cooper.formulations.QuadraticPenalty,
+        cooper.formulations.AugmentedLagrangian,
+        cooper.formulations.AugmentedLagrangianFunction,
+    ]
+)
 def formulation_type(request):
     return request.param
 
 
 @pytest.fixture
-def multiplier(num_constraints):
-    return cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
+def multiplier(num_constraints, formulation_type):
+    if formulation_type.expects_multiplier:
+        return cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
+    return None
 
 
 @pytest.fixture
 def penalty_coefficient(num_constraints, formulation_type):
-    if formulation_type == cooper.formulations.Lagrangian:
+    if formulation_type.expects_penalty_coefficient:
         return None
     return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
 
@@ -51,37 +60,56 @@ def test_constraint_initialization(
     assert valid_constraint.penalty_coefficient == penalty_coefficient
 
 
-def test_constraint_sanity_check_penalty_coefficient(constraint_type, multiplier):
+@pytest.mark.parametrize(
+    "formulation_type",
+    [
+        cooper.formulations.QuadraticPenalty,
+        cooper.formulations.AugmentedLagrangian,
+        cooper.formulations.AugmentedLagrangianFunction,
+    ],
+)
+def test_constraint_sanity_check_penalty_coefficient(constraint_type, formulation_type, multiplier):
     # Test when penalty coefficient is expected but not provided
     with pytest.raises(ValueError, match="expects a penalty coefficient"):
         _ = cooper.Constraint(
             constraint_type=constraint_type,
             multiplier=multiplier,
-            formulation_type=cooper.formulations.AugmentedLagrangian,
+            formulation_type=formulation_type,
             penalty_coefficient=None,
         )
 
 
+@pytest.mark.parametrize("formulation_type", [cooper.formulations.Lagrangian])
 def test_constraint_sanity_check_penalty_coefficient_unexpected_penalty_coefficient(
-    num_constraints, constraint_type, multiplier
+    num_constraints, formulation_type, constraint_type, multiplier
 ):
     # Test when penalty coefficient is not expected but provided
     with pytest.raises(ValueError, match="Received unexpected penalty coefficient"):
         _ = cooper.Constraint(
             constraint_type=constraint_type,
             multiplier=multiplier,
-            formulation_type=cooper.formulations.Lagrangian,
+            formulation_type=formulation_type,
             penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints)),
         )
 
 
-def test_constraint_sanity_check_penalty_coefficient_negative_penalty_coefficient(constraint_type, multiplier):
+@pytest.mark.parametrize(
+    "formulation_type",
+    [
+        cooper.formulations.QuadraticPenalty,
+        cooper.formulations.AugmentedLagrangian,
+        cooper.formulations.AugmentedLagrangianFunction,
+    ],
+)
+def test_constraint_sanity_check_penalty_coefficient_negative_penalty_coefficient(
+    constraint_type, formulation_type, multiplier
+):
     # Test negative penalty coefficient
     with pytest.raises(ValueError, match="must be non-negative"):
         _ = cooper.Constraint(
             constraint_type=constraint_type,
             multiplier=multiplier,
-            formulation_type=cooper.formulations.AugmentedLagrangian,
+            formulation_type=formulation_type,
             penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=-torch.ones(10)),
         )
 
@@ -101,5 +129,5 @@ def test_constraint_repr(valid_constraint, formulation_type):
     assert "constraint_type=" in repr_str
     assert "formulation=" in repr_str
     assert "multiplier=" in repr_str
-    if formulation_type == cooper.formulations.AugmentedLagrangian:
+    if formulation_type.expects_penalty_coefficient:
         assert "penalty_coefficient=" in repr_str
