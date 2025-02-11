@@ -29,7 +29,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
-from scipy.linalg import expm
 
 import cooper
 ```
@@ -55,30 +54,7 @@ where $\| \cdot \|_F$ is the Frobenius norm, $\lambda$ is a regularization param
 \quad s.t. \quad \text{tr}(e^{A}) = d.
 \end{equation}
 
-We will use the following autograd-compatible function to compute the matrix exponential:
-
-```{code-cell} ipython3
-class TrExpScipy(torch.autograd.Function):
-    """autograd.Function to compute trace of an exponential of a matrix"""
-
-    @staticmethod
-    def forward(ctx, M):
-        with torch.no_grad():
-            expm_input = expm(M.detach().cpu().numpy())  # using scipy
-            expm_input = torch.as_tensor(expm_input)
-
-            if M.is_cuda:
-                assert expm_input.is_cuda
-
-            ctx.save_for_backward(expm_input)
-            return torch.trace(expm_input)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        with torch.no_grad():
-            (expm_input,) = ctx.saved_tensors
-            return expm_input.t() * grad_output
-```
++++
 
 ## Data Generation
 
@@ -95,7 +71,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 
-def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch.device) -> torch.Tensor:
+def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch.device):
     """Generate data from a linear structural equation model with Gaussian noise.
     The
 
@@ -123,7 +99,7 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
         parents = torch.randperm(i)[: np.random.randint(1, i)]
         A[i, parents] = 1
 
-    assert TrExpScipy.apply(A).item() == d, "A is not a DAG"
+    assert torch.trace(torch.linalg.matrix_exp(A)).item() == d, "A is not a DAG"
 
     # --------------------------------------------
     # Sample data
@@ -191,7 +167,7 @@ class DAGLearning(cooper.ConstrainedMinimizationProblem):
         loss = torch.linalg.norm(self.X - self.X @ torch.sigmoid(A.T), ord="fro") ** 2
         loss += self.lmbda * torch.linalg.norm(torch.sigmoid(A), ord=1)
 
-        constraint_value = TrExpScipy.apply(A) - self.d
+        constraint_value = torch.trace(torch.linalg.matrix_exp(A)) - self.d
         constraint_state = cooper.ConstraintState(violation=constraint_value)
 
         return cooper.CMPState(loss=loss, observed_constraints={self.constraint: constraint_state})
