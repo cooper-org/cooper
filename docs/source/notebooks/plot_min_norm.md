@@ -5,10 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.6
-kernelspec:
-  display_name: Python 3
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
 # Finding the min-norm solution to a linear system of equations.
