@@ -15,21 +15,20 @@ def is_scalar(request):
     return request.param
 
 
-@pytest.fixture
-def penalty_coefficient(num_constraints, multiplier_class, is_scalar):
+@pytest.fixture(
+    params=[cooper.penalty_coefficients.DensePenaltyCoefficient, cooper.penalty_coefficients.IndexedPenaltyCoefficient]
+)
+def penalty_coefficient(request, num_constraints, is_scalar):
+    penalty_coefficien_type = request.param
     init = torch.tensor(1.0) if is_scalar else torch.ones(num_constraints)
-
-    if multiplier_class == cooper.multipliers.IndexedMultiplier:
-        return cooper.penalty_coefficients.IndexedPenaltyCoefficient(init=init)
-    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=init)
+    return penalty_coefficien_type(init=init)
 
 
 @pytest.fixture
-def constraint(num_constraints, constraint_type, multiplier_class, penalty_coefficient):
+def constraint(constraint_type, penalty_coefficient):
     constraint = cooper.Constraint(
         constraint_type=constraint_type,
-        multiplier=multiplier_class(num_constraints=num_constraints),
-        formulation_type=cooper.formulations.AugmentedLagrangian,
+        formulation_type=cooper.formulations.QuadraticPenalty,
         penalty_coefficient=penalty_coefficient,
     )
     return constraint

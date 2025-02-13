@@ -195,15 +195,7 @@ If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the
 2. Use {py:class}`torch.optim.SGD` with `lr=1.0` as the optimizer for the dual variables. This ensures that the dual learning rate is simply the penalty coefficient, as opposed `lr * c_t`.
 3. Use {py:class}`~cooper.optim.PrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
 4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. See {doc}`optim` for details on how to implement this.
-
 :::
-
-
-```{eval-rst}
-.. autoclass:: AugmentedLagrangianFunction
-    :members:
-    :exclude-members: compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
-```
 
 ```{eval-rst}
 .. autoclass:: AugmentedLagrangian

@@ -42,27 +42,6 @@ def test_constrained_optimizer_init_fail_dual_optimizer_not_maximize(cooper_opti
         )
 
 
-def test_alternating_optimizer_sanity_checks(cooper_optimizer_class, cmp_instance):
-    if cooper_optimizer_class == cooper.optim.SimultaneousOptimizer:
-        pytest.skip("SimultaneousOptimizer does not have the custom_sanity_checks method.")
-
-    cmp_instance.test_constraint = cooper.Constraint(
-        constraint_type=cooper.ConstraintType.EQUALITY,
-        formulation_type=cooper.formulations.AugmentedLagrangian,
-        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
-        penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(1)),
-    )
-
-    with pytest.warns(
-        UserWarning, match=r"Detected use of Augmented Lagrangian but not all dual optimizers are SGD\(lr=1.0\)."
-    ):
-        cooper_optimizer_class(
-            cmp=cmp_instance,
-            primal_optimizers=torch.optim.SGD([torch.ones(1, requires_grad=True)], lr=0.1),
-            dual_optimizers=torch.optim.SGD(cmp_instance.dual_parameters(), lr=0.1, maximize=True),
-        )
-
-
 def test_alternating_primal_dual_optimizer_roll_fail_compute_violations_has_loss(cmp_instance):
     optimizer = cooper.optim.AlternatingPrimalDualOptimizer(
         cmp=cmp_instance,

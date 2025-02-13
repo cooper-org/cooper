@@ -241,7 +241,7 @@ class QuadraticPenalty(Formulation):
         return
 
 
-class AugmentedLagrangianFunction(Formulation):
+class AugmentedLagrangian(Formulation):
     r"""The Augmented Lagrangian formulation implements the following primal Lagrangian:
 
     .. math::
@@ -299,78 +299,6 @@ class AugmentedLagrangianFunction(Formulation):
         # sum of the violation times the multiplier.
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=None
-        )
-
-        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
-
-
-class AugmentedLagrangian(Formulation):
-    r"""The Augmented Lagrangian **Method**'s formulation implements the following primal Lagrangian:
-
-    .. math::
-        \Lag_{\text{primal}}(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^{\top}
-        \tilde{\vg}(\vx) + \vmu^{\top} \tilde{\vh}(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
-        \texttt{relu}(\tilde{\vg}(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \,
-        \tilde{\vh}(\vx)^2.
-
-    thus matching that of the :py:class:`AugmentedLagrangianFunction`. However, the dual Lagrangian
-    is different:
-
-    .. math::
-        \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = (\vlambda \odot \vc_{\vg})^{\top}
-        \vg(\vx) +  (\vmu \odot \vc_{\vh})^{\top} \vh(\vx),
-
-    where :math:`\odot` denotes element-wise multiplication. This ensures that the
-    gradients of the dual Lagrangian with respect to the multipliers are scaled by the
-    penalty coefficient, yielding an effective dual learning rate of
-    :math:`\eta_{\text{dual}} \cdot \vc`.
-
-    .. warning::
-        The dual optimizers must all be SGD with ``lr=1.0`` and ``maximize=True`` to
-        replicate the updates of the Augmented Lagrangian *method*.
-    """
-
-    expects_multiplier = True
-    expects_penalty_coefficient = True
-
-    def compute_contribution_to_primal_lagrangian(
-        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
-    ) -> Optional[ContributionStore]:
-        if not constraint_state.contributes_to_primal_update:
-            return None
-
-        violation, multiplier_value, penalty_coefficient_value = self._prepare_kwargs_for_lagrangian_contribution(
-            constraint_state=constraint_state,
-            multiplier=multiplier,
-            penalty_coefficient=penalty_coefficient,
-            primal_or_dual="primal",
-        )
-        lagrangian_contribution = formulation_utils.compute_primal_quadratic_augmented_contribution(
-            multiplier_value=multiplier_value,
-            penalty_coefficient_value=penalty_coefficient_value,
-            violation=violation,
-            constraint_type=self.constraint_type,
-        )
-
-        return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)
-
-    def compute_contribution_to_dual_lagrangian(
-        self, constraint_state: ConstraintState, multiplier: Multiplier, penalty_coefficient: PenaltyCoefficient
-    ) -> Optional[ContributionStore]:
-        if not constraint_state.contributes_to_dual_update:
-            return None
-
-        violation, multiplier_value, penalty_coefficient_value = self._prepare_kwargs_for_lagrangian_contribution(
-            constraint_state=constraint_state,
-            multiplier=multiplier,
-            penalty_coefficient=penalty_coefficient,
-            primal_or_dual="dual",
-        )
-
-        # Providing a penalty coefficient to ensure that the dual Lagrangian is the
-        # sum of the violation times the multiplier *times the penalty coefficient*.
-        lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
-            multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=penalty_coefficient_value
         )
 
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)

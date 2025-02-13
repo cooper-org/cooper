@@ -21,7 +21,6 @@ def constraint_type(request):
         cooper.formulations.Lagrangian,
         cooper.formulations.QuadraticPenalty,
         cooper.formulations.AugmentedLagrangian,
-        cooper.formulations.AugmentedLagrangianFunction,
     ]
 )
 def formulation_type(request):

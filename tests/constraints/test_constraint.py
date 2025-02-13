@@ -19,7 +19,6 @@ def num_constraints(request):
         cooper.formulations.Lagrangian,
         cooper.formulations.QuadraticPenalty,
         cooper.formulations.AugmentedLagrangian,
-        cooper.formulations.AugmentedLagrangianFunction,
     ]
 )
 def formulation_type(request):
@@ -61,12 +60,7 @@ def test_constraint_initialization(
 
 
 @pytest.mark.parametrize(
-    "formulation_type",
-    [
-        cooper.formulations.QuadraticPenalty,
-        cooper.formulations.AugmentedLagrangian,
-        cooper.formulations.AugmentedLagrangianFunction,
-    ],
+    "formulation_type", [cooper.formulations.AugmentedLagrangian, cooper.formulations.QuadraticPenalty]
 )
 def test_constraint_sanity_check_penalty_coefficient(constraint_type, formulation_type, multiplier):
     # Test when penalty coefficient is expected but not provided
@@ -98,7 +92,6 @@ def test_constraint_sanity_check_penalty_coefficient_unexpected_penalty_coeffici
     [
         cooper.formulations.QuadraticPenalty,
         cooper.formulations.AugmentedLagrangian,
-        cooper.formulations.AugmentedLagrangianFunction,
     ],
 )
 def test_constraint_sanity_check_penalty_coefficient_negative_penalty_coefficient(
