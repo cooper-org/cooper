@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
 import torch
+from typing_extensions import Self
 
 from cooper.constraints import Constraint, ConstraintState
 from cooper.multipliers import Multiplier
@@ -181,14 +182,16 @@ class ConstrainedMinimizationProblem(abc.ABC):
         constraints of the CMP.
         """
         for constraint in self.constraints():
-            yield constraint.multiplier
+            if constraint.multiplier is not None:
+                yield constraint.multiplier
 
     def named_multipliers(self) -> Iterator[tuple[str, Multiplier]]:
         """Returns an iterator over the multipliers associated with the registered
         constraints of the CMP, yielding tuples of the form ``(constraint_name, multiplier)``.
         """
         for constraint_name, constraint in self.named_constraints():
-            yield constraint_name, constraint.multiplier
+            if constraint.multiplier is not None:
+                yield constraint_name, constraint.multiplier
 
     def penalty_coefficients(self) -> Iterator[PenaltyCoefficient]:
         """Returns an iterator over the penalty coefficients associated with the
@@ -215,13 +218,17 @@ class ConstrainedMinimizationProblem(abc.ABC):
         dual optimizers. If a multiplier is shared by several constraints, we only
         return its parameters once.
         """
-        for multiplier in {constraint.multiplier for constraint in self.constraints()}:
+        for multiplier in set(self.multipliers()):
             yield from multiplier.parameters()
 
-    def to_(self, *args: str, **kwargs: str) -> None:
+    def to(self, *args: str, **kwargs: str) -> Self:
         # TODO: document, test
         for constraint in self.constraints():
-            constraint.multiplier = constraint.multiplier.to(*args, **kwargs)
+            if constraint.multiplier is not None:
+                constraint.multiplier = constraint.multiplier.to(*args, **kwargs)
+            if constraint.penalty_coefficient is not None:
+                constraint.penalty_coefficient = constraint.penalty_coefficient.to(*args, **kwargs)
+        return self
 
     def state_dict(self) -> dict:
         """Returns the state of the CMP. This includes the state of the multipliers and penalty coefficients."""
@@ -242,6 +249,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             self._constraints[name].multiplier.sanity_check()
         for name, penalty_coefficient_state_dict in state_dict["penalty_coefficients"].items():
             self._constraints[name].penalty_coefficient.load_state_dict(penalty_coefficient_state_dict)
+            self._constraints[name].penalty_coefficient.sanity_check()
 
     def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, Constraint):
