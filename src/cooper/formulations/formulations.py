@@ -234,11 +234,11 @@ class QuadraticPenalty(Formulation):
         self,
         constraint_state: ConstraintState,  # noqa: ARG002
         penalty_coefficient: PenaltyCoefficient,  # noqa: ARG002
-    ) -> Optional[ContributionStore]:
+    ) -> None:
         """The Quadratic Penalty formulation does not involve dual variables and
         therefore does not implement a dual Lagrangian (returns ``None``).
         """
-        return None
+        return
 
 
 class AugmentedLagrangianFunction(Formulation):
@@ -368,7 +368,7 @@ class AugmentedLagrangian(Formulation):
         )
 
         # Providing a penalty coefficient to ensure that the dual Lagrangian is the
-        # sum of the violation times the multiplier *times the penalty term*.
+        # sum of the violation times the multiplier *times the penalty coefficient*.
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
             multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=penalty_coefficient_value
         )
