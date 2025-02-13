@@ -36,8 +36,8 @@ def multiplier(num_constraints, formulation_type):
 @pytest.fixture
 def penalty_coefficient(num_constraints, formulation_type):
     if formulation_type.expects_penalty_coefficient:
-        return None
-    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+        return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    return None
 
 
 @pytest.fixture
@@ -117,11 +117,14 @@ def test_constraint_sanity_check_penalty_coefficient_negative_penalty_coefficien
 def test_constraint_compute_contribution_to_lagrangian(num_constraints, valid_constraint):
     constraint_state = cooper.ConstraintState(violation=torch.ones(num_constraints))
 
-    contribution = valid_constraint.compute_contribution_to_lagrangian(constraint_state, "primal")
-    assert isinstance(contribution, cooper.formulations.ContributionStore)
+    primal_contribution = valid_constraint.compute_contribution_to_lagrangian(constraint_state, "primal")
+    assert isinstance(primal_contribution, cooper.formulations.ContributionStore)
 
-    contribution = valid_constraint.compute_contribution_to_lagrangian(constraint_state, "dual")
-    assert isinstance(contribution, cooper.formulations.ContributionStore)
+    dual_contribution = valid_constraint.compute_contribution_to_lagrangian(constraint_state, "dual")
+    if valid_constraint.formulation_type == cooper.formulations.QuadraticPenalty:
+        assert dual_contribution is None
+    else:
+        assert isinstance(dual_contribution, cooper.formulations.ContributionStore)
 
 
 def test_constraint_repr(valid_constraint, formulation_type):

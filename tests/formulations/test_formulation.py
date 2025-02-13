@@ -112,7 +112,10 @@ def test_compute_contribution_to_lagrangian(
     dual_contribution_store = formulation.compute_contribution_to_dual_lagrangian(**kwargs)
 
     # Check that the returned value is of the correct type
-    assert isinstance(dual_contribution_store, cooper.formulations.ContributionStore)
+    if formulation_type == cooper.formulations.QuadraticPenalty:
+        assert dual_contribution_store is None
+    else:
+        assert isinstance(dual_contribution_store, cooper.formulations.ContributionStore)
 
     # Call compute_contribution_to_primal_lagrangian
     primal_contribution_store = formulation.compute_contribution_to_primal_lagrangian(**kwargs)
