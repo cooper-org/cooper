@@ -103,7 +103,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     loaded_primal_optimizers = testing.build_primal_optimizers(list(loaded_model.parameters()))
     loaded_dual_optimizers = None
     if any(new_cmp.constraints()):
-        loaded_dual_optimizers = testing.build_dual_optimizers(
+        loaded_dual_optimizers = testing.build_dual_optimizer(
             dual_parameters=new_cmp.dual_parameters(), dual_optimizer_kwargs={"lr": DUAL_LR}
         )
 

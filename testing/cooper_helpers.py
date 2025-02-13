@@ -59,12 +59,12 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         C: Optional[torch.Tensor] = None,
         d: Optional[torch.Tensor] = None,
         ineq_formulation_type: type[cooper.formulations.Formulation] = cooper.formulations.Lagrangian,
-        ineq_multiplier_type: type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        ineq_multiplier_type: Optional[type[cooper.multipliers.Multiplier]] = None,
         ineq_penalty_coefficient_type: Optional[type[cooper.penalty_coefficients.PenaltyCoefficient]] = None,
         ineq_observed_constraint_ratio: float = 1.0,
         ineq_surrogate_noise_magnitude: float = 1e-1,
         eq_formulation_type: type[cooper.formulations.Formulation] = cooper.formulations.Lagrangian,
-        eq_multiplier_type: type[cooper.multipliers.Multiplier] = cooper.multipliers.DenseMultiplier,
+        eq_multiplier_type: Optional[type[cooper.multipliers.Multiplier]] = None,
         eq_penalty_coefficient_type: Optional[type[cooper.penalty_coefficients.PenaltyCoefficient]] = None,
         eq_observed_constraint_ratio: float = 1.0,
         eq_surrogate_noise_magnitude: float = 1e-1,
@@ -83,8 +83,14 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.C = C.to(device) if C is not None else None
         self.d = d.to(device) if d is not None else None
 
-        self.is_ineq_sampled = ineq_multiplier_type == cooper.multipliers.IndexedMultiplier
-        self.is_eq_sampled = eq_multiplier_type == cooper.multipliers.IndexedMultiplier
+        self.is_ineq_sampled = (
+            ineq_multiplier_type == cooper.multipliers.IndexedMultiplier
+            or ineq_penalty_coefficient_type == cooper.penalty_coefficients.IndexedPenaltyCoefficient
+        )
+        self.is_eq_sampled = (
+            eq_multiplier_type == cooper.multipliers.IndexedMultiplier
+            or eq_penalty_coefficient_type == cooper.penalty_coefficients.IndexedPenaltyCoefficient
+        )
 
         self.ineq_observed_constraint_ratio = ineq_observed_constraint_ratio
         self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
@@ -109,7 +115,10 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if ineq_penalty_coefficient_type is not None:
                 ineq_penalty_coefficient = ineq_penalty_coefficient_type(init=torch.ones(b.numel(), device=device))
 
-            ineq_multiplier = ineq_multiplier_type(num_constraints=b.numel(), device=device)
+            ineq_multiplier = None
+            if ineq_multiplier_type is not None:
+                ineq_multiplier = ineq_multiplier_type(num_constraints=b.numel(), device=device)
+
             self.ineq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.INEQUALITY,
                 formulation_type=ineq_formulation_type,
@@ -122,7 +131,10 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             if eq_penalty_coefficient_type is not None:
                 eq_penalty_coefficient = eq_penalty_coefficient_type(init=torch.ones(d.numel(), device=device))
 
-            eq_multiplier = eq_multiplier_type(num_constraints=d.numel(), device=device)
+            eq_multiplier = None
+            if eq_multiplier_type is not None:
+                eq_multiplier = eq_multiplier_type(num_constraints=d.numel(), device=device)
+
             self.eq_constraints = cooper.Constraint(
                 constraint_type=cooper.ConstraintType.EQUALITY,
                 formulation_type=eq_formulation_type,
@@ -240,7 +252,7 @@ def build_primal_optimizers(
     return primal_optimizers
 
 
-def build_dual_optimizers(
+def build_dual_optimizer(
     dual_parameters, augmented_lagrangian=False, dual_optimizer_class=torch.optim.SGD, dual_optimizer_kwargs=None
 ):
     # Make copy of this fixture since we are modifying in-place
@@ -281,9 +293,9 @@ def build_cooper_optimizer(
     dual_optimizers = None
     cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
 
-    if any(cmp.constraints()):
-        # If there are constraints, we build dual optimizers
-        dual_optimizers = build_dual_optimizers(
+    if any(True for _ in cmp.dual_parameters()):
+        # If there are dual parameters, we build dual optimizers
+        dual_optimizers = build_dual_optimizer(
             dual_parameters=cmp.dual_parameters(),
             augmented_lagrangian=augmented_lagrangian,
             dual_optimizer_class=dual_optimizer_class,
