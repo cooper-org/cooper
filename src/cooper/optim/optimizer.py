@@ -82,11 +82,12 @@ class CooperOptimizer(abc.ABC):
 
     @torch.no_grad()
     def primal_step(self) -> None:
+        """Performs a gradient step on the parameters associated with the primal variables."""
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
     def state_dict(self) -> CooperOptimizerState:
-        r"""Return the state of the optimizer as a
+        r"""Returns the state of the optimizer as a
         :py:class:`~cooper.optim.cooper_optimizer.CooperOptimizerState`. This method
         relies on the internal :py:meth:`~torch.optim.Optimizer.state_dict` method of
         the corresponding primal or dual optimizers.

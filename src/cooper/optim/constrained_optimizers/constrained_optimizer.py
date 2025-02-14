@@ -53,7 +53,7 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
         self.custom_sanity_checks()
 
     def base_sanity_checks(self) -> None:
-        """Perform sanity checks on the initialization of ``ConstrainedOptimizer``."""
+        """Performs sanity checks on the initialization of ``ConstrainedOptimizer``."""
         if self.primal_optimizers is None:
             raise TypeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
         if self.dual_optimizers is None:
@@ -64,11 +64,11 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
                     raise ValueError("Dual optimizers must be set to carry out maximization steps.")
 
     def custom_sanity_checks(self) -> None:
-        """Perform custom sanity checks on the initialization of ``ConstrainedOptimizer``."""
+        """Performs custom sanity checks on the initialization of ``ConstrainedOptimizer``."""
 
     @torch.no_grad()
     def dual_step(self) -> None:
-        """Perform a gradient step on the parameters associated with the dual variables.
+        """Performs a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we require
         dual optimizers which satisfy ``maximize=True``.
 
@@ -87,4 +87,4 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
 
     @abc.abstractmethod
     def roll(*args, **kwargs) -> RollOut:  # noqa: ANN002, ANN003
-        """Perform a full update step on the primal and dual variables."""
+        """Performs a full update step on the primal and dual variables."""
