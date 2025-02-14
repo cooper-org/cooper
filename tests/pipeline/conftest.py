@@ -84,8 +84,8 @@ def penalty_coefficient_type(multiplier_penalty_coefficient_types):
 
 @pytest.fixture(params=[True, False])
 def extrapolation(request, formulation_type):
-    if request.param and formulation_type != cooper.formulations.Lagrangian:
-        pytest.skip("Extrapolation is not supported for the Augmented Lagrangian and Quadratic Penalty formulations.")
+    if request.param and formulation_type == cooper.formulations.QuadraticPenalty:
+        pytest.skip("Extrapolation is not supported for the Quadratic Penalty formulation.")
     return request.param
 
 
@@ -198,7 +198,7 @@ def cooper_optimizer(cmp, params, num_variables, use_multiple_primal_optimizers,
 
 @pytest.fixture
 def penalty_updater(formulation_type):
-    if formulation_type == cooper.formulations.QuadraticPenalty:
+    if formulation_type in {cooper.formulations.AugmentedLagrangian, cooper.formulations.QuadraticPenalty}:
         return cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
             growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
         )

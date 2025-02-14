@@ -38,7 +38,10 @@ class TestConvergence:
 
         self.expects_multiplier = formulation_type.expects_multiplier
         self.expects_penalty_coefficient = formulation_type.expects_penalty_coefficient
-        self.has_penalty_updater = formulation_type == cooper.formulations.QuadraticPenalty
+        self.has_penalty_updater = formulation_type in {
+            cooper.formulations.QuadraticPenalty,
+            cooper.formulations.AugmentedLagrangian,
+        }
 
         self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
         self.num_variables = num_variables
