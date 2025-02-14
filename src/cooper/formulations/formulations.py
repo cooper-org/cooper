@@ -187,7 +187,7 @@ class Lagrangian(Formulation):
             constraint_state=constraint_state, multiplier=multiplier, penalty_coefficient=None, primal_or_dual="dual"
         )
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
-            multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=None
+            multiplier_value=multiplier_value, violation=violation
         )
 
         return ContributionStore(lagrangian_contribution, multiplier_value, None)
@@ -298,7 +298,7 @@ class AugmentedLagrangian(Formulation):
         # Not providing a penalty coefficient since the dual Lagrangian is just the
         # sum of the violation times the multiplier.
         lagrangian_contribution = formulation_utils.compute_dual_weighted_violation(
-            multiplier_value=multiplier_value, violation=violation, penalty_coefficient_value=None
+            multiplier_value=multiplier_value, violation=violation
         )
 
         return ContributionStore(lagrangian_contribution, multiplier_value, penalty_coefficient_value)

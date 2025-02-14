@@ -63,12 +63,10 @@ def compute_primal_weighted_violation(
     return torch.einsum("i...,i...->", constraint_factor_value.detach(), violation)
 
 
-def compute_dual_weighted_violation(
-    multiplier_value: torch.Tensor, violation: torch.Tensor, penalty_coefficient_value: Optional[torch.Tensor] = None
-) -> torch.Tensor:
-    r"""If a penalty coefficient is *not* provided, computes the sum of weighted constraint
-    violations while preserving the gradient for the dual variables :math:`\vlambda` and
-    :math:`\vmu` only. That is:
+def compute_dual_weighted_violation(multiplier_value: torch.Tensor, violation: torch.Tensor) -> torch.Tensor:
+    r"""Computes the sum of weighted constraint violations while preserving the gradient
+    for the dual variables :math:`\vlambda` and :math:`\vmu` only.
+    That is:
 
     .. math::
         \vlambda^{\top} \vg(\vx).\texttt{detach}() \text{ or } \vmu^{\top}
@@ -87,16 +85,8 @@ def compute_dual_weighted_violation(
     Args:
         multiplier_value: Tensor of multiplier values.
         violation: Tensor of constraint violations.
-        penalty_coefficient_value: Tensor of penalty coefficient values.
     """
-    args = [multiplier_value, violation.detach()]
-    einsum_str = "i...,i..."
-
-    if penalty_coefficient_value is not None:
-        args.append(penalty_coefficient_value.detach())
-        einsum_str += ",i..."
-
-    return torch.einsum(f"{einsum_str}->", *args)
+    return torch.einsum("i...,i...->", multiplier_value, violation.detach())
 
 
 def compute_quadratic_penalty(
