@@ -40,7 +40,9 @@ def num_constraints(request, num_variables):
 
 
 @pytest.fixture(params=[True, False])
-def use_surrogate(request):
+def use_surrogate(request, formulation_type):
+    if request.param and formulation_type == cooper.formulations.QuadraticPenalty:
+        pytest.skip("Proxy constraints are not applicable for the Quadratic Penalty formulation.")
     return request.param
 
 
@@ -198,7 +200,7 @@ def cooper_optimizer(cmp, params, num_variables, use_multiple_primal_optimizers,
 
 @pytest.fixture
 def penalty_updater(formulation_type):
-    if formulation_type in {cooper.formulations.AugmentedLagrangian, cooper.formulations.QuadraticPenalty}:
+    if formulation_type != cooper.formulations.Lagrangian:
         return cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
             growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
         )
