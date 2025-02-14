@@ -38,10 +38,7 @@ class TestConvergence:
 
         self.expects_multiplier = formulation_type.expects_multiplier
         self.expects_penalty_coefficient = formulation_type.expects_penalty_coefficient
-        self.has_penalty_updater = formulation_type in {
-            cooper.formulations.QuadraticPenalty,
-            cooper.formulations.AugmentedLagrangian,
-        }
+        self.use_penalty_updater = formulation_type != cooper.formulations.Lagrangian
 
         self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
         self.num_variables = num_variables
@@ -57,9 +54,6 @@ class TestConvergence:
         The manual implementation assumes Stochastic Gradient Descent (SGD) is used for both the primal
         and dual optimizers.
         """
-        if alternation_type == testing.AlternationType.PRIMAL_DUAL and self.is_indexed_multiplier:
-            pytest.skip("Cannot test IndexedMultiplier with PRIMAL_DUAL alternation.")
-
         x = torch.nn.Parameter(torch.ones(self.num_variables, device=self.device))
         optimizer_class = cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD
         primal_optimizers = optimizer_class([x], lr=PRIMAL_LR)
@@ -74,14 +68,10 @@ class TestConvergence:
         )
 
         penalty_updater = None
-        if self.has_penalty_updater:
+        if self.use_penalty_updater:
             penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
-
-        roll_kwargs = {"compute_cmp_state_kwargs": {"x": x}}
-        if alternation_type == testing.AlternationType.PRIMAL_DUAL:
-            roll_kwargs["compute_violations_kwargs"] = {"x": x}
 
         manual_x = torch.ones(self.num_variables, device=self.device)
         manual_multiplier = None
@@ -92,27 +82,30 @@ class TestConvergence:
             manual_penalty_coeff = torch.ones(self.num_constraints, device=self.device)
 
         # ----------------------- Iterations -----------------------
-        for _ in range(2):
+        for step in range(2):
+            roll_kwargs = {"compute_cmp_state_kwargs": {"x": x, "seed": step}}
+            if alternation_type == testing.AlternationType.PRIMAL_DUAL:
+                roll_kwargs["compute_violations_kwargs"] = {"x": x, "seed": step}
             roll_out = cooper_optimizer.roll(**roll_kwargs)
-            if self.has_penalty_updater:
+            if self.use_penalty_updater:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-            observed_multipliers = None
+            primal_observed_multipliers = None
+            dual_observed_multipliers = None
             if self.expects_multiplier:
-                if alternation_type == testing.AlternationType.PRIMAL_DUAL:
-                    observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
-                else:
-                    observed_multipliers = torch.cat(
-                        list(roll_out.primal_lagrangian_store.observed_multiplier_values())
-                    )
+                primal_observed_multipliers = torch.cat(
+                    list(roll_out.primal_lagrangian_store.observed_multiplier_values())
+                )
+                dual_observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
 
+            # The CMP has only one constraint, so we can use the first element
             features = next(iter(roll_out.cmp_state.observed_constraint_features()))
             if features is None:
                 features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
             strict_features = next(iter(roll_out.cmp_state.observed_strict_constraint_features()))
             if strict_features is None:
-                strict_features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
+                strict_features = features
 
             manual_x_prev = manual_x.clone()
             # Manual step
@@ -121,7 +114,8 @@ class TestConvergence:
                 manual_multiplier,
                 manual_primal_lagrangian,
                 manual_dual_lagrangian,
-                manual_observed_multipliers,
+                manual_primal_observed_multipliers,
+                manual_dual_observed_multipliers,
             ) = self.manual_roll(
                 manual_x,
                 manual_multiplier,
@@ -132,7 +126,7 @@ class TestConvergence:
                 extrapolation,
             )
 
-            if self.has_penalty_updater:
+            if self.use_penalty_updater:
                 # Update penalty coefficients for the Quadratic Penalty formulation
                 self._update_penalty_coefficients(
                     manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
@@ -142,7 +136,8 @@ class TestConvergence:
             assert torch.allclose(x, manual_x)
             assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
             if self.expects_multiplier:
-                assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
+                assert torch.allclose(primal_observed_multipliers, manual_primal_observed_multipliers[features])
+                assert torch.allclose(dual_observed_multipliers, manual_dual_observed_multipliers[strict_features])
                 assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
     def _violation(self, x, strict=False):
@@ -239,49 +234,54 @@ class TestConvergence:
             self._dual_step(x, multiplier, strict_features),
         )
 
-        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
+        # primal and dual observed multipliers are the same
+        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers, observed_multipliers
 
     def _dual_primal_roll(self, x, multiplier, features, strict_features, penalty_coeff):
         # Dual step
+        dual_observed_multipliers = multiplier.clone()
         dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
         multiplier = self._dual_step(x, multiplier, strict_features)
 
         # Primal step
         primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
-        observed_multipliers = multiplier.clone()
+        primal_observed_multipliers = multiplier.clone()
         x = self._primal_step(x, multiplier, features, penalty_coeff)
 
-        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
+        return x, multiplier, primal_lagrangian, dual_lagrangian, primal_observed_multipliers, dual_observed_multipliers
 
     def _primal_dual_roll(self, x, multiplier, features, strict_features, penalty_coeff):
         # Primal step
         primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
-        observed_multipliers = multiplier.clone()
+        primal_observed_multipliers = multiplier.clone()
         x = self._primal_step(x, multiplier, features, penalty_coeff)
 
         # Dual step
+        dual_observed_multipliers = multiplier.clone()
         dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
         multiplier = self._dual_step(x, multiplier, strict_features)
 
-        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
+        return x, multiplier, primal_lagrangian, dual_lagrangian, primal_observed_multipliers, dual_observed_multipliers
 
     def _extragradient_roll(self, x, multiplier, features, strict_features, penalty_coeff):
         x_copy = x.clone()  # x_t
         multiplier_copy = multiplier.clone()
+
+        # Compute the Lagrangians
+        primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
+        observed_multipliers = multiplier.clone()
+        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
 
         # Extrapolation step
         x = self._primal_step(x_copy, multiplier_copy, features, penalty_coeff)  # x_{t+1/2}
         multiplier = self._dual_step(x_copy, multiplier_copy.clone(), strict_features)
 
         # Update step
-        primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
-        observed_multipliers = multiplier.clone()
-        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
-
         x_grad = self._primal_gradient(x, multiplier, features, penalty_coeff)
         x, multiplier = x_copy - PRIMAL_LR * x_grad, self._dual_step(x, multiplier_copy, strict_features)
 
-        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
+        # primal and dual observed multipliers are the same
+        return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers, observed_multipliers
 
     @torch.inference_mode()
     def manual_roll(self, x, multiplier, features, strict_features, alternation_type, penalty_coeff, extrapolation):

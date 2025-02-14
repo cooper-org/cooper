@@ -150,9 +150,14 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         lhs_sur: Optional[torch.Tensor],
         is_sampled: bool,
         observed_constraint_ratio: float,
+        seed: Optional[int],
     ) -> cooper.ConstraintState:
+        """Computes the constraint state."""
         num_constraints = rhs.numel()
         strict_violation = torch.matmul(lhs, x) - rhs
+
+        if seed is not None:
+            self.generator.manual_seed(seed)
 
         strict_constraint_features = None
         if is_sampled:
@@ -180,30 +185,30 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             strict_constraint_features=strict_constraint_features,
         )
 
-    def compute_violations(self, x: torch.Tensor) -> cooper.CMPState:
+    def compute_violations(self, x: torch.Tensor, seed: Optional[int]) -> cooper.CMPState:
         """Computes the constraint violations for the given parameters."""
         observed_constraints = {}
 
         if self.has_ineq_constraint:
             ineq_state = self._compute_constraint_states(
-                x, self.A, self.b, self.A_sur, self.is_ineq_sampled, self.ineq_observed_constraint_ratio
+                x, self.A, self.b, self.A_sur, self.is_ineq_sampled, self.ineq_observed_constraint_ratio, seed
             )
             observed_constraints[self.ineq_constraints] = ineq_state
 
         if self.has_eq_constraint:
             eq_state = self._compute_constraint_states(
-                x, self.C, self.d, self.C_sur, self.is_eq_sampled, self.eq_observed_constraint_ratio
+                x, self.C, self.d, self.C_sur, self.is_eq_sampled, self.eq_observed_constraint_ratio, seed
             )
             observed_constraints[self.eq_constraints] = eq_state
 
         return cooper.CMPState(observed_constraints=observed_constraints)
 
-    def compute_cmp_state(self, x: torch.Tensor) -> cooper.CMPState:
+    def compute_cmp_state(self, x: torch.Tensor, seed: Optional[int] = None) -> cooper.CMPState:
         """Computes the state of the CMP at the current value of the primal parameters
         by evaluating the loss and constraints.
         """
         loss = torch.sum(x**2)
-        violation_state = self.compute_violations(x)
+        violation_state = self.compute_violations(x, seed)
         cmp_state = cooper.CMPState(loss=loss, observed_constraints=violation_state.observed_constraints)
         return cmp_state
 
