@@ -15,14 +15,12 @@ DUAL_LR = 1e-2
 class Model(torch.nn.Module):
     """A simple model that concatenates a list of parameters."""
 
-    def __init__(self, params: Sequence):
+    def __init__(self, params: Sequence[torch.Tensor]):
         super().__init__()
         self.num_params = len(params)
 
         for i, param in enumerate(params):
-            if not isinstance(param, torch.nn.Parameter):
-                param = torch.nn.Parameter(param)
-            self.register_parameter(name=f"params_{i}", param=param)
+            self.register_parameter(name=f"params_{i}", param=torch.nn.Parameter(param))
 
     def forward(self):
         return torch.cat([getattr(self, f"params_{i}") for i in range(self.num_params)])
@@ -102,7 +100,7 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     loaded_primal_optimizers = testing.build_primal_optimizers(list(loaded_model.parameters()))
     loaded_dual_optimizers = None
-    if any(new_cmp.constraints()):
+    if any(True for _ in new_cmp.dual_parameters()):
         loaded_dual_optimizers = testing.build_dual_optimizer(
             dual_parameters=new_cmp.dual_parameters(), dual_optimizer_kwargs={"lr": DUAL_LR}
         )
