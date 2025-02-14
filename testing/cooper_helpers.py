@@ -252,18 +252,12 @@ def build_primal_optimizers(
     return primal_optimizers
 
 
-def build_dual_optimizer(
-    dual_parameters, augmented_lagrangian=False, dual_optimizer_class=torch.optim.SGD, dual_optimizer_kwargs=None
-):
-    # Make copy of this fixture since we are modifying in-place
+def build_dual_optimizer(dual_parameters, dual_optimizer_class=torch.optim.SGD, dual_optimizer_kwargs=None):
+    # Make copy of the kwargs since we are modifying in-place
+    dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     if dual_optimizer_kwargs is None:
         dual_optimizer_kwargs = {"lr": 0.01}
-    dual_optimizer_kwargs = deepcopy(dual_optimizer_kwargs)
     dual_optimizer_kwargs["maximize"] = True
-
-    if augmented_lagrangian:
-        assert dual_optimizer_class == torch.optim.SGD
-        dual_optimizer_kwargs["lr"] = 1.0
 
     if dual_optimizer_class == torch.optim.SGD:
         # SGD does not support `foreach=True` (the default for 2.0.0) when the
@@ -283,21 +277,20 @@ def build_cooper_optimizer(
     cmp,
     primal_optimizers,
     extrapolation: bool = False,
-    augmented_lagrangian: bool = False,
     alternation_type: AlternationType = AlternationType.FALSE,
     dual_optimizer_class=torch.optim.SGD,
     dual_optimizer_kwargs=None,
 ) -> cooper.optim.CooperOptimizer:
-    if dual_optimizer_kwargs is None:
-        dual_optimizer_kwargs = {"lr": 0.01}
     dual_optimizers = None
     cooper_optimizer_class = cooper.optim.UnconstrainedOptimizer
 
+    # If there are dual parameters, we build a dual optimizer
     if any(True for _ in cmp.dual_parameters()):
-        # If there are dual parameters, we build dual optimizers
+        if dual_optimizer_kwargs is None:
+            dual_optimizer_kwargs = {"lr": 0.01}
+
         dual_optimizers = build_dual_optimizer(
             dual_parameters=cmp.dual_parameters(),
-            augmented_lagrangian=augmented_lagrangian,
             dual_optimizer_class=dual_optimizer_class,
             dual_optimizer_kwargs=dual_optimizer_kwargs,
         )

@@ -35,7 +35,11 @@ class TestConvergence:
 
         self.constraint_type = constraint_type
         self.use_surrogate = use_surrogate
-        self.is_augmented_lagrangian = formulation_type == cooper.formulations.AugmentedLagrangian
+
+        self.expects_multiplier = formulation_type.expects_multiplier
+        self.expects_penalty_coefficient = formulation_type.expects_penalty_coefficient
+        self.has_penalty_updater = formulation_type == cooper.formulations.QuadraticPenalty
+
         self.is_indexed_multiplier = multiplier_type == cooper.multipliers.IndexedMultiplier
         self.num_variables = num_variables
         self.num_constraints = num_constraints
@@ -62,13 +66,12 @@ class TestConvergence:
             primal_optimizers=primal_optimizers,
             extrapolation=extrapolation,
             dual_optimizer_class=optimizer_class,
-            augmented_lagrangian=self.is_augmented_lagrangian,
             alternation_type=alternation_type,
             dual_optimizer_kwargs={"lr": DUAL_LR},
         )
 
         penalty_updater = None
-        if self.is_augmented_lagrangian:
+        if self.has_penalty_updater:
             penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
                 growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
             )
@@ -78,21 +81,27 @@ class TestConvergence:
             roll_kwargs["compute_violations_kwargs"] = {"x": x}
 
         manual_x = torch.ones(self.num_variables, device=self.device)
-        manual_multiplier = torch.zeros(self.num_constraints, device=self.device)
+        manual_multiplier = None
+        if self.expects_multiplier:
+            manual_multiplier = torch.zeros(self.num_constraints, device=self.device)
         manual_penalty_coeff = None
-        if self.is_augmented_lagrangian:
+        if self.expects_penalty_coefficient:
             manual_penalty_coeff = torch.ones(self.num_constraints, device=self.device)
 
         # ----------------------- Iterations -----------------------
         for _ in range(2):
             roll_out = cooper_optimizer.roll(**roll_kwargs)
-            if self.is_augmented_lagrangian:
+            if self.has_penalty_updater:
                 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 
-            if alternation_type == testing.AlternationType.PRIMAL_DUAL:
-                observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
-            else:
-                observed_multipliers = torch.cat(list(roll_out.primal_lagrangian_store.observed_multiplier_values()))
+            observed_multipliers = None
+            if self.expects_multiplier:
+                if alternation_type == testing.AlternationType.PRIMAL_DUAL:
+                    observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
+                else:
+                    observed_multipliers = torch.cat(
+                        list(roll_out.primal_lagrangian_store.observed_multiplier_values())
+                    )
 
             features = next(iter(roll_out.cmp_state.observed_constraint_features()))
             if features is None:
@@ -120,17 +129,18 @@ class TestConvergence:
                 extrapolation,
             )
 
-            if self.is_augmented_lagrangian:
-                # Update penalty coefficients for Augmented Lagrangian Method
+            if self.has_penalty_updater:
+                # Update penalty coefficients for the Quadratic Penalty formulation
                 self._update_penalty_coefficients(
                     manual_x, manual_x_prev, strict_features, alternation_type, manual_penalty_coeff
                 )
 
             # Check manual and cooper outputs are close
-            assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
             assert torch.allclose(x, manual_x)
             assert torch.allclose(roll_out.primal_lagrangian_store.lagrangian, manual_primal_lagrangian)
-            assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
+            if self.expects_multiplier:
+                assert torch.allclose(observed_multipliers, manual_observed_multipliers[features])
+                assert torch.allclose(roll_out.dual_lagrangian_store.lagrangian, manual_dual_lagrangian)
 
     def _violation(self, x, strict=False):
         """Compute the constraint violations given the primal variables.
@@ -141,41 +151,53 @@ class TestConvergence:
             return self.lhs_sur @ x - self.rhs
         return self.lhs @ x - self.rhs
 
-    def _primal_step(self, x, multiplier, features, penalty_coeff=None):
+    def _primal_gradient(self, x, multiplier, features, penalty_coeff):
         lhs = self.lhs_sur if self.use_surrogate else self.lhs
         obj_grad = 2 * x
-        if penalty_coeff is not None:
+        if self.expects_penalty_coefficient:
             # The gradient of the Augmented Lagrangian wrt the primal variables for inequality
-            # constraints is: grad_objective + grad_constraint * relu(multiplier + penalty_coeff * violation)
+            # constraints is: grad_objective + grad_constraint * (multiplier + penalty_coeff * relu(violation))
             violation = self._violation(x)[features]
-            aux_grad = multiplier[features] + penalty_coeff[features] * violation
             if self.is_inequality:
-                aux_grad.relu_()
+                violation.relu_()
+            aux_grad = penalty_coeff[features] * violation
+            if self.expects_multiplier:
+                aux_grad += multiplier[features]
             constraint_grad = lhs[features].t() @ aux_grad
         else:
             constraint_grad = lhs[features].t() @ multiplier[features]
-        x_grad = obj_grad + constraint_grad
 
+        return obj_grad + constraint_grad
+
+    def _primal_step(self, x, multiplier, features, penalty_coeff):
+        x_grad = self._primal_gradient(x, multiplier, features, penalty_coeff)
         return x - PRIMAL_LR * x_grad
 
-    def _dual_step(self, x, multiplier, strict_features, penalty_coeff=None):
-        violation = self._violation(x, strict=True)[strict_features]
-        if penalty_coeff is None:
-            multiplier[strict_features] = multiplier[strict_features] + DUAL_LR * violation
-        else:
-            multiplier[strict_features] = multiplier[strict_features] + penalty_coeff[strict_features] * violation
+    def _dual_step(self, x, multiplier, strict_features):
+        if not self.expects_multiplier:
+            # Quadratic Penalty formulation
+            return None
 
+        violation = self._violation(x, strict=True)[strict_features]
+        multiplier[strict_features] = multiplier[strict_features] + DUAL_LR * violation
         if self.is_inequality:
             multiplier.relu_()
 
         return multiplier
 
-    def _primal_lagrangian(self, x, multiplier, features, penalty_coeff: Optional[torch.Tensor] = None):
+    def _primal_lagrangian(self, x, multiplier, features, penalty_coeff: Optional[torch.Tensor]):
         loss = torch.sum(x**2)
         violation = self._violation(x)[features]
 
-        if penalty_coeff is None:
+        if not self.expects_penalty_coefficient:
+            # Lagrangian formulation
             return loss + torch.dot(multiplier[features], violation)
+
+        if not self.expects_multiplier:
+            # Quadratic Penalty formulation
+            if self.is_inequality:
+                violation.relu_()
+            return loss + 0.5 * torch.dot(penalty_coeff[features], violation**2)
 
         penalty_term = multiplier[features] + penalty_coeff[features] * violation
         if self.is_inequality:
@@ -184,16 +206,14 @@ class TestConvergence:
         aug_lag = loss + 0.5 * torch.dot(1 / penalty_coeff[features], penalty_term**2 - multiplier[features] ** 2)
         return aug_lag
 
-    def _dual_lagrangian(self, x, multiplier, strict_features, penalty_coeff=None):
-        violation = self._violation(x, strict=True)[strict_features]
-        if penalty_coeff is None:
-            return torch.sum(multiplier[strict_features] * violation)
+    def _dual_lagrangian(self, x, multiplier, strict_features):
+        if not self.expects_multiplier:
+            # Quadratic Penalty formulation
+            return None
 
-        # When the penalty coefficient is provided, the dual lagrangian is weighted by
-        # both the value of the multiplier and the penalty coefficient.
-        # This way, the gradient with respect to the multiplier is the constraint violation times
-        # the penalty coefficient, as required by the updates of the Augmented Lagrangian Method.
-        return torch.sum(penalty_coeff[strict_features] * multiplier[strict_features] * violation)
+        violation = self._violation(x, strict=True)[strict_features]
+
+        return torch.sum(multiplier[strict_features] * violation)
 
     def _update_penalty_coefficients(self, x, x_prev, strict_features, alternation_type, penalty_coeff):
         if alternation_type == testing.AlternationType.PRIMAL_DUAL:
@@ -206,19 +226,22 @@ class TestConvergence:
         # Update the penalty coefficients for the violated constraints
         penalty_coeff[strict_features[violated_indices]] *= PENALTY_GROWTH_FACTOR
 
-    def _simultaneous_roll(self, x, multiplier, features, strict_features):
-        primal_lagrangian = self._primal_lagrangian(x, multiplier, features)
-        observed_multipliers = multiplier.clone()
+    def _simultaneous_roll(self, x, multiplier, features, strict_features, penalty_coeff):
+        primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
+        observed_multipliers = multiplier.clone() if multiplier is not None else None
         dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
 
-        x, multiplier = self._primal_step(x, multiplier, features), self._dual_step(x, multiplier, strict_features)
+        x, multiplier = (
+            self._primal_step(x, multiplier, features, penalty_coeff),
+            self._dual_step(x, multiplier, strict_features),
+        )
 
         return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
 
     def _dual_primal_roll(self, x, multiplier, features, strict_features, penalty_coeff):
         # Dual step
-        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features, penalty_coeff)
-        multiplier = self._dual_step(x, multiplier, strict_features, penalty_coeff)
+        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
+        multiplier = self._dual_step(x, multiplier, strict_features)
 
         # Primal step
         primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
@@ -234,26 +257,25 @@ class TestConvergence:
         x = self._primal_step(x, multiplier, features, penalty_coeff)
 
         # Dual step
-        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features, penalty_coeff)
-        multiplier = self._dual_step(x, multiplier, strict_features, penalty_coeff)
+        dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
+        multiplier = self._dual_step(x, multiplier, strict_features)
 
         return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
 
-    def _extragradient_roll(self, x, multiplier, features, strict_features):
+    def _extragradient_roll(self, x, multiplier, features, strict_features, penalty_coeff):
         x_copy = x.clone()  # x_t
         multiplier_copy = multiplier.clone()
 
         # Extrapolation step
-        x = self._primal_step(x_copy, multiplier_copy, features)  # x_{t+1/2}
+        x = self._primal_step(x_copy, multiplier_copy, features, penalty_coeff)  # x_{t+1/2}
         multiplier = self._dual_step(x_copy, multiplier_copy.clone(), strict_features)
 
         # Update step
-        primal_lagrangian = self._primal_lagrangian(x, multiplier, features)
+        primal_lagrangian = self._primal_lagrangian(x, multiplier, features, penalty_coeff)
         observed_multipliers = multiplier.clone()
         dual_lagrangian = self._dual_lagrangian(x, multiplier, strict_features)
 
-        lhs = self.lhs_sur if self.use_surrogate else self.lhs
-        x_grad = 2 * x + lhs[features].t() @ multiplier[features]
+        x_grad = self._primal_gradient(x, multiplier, features, penalty_coeff)
         x, multiplier = x_copy - PRIMAL_LR * x_grad, self._dual_step(x, multiplier_copy, strict_features)
 
         return x, multiplier, primal_lagrangian, dual_lagrangian, observed_multipliers
@@ -261,9 +283,9 @@ class TestConvergence:
     @torch.inference_mode()
     def manual_roll(self, x, multiplier, features, strict_features, alternation_type, penalty_coeff, extrapolation):
         if extrapolation:
-            return self._extragradient_roll(x, multiplier, features, strict_features)
+            return self._extragradient_roll(x, multiplier, features, strict_features, penalty_coeff)
         if alternation_type == testing.AlternationType.FALSE:
-            return self._simultaneous_roll(x, multiplier, features, strict_features)
+            return self._simultaneous_roll(x, multiplier, features, strict_features, penalty_coeff)
         if alternation_type == testing.AlternationType.DUAL_PRIMAL:
             return self._dual_primal_roll(x, multiplier, features, strict_features, penalty_coeff)
         if alternation_type == testing.AlternationType.PRIMAL_DUAL:

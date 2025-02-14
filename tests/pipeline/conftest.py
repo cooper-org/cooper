@@ -97,8 +97,8 @@ def alternation_type(request, extrapolation, formulation_type):
 
     if extrapolation and is_alternation:
         pytest.skip("Extrapolation is only supported for simultaneous updates.")
-    if formulation_type == cooper.formulations.AugmentedLagrangian and not is_alternation:
-        pytest.skip("Augmented Lagrangian formulation requires alternation.")
+    if formulation_type == cooper.formulations.QuadraticPenalty and is_alternation:
+        pytest.skip("Quadratic Penalty formulation does not support alternation.")
     return request.param
 
 
@@ -177,9 +177,7 @@ def cooper_optimizer_no_constraint(unconstrained_cmp, params):
 
 
 @pytest.fixture
-def cooper_optimizer(
-    cmp, params, num_variables, use_multiple_primal_optimizers, extrapolation, alternation_type, formulation_type
-):
+def cooper_optimizer(cmp, params, num_variables, use_multiple_primal_optimizers, extrapolation, alternation_type):
     primal_optimizer_kwargs = [{"lr": PRIMAL_LR}]
     if use_multiple_primal_optimizers:
         primal_optimizer_kwargs.append({"lr": 10 * PRIMAL_LR, "betas": (0.0, 0.0), "eps": 10.0})
@@ -191,7 +189,6 @@ def cooper_optimizer(
         cmp=cmp,
         primal_optimizers=primal_optimizers,
         extrapolation=extrapolation,
-        augmented_lagrangian=formulation_type == cooper.formulations.AugmentedLagrangian,
         alternation_type=alternation_type,
         dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
         dual_optimizer_kwargs={"lr": DUAL_LR / math.sqrt(num_variables)},
@@ -201,7 +198,7 @@ def cooper_optimizer(
 
 @pytest.fixture
 def penalty_updater(formulation_type):
-    if formulation_type in {cooper.formulations.AugmentedLagrangian, cooper.formulations.QuadraticPenalty}:
+    if formulation_type == cooper.formulations.QuadraticPenalty:
         return cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
             growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
         )
