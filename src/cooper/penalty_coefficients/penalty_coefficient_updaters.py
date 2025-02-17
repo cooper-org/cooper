@@ -86,3 +86,59 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
         else:
             penalty_coefficient.value = new_value.detach()
+
+
+class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
+    """Additive penalty coefficient updater for Augmented Lagrangian formulation.
+    The penalty coefficient is updated by adding a constant value when the constraint
+    violation is larger than a given tolerance.
+    Based on Algorithm 17.4 in Numerical Optimization by Nocedal and Wright.
+
+    Args:
+        penalty_increment: The constant value by which the penalty coefficient is added when the
+            constraint is violated beyond ``violation_tolerance``.
+        violation_tolerance: The tolerance for the constraint violation. If the violation
+            is smaller than this tolerance, the penalty coefficient is not updated.
+            The comparison is done at the constraint-level (i.e., each entry of the
+            violation tensor). For equality constraints, the absolute violation is
+            compared to the tolerance. All constraint types use the strict violation
+            (when available) for the comparison.
+    """
+
+    def __init__(self, penalty_increment: float = 1.0, violation_tolerance: float = 1e-4) -> None:
+        if violation_tolerance < 0.0:
+            raise ValueError("Violation tolerance must be non-negative.")
+
+        self.penalty_increment = penalty_increment
+        self.violation_tolerance = violation_tolerance
+
+    def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
+        _, strict_violation = constraint_state.extract_violations()
+        _, strict_constraint_features = constraint_state.extract_constraint_features()
+        penalty_coefficient = constraint.penalty_coefficient
+
+        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient()
+        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient(strict_constraint_features)
+        else:
+            raise TypeError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
+
+        if constraint.constraint_type == ConstraintType.INEQUALITY:
+            # For inequality constraints, we only consider the non-negative part of the violation.
+            strict_violation = strict_violation.relu()
+
+        if observed_penalty_values.dim() == 0:
+            condition = strict_violation.norm() > self.violation_tolerance
+        else:
+            condition = strict_violation.abs() > self.violation_tolerance
+
+        # Update the penalty coefficient by adding a constant value when
+        # the constraint violation is larger than the tolerance.
+        # When the violation is less than the tolerance, the penalty value is left unchanged.
+        new_value = torch.where(condition, observed_penalty_values + self.penalty_increment, observed_penalty_values)
+
+        if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
+            penalty_coefficient.value[strict_constraint_features] = new_value.detach()
+        else:
+            penalty_coefficient.value = new_value.detach()
