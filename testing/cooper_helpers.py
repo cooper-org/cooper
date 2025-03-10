@@ -185,7 +185,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
             strict_constraint_features=strict_constraint_features,
         )
 
-    def compute_violations(self, x: torch.Tensor, seed: Optional[int]) -> cooper.CMPState:
+    def compute_violations(self, x: torch.Tensor, seed: Optional[int] = None) -> cooper.CMPState:
         """Computes the constraint violations for the given parameters."""
         observed_constraints = {}
 
