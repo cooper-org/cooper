@@ -26,19 +26,19 @@ Please follow these steps to contribute:
 2. Fork the **Cooper** repository by clicking the **Fork** button on the
    [repository page](http://www.github.com/cooper-org/cooper).
 
-3. Install Python >= 3.9 locally in order to run tests.
+3. Install `uv` to install the dependencies. See [installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
-4. `pip` install your fork from source. This allows you to modify the code
-   and immediately test it out:
+4. Clone your local forked repo with `git clone` and install the dependencies using `uv`.
+   This allows you to modify the code and immediately test it out:
     ```bash
     git clone https://github.com/YOUR_USERNAME/cooper
     cd cooper
-    pip install --editable .  # Without tests.
-    pip install --editable '.[test]'  # Matches test environment.
-    pip install --editable '.[dev]'  # Matches development environment.
-    pip install --editable '.[notebooks]'  # Install dependencies for running notebooks.
-    pip install --editable '.[docs]'  # Used to generate the documentation.
-    pip install --editable '.[dev, docs]'  # Install all dependencies.
+    uv sync  # Without tests.
+    uv sync --group tests  # Matches test environment.
+    uv sync --group dev  # Matches development environment.
+    uv sync --group notebooks  # Install dependencies for running notebooks.
+    uv sync --group docs  # Used to generate the documentation.
+    uv sync --all-groups  # Install all dependencies.
     ```
 
 5. Add the **Cooper** repo as an upstream remote, so you can use it to sync your
@@ -58,28 +58,28 @@ Please follow these steps to contribute:
    the top of the repository:
 
    ```bash
-   pip install pre-commit
-   pre-commit run --all-files
+   uv sync --group dev
+   uv run pre-commit run --all-files
    ```
 
 8. Make sure the tests pass by running the following command from the top of
    the repository:
 
    ```bash
-   pytest tests
+   uv run pytest tests
    ```
 
    **Cooper**'s pipeline tests can take a while to run, so if you know the specific test file that covers your changes, you can limit the tests to that; for example:
 
    ```bash
-   pytest tests/multipliers/test_explicit_multipliers.py
+   uv run pytest tests/multipliers/test_explicit_multipliers.py
    ```
 
    You can narrow the tests further by using the `pytest -k` flag to match particular test
    names:
 
    ```bash
-   pytest tests/test_cmp.py -k test_cmp_state_dict
+   uv run pytest tests/test_cmp.py -k test_cmp_state_dict
    ```
 
 9. Once you are satisfied with your change, create a commit as follows (
@@ -121,8 +121,8 @@ The easiest way to run these checks locally is via the
 [pre-commit](https://pre-commit.com/) framework:
 
 ```bash
-pip install pre-commit
-pre-commit run --all-files
+uv sync --group dev
+uv run pre-commit run --all-files
 ```
 
 ## Tutorial notebooks
@@ -134,7 +134,8 @@ is that it can be opened and executed directly in Google Colab; while the latter
 To create a new notebook which is automatically synced between the two formats, first create a jupyter notebook `path/to/notebook.ipynb`. Ensure that it has at least one cell, and then run the following command:
 
 ```bash
-jupytext --set-formats ipynb,md:myst path/to/notebook.ipynb
+uv sync --group dev
+uv run jupytext --set-formats ipynb,md:myst path/to/notebook.ipynb
 ```
 
 Note that `pre-commit` will automatically ensure that the two formats are in sync.
@@ -142,7 +143,7 @@ Note that `pre-commit` will automatically ensure that the two formats are in syn
 To manually sync them, you can run the following command:
 
 ```bash
-jupytext --sync path/to/notebook.ipynb
+uv run jupytext --sync path/to/notebook.ipynb
 ```
 
 The jupytext version should match that specified in
@@ -153,8 +154,8 @@ To check that the markdown and ipynb files are properly synced, you may use the
 by the GitHub CI:
 
 ```bash
-pip install pre-commit
-pre-commit run jupytext --all-files
+uv sync --group dev
+uv run pre-commit run jupytext --all-files
 ```
 
 ## Update documentation
@@ -162,20 +163,20 @@ pre-commit run jupytext --all-files
 To rebuild the documentation, install several packages:
 
 ```
-pip install -e '.[docs]'
+uv sync --group docs
 ```
 
 And then run:
 
 ```
-sphinx-build -b html docs/source docs/source/build/html -j auto
+uv run sphinx-build -b html docs/source docs/source/build/html -j auto
 ```
 
 This can take some time because it executes many of the notebooks in the documentation source.
 If you'd prefer to build the docs without executing the notebooks, you can run:
 
 ```
-sphinx-build -b html -D nb_execution_mode=off docs/source docs/source/build/html -j auto
+uv run sphinx-build -b html -D nb_execution_mode=off docs/source docs/source/build/html -j auto
 ```
 
 You can then see the generated documentation in `docs/source/build/html/index.html`.
@@ -190,9 +191,9 @@ while changing `sphinx-build` for `sphinx-autobuild`:
 :::
 
 ```
-sphinx-autobuild -b html docs/source docs/source/build/html -j auto
+uv run sphinx-autobuild -b html docs/source docs/source/build/html -j auto
 
-sphinx-autobuild -D nb_execution_mode=off docs/source docs/source/build/html -j auto
+uv run sphinx-autobuild -D nb_execution_mode=off docs/source docs/source/build/html -j auto
 ```
 
 ## License

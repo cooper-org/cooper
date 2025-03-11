@@ -18,8 +18,14 @@ repos:
         # only include python files
         files: \.py$
 
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.6.9
+    hooks:
+      - id: uv-lock
+        args: [ --check ]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: v0.11.2
     hooks:
       - id: ruff
         types_or: [ python, pyi, jupyter ]

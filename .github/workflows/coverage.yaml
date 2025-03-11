@@ -2,7 +2,7 @@ name: Post coverage comment
 
 on:
   workflow_run:
-    workflows: [ "Continuous Integration" ]
+    workflows: [ "Tests" ]
     types: [ completed ]
 
 jobs:
