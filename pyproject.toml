@@ -101,6 +101,9 @@ source = "vcs"
 packages = ["cooper"]
 warn_unused_configs = true
 
+[tool.coverage.run]
+relative_files = true
+
 [tool.jupytext]
 notebook_metadata_filter="-kernelspec"
 cell_metadata_filter="-all"
