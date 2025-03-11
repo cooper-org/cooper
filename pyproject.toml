@@ -103,6 +103,7 @@ warn_unused_configs = true
 
 [tool.coverage.run]
 relative_files = true
+source = ["src/cooper"]
 
 [tool.jupytext]
 notebook_metadata_filter="-kernelspec"
