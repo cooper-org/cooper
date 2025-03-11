@@ -93,7 +93,11 @@ def compute_quadratic_penalty(
     penalty_coefficient_value: torch.Tensor, violation: torch.Tensor, constraint_type: ConstraintType
 ) -> Optional[torch.Tensor]:
     r"""A weighted sum of *squared* constraint violations using their associated penalty
-    coefficients. This yields:
+    coefficients.
+
+    We clamp the violations for inequality constraints as done in Eq 17.7 in Numerical
+    Optimization by :cite:t:`nocedal2006NumericalOptimization`.
+    This corresponds to:
 
     .. math::
         \frac{1}{2} \, \vc_{\vg}^{\top} \texttt{relu}(\vg(\vx))^2 \text{ or }
