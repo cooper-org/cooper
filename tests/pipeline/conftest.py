@@ -7,7 +7,9 @@ import cooper
 import testing
 
 PRIMAL_LR = 3e-2
+PRIMAL_LR_QUADRATIC_PENALTY = 1e-4
 DUAL_LR = 2e-1
+PENALTY_INCREMENT = 1.75
 PENALTY_GROWTH_FACTOR = 1.0 + 2.5e-4
 PENALTY_VIOLATION_TOLERANCE = 1e-4
 
@@ -179,10 +181,22 @@ def cooper_optimizer_no_constraint(unconstrained_cmp, params):
 
 
 @pytest.fixture
-def cooper_optimizer(cmp, params, num_variables, use_multiple_primal_optimizers, extrapolation, alternation_type):
-    primal_optimizer_kwargs = [{"lr": PRIMAL_LR}]
+def primal_lr(formulation_type):
+    if formulation_type == cooper.formulations.QuadraticPenalty:
+        return PRIMAL_LR_QUADRATIC_PENALTY
+    return PRIMAL_LR
+
+
+@pytest.fixture
+def dual_lr(num_variables):
+    return DUAL_LR / math.sqrt(num_variables)
+
+
+@pytest.fixture
+def cooper_optimizer(cmp, params, primal_lr, dual_lr, use_multiple_primal_optimizers, extrapolation, alternation_type):
+    primal_optimizer_kwargs = [{"lr": primal_lr}]
     if use_multiple_primal_optimizers:
-        primal_optimizer_kwargs.append({"lr": 10 * PRIMAL_LR, "betas": (0.0, 0.0), "eps": 10.0})
+        primal_optimizer_kwargs.append({"lr": 10 * primal_lr, "betas": (0.0, 0.0), "eps": 10.0})
     primal_optimizers = testing.build_primal_optimizers(
         params, extrapolation, primal_optimizer_kwargs=primal_optimizer_kwargs
     )
@@ -193,14 +207,18 @@ def cooper_optimizer(cmp, params, num_variables, use_multiple_primal_optimizers,
         extrapolation=extrapolation,
         alternation_type=alternation_type,
         dual_optimizer_class=cooper.optim.ExtraSGD if extrapolation else torch.optim.SGD,
-        dual_optimizer_kwargs={"lr": DUAL_LR / math.sqrt(num_variables)},
+        dual_optimizer_kwargs={"lr": dual_lr},
     )
     return cooper_optimizer
 
 
 @pytest.fixture
 def penalty_updater(formulation_type):
-    if formulation_type != cooper.formulations.Lagrangian:
+    if formulation_type == cooper.formulations.QuadraticPenalty:
+        return cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater(
+            increment=PENALTY_INCREMENT, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
+        )
+    if formulation_type == cooper.formulations.AugmentedLagrangian:
         return cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
             growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
         )
