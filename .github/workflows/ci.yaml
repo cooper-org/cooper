@@ -38,10 +38,12 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
       - name: Install package & dependencies
-        run: pip install '.[tests]'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[tests]'
 
       - name: Launch tests & generate coverage report
-        run: coverage run -m pytest tests
+        run: python -m coverage run -m pytest tests
 
       - name: Coverage comment
         id: coverage_comment

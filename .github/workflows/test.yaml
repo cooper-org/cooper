@@ -38,11 +38,11 @@ jobs:
 
       - name: Install dependencies and PyTorch ${{ matrix.TORCH_VERSION }}
         run: |
-          pip install --upgrade pip
-          pip install torch==${{ matrix.TORCH_VERSION }} '.[tests]'
+          python -m pip install --upgrade pip
+          python -m pip install torch==${{ matrix.TORCH_VERSION }} '.[tests]'
 
       - name: Launch tests
         # Only run the unit tests, not the pipeline tests.
         # Pipeline tests are too expensive to run for every python/PyTorch version.
         # However, they are run as part the coverage job in the CI workflow
-        run: pytest --ignore=tests/pipeline tests
+        run: python -m pytest --ignore=tests/pipeline tests
