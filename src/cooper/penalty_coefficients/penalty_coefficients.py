@@ -18,6 +18,7 @@ class PenaltyCoefficient(abc.ABC):
     def __init__(self, init: torch.Tensor) -> None:
         if init.dim() > 1:
             raise ValueError("init must either be a scalar or a 1D tensor of shape `(num_constraints,)`.")
+        self.init = init.clone()
         self.value = init
 
     @property

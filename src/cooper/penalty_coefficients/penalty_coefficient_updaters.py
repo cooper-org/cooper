@@ -92,10 +92,9 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
     """Additive penalty coefficient updater for Augmented Lagrangian formulation.
     The penalty coefficient is updated by adding a constant value when the constraint
     violation is larger than a given tolerance.
-    Based on Algorithm 17.4 in Numerical Optimization by Nocedal and Wright.
 
     Args:
-        penalty_increment: The constant value by which the penalty coefficient is added when the
+        increment: The constant value by which the penalty coefficient is added when the
             constraint is violated beyond ``violation_tolerance``.
         violation_tolerance: The tolerance for the constraint violation. If the violation
             is smaller than this tolerance, the penalty coefficient is not updated.
@@ -103,14 +102,18 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             violation tensor). For equality constraints, the absolute violation is
             compared to the tolerance. All constraint types use the strict violation
             (when available) for the comparison.
+        has_restart: Whether to restart the penalty coefficient to its initial value when
+            the inequality constraint is satisfied. This is only applicable to inequality
+            constraints.
     """
 
-    def __init__(self, penalty_increment: float = 1.0, violation_tolerance: float = 1e-4) -> None:
+    def __init__(self, increment: float = 1.0, violation_tolerance: float = 1e-4, has_restart: bool = True) -> None:
         if violation_tolerance < 0.0:
             raise ValueError("Violation tolerance must be non-negative.")
 
-        self.penalty_increment = penalty_increment
+        self.increment = increment
         self.violation_tolerance = violation_tolerance
+        self.has_restart = has_restart
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
         _, strict_violation = constraint_state.extract_violations()
@@ -136,7 +139,12 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         # Update the penalty coefficient by adding a constant value when
         # the constraint violation is larger than the tolerance.
         # When the violation is less than the tolerance, the penalty value is left unchanged.
-        new_value = torch.where(condition, observed_penalty_values + self.penalty_increment, observed_penalty_values)
+        new_value = torch.where(condition, observed_penalty_values + self.increment, observed_penalty_values)
+
+        # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
+        if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
+            # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
+            new_value = torch.where(strict_violation == 0, penalty_coefficient.init, new_value)
 
         if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
