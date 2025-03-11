@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 import torch
 
-import cooper
 import testing
 
 DUAL_LR = 1e-2
@@ -26,7 +25,7 @@ class Model(torch.nn.Module):
         return torch.cat([getattr(self, f"params_{i}") for i in range(self.num_params)])
 
 
-def construct_cmp(multiplier_type, num_constraints, num_variables, device):
+def construct_cmp(multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device):
     generator = torch.Generator(device).manual_seed(0)
     A = torch.randn(num_constraints, num_variables, device=device, generator=generator)
     b = torch.randn(num_constraints, device=device, generator=generator)
@@ -35,21 +34,32 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
         num_variables=num_variables,
         has_ineq_constraint=True,
         ineq_multiplier_type=multiplier_type,
-        ineq_formulation_type=cooper.formulations.Lagrangian,
+        ineq_penalty_coefficient_type=penalty_coefficient_type,
+        ineq_formulation_type=formulation_type,
         A=A,
         b=b,
         device=device,
     )
 
 
-def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
+def test_checkpoint(
+    multiplier_type,
+    penalty_coefficient_type,
+    formulation_type,
+    use_multiple_primal_optimizers,
+    num_constraints,
+    num_variables,
+    device,
+):
     x = [torch.ones(num_variables, device=device)]
     if use_multiple_primal_optimizers:
         x = x[0].split(1)
     model = Model(x)
     model.to(device=device)
 
-    cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
+    cmp = construct_cmp(
+        multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device
+    )
 
     primal_optimizers = testing.build_primal_optimizers(list(model.parameters()))
     cooper_optimizer = testing.build_cooper_optimizer(
@@ -88,7 +98,9 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     cmp_state_dict_200 = cmp.state_dict()
 
     # ------------ Reload from 100-step checkpoint ------------
-    new_cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
+    new_cmp = construct_cmp(
+        multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device
+    )
     new_cmp.load_state_dict(cmp_state_dict_100)
 
     x = [torch.randn(num_variables, device=device)]
