@@ -13,9 +13,9 @@ def formulation_type(request):
 
 @pytest.fixture
 def penalty_coefficient(formulation_type):
-    if not formulation_type.expects_penalty_coefficient:
-        return None
-    return cooper.penalty_coefficients.DensePenaltyCoefficient(torch.ones(1))
+    if formulation_type.expects_penalty_coefficient:
+        return cooper.penalty_coefficients.DensePenaltyCoefficient(torch.ones(1))
+    return None
 
 
 @pytest.fixture
@@ -234,6 +234,14 @@ def test_cmp_dual_parameters(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     dual_parameters = list(cmp_instance.dual_parameters())
     assert len(dual_parameters) == len(list(eq_constraint.multiplier.parameters()))
+
+def test_cmp_to(cmp_instance, eq_constraint):
+    cmp_instance._register_constraint("test_constraint", eq_constraint)
+    cmp_instance.to(torch.float64)
+
+    assert cmp_instance._constraints["test_constraint"].multiplier.weight.dtype == torch.float64
+    if eq_constraint.penalty_coefficient is not None:
+        assert cmp_instance._constraints["test_constraint"].penalty_coefficient.value.dtype == torch.float64
 
 
 def test_cmp_state_dict(cmp_instance, eq_constraint):
