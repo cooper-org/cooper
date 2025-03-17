@@ -127,8 +127,19 @@ in `docs/source/notebooks`: one in `ipynb` format, and one in `md` format. The a
 is that it can be opened and executed directly in Colab; the advantage of the latter is that
 it makes it much easier to track diffs within version control.
 
+To create a new notebook which is automatically synced between the two formats, you can run the following command:
+
 ```bash
 pip install jupytext==1.16.4
+jupytext --set-formats ipynb,md:myst path/to/notebook.ipynb
+
+```
+
+Note that `pre-commit` will automatically ensure that the two formats are in sync.
+
+To manually sync them, you can run the following command:
+
+```bash
 jupytext --sync docs/source/notebooks/new_tutorial.ipynb
 ```
 
