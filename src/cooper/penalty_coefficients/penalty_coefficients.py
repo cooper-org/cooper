@@ -38,14 +38,9 @@ class PenaltyCoefficient(abc.ABC):
         self._value = value.clone()
         self.sanity_check()
 
-    def to(self, device: Optional[torch.device] = None, dtype: Optional[torch.dtype] = None) -> Self:
-        """Move the penalty coefficient to a new device and/or change its dtype.
-
-        Args:
-            device: The desired device of the penalty coefficient.
-            dtype: The desired dtype of the penalty coefficient.
-        """
-        self._value = self._value.to(device=device, dtype=dtype)
+    def to(self, *args: Any, **kwargs: Any) -> Self:
+        """Move the penalty coefficient to a new device and/or change its dtype."""
+        self._value = self._value.to(*args, **kwargs)
         return self
 
     def state_dict(self) -> dict:
