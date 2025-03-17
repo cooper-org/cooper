@@ -221,8 +221,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for multiplier in set(self.multipliers()):
             yield from multiplier.parameters()
 
-    def to(self, *args: str, **kwargs: str) -> Self:
-        # TODO: document, test
+    def to(self, *args: Any, **kwargs: Any) -> Self:
+        """Move the CMP to a new device and/or change the dtype of the multipliers and penalty coefficients."""
         for constraint in self.constraints():
             if constraint.multiplier is not None:
                 constraint.multiplier = constraint.multiplier.to(*args, **kwargs)
