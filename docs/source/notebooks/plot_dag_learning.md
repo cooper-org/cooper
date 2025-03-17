@@ -8,7 +8,7 @@ jupytext:
     jupytext_version: 1.16.7
 ---
 
-# Learning a Direct Acyclic Graph (DAG) on Data
+# Learning a Directed Acyclic Graph (DAG) on data.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_dag_learning.ipynb)
 
@@ -22,7 +22,6 @@ Consider the problem of learning a Directed Acyclic Graph (DAG) on data. This is
 ```
 
 ```{code-cell} ipython3
-import logging
 import math
 
 import matplotlib.pyplot as plt
@@ -40,19 +39,20 @@ import cooper
 Consider a $d$-dimensional random vector ${X_1, X_2, ..., X_d}$. Given $n$ observations of the random vector $X \in \mathbb{R}^{n \times d}$, we are interested in learning a DAG $G = (V, E)$ whose edges represent the dependencies between the variables. We model the DAG via an adjacency matrix $A \in \{0, 1\}^{d \times d}$, where $A_{ij} = 1$ if there is an edge from $X_i$ to $X_j$ and $A_{ij} = 0$ otherwise.
 
 This problem can be formulated as the following optimization problem:
-\begin{equation}
+
+$$
 \min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1,
 \quad s.t. \quad A \text{ is acyclic},
-\end{equation}
+$$
 
 where $\| \cdot \|_F$ is the Frobenius norm, $\lambda$ is a regularization parameter aimed at encougaing sparsity in the learned DAG, and the constraint ensures that the learned graph is acyclic.
 
 {cite:t}`NOTEARS` show that the acyclicity constraint can be formulated as $\text{tr}(e^{A}) = d$, where $e^{A}$ is the matrix exponential of $A$. This yields the following optimization problem:
 
-\begin{equation}
+$$
 \min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1,
 \quad s.t. \quad \text{tr}(e^{A}) = d.
-\end{equation}
+$$
 
 +++
 
@@ -60,11 +60,11 @@ where $\| \cdot \|_F$ is the Frobenius norm, $\lambda$ is a regularization param
 
 +++
 
-The generative process we use is this:
+The generative process we use is:
 
 $X_i \leftarrow \sum_{j \in \pi_i} X_j + \epsilon_i$
 
-where $\pi_i$ is the set of parents of $X_i$, and $\epsilon_i$ is a noise term.
+where $\pi_i$ is the set of parents of $X_i$, and $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$ is Gaussian noise.
 
 ```{code-cell} ipython3
 torch.manual_seed(0)
@@ -83,8 +83,8 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
         device: torch.device
 
     Returns:
-        torch.Tensor: X of shape (n, d)
-        torch.Tensor: A of shape (d, d)
+        torch.Tensor: Data (X) of shape (n, d)
+        torch.Tensor: Graph (A) of shape (d, d)
     """
     assert n_causes <= d
 
@@ -96,7 +96,9 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
     A = torch.zeros(d, d, device=device)
 
     for i in range(n_causes, d):
-        parents = torch.randperm(i)[: np.random.randint(1, i)]
+        # For i=1, the only possible parent is 0
+        parents = 0 if i == 1 else torch.randperm(i)[: np.random.randint(1, i)]
+
         A[i, parents] = 1
 
     assert torch.trace(torch.linalg.matrix_exp(A)).item() == d, "A is not a DAG"
@@ -122,9 +124,9 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
 
 We will use the {py:class}`~cooper.formulations.QuadraticPenalty` formulation to solve the problem. This leads to the following formulation of the constrained optimization problem:
 
-\begin{equation}
+$$
 \min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1 + \frac{c}{2}[\text{tr}(e^{A}) - d]^2,
-\end{equation}
+$$
 
 where $c$ is a penalty parameter. We will schedule the penalty parameter $c$ to increase over time in order to enforce the acyclicity constraint.
 
@@ -133,10 +135,10 @@ where $c$ is a penalty parameter. We will schedule the penalty parameter $c$ to 
 ### Data
 
 ```{code-cell} ipython3
-D = 10
-N = 1000
-N_CAUSES = 3
-NOISE_STD = 1e-1
+D = 4
+N = 5_000
+N_CAUSES = 1
+NOISE_STD = 1e-2
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Generate data
@@ -164,8 +166,8 @@ class DAGLearning(cooper.ConstrainedMinimizationProblem):
         )
 
     def compute_cmp_state(self, A: torch.Tensor) -> cooper.CMPState:
-        loss = torch.linalg.norm(self.X - self.X @ torch.sigmoid(A.T), ord="fro") ** 2
-        loss += self.lmbda * torch.linalg.norm(torch.sigmoid(A), ord=1)
+        loss = torch.linalg.norm(self.X - self.X @ A.T, ord="fro") ** 2
+        loss += self.lmbda * torch.linalg.norm(A, ord=1)
 
         constraint_value = torch.trace(torch.linalg.matrix_exp(A)) - self.d
         constraint_state = cooper.ConstraintState(violation=constraint_value)
@@ -178,10 +180,10 @@ class DAGLearning(cooper.ConstrainedMinimizationProblem):
 ```{code-cell} ipython3
 A = torch.nn.Parameter(torch.randn(D, D, device=DEVICE) / math.sqrt(D))
 
-LMBDA = 1e-1
-PRIMAL_LR = 1e-5
+LMBDA = 1e-3
+PRIMAL_LR = 1e-2
 MOMENTUM = 0.9
-N_STEPS = 1_000
+N_STEPS = 2_000
 
 cmp = DAGLearning(X, LMBDA)
 
@@ -190,17 +192,18 @@ constrained_optimizer = cooper.optim.UnconstrainedOptimizer(cmp=cmp, primal_opti
 
 # Multiply the penalty coefficient by `growth_factor` if the constraint is violated
 # by more than `violation_tolerance`
-penalty_scheduler = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
-    growth_factor=1.01,
+penalty_scheduler = cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater(
+    increment=1.0,
     violation_tolerance=1e-4,
 )
 
-logger = logging.getLogger("cooper")
+
+steps, losses, violations, penalty_coefficients = [], [], [], []  # for plotting
 for i in range(N_STEPS):
     roll_out = constrained_optimizer.roll(compute_cmp_state_kwargs={"A": A})
 
-    # Set the diagonal to zero to prevent self-loops
-    A.data.fill_diagonal_(0)
+    A.data.fill_diagonal_(0)  # set the diagonal to zero to prevent self-loops
+    A.data.clamp_(min=0, max=1)  # ensure that A is a valid adjacency matrix
 
     # Update the penalty coefficient
     constraint_state = roll_out.cmp_state.observed_constraints[cmp.constraint]
@@ -209,16 +212,13 @@ for i in range(N_STEPS):
     loss = roll_out.loss.item()
     violation = constraint_state.violation.item()
     primal_lagrangian = roll_out.primal_lagrangian_store.lagrangian.item()
-    penalty_coefficient_value = cmp.constraint.penalty_coefficient()
+    penalty_coefficient_value = cmp.constraint.penalty_coefficient().item()
 
-    if i % (N_STEPS // 10) == 0:
-        log = (
-            f"Step {i}, loss={loss:.4f}, violation={violation:.4f}, penalty_coefficient={penalty_coefficient_value:.4f}"
-        )
-        logger.info(log)
-
-final_log = f"Final loss: {loss:.4f}, violation: {violation:.4f}, penalty_coefficient: {penalty_coefficient_value:.4f}"
-logger.info(final_log)
+    if i % (N_STEPS // 100) == 0:
+        steps.append(i)
+        losses.append(loss)
+        violations.append(violation)
+        penalty_coefficients.append(penalty_coefficient_value)
 ```
 
 ### Results
@@ -235,7 +235,7 @@ def plot_adjacency(adjacency, gt_adjacency):
     plt.clf()
     _, (ax1, ax2, ax3) = plt.subplots(ncols=3, nrows=1)
 
-    kwargs = {"vmin": -1, "vmax": 1, "cmap": "Blues_r", "xticklabels": False, "yticklabels": False}
+    kwargs = {"vmin": 0, "vmax": 1, "cmap": "Blues", "xticklabels": False, "yticklabels": False}
     sns.heatmap(adjacency, ax=ax2, cbar=False, **kwargs)
     sns.heatmap(gt_adjacency, ax=ax3, cbar=False, **kwargs)
     sns.heatmap(adjacency - gt_adjacency, ax=ax1, cbar=False, **kwargs)
@@ -249,15 +249,38 @@ def plot_adjacency(adjacency, gt_adjacency):
     ax3.set_aspect("equal", adjustable="box")
 
     plt.show()
+
+
+def plot_progress(steps, losses, penalty_coefficients):
+    _, ax1 = plt.subplots(figsize=(5, 3))
+    ax2 = ax1.twinx()
+    ax1.plot(steps, losses, "tab:blue")
+    ax2.plot(steps, penalty_coefficients, "tab:red")
+
+    ax1.set_yscale("log")
+
+    ax1.set_xlabel("Steps", fontsize=12)
+    ax1.set_ylabel("Loss", color="tab:blue", labelpad=10, fontsize=16)
+    ax2.set_ylabel("Penalty coefficient", color="tab:red", labelpad=10, fontsize=16)
+
+    plt.show()
 ```
+
+## Results
+
++++
+
+The following plot shows the loss and penalty coefficient as a function of the number of iterations. We can observe the following:
+
+* The loss decreases over time and eventually plateaus, as expected due to the noisy data generation process.
+* The penalty coefficient increases throughout training to enforce the acyclicity constraint. This increase is more pronounced early on because the initial DAG is not acyclic. Later, as the loss-driven updates to the DAG lead to constraint violations, the penalty coefficient continues to rise.
 
 ```{code-cell} ipython3
-# Plot
-
-ROUND_A = torch.where(torch.sigmoid(A) < 1e-1, torch.zeros_like(A), torch.sigmoid(A))
-plot_adjacency(ROUND_A.cpu().detach().numpy(), A_TRUE.cpu().detach().numpy())
+plot_progress(steps, losses, penalty_coefficients)
 ```
 
-## References
-- NOTEARS
-- Seb's paper?
+The next plot shows the adjacency matrix of the learned DAG, compared to the ground truth DAG. We can observe that we are able to recover the true DAG structure.
+
+```{code-cell} ipython3
+plot_adjacency(A.cpu().detach().numpy(), A_TRUE.cpu().detach().numpy())
+```
