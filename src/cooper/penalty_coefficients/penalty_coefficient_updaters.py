@@ -72,15 +72,18 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             # For inequality constraints, we only consider the non-negative part of the violation.
             strict_violation = strict_violation.relu()
 
-        if observed_penalty_values.dim() == 0:
-            condition = strict_violation.norm() > self.violation_tolerance
-        else:
-            condition = strict_violation.abs() > self.violation_tolerance
+        is_scalar = observed_penalty_values.dim() == 0
+        violation_measure = strict_violation.norm() if is_scalar else strict_violation.abs()
+
+        # Check where the violation exceeds the allowed tolerance
+        violation_exceeds_tolerance = violation_measure > self.violation_tolerance
 
         # Update the penalty coefficient by multiplying it by the growth factor when
         # the constraint violation is larger than the tolerance. When the violation is
         # less than the tolerance, the penalty value is left unchanged.
-        new_value = torch.where(condition, observed_penalty_values * self.growth_factor, observed_penalty_values)
+        new_value = torch.where(
+            violation_exceeds_tolerance, observed_penalty_values * self.growth_factor, observed_penalty_values
+        )
 
         if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
@@ -131,20 +134,22 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             # For inequality constraints, we only consider the non-negative part of the violation.
             strict_violation = strict_violation.relu()
 
-        if observed_penalty_values.dim() == 0:
-            condition = strict_violation.norm() > self.violation_tolerance
-        else:
-            condition = strict_violation.abs() > self.violation_tolerance
+        is_scalar = observed_penalty_values.dim() == 0
+        violation_measure = strict_violation.norm() if is_scalar else strict_violation.abs()
 
-        # Update the penalty coefficient by adding a constant value when
-        # the constraint violation is larger than the tolerance.
-        # When the violation is less than the tolerance, the penalty value is left unchanged.
-        new_value = torch.where(condition, observed_penalty_values + self.increment, observed_penalty_values)
+        # Check where the violation exceeds the allowed tolerance
+        violation_exceeds_tolerance = violation_measure > self.violation_tolerance
+
+        # Increment penalty coefficients where violations exceed tolerance, leave unchanged otherwise
+        new_value = torch.where(
+            violation_exceeds_tolerance, observed_penalty_values + self.increment, observed_penalty_values
+        )
 
         # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
         if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
             # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
-            new_value = torch.where(strict_violation == 0, penalty_coefficient.init, new_value)
+            is_feasible = torch.eq(violation_measure, 0)
+            new_value = torch.where(is_feasible, penalty_coefficient.init, new_value)
 
         if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
