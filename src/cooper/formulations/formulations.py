@@ -29,7 +29,6 @@ class Formulation(abc.ABC):
 
     Raises:
         ValueError: If the constraint type is not equality or inequality.
-
     """
 
     expects_multiplier: bool
@@ -202,7 +201,6 @@ class QuadraticPenalty(Formulation):
         \tilde{\vh}(\vx)^2.
 
     It does not implement a dual Lagrangian since it does not consider dual variables.
-
     """
 
     expects_multiplier = False

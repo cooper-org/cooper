@@ -50,6 +50,8 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         has_restart: Whether to restart the penalty coefficient to its initial value when
             the inequality constraint is satisfied. This is only applicable to inequality
             constraints.
+
+    TODO: Add raises docs for ValueErrors
     """
 
     def __init__(
@@ -63,6 +65,7 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         self.has_restart = has_restart
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
+        """TODO: Add raises docs for TypeErrors"""
         _, strict_violation = constraint_state.extract_violations()
         _, strict_constraint_features = constraint_state.extract_constraint_features()
         penalty_coefficient = constraint.penalty_coefficient
@@ -120,6 +123,8 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         has_restart: Whether to restart the penalty coefficient to its initial value when
             the inequality constraint is satisfied. This is only applicable to inequality
             constraints.
+
+    TODO: Add raises docs for ValueErrors
     """
 
     def __init__(self, increment: float = 1.0, violation_tolerance: float = 1e-4, has_restart: bool = True) -> None:
@@ -131,6 +136,7 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         self.has_restart = has_restart
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
+        """TODO: Add raises docs for TypeErrors"""
         _, strict_violation = constraint_state.extract_violations()
         _, strict_constraint_features = constraint_state.extract_constraint_features()
         penalty_coefficient = constraint.penalty_coefficient

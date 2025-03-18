@@ -114,6 +114,8 @@ class nuPI(torch.optim.Optimizer):
                 ``InitType.SGD``, which matches the first step of SGD.
             maximize: whether to maximize the objective with respect to the parameters
                 instead of minimizing. Defaults to ``False``.
+
+        TODO: Add raises docs for ValueErrors
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")

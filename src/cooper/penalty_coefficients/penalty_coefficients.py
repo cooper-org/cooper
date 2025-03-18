@@ -10,6 +10,8 @@ class PenaltyCoefficient(abc.ABC):
 
     Args:
         init: Value of the penalty coefficient.
+
+    TODO: Add raises docs for ValueErrors
     """
 
     expects_constraint_features: bool
@@ -28,7 +30,10 @@ class PenaltyCoefficient(abc.ABC):
 
     @value.setter
     def value(self, value: torch.Tensor) -> None:
-        """Update the value of the penalty."""
+        """Update the value of the penalty.
+
+        TODO: Add raises docs for ValueErrors
+        """
         if value.requires_grad:
             raise ValueError("PenaltyCoefficient should not require gradients.")
         if self._value is not None and value.shape != self._value.shape:
@@ -56,6 +61,10 @@ class PenaltyCoefficient(abc.ABC):
         self._value = state_dict["value"]
 
     def sanity_check(self) -> None:
+        """Check that the penalty coefficient is well-formed.
+
+        TODO: Add raises docs for ValueErrors
+        """
         if torch.any(self._value < 0):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
@@ -94,6 +103,8 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
 
         Args:
             indices: Tensor of indices for which to return the penalty coefficient.
+
+        TODO: Add raises docs for ValueErrors
         """
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by

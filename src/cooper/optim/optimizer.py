@@ -103,6 +103,7 @@ class CooperOptimizer(abc.ABC):
         )
 
     def load_state_dict(self, state: CooperOptimizerState) -> None:
+        """TODO: Add raises docs for ValueErrors"""
         if len(state["primal_optimizer_states"]) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 

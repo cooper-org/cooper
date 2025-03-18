@@ -147,6 +147,8 @@ class ExtraSGD(ExtragradientOptimizer):
         dampening: Dampening for momentum.
         nesterov: If ``True``, enables Nesterov momentum.
 
+    TODO: Add raises docs for ValueErrors
+
     """
 
     def __init__(
@@ -223,6 +225,8 @@ class ExtraAdam(ExtragradientOptimizer):
         weight_decay: Weight decay (L2 penalty).
         amsgrad: Flag to use the AMSGrad variant of this algorithm from
             :cite:p:`reddi2018amsgrad`.
+
+    TODO: Add raises docs for ValueErrors
     """
 
     def __init__(
