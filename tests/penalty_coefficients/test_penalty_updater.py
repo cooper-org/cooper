@@ -55,7 +55,7 @@ def create_constraint_state(violations, num_constraints):
 )
 def test_initialization_with_negative_violation_tolerance(penalty_updater_type):
     with pytest.raises(ValueError, match=r"Violation tolerance must be non-negative."):
-        penalty_updater_type(violation_tolerance=VIOLATION_TOLERANCE)
+        penalty_updater_type(violation_tolerance=-VIOLATION_TOLERANCE)
 
 
 @pytest.mark.parametrize(
