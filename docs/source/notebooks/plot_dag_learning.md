@@ -13,7 +13,7 @@ jupytext:
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_dag_learning.ipynb)
 
 
-This tutorial considers the problem of learning a Directed Acyclic Graph (DAG) on data. This is a common problem in causal inference, where we are interested in learning the causal relationships between variables. In this notebook, we will demonstrate how to learn a DAG on data using a {py:class}`~cooper.formulations.QuadraticPenalty` formulation in **Cooper**.
+This tutorial considers the problem of learning a Directed Acyclic Graph (DAG) on data. This is a common problem in causal inference, where we are interested in learning the dependency relationships between variables. In this notebook, we will demonstrate how to learn a DAG on data using a {py:class}`~cooper.formulations.QuadraticPenalty` formulation in **Cooper**.
 
 ```{code-cell} ipython3
 %%capture
@@ -25,6 +25,7 @@ This tutorial considers the problem of learning a Directed Acyclic Graph (DAG) o
 import math
 
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import seaborn as sns
 import torch
@@ -42,7 +43,7 @@ This problem can be formulated as the following optimization problem:
 
 $$
 \min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1,
-\quad s.t. \quad A \text{ is acyclic},
+\quad \text{s.t.} \quad A \text{ is acyclic},
 $$
 
 where $\| \cdot \|_F$ is the Frobenius norm, $r$ is a regularization parameter aimed at encougaing sparsity in the learned DAG, and the constraint ensures that the learned graph is acyclic.
@@ -51,7 +52,7 @@ where $\| \cdot \|_F$ is the Frobenius norm, $r$ is a regularization parameter a
 
 $$
 \min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1,
-\quad s.t. \quad \text{tr}(e^{A}) = d.
+\quad \text{s.t.} \quad \text{tr}(e^{A}) = d.
 $$
 
 +++
@@ -67,8 +68,8 @@ $X_i \leftarrow \sum_{j \in \pi_i} X_j + \epsilon_i$
 where $\pi_i$ is the set of parents of $X_i$, and $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$ is Gaussian noise.
 
 ```{code-cell} ipython3
-torch.manual_seed(0)
-np.random.seed(0)
+torch.manual_seed(1)
+np.random.seed(1)
 
 
 def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch.device):
@@ -120,22 +121,10 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
     return X, A
 ```
 
-## Solving the Problem
-
-We will use the {py:class}`~cooper.formulations.QuadraticPenalty` formulation to solve the problem. This leads to the following formulation of the constrained optimization problem:
-
-$$
-\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1 + \frac{c}{2}[\text{tr}(e^{A}) - d]^2,
-$$
-
-where $c$ is a penalty parameter. We will schedule the penalty parameter $c$ to increase over time in order to enforce the acyclicity constraint.
-
-+++
-
-### Data
+Now we generate the data and visualize the underlying DAG.
 
 ```{code-cell} ipython3
-D = 4
+D = 5
 N = 5_000
 N_CAUSES = 1
 NOISE_STD = 1e-2
@@ -144,6 +133,35 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Generate data
 X, A_TRUE = generate_data(N, D, N_CAUSES, NOISE_STD, DEVICE)
 ```
+
+```{code-cell} ipython3
+# Visualize the graph
+G = nx.DiGraph()
+
+G.add_nodes_from(range(D))
+for i in range(D):
+    for j in range(D):
+        if A_TRUE[i, j] != 0:
+            G.add_edge(j, i)
+
+pos = nx.shell_layout(G)
+
+plt.figure(figsize=(5, 2))
+nx.draw(G, pos, with_labels=True, font_weight="bold")
+plt.show()
+```
+
+## Solving the Problem
+
+We will use the {py:class}`~cooper.formulations.QuadraticPenalty` formulation to solve the problem. This leads to the following formulation of the constrained optimization problem:
+
+$$
+\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1 + \frac{c}{2}[\text{tr}(e^{A}) - d]^2,
+$$
+
+where $c$ is a penalty parameter. We will use a {py:class}`cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater` to increase the penalty coefficient $c$ whenever the constraint is violated beyond a tolerance.
+
++++
 
 ### ConstrainedMinimizationProblem
 
@@ -240,8 +258,8 @@ def plot_adjacency(adjacency, gt_adjacency):
     sns.heatmap(gt_adjacency, ax=ax3, cbar=False, **kwargs)
     sns.heatmap(adjacency - gt_adjacency, ax=ax1, cbar=False, **kwargs)
 
+    ax1.set_title("Difference (Learned, GT)")
     ax2.set_title("Learned")
-    ax1.set_title("Learned - GT")
     ax3.set_title("Ground truth")
 
     ax1.set_aspect("equal", adjustable="box")
