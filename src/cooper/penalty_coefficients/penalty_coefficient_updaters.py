@@ -47,14 +47,20 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
             violation tensor). For equality constraints, the absolute violation is
             compared to the tolerance. All constraint types use the strict violation
             (when available) for the comparison.
+        has_restart: Whether to restart the penalty coefficient to its initial value when
+            the inequality constraint is satisfied. This is only applicable to inequality
+            constraints.
     """
 
-    def __init__(self, growth_factor: float = 1.01, violation_tolerance: float = 1e-4) -> None:
+    def __init__(
+        self, growth_factor: float = 1.01, violation_tolerance: float = 1e-4, has_restart: bool = True
+    ) -> None:
         if violation_tolerance < 0.0:
             raise ValueError("Violation tolerance must be non-negative.")
 
         self.growth_factor = growth_factor
         self.violation_tolerance = violation_tolerance
+        self.has_restart = has_restart
 
     def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
         _, strict_violation = constraint_state.extract_violations()
@@ -84,6 +90,12 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
         new_value = torch.where(
             violation_exceeds_tolerance, observed_penalty_values * self.growth_factor, observed_penalty_values
         )
+
+        # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
+        if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
+            # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
+            is_feasible = torch.eq(violation_measure, 0)
+            new_value = torch.where(is_feasible, penalty_coefficient.init, new_value)
 
         if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
             penalty_coefficient.value[strict_constraint_features] = new_value.detach()
