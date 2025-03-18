@@ -41,16 +41,16 @@ Consider a $d$-dimensional random vector ${X_1, X_2, ..., X_d}$. Given $n$ obser
 This problem can be formulated as the following optimization problem:
 
 $$
-\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1,
+\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1,
 \quad s.t. \quad A \text{ is acyclic},
 $$
 
-where $\| \cdot \|_F$ is the Frobenius norm, $\lambda$ is a regularization parameter aimed at encougaing sparsity in the learned DAG, and the constraint ensures that the learned graph is acyclic.
+where $\| \cdot \|_F$ is the Frobenius norm, $r$ is a regularization parameter aimed at encougaing sparsity in the learned DAG, and the constraint ensures that the learned graph is acyclic.
 
 {cite:t}`NOTEARS` show that the acyclicity constraint can be formulated as $\text{tr}(e^{A}) = d$, where $e^{A}$ is the matrix exponential of $A$. This yields the following optimization problem:
 
 $$
-\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1,
+\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1,
 \quad s.t. \quad \text{tr}(e^{A}) = d.
 $$
 
@@ -125,7 +125,7 @@ def generate_data(n: int, d: int, n_causes: int, noise_std: float, device: torch
 We will use the {py:class}`~cooper.formulations.QuadraticPenalty` formulation to solve the problem. This leads to the following formulation of the constrained optimization problem:
 
 $$
-\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + \lambda \|A\|_1 + \frac{c}{2}[\text{tr}(e^{A}) - d]^2,
+\min_{A \in \{0, 1\}^{d \times d}} \left\| X - XA \right\|_F^2 + r \|A\|_1 + \frac{c}{2}[\text{tr}(e^{A}) - d]^2,
 $$
 
 where $c$ is a penalty parameter. We will schedule the penalty parameter $c$ to increase over time in order to enforce the acyclicity constraint.
@@ -149,12 +149,12 @@ X, A_TRUE = generate_data(N, D, N_CAUSES, NOISE_STD, DEVICE)
 
 ```{code-cell} ipython3
 class DAGLearning(cooper.ConstrainedMinimizationProblem):
-    def __init__(self, X: torch.Tensor, lmbda: float):
+    def __init__(self, X: torch.Tensor, r: float):
         super().__init__()
 
         self.X = X
         self.n, self.d = X.shape
-        self.lmbda = lmbda
+        self.r = r
 
         penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(
             init=torch.tensor(1.0, device=X.device),
@@ -167,7 +167,7 @@ class DAGLearning(cooper.ConstrainedMinimizationProblem):
 
     def compute_cmp_state(self, A: torch.Tensor) -> cooper.CMPState:
         loss = torch.linalg.norm(self.X - self.X @ A.T, ord="fro") ** 2
-        loss += self.lmbda * torch.linalg.norm(A, ord=1)
+        loss += self.r * torch.linalg.norm(A, ord=1)
 
         constraint_value = torch.trace(torch.linalg.matrix_exp(A)) - self.d
         constraint_state = cooper.ConstraintState(violation=constraint_value)
@@ -180,12 +180,12 @@ class DAGLearning(cooper.ConstrainedMinimizationProblem):
 ```{code-cell} ipython3
 A = torch.nn.Parameter(torch.randn(D, D, device=DEVICE) / math.sqrt(D))
 
-LMBDA = 1e-3
+R = 1e-3
 PRIMAL_LR = 1e-2
 MOMENTUM = 0.9
 N_STEPS = 2_000
 
-cmp = DAGLearning(X, LMBDA)
+cmp = DAGLearning(X, R)
 
 primal_optimizer = torch.optim.SGD([A], lr=PRIMAL_LR, momentum=MOMENTUM)
 constrained_optimizer = cooper.optim.UnconstrainedOptimizer(cmp=cmp, primal_optimizers=primal_optimizer)
