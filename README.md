@@ -18,9 +18,11 @@
 
 **Cooper** is a library for solving constrained optimization problems in [PyTorch](https://github.com/pytorch/pytorch).
 
-**Cooper** implements several Lagrangian-based (first-order) update schemes that are applicable to a wide range of continuous constrained optimization problems. **Cooper** is mainly targeted for deep learning applications (where gradients are estimated based on mini-batches), but it is also suitable for general continuous constrained optimization.
+**Cooper** implements several Lagrangian-based (first-order) update schemes that are applicable to a wide range of continuous constrained optimization problems. **Cooper** is mainly targeted for deep learning applications, where gradients are estimated based on mini-batches, but it is also suitable for general continuous constrained optimization tasks.
 
-There exist other libraries for constrained optimization in PyTorch, like [CHOP](https://github.com/openopt/chop) and [GeoTorch](https://github.com/Lezcano/geotorch), but they rely on assumptions about the constraints (such as admitting efficient projection or proximal terms). These assumptions are often not met in modern machine learning problems. **Cooper** can be applied to a wider range of constrained optimization problems (including non-convex problems) thanks to its Lagrangian-based approach.
+There exist other libraries for constrained optimization in PyTorch, like [CHOP](https://github.com/openopt/chop) and [GeoTorch](https://github.com/Lezcano/geotorch), but they rely on assumptions about the constraints (such as admitting efficient projection or proximal operators). These assumptions are often not met in modern machine learning problems. **Cooper** can be applied to a wider range of constrained optimization problems (including non-convex problems) thanks to its Lagrangian-based approach.
+
+You can check out **Cooper**'s FAQ [here](https://cooper.readthedocs.io/en/latest/faq.html).
 
 TODO(juan43ramirez): mention Cooper MLOSS paper
 
@@ -58,22 +60,21 @@ pip install git+https://github.com/cooper-org/cooper@dev
 
 To use **Cooper**, you need to:
 
-- Implement a {py:class}`~cooper.ConstrainedMinimizationProblem` (CMP) class and its associated {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method. This method computes the objective value and constraint violations, and packages them in a {py:class}`~cooper.CMPState` object.
-- The initialization of the CMP must create a {py:class}`~cooper.constraints.Constraint` object for each constraint. Each constraint requires an associated {py:class}`~cooper.Multiplier` object corresponding to the Lagrange multipliers for that constraint. Additionally, it is necessary to specify a formulation type (e.g. {py:class}`~cooper.formulations.Lagrangian`).
-- Create a {py:class}`torch.optim.Optimizer` for the primal variables and a {py:class}`torch.optim.Optimizer(maximize=True)` for the dual variables (i.e. the multipliers). Then, wrap these two optimizers in a {py:class}`~cooper.optim.CooperOptimizer` (such as {py:class}`~cooper.optim.constrained_optimizer.SimultaneousOptimizer` for executing simultaneous primal-dual updates).
+- Implement a {py:class}`~cooper.ConstrainedMinimizationProblem` (CMP) class and its associated {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method. This method computes the value of the objective function and constraint violations, and packages them in a {py:class}`~cooper.CMPState` object.
+- The initialization of the CMP must create a {py:class}`~cooper.constraints.Constraint` object for each constraint. It is necessary to specify a formulation type (e.g. {py:class}`~cooper.formulations.Lagrangian`). Finally, if the chosen formulation requires it, each constraint needs an associated {py:class}`~cooper.Multiplier` object corresponding to the Lagrange multiplier for that constraint.
+- Create a {py:class}`torch.optim.Optimizer` for the primal variables and a {py:class}`torch.optim.Optimizer(maximize=True)` for the dual variables (i.e. the multipliers). Then, wrap these two optimizers in a {py:class}`cooper.optim.CooperOptimizer` (such as {py:class}`~cooper.optim.constrained_optimizer.SimultaneousOptimizer` for executing simultaneous primal-dual updates).
 - You are now ready to perform updates on the primal and dual parameters using the {py:meth}`cooper.optim.CooperOptimizer.roll` method. This method triggers the following calls:
   - {py:meth}`zero_grad` on both optimizers,
   - {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` on the CMP,
-  - compute the Lagrangian based on the latest {py:class}`~cooper.cmp.CMPState`
+  - compute the Lagrangian based on the latest {py:class}`~cooper.cmp.CMPState`,
   - {py:meth}`backward` on the Lagrangian,
   - {py:meth}`~torch.optim.Optimizer.step` on both optimizers.
-
-To access the value of the loss, constraint violations, and Lagrangian terms, you can inspect the returned {py:class}`~cooper.optim.RollOut` object from the call to {py:meth}`~cooper.optim.CooperOptimizer.roll`.
+- To access the value of the loss, constraint violations, and Lagrangian terms, you can inspect the returned {py:class}`~cooper.optim.RollOut` object from the call to {py:meth}`~cooper.optim.CooperOptimizer.roll`.
 
 ### Example
 
 This is an abstract example on how to solve a constrained optimization problem with
-**Cooper**. You can find runnable notebooks in our [**Tutorials**](https://cooper.readthedocs.io/en/master/notebooks/index.html).
+**Cooper**. You can find runnable notebooks with concrete examples in our [**Tutorials**](https://cooper.readthedocs.io/en/master/notebooks/index.html).
 
 ```python
 import cooper
@@ -124,7 +125,10 @@ for epoch_num in range(NUM_EPOCHS):
 
 ## Contributions
 
-Please read our [CONTRIBUTING](https://cooper.readthedocs.io/en/master/notebooks/CONTRIBUTING.html) guide prior to submitting a pull request. We use `ruff` for formatting and linting, and `mypy` for type checking.
+We appreciate all contributions. Please let us know if you encounter a bug by [filing an issue](https://github.com/cooper-org/cooper/issues).
+
+If you plan to contribute new features, utility functions, or extensions, please first open an issue and discuss the feature with us. To learn more about making a contribution to **Cooper**, please see our [Contribution page](https://cooper.readthedocs.io/en/master/notebooks/CONTRIBUTING.html).
+
 
 ## Acknowledgements
 
@@ -147,7 +151,3 @@ To cite **Cooper**, please cite [this paper](link-to-paper):
     year={2025}
 }
 ```
-
-## FAQ
-
-**Cooper**'s FAQ is available [here](https://cooper.readthedocs.io/en/latest/faq.html).
