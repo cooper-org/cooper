@@ -197,7 +197,7 @@ class QuadraticPenalty(Formulation):
     r"""The Quadratic Penalty formulation implements the following primal Lagrangian:
 
     .. math::
-        \Lag_{\text{primal}} = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
+        \Lag_{\text{primal}}(\vx) = f(\vx) + \frac{1}{2} \vc_{\vg}^\top \,
         \texttt{relu}(\tilde{\vg}(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \,
         \tilde{\vh}(\vx)^2.
 
@@ -254,8 +254,6 @@ class AugmentedLagrangian(Formulation):
 
     .. math::
         \Lag_{\text{dual}}(\vx, \vlambda, \vmu) = \vlambda^{\top} \vg(\vx) + \vmu^{\top} \vh(\vx).
-
-    TODO: Add tests for this formulation.
     """
 
     expects_multiplier = True
