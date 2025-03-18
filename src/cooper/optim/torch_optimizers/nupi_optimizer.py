@@ -116,6 +116,7 @@ class nuPI(torch.optim.Optimizer):
                 instead of minimizing. Defaults to ``False``.
 
         TODO: Add raises docs for ValueErrors
+        TODO: Add docs for warnings
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
