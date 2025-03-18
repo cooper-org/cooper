@@ -147,21 +147,23 @@ class ExtraSGD(ExtragradientOptimizer):
         dampening: Dampening for momentum.
         nesterov: If ``True``, enables Nesterov momentum.
 
-    TODO: Add raises docs for ValueErrors
-
+    Raises:
+        ValueError: If the learning rate, momentum, or weight decay are negative.
+        ValueError: If Nesterov momentum is enabled while momentum is set to zero or
+            dampening is not zero.
     """
 
     def __init__(
         self,
         params: Iterable,
-        lr: float,
+        lr: float = 1e-3,
         momentum: float = 0,
         dampening: float = 0,
         weight_decay: float = 0,
         nesterov: bool = False,
         maximize: bool = False,
     ) -> None:
-        if lr is None or lr < 0.0:
+        if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         if momentum < 0.0:
             raise ValueError(f"Invalid momentum value: {momentum}")
@@ -176,7 +178,7 @@ class ExtraSGD(ExtragradientOptimizer):
             "nesterov": nesterov,
             "maximize": maximize,
         }
-        if nesterov and (momentum <= 0 or dampening != 0):
+        if nesterov and (momentum == 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
         super().__init__(params, defaults)
 
@@ -226,7 +228,9 @@ class ExtraAdam(ExtragradientOptimizer):
         amsgrad: Flag to use the AMSGrad variant of this algorithm from
             :cite:p:`reddi2018amsgrad`.
 
-    TODO: Add raises docs for ValueErrors
+    Raises:
+        ValueError: If the learning rate or epsilon value is negative.
+        ValueError: If the beta parameters are not in the range [0, 1).
     """
 
     def __init__(
@@ -239,9 +243,9 @@ class ExtraAdam(ExtragradientOptimizer):
         amsgrad: bool = False,
         maximize: bool = False,
     ) -> None:
-        if not lr >= 0.0:
+        if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
-        if not eps >= 0.0:
+        if eps < 0.0:
             raise ValueError(f"Invalid epsilon value: {eps}")
         if not 0.0 <= betas[0] < 1.0:
             raise ValueError(f"Invalid beta parameter at index 0: {betas[0]}")

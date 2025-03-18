@@ -115,8 +115,17 @@ class nuPI(torch.optim.Optimizer):
             maximize: whether to maximize the objective with respect to the parameters
                 instead of minimizing. Defaults to ``False``.
 
-        TODO: Add raises docs for ValueErrors
-        TODO: Add docs for warnings
+        Raises:
+            ValueError: If the learning rate, or weight decay is negative.
+            ValueError: If the EMA coefficient is not in the range :math:`(-1, 1)`.
+            ValueError: If the initialization type is invalid.
+            NotImplementedError: If multiple parameter groups are used with non-scalar
+                proportional and integral gains.
+
+        Warnings:
+            If a negative proportional or integral gain is used.
+            If both proportional and integral gains are zero.
+            If the EMA coefficient is negative.
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")

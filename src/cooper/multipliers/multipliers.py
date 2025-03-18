@@ -73,7 +73,11 @@ class ExplicitMultiplier(Multiplier):
         precedence. Otherwise, the weight is initialized to :py:func:`torch.zeros` of
         shape ``(num_constraints,)``.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: If both ``num_constraints`` and ``init`` are ``None``.
+            ValueError: If both ``num_constraints`` and ``init`` are provided but the
+                shapes are inconsistent.
+            ValueError: If the provided``init`` is not a 1D tensor.
         """
         if num_constraints is None and init is None:
             raise ValueError("At least one of `num_constraints` and `init` must be provided.")
@@ -95,7 +99,9 @@ class ExplicitMultiplier(Multiplier):
     def sanity_check(self) -> None:
         """Ensures multipliers for inequality constraints are non-negative.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: If any entry in the multiplier is negative for inequality
+                constraints.
         """
         if self.constraint_type == ConstraintType.INEQUALITY and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
@@ -153,7 +159,8 @@ class IndexedMultiplier(ExplicitMultiplier):
             indices: Indices of the multipliers to return. The shape of ``indices`` must
                 be ``(num_indices,)``.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: If ``indices`` dtype is not ``torch.long``.
         """
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by

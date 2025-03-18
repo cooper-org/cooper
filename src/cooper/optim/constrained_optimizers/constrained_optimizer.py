@@ -55,8 +55,9 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
     def base_sanity_checks(self) -> None:
         """Performs sanity checks on the initialization of ``ConstrainedOptimizer``.
 
-        TODO: Add raises docs for ValueErrors
-        TODO: Add raises docs for TypeErrors
+        Raises:
+            TypeError: If no primal or dual optimizers are provided.
+            ValueError: If any dual optimizer is not configured with `maximize=True`.
         """
         if self.primal_optimizers is None:
             raise TypeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
