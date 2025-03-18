@@ -235,6 +235,7 @@ def test_cmp_dual_parameters(cmp_instance, eq_constraint):
     dual_parameters = list(cmp_instance.dual_parameters())
     assert len(dual_parameters) == len(list(eq_constraint.multiplier.parameters()))
 
+
 def test_cmp_to(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     cmp_instance.to(torch.float64)
