@@ -22,7 +22,7 @@
 
 There exist other libraries for constrained optimization in PyTorch, like [CHOP](https://github.com/openopt/chop) and [GeoTorch](https://github.com/Lezcano/geotorch), but they rely on assumptions about the constraints (such as admitting efficient projection or proximal operators). These assumptions are often not met in modern machine learning problems. **Cooper** can be applied to a wider range of constrained optimization problems (including non-convex problems) thanks to its Lagrangian-based approach.
 
-You can check out **Cooper**'s FAQ [here](https://cooper.readthedocs.io/en/latest/faq.html).
+You can check out **Cooper**'s FAQ [here](#faq).
 
 TODO(juan43ramirez): mention Cooper MLOSS paper
 
@@ -36,7 +36,6 @@ TODO(juan43ramirez): mention Cooper MLOSS paper
   - [Acknowledgements](#acknowledgements)
   - [License](#license)
   - [How to cite **Cooper**](#how-to-cite-cooper)
-  - [FAQ](#faq)
 
 
 ## Installation
@@ -142,6 +141,7 @@ We thank Manuel Del Verme, Daniel Otero, and Isabel Urrego for useful discussion
 ## How to cite **Cooper**
 
 To cite **Cooper**, please cite [this paper](link-to-paper):
+# TODO: Add paper link
 
 ```bibtex
 @misc{gallegoPosada2025cooper,

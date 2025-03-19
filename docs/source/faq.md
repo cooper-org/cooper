@@ -1,23 +1,13 @@
 # FAQ
 
-TODO: emojis?
-
-How can I tell if Cooper found a good solution?
-  As a reference, consider the solution of the unconstrained problem, which is a lower bound on the solution to the constrained problem
-  Nuance with the fact that you may not actually solve the problem in the nonconvex case
 Primal optimization pipeline
   Tune with unconstrained
+
 How to choose dual lr
   1e-3 to start
   If dual lr is Larger, pushing for feasibility faster.
   Relationship between mini-batch size, and the relative frequency of multiplier updates.
-Noise
-  What is noise? Constraints are estimated stochastically
-  Also makes it tricky to determine if you are feasible.
-  Difficult to achieve feasibility
-  Consider evaluating the constraints at the epoch level/averaging out constraints
-  Increase batch size
-  Variance reduction
+
 
 
 **What are common pitfalls when implementing a CMP?**
@@ -38,7 +28,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Where can I get help with <b>Cooper</b>?
   </summary>
   <div style="margin-left: 20px;">
@@ -47,7 +37,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Where can I learn more about constrained optimization?
   </summary>
   <div style="margin-left: 20px;">
@@ -59,7 +49,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 ### Formulations
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What problem formulations does <b>Cooper</b> support?
   </summary>
   <div style="margin-left: 20px;">
@@ -74,7 +64,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 ### Optimizers
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What is a good configuration for the primal optimizer?
   </summary>
   <div style="margin-left: 20px;">
@@ -83,7 +73,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What is a good configuration for the dual optimizer?
   </summary>
   <div style="margin-left: 20px;">
@@ -92,7 +82,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Which <b>Cooper</b> optimizer should I use?
   </summary>
   <div style="margin-left: 20px;">
@@ -103,7 +93,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 ### Debugging and troubleshooting
 
 <details>
-    <summary style="font-size: 1.2rem;">
+    <summary style="font-size: 1.1rem;">
     What behavior should I expect when solving a problem with <b>Cooper</b>?</summary>
     <div>
         <ol>
@@ -129,7 +119,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Why is my solution not becoming feasible?
   </summary>
   <div style="margin-left: 20px;">
@@ -141,7 +131,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Why is my objective function increasing? 😟
   </summary>
   <div style="margin-left: 20px;">
@@ -150,7 +140,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     How can I tell if <b>Cooper</b> found a "good" solution?
   </summary>
   <div style="margin-left: 20px;">
@@ -162,7 +152,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What should I log to monitor the progress of my optimization?
   </summary>
   <div style="margin-left: 20px;">
@@ -171,112 +161,163 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What do typical multiplier dynamics look like?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here. Complementary slackness.
+    <ul>
+      <li><b>Inequality constraints:</b>
+        <ul>
+          <li>If a constraint is violated, its corresponding Lagrange multiplier increases to penalize the violation.</li>
+          <li>If the constraint is strictly satisfied, the multiplier decreases, shifting focus toward minimizing the loss.</li>
+          <li>At convergence, the multipliers for strictly satisfied constraints should be zero, while those for violated constraints stabilize at a positive value.</li>
+        </ul>
+      </li>
+      <li><b>Equality constraints:</b>
+        <ul>
+          <li>If the constraint is violated, the multiplier increases (or decreases).</li>
+          <li>The multiplier stabilizes once the constraint is satisfied.</li>
+        </ul>
+      </li>
+    </ul>
   </div>
 </details>
 
-**What should I do if my Lagrange multipliers diverge?**
-> * Start by ensuring that your problem is feasible: for infeasible problems, the optimal Lagrange multipliers are infinite.
-> * Normally, the growth in the Lagrange multipliers (due to the accumulation of the violation) is accompanied by a "response" from the primal parameters moving towards feasibility. A lack of primal response could be due to the primal learning rate being too low.
-> * Having tuned the primal learning rate, a lack of primal response could indicate (i) that your problem is infeasible or (ii) that the constraint gradients are vanishing (impeding movement towards feasibility). In situation (ii), you may attempt reformulating the constraints to avoid the vanishing gradient.
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
+    What should I do if my Lagrange multipliers diverge?
+  </summary>
+  <div style="margin-left: 20px;">
+    <ol>
+      <li>If your problem does not have any feasible solutions, the Lagrange multipliers may grow indefinitely.</li>
+      <li>Typically, the growth of Lagrange multipliers is accompanied by a corresponding response from the primal parameters moving toward feasibility. If there is no response from the primal parameters, it could be due to the primal learning rate being too low.</li>
+      <li>If the primal learning rate is properly tuned and there is still no response, this may indicate one of the following:
+        <ul>
+          <li>The problem is infeasible.</li>
+          <li>The constraint gradients are vanishing, impeding movement toward feasibility. In this case, you may try reformulating the constraints to avoid vanishing gradients.</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+</details>
+
+<details>
+  <summary style="font-size: 1.1rem;">
     What should I do if my Lagrange multipliers oscillate too much?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Oscillations in Lagrange multipliers are common due to the game structure of the Lagrangian formulation, where feasibility and optimality must be balanced. However, if the oscillations become too severe, try the following:
+    <ol>
+      <li>Decrease one or both of the primal and dual learning rates.</li>
+      <li>Consider a different dual optimizer, such as <a href="https://cooper.readthedocs.io/en/latest/torch_optimizers.html#nupi">nuPI</a>, which is designed to mitigate oscillations.</li>
+    </ol>
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What should I do if my Lagrange multipliers are too noisy?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Stochastic constraint estimation, such as when constraints depend on training data and are estimated from mini-batches, can introduce noise in the Lagrange multipliers. This stochasticity makes it difficult to determine feasibility, as a constraint may be satisfied for some stochastic samples but not others, leading to erratic multiplier updates.
+
+    If you're experiencing noisy multipliers, consider these strategies:
+    <ol>
+      <li>Evaluate constraints at the epoch level or average them across multiple epochs to smooth the estimates.</li>
+      <li>Increase the batch size to reduce variance in constraint estimations.</li>
+      <li>Use variance reduction techniques like SAGA or SVRG. These methods compute aggregate constraint measurements across mini-batches, providing more stable multiplier updates.</li>
+    </ol>
   </div>
 </details>
+
 
 ### Computational considerations
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Is <b>Cooper</b> computationally expensive?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    <b>Cooper</b> is computationally efficient:
+    <ul>
+      <li>It requires only a few additional forward and backward passes to compute the Lagrangian.</li>
+      <li>It relies on PyTorch for automatic differentiation and GPU acceleration.</li>
+    </ul>
   </div>
 </details>
 
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Does <b>Cooper</b> support GPU acceleration?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Yes, <b>Cooper</b> supports GPU acceleration through PyTorch.
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Does <b>Cooper</b> support DDP execution?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Currently, <b>Cooper</b> does not support DDP execution, but we have plans to implement this in the future.
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Does <b>Cooper</b> support AMP?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    We have not tested <b>Cooper</b> with AMP, so we cannot guarantee that it operates as expected.
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     What if my problem has a lot of constraints?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here. IndexedMultipliers, ImplicitMultipliers, etc.
+    If your problem involves a large number of constraints, you can utilize <b>IndexedMultipliers</b> or <b>ImplicitMultipliers</b>. This approach allows you to model the multipliers with fewer parameters, making the problem more manageable and efficient to solve.
   </div>
-
-### Advanced topics
-
+</details>
 
 ### Miscellaneous
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     How do I cite <b>Cooper</b>?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    To cite <b>Cooper</b>, please cite [this paper](link-to-paper):
+    #TODO: Add link to paper
+
+    @misc{gallegoPosada2025cooper,
+        author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
+        title={{Cooper: A Library for Constrained Optimization in Deep Learning}},
+        howpublished={\url{https://github.com/cooper-org/cooper}},
+        year={2025}
+    }
+    
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Is there a JAX version of <b>Cooper</b>?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here.
+    Not at the moment, but we’d love to see a JAX version of Cooper!
   </div>
 </details>
 
 <details>
-  <summary style="font-size: 1.2rem;">
+  <summary style="font-size: 1.1rem;">
     Is there a TensorFlow version of <b>Cooper</b>?
   </summary>
   <div style="margin-left: 20px;">
-    Answer here. TFCO is a good alternative.
+    Not exactly, but you can use TensorFlow Constrained Optimization (TFCO) for similar functionality.
   </div>
 </details>
