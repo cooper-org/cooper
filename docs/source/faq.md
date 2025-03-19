@@ -55,8 +55,9 @@ Autograd differentiable objective and constraints (or non-differentiable constra
   <div style="margin-left: 20px;">
     <b>Cooper</b> supports the following formulations:
     <ul>
-      <li><a href="https://cooper.readthedocs.io/en/latest/lagrangian_formulation.html#lagrangian-formulation">Lagrangian Formulation.</a></li>
-      <li><a href="https://cooper.readthedocs.io/en/latest/lagrangian_formulation.html#augmented-lagrangian-formulation">Augmented Lagrangian Formulation.</a></li>
+      <li><a href="https://cooper.readthedocs.io/en/latest/formulations.html#lagrangian-formulations">Lagrangian Formulation.</a></li>
+      <li><a href="https://cooper.readthedocs.io/en/latest/formulations.html#quadratic-penalty-formulations">Quadratic Penalty Formulation.</a></li>
+      <li><a href="https://cooper.readthedocs.io/en/latest/formulations.html#augmented-lagrangian-formulations">Augmented Lagrangian Formulation.</a></li>
     </ul>
   </div>
 </details>
@@ -83,7 +84,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 
 <details>
   <summary style="font-size: 1.1rem;">
-    Which <b>Cooper</b> optimizer should I use?
+    Which <b>Cooper</b> constrained optimizer should I use?
   </summary>
   <div style="margin-left: 20px;">
     <b>Cooper</b> provides a range of CooperOptimizers to choose from. The <b>AlternatingDualPrimalOptimizer</b> is a good starting point. For details, <a href=https://cooper.readthedocs.io/en/latest/optim.html>see</a>.
@@ -239,14 +240,19 @@ Autograd differentiable objective and constraints (or non-differentiable constra
     Is <b>Cooper</b> computationally expensive?
   </summary>
   <div style="margin-left: 20px;">
-    <b>Cooper</b> is computationally efficient:
+    No, <b>Cooper</b> is computationally efficient, comparable to solving unconstrained minimization problems in PyTorch. The only additional cost is the storage and updating of the Lagrange multipliers, which is generally negligible in large-scale machine learning applications.
+
+    In terms of computation, <b>Cooper</b> does not require extra forward or backward passes compared to an unconstrained problem:
     <ul>
-      <li>It requires only a few additional forward and backward passes to compute the Lagrangian.</li>
-      <li>It relies on PyTorch for automatic differentiation and GPU acceleration.</li>
+      <li>The forward pass computes the Lagrangian by evaluating both the loss and constraints. In many cases, such as when the constraint depends on the model's output, the computational graph for the loss and constraints is largely shared. Additionally, the Lagrangian is a linear combination of the loss and constraints, making it inexpensive to compute.</li>
+      <li>The backward pass backpropagates through the loss and constraints, which is already required when minimizing the loss. The gradient of the Lagrangian with respect to the multipliers corresponds to the constraint violations themselves, so no additional backward passes or gradients are needed to update the multipliers. Only the already evaluated constraint violations are used.</li>
     </ul>
+
+    Additionally, <b>Cooper</b> takes advantage of PyTorch's autograd functionality and GPU acceleration for these operations.
+
+    In terms of storage, you need to store the value of each Lagrange multiplier (one per constraint). This storage requirement is typically negligible unless the number of constraints exceeds the model or data sizes.
   </div>
 </details>
-
 
 <details>
   <summary style="font-size: 1.1rem;">
@@ -280,7 +286,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
     What if my problem has a lot of constraints?
   </summary>
   <div style="margin-left: 20px;">
-    If your problem involves a large number of constraints, you can utilize <b>IndexedMultipliers</b> or <b>ImplicitMultipliers</b>. This approach allows you to model the multipliers with fewer parameters, making the problem more manageable and efficient to solve.
+    If your problem involves a large number of constraints, you can use <a href="https://cooper.readthedocs.io/en/latest/multipliers.html#indexed-multipliers">IndexedMultipliers</a> or <a href="https://cooper.readthedocs.io/en/latest/multipliers.html#implicit-multipliers">ImplicitMultipliers</a>. The former allows for efficient indexing of the multiplier object, while the latter avoids explicitly storing them by considering a parametric representation instead.
   </div>
 </details>
 
@@ -300,7 +306,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
         howpublished={\url{https://github.com/cooper-org/cooper}},
         year={2025}
     }
-    
+
   </div>
 </details>
 
