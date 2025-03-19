@@ -102,32 +102,71 @@ Autograd differentiable objective and constraints (or non-differentiable constra
 
 ### Debugging and troubleshooting
 
-**Why is my solution not becoming feasible?**
+<details>
+    <summary style="font-size: 1.2rem;">
+    What behavior should I expect when solving a problem with <b>Cooper</b>?</summary>
+    <div>
+        <ol>
+            <li><b>If the initial solution is feasible:</b>
+                <ul>
+                    <li>The loss will decrease.</li>
+                    <li>Multipliers will remain at 0.</li>
+                    <li>However, reducing the loss may sometimes introduce constraint violations, leading to behavior similar to the <i>infeasible case</i>.</li>
+                </ul>
+            </li>
+            <li><b>If the initial solution is infeasible:</b>
+                <ul>
+                    <li>The loss will initially decrease while multipliers "warm up."</li>
+                    <li>As multipliers increase in magnitude, constraint violations should reduce. However, this may lead the loss to temporarily rise.</li>
+                    <li>Once feasibility is reached, the loss should begin decreasing again.</li>
+                    <li>If a constraint violation switches signs (e.g., an inequality becomes strictly satisfied), the corresponding multiplier should decrease. For inequalities, it may reach 0.</li>
+                    <li>Eventually, both the loss and constraint violations should stabilize at an equilibrium.</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+</details>
 
-> Start by assessing the feasibility of your problem. You may establish the feasibility of your problem by inspecting the constraints. Alternatively, you may try to solve a "feasibility problem" (by removing the loss). However, note that determining feasibility for a non-convex constrained optimization problem is intractable in general.
->
-> Once you have determined your problem is feasible, monitor the progress of the model becoming feasible. If the primal parameters are not moving fast enough towards feasibility, you may need to tune (increase) the dual learning rate.
+
+<details>
+  <summary style="font-size: 1.2rem;">
+    Why is my solution not becoming feasible?
+  </summary>
+  <div style="margin-left: 20px;">
+    <ol>
+      <li><b>Assess whether your problem has feasible points</b>. If this cannot be determined from examining the constraints, try solving a "relaxed" version of the problem, where you focus only on finding feasible solutions without minimizing the loss. If you cannot find a feasible solution, your problem may be infeasible.</li>
+      <li>Once you've confirmed feasibility, monitor the model's progress toward it. <b>If the primal parameters are not moving sufficiently fast toward feasibility, try adjusting (increasing) the dual learning rate</b> to apply more pressure on achieving feasibility.</li>
+    </ol>
+  </div>
+</details>
 
 <details>
   <summary style="font-size: 1.2rem;">
     Why is my objective function increasing? 😟
   </summary>
   <div style="margin-left: 20px;">
-    There are several reasons why this might happen. But the most common one is that the dual learning rate is too high. Try reducing it.
+    <b>It is common for the loss to temporarily increase when solving constrained optimization problems</b>, particularly when constraints are violated. This occurs because the drive for feasibility can conflict with minimizing the loss, causing a brief increase in the objective. However, as the optimization progresses, the loss should stabilize and potentially decrease, as the variables strike a balance between ensuring feasibility and achieving optimality.
   </div>
 </details>
 
-**How can I tell if Cooper found a "good" solution?**
-> As a reference, consider the solution of the unconstrained problem, which is a lower bound on the solution to the constrained problem
-> Nuance with the fact that you may not actually solve the problem in the nonconvex case
+<details>
+  <summary style="font-size: 1.2rem;">
+    How can I tell if <b>Cooper</b> found a "good" solution?
+  </summary>
+  <div style="margin-left: 20px;">
+  Consider the solution to the unconstrained version of the problem (with the same objective). This solution provides a lower bound for the constrained problem, as it can optimize the objective without needing to satisfy the constraints. Thus, <b>if Cooper's solution to the constrained problem is close to the unconstrained solution, it is likely a good one</b>.
 
+  However, for nonconvex problems, the solutions found for either problem may not be globally optimal, making such assessments more challenging.
+
+  </div>
+</details>
 
 <details>
   <summary style="font-size: 1.2rem;">
-    What quantities should I log for sanity-checking?
+    What should I log to monitor the progress of my optimization?
   </summary>
   <div style="margin-left: 20px;">
-    Log the loss, the constraint violations, the multiplier values, and the Lagrangian.
+    Log the loss, constraint violations, multiplier values, and the Lagrangian.
   </div>
 </details>
 
