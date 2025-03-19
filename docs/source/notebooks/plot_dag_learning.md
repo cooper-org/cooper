@@ -208,8 +208,8 @@ cmp = DAGLearning(X, R)
 primal_optimizer = torch.optim.SGD([A], lr=PRIMAL_LR, momentum=MOMENTUM)
 constrained_optimizer = cooper.optim.UnconstrainedOptimizer(cmp=cmp, primal_optimizers=primal_optimizer)
 
-# Multiply the penalty coefficient by `growth_factor` if the constraint is violated
-# by more than `violation_tolerance`
+# Increase the penalty coefficient by `increment` if the constraint is violate by more
+# than `violation_tolerance`
 penalty_scheduler = cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater(
     increment=1.0,
     violation_tolerance=1e-4,
@@ -229,7 +229,6 @@ for i in range(N_STEPS):
 
     loss = roll_out.loss.item()
     violation = constraint_state.violation.item()
-    primal_lagrangian = roll_out.primal_lagrangian_store.lagrangian.item()
     penalty_coefficient_value = cmp.constraint.penalty_coefficient().item()
 
     if i % (N_STEPS // 100) == 0:
