@@ -138,6 +138,10 @@ We thank Manuel Del Verme, Daniel Otero, and Isabel Urrego for useful discussion
 **Cooper** is distributed under an MIT license, as found in the
 [LICENSE](https://github.com/cooper-org/cooper/tree/master/LICENSE) file.
 
+## Discord Server
+
+To join our Discord server, click [here](https://discord.gg/Aq5PjH8m6E).
+
 ## How to cite **Cooper**
 
 To cite **Cooper**, please cite [this paper](link-to-paper):
