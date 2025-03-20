@@ -141,7 +141,7 @@ We thank Manuel Del Verme, Daniel Otero, and Isabel Urrego for useful discussion
 ## How to cite **Cooper**
 
 To cite **Cooper**, please cite [this paper](link-to-paper):
-# TODO: Add paper link
+TODO: Add paper link
 
 ```bibtex
 @misc{gallegoPosada2025cooper,

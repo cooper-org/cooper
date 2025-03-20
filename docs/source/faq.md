@@ -69,7 +69,7 @@ Autograd differentiable objective and constraints (or non-differentiable constra
     What is a good configuration for the primal optimizer?
   </summary>
   <div style="margin-left: 20px;">
-    You can use whichever optimizer you prefer for your task, e.g., SGD, Adam, ...
+    <b>Cooper</b> works with any PyTorch optimizer. We recommend using the same optimizer as in the unconstrained version of your problem to avoid redesigning the primal optimization scheme. This allows you to focus on tuning the dual optimizer.
   </div>
 </details>
 
@@ -78,7 +78,11 @@ Autograd differentiable objective and constraints (or non-differentiable constra
     What is a good configuration for the dual optimizer?
   </summary>
   <div style="margin-left: 20px;">
-    For the dual optimizer, we recommend starting with SGD. If the dual learning rate is difficult to tune or if the Lagrange multipliers present oscillations, we recommend using <a href="TODO">nuPI</a>.
+  <ul>
+    <li><b>Gradient ascent (SGD)</b> is the simplest and most intuitive choice, where multipliers accumulate constraint violations.</li>
+    <li>However, it can cause <b>oscillations</b> in the multipliers. To mitigate this, consider using <a href="https://cooper.readthedocs.io/en/latest/torch_optimizers.html#nupi"><b>nuPI</b></a>, which is specifically designed to <b>stabilize multiplier dynamics</b>.</li>
+    <li><b>Important Note:</b> Momentum can <b>exacerbate oscillations</b> in multipliers and is generally detrimental when optimizing dual variables in constrained optimization (<a href="https://arxiv.org/abs/2406.04558">Sohrabi et al., 2024</a>).</li>
+  </ul>
   </div>
 </details>
 
