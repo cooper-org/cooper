@@ -5,3 +5,17 @@
 .rst-content .theorem {
     background: #ded9f1ea
 }
+
+details {
+    margin: 10px 0;
+}
+
+summary {
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+details div {
+    margin-top: 10px;
+    margin-left: 1rem;
+}
