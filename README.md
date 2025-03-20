@@ -35,6 +35,7 @@ TODO(juan43ramirez): mention Cooper MLOSS paper
   - [Contributions](#contributions)
   - [Acknowledgements](#acknowledgements)
   - [License](#license)
+  - [Discord Server](#discord-server)
   - [How to cite **Cooper**](#how-to-cite-cooper)
 
 

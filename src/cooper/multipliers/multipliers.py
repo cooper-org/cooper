@@ -36,8 +36,8 @@ class Multiplier(torch.nn.Module, abc.ABC):
 
 
 class ExplicitMultiplier(Multiplier):
-    """An ExplicitMultiplier holds a :py:class:`~torch.nn.parameter.Parameter` which
-    explicitly contains the value of the Lagrange multipliers associated with a
+    """An ExplicitMultiplier holds a :py:class:`torch.nn.parameter.Parameter` (`weight`)
+    which explicitly contains the value of the Lagrange multipliers associated with a
     :py:class:`~cooper.constraints.Constraint` in a
     :py:class:`~cooper.cmp.ConstrainedMinimizationProblem`.
 
@@ -75,9 +75,9 @@ class ExplicitMultiplier(Multiplier):
 
         Raises:
             ValueError: If both ``num_constraints`` and ``init`` are ``None``.
-            ValueError: If both ``num_constraints`` and ``init`` are provided but the
-                shapes are inconsistent.
-            ValueError: If the provided``init`` is not a 1D tensor.
+            ValueError: If both ``num_constraints`` and ``init`` are provided but
+                their shapes are inconsistent.
+            ValueError: If the provided ``init`` is not a 1D tensor.
         """
         if num_constraints is None and init is None:
             raise ValueError("At least one of `num_constraints` and `init` must be provided.")
@@ -100,8 +100,8 @@ class ExplicitMultiplier(Multiplier):
         """Ensures multipliers for inequality constraints are non-negative.
 
         Raises:
-            ValueError: If any entry in the multiplier is negative for inequality
-                constraints.
+            ValueError: If the multiplier is associated with an inequality constraint
+                and any of its entries is negative.
         """
         if self.constraint_type == ConstraintType.INEQUALITY and torch.any(self.weight.data < 0):
             raise ValueError("For inequality constraint, all entries in multiplier must be non-negative.")
@@ -178,7 +178,7 @@ class IndexedMultiplier(ExplicitMultiplier):
 class ImplicitMultiplier(Multiplier):
     """An implicit multiplier is a :py:class:`torch.nn.Module` that computes the value
     of a Lagrange multiplier associated with a
-    :py:class:`~cooper.constraints.Constraint` based on "features" for each
+    :py:class:`~cooper.constraints.Constraint` based on the "features" for each
     constraint. The multiplier is *implicitly* represented by its parameters.
     """
 
