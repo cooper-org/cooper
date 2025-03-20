@@ -4,12 +4,18 @@
 
 We encourage contributions to **Cooper**.
 
-Some things that we would like to see in the future, but have not yet had time to implement, are:
+:::{admonition} Future Plans
+:class: note
 
-TODO:
-- More tutorials showing how to use **Cooper** in non-deep learning applications.
-- Implementing **Penalty methods** such as the quadratic penalty method; not currently implemented.
-- Implementing **Interior-point methods** (not currently implemented).
+We aim to expand **Cooper** with several new features, and would love your help! Some of the features we are considering are:
+
+- **More tutorials**, especially on using **Cooper** beyond deep learning applications.
+- **New problem formulations**, such as the **Interior-point methods** {cite:p}`bertsekas1999NonlinearProgramming`.
+- Native **Distributed Data Parallel** (DDP) and **Automatic Mixed Precision** (AMP) support.
+- **A JAX version of Cooper**.
+- **Lightning integration**.
+
+:::
 
 ## How to contribute
 
@@ -18,12 +24,11 @@ Please follow these steps to contribute:
 1. If you plan to contribute new features, please first open an issue and discuss the feature with us.
 
 2. Fork the **Cooper** repository by clicking the **Fork** button on the
-   [repository page](http://www.github.com/cooper-org/cooper). This creates
-   a copy of the **Cooper** repository in your own account.
+   [repository page](http://www.github.com/cooper-org/cooper).
 
 3. Install Python >= 3.9 locally in order to run tests.
 
-4. `pip` installing your fork from source. This allows you to modify the code
+4. `pip` install your fork from source. This allows you to modify the code
    and immediately test it out:
     ```bash
     git clone https://github.com/YOUR_USERNAME/cooper
@@ -54,7 +59,7 @@ Please follow these steps to contribute:
 
    ```bash
    pip install pre-commit
-   pre-commit run --all
+   pre-commit run --all-files
    ```
 
 8. Make sure the tests pass by running the following command from the top of
@@ -111,7 +116,7 @@ clear and has sufficient instructions to be able to reproduce the issue.
 ## Code Style
 
 We use [ruff](https://docs.astral.sh/ruff/) for linting, formatting and import sorting. We ask for type hints for all code committed to **Cooper** and check for compliance with [mypy](https://mypy.readthedocs.io/).
-The CI system should check this when you submit your pull requests.
+The continuous integration system should check this when you submit your pull requests.
 The easiest way to run these checks locally is via the
 [pre-commit](https://pre-commit.com/) framework:
 
@@ -120,17 +125,15 @@ pip install pre-commit
 pre-commit run --all-files
 ```
 
-## Update notebooks
+## Tutorial notebooks
 
 We use [jupytext](https://jupytext.readthedocs.io/) to maintain two synced copies of the notebooks
 in `docs/source/notebooks`: one in `ipynb` format, and one in `md` format. The advantage of the former
-is that it can be opened and executed directly in Colab; the advantage of the latter is that
-it makes it much easier to track diffs within version control.
+is that it can be opened and executed directly in Google Colab; while the latter is useful to track diffs within version control.
 
-To create a new notebook which is automatically synced between the two formats, first create a new notebook `path/to/notebook.ipynb`. Ensure that it has at least one cell, and then run the following command:
+To create a new notebook which is automatically synced between the two formats, first create a jupyter notebook `path/to/notebook.ipynb`. Ensure that it has at least one cell, and then run the following command:
 
 ```bash
-pip install jupytext==1.16.4
 jupytext --set-formats ipynb,md:myst path/to/notebook.ipynb
 ```
 
@@ -139,7 +142,7 @@ Note that `pre-commit` will automatically ensure that the two formats are in syn
 To manually sync them, you can run the following command:
 
 ```bash
-jupytext --sync docs/source/notebooks/new_tutorial.ipynb
+jupytext --sync path/to/notebook.ipynb
 ```
 
 The jupytext version should match that specified in
@@ -180,8 +183,11 @@ You can then see the generated documentation in `docs/source/build/html/index.ht
 The `-j auto` option controls the parallelism of the build. You can use a number
 in place of `auto` to control how many CPU cores to use.
 
-To re-build the documentation automatically upon changes, you can use previous commands
-changing `sphinx-build` for `sphinx-autobuild`:
+:::{note}
+:class: note
+To re-build the documentation automatically upon changes, you can use the previous commands
+while changing `sphinx-build` for `sphinx-autobuild`:
+:::
 
 ```
 sphinx-autobuild -b html docs/source docs/source/build/html -j auto
