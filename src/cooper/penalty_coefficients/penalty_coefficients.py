@@ -11,7 +11,8 @@ class PenaltyCoefficient(abc.ABC):
     Args:
         init: Value of the penalty coefficient.
 
-    TODO: Add raises docs for ValueErrors
+    Raises:
+        ValueError: If ``init`` has more than one dimension.
     """
 
     expects_constraint_features: bool
@@ -32,7 +33,10 @@ class PenaltyCoefficient(abc.ABC):
     def value(self, value: torch.Tensor) -> None:
         """Update the value of the penalty.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: if the provided ``value`` has a different shape than the
+                existing one or contains negative entries.
+
         """
         if value.requires_grad:
             raise ValueError("PenaltyCoefficient should not require gradients.")
@@ -44,7 +48,7 @@ class PenaltyCoefficient(abc.ABC):
         self.sanity_check()
 
     def to(self, *args: Any, **kwargs: Any) -> Self:
-        """Move the penalty coefficient to a new device and/or change its dtype."""
+        """Move the penalty coefficient to a new device and/or change its ``dtype``."""
         self._value = self._value.to(*args, **kwargs)
         return self
 
@@ -63,7 +67,8 @@ class PenaltyCoefficient(abc.ABC):
     def sanity_check(self) -> None:
         """Check that the penalty coefficient is well-formed.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: If the penalty coefficient contains negative entries.
         """
         if torch.any(self._value < 0):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
@@ -104,7 +109,8 @@ class IndexedPenaltyCoefficient(PenaltyCoefficient):
         Args:
             indices: Tensor of indices for which to return the penalty coefficient.
 
-        TODO: Add raises docs for ValueErrors
+        Raises:
+            ValueError: If ``indices`` is not of type ``torch.long``.
         """
         if indices.dtype != torch.long:
             # Not allowing for boolean "indices", which are treated as indices by
