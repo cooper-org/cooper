@@ -1,9 +1,9 @@
 name: Tests
 
 on:
-  workflow_run:
-    workflows: [ "Continuous Integration" ]
-    types: [ completed ]
+  pull_request:
+  push:
+    branches: [ master ]
 
 concurrency:
   # github.workflow: name of the workflow
@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   ci:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     name: Check coverage
     permissions:
