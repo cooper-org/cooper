@@ -55,12 +55,6 @@ class Constraint:
             raise ValueError("Cannot set the name of a constraint more than once.")
         self._name = name
 
-    @name.getter
-    def name(self) -> str:
-        if self._name is None:
-            raise ValueError("Constraint name has not been set.")
-        return self._name
-
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
     ) -> Optional[ContributionStore]:
