@@ -48,7 +48,7 @@ def cmp_state():
 @pytest.fixture
 def cmp_instance(cmp_state):
     class DummyCMP(cooper.ConstrainedMinimizationProblem):
-        def compute_cmp_state(self):
+        def compute_cmp_state(self):  # noqa: PLR6301
             return cmp_state
 
     return DummyCMP()

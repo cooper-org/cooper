@@ -232,7 +232,6 @@ def _nupi_zero_init(
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
-    assert not error.is_sparse, "For sparse updates, use _sparse_nupi instead"
 
     xit_m1_coef = Kp * (1 - ema_nu)
     if "xi" not in state and xit_m1_coef.ne(0).any():
@@ -273,8 +272,6 @@ def _sparse_nupi_zero_init(
     updates based on a zero initialization scheme.
     """
     error = param.grad
-    assert error.is_sparse, "For dense updates, use _nupi instead"
-
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error.indices()
     detached_error_values = error._values().clone().detach()
@@ -332,7 +329,6 @@ def _nupi_sgd_init(
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
-    assert not error.is_sparse, "For sparse updates, use _sparse_nupi_* instead"
 
     uses_ki_term = Ki.ne(0).any()
     uses_kp_term = (Kp * (1 - ema_nu)).ne(0).any()
@@ -381,8 +377,6 @@ def _sparse_nupi_sgd_init(
     (on each coordinate) match that of SGD.
     """
     error = param.grad
-    assert error.is_sparse, "For dense updates, use _nupi instead"
-
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error.indices()
     detached_error_values = error._values().clone().detach()

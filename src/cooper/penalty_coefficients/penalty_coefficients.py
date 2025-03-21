@@ -74,7 +74,7 @@ class PenaltyCoefficient(abc.ABC):
             raise ValueError("All entries of the penalty coefficient must be non-negative.")
 
     def __repr__(self) -> str:
-        if self.value.numel() <= 10:
+        if self.value.numel() <= 10:  # noqa: PLR2004
             return f"{type(self).__name__}({self.value})"
         return f"{type(self).__name__}(shape={self.value.shape})"
 

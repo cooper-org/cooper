@@ -157,26 +157,23 @@ ignore = [
     "ISC001",   # Fixed by ruff-format
     "NPY002",   # numpy.random.Generator is preferred over numpy.random.seed
     "PLR09",    # Too many arguments
-    "PLR2004",  # Use of value instead of constant variable
     "PLR6104",  # Forces in-place operations, for example, x += 1 instead of x = x + 1
-    "PLR6301",  # Self not used in method
     "PLW2901",  # For loop variable is overwritten
     "PTH",      # Use Pathlib instead of os.path
     "RET504",   # Unnecessary assignment before return
-    "S101",     # Use of assert
     "SLF",      # Private (underscore) attribute access
-    "TD",       # TODOs
+    "TD003",    # Missing link in TODOs
     "TRY003",   # Long Exception message
     "W505",     # Doc Line length
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"testing/*" = ["ANN", "N801", "N802", "N803", "N806"]
-"tests/*" = ["ANN", "C901", "N801", "N802", "N803", "N806"]
-"docs/*" = ["ANN"]
+"testing/*" = ["ANN", "N801", "N802", "N803", "N806", "S101"]
+"tests/*" = ["ANN", "C901", "N801", "N802", "N803", "N806", "S101"]
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]
-"docs/source/notebooks/*" = ["N801", "N802", "N803", "N806"]
+"docs/source/notebooks/*" = ["N801", "ANN", "N802", "N803", "N806", "S101"]
+"docs/source/notebooks/plot_gaussian_mixture.ipynb" = ["PLR2004", "PLR6301"]
 "src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
 
 [tool.uv]

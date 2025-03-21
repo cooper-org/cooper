@@ -45,8 +45,8 @@ class LagrangianStore:
 
 @dataclass
 class CMPState:
-    r"""Represents the state of a :py:class:`~.ConstrainedMinimizationProblem` in terms of
-    the value of its loss and constraint violations at point :math:`\vx_t`.
+    r"""Represents the state of a :py:class:`~.ConstrainedMinimizationProblem` in terms
+    of the value of its loss and constraint violations at point :math:`\vx_t`.
 
     Args:
         loss: Value of the loss or main objective to be minimized :math:`f(\vx_t)`.
@@ -137,14 +137,14 @@ class CMPState:
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
-    """Template for constrained minimization problems, where subclasses represent specific
-    constrained optimization problems.
+    """Template for constrained minimization problems, where subclasses represent
+    specific constrained optimization problems.
 
     Subclasses must override the
     :py:meth:`CMP.compute_cmp_state<.ConstrainedMinimizationProblem.compute_cmp_state>`
-    method. This method should return a :py:class:`~.CMPState` instance that encapsulates the
-    current state of the optimization problem, including the evaluated loss and the values of
-    the constraint violations.
+    method. This method should return a :py:class:`~.CMPState` instance that
+    encapsulates the current state of the optimization problem, including the evaluated
+    loss and the values of the constraint violations.
     """
 
     def __init__(self) -> None:
@@ -275,7 +275,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
     def __repr__(self) -> str:
         repr_str = f"{type(self).__name__}"
-        if len(self._constraints) < 5:
+        if len(self._constraints) < 5:  # noqa: PLR2004
             repr_str += "\n\t(constraints=[\n"
             for i, (name, constraint) in enumerate(self.named_constraints()):
                 suffix = ",\n" if i < len(self._constraints) - 1 else "\n"
@@ -303,7 +303,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
 
         """
 
-    def sanity_check_cmp_state(self, cmp_state: CMPState) -> None:
+    @staticmethod
+    def sanity_check_cmp_state(cmp_state: CMPState) -> None:
         """Performs sanity checks on the CMP state. This helper method is useful for
         ensuring that the CMP state is well-formed.
 

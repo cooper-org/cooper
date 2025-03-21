@@ -228,7 +228,7 @@ class QuadraticPenalty(Formulation):
 
         return ContributionStore(lagrangian_contribution, None, penalty_coefficient_value)
 
-    def compute_contribution_to_dual_lagrangian(
+    def compute_contribution_to_dual_lagrangian(  # noqa: PLR6301
         self,
         constraint_state: ConstraintState,  # noqa: ARG002
         penalty_coefficient: PenaltyCoefficient,  # noqa: ARG002

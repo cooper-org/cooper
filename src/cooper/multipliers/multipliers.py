@@ -61,8 +61,8 @@ class ExplicitMultiplier(Multiplier):
 
         self.weight = self.initialize_weight(num_constraints=num_constraints, init=init, device=device, dtype=dtype)
 
+    @staticmethod
     def initialize_weight(
-        self,
         num_constraints: Optional[int],
         init: Optional[torch.Tensor],
         device: Optional[torch.device] = None,
@@ -89,7 +89,6 @@ class ExplicitMultiplier(Multiplier):
                 raise ValueError("`init` must be a 1D tensor of shape `(num_constraints,)`.")
             return torch.nn.Parameter(init.to(device=device, dtype=dtype))
 
-        assert num_constraints is not None
         return torch.nn.Parameter(torch.zeros(num_constraints, device=device, dtype=dtype))
 
     @property
