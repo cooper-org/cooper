@@ -115,25 +115,25 @@ class CMPState:
         """
         return self._compute_primal_or_dual_lagrangian(primal_or_dual="dual")
 
-    def observed_violations(self) -> Iterator[torch.Tensor]:
+    def named_observed_violations(self) -> Iterator[tuple[str, torch.Tensor]]:
         """Returns an iterator over the observed constraint violations."""
-        for constraint_state in self.observed_constraints.values():
-            yield constraint_state.violation
+        for constraint, constraint_state in self.observed_constraints.items():
+            yield constraint.name, constraint_state.violation
 
-    def observed_strict_violations(self) -> Iterator[torch.Tensor]:
+    def named_observed_strict_violations(self) -> Iterator[tuple[str, torch.Tensor]]:
         """Returns an iterator over the observed strict constraint violations."""
-        for constraint_state in self.observed_constraints.values():
-            yield constraint_state.strict_violation
+        for constraint, constraint_state in self.observed_constraints.items():
+            yield constraint.name, constraint_state.strict_violation
 
-    def observed_constraint_features(self) -> Iterator[torch.Tensor]:
+    def named_observed_constraint_features(self) -> Iterator[tuple[str, torch.Tensor]]:
         """Returns an iterator over the observed constraint features."""
-        for constraint_state in self.observed_constraints.values():
-            yield constraint_state.constraint_features
+        for constraint, constraint_state in self.observed_constraints.items():
+            yield constraint.name, constraint_state.constraint_features
 
-    def observed_strict_constraint_features(self) -> Iterator[torch.Tensor]:
+    def named_observed_strict_constraint_features(self) -> Iterator[tuple[str, torch.Tensor]]:
         """Returns an iterator over the observed strict constraint features."""
-        for constraint_state in self.observed_constraints.values():
-            yield constraint_state.strict_constraint_features
+        for constraint, constraint_state in self.observed_constraints.items():
+            yield constraint.name, constraint_state.strict_constraint_features
 
 
 class ConstrainedMinimizationProblem(abc.ABC):
@@ -170,6 +170,7 @@ class ConstrainedMinimizationProblem(abc.ABC):
             raise ValueError(f"Constraint with name {name} already exists")
 
         self._constraints[name] = constraint
+        constraint.name = name
 
     def constraints(self) -> Iterator[Constraint]:
         """Return an iterator over the registered constraints of the CMP."""
