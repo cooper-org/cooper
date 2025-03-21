@@ -52,7 +52,7 @@ def test_load_state_dict_mismatch_dual(cooper_optimizer, cooper_optimizer_class)
     new_optimizer = cooper.optim.UnconstrainedOptimizer(cooper_optimizer.cmp, cooper_optimizer.primal_optimizers)
 
     with pytest.raises(
-        ValueError, match=r"Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None."
+        ValueError, match=r"Optimizer state dict contains ``dual_optimizer_states`` but ``dual_optimizers`` is None."
     ):
         new_optimizer.load_state_dict(state)
 
