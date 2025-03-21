@@ -229,3 +229,8 @@ To ensure that your {py:class}`CMPState` is correctly constructed—with loss an
 .. autoclass:: CMPState
     :members:
 ```
+
+## Checkpointing
+
+TODO(gallego-posada): Add section on checkpointing. Link to MNIST tutorial which has a
+full working example.
