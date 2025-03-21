@@ -99,11 +99,11 @@ class TestConvergence:
                 dual_observed_multipliers = torch.cat(list(roll_out.dual_lagrangian_store.observed_multiplier_values()))
 
             # The CMP has only one constraint, so we can use the first element
-            features = next(iter(roll_out.cmp_state.observed_constraint_features()))
+            features = next(iter(roll_out.cmp_state.named_observed_constraint_features()))[1]
             if features is None:
                 features = torch.arange(self.num_constraints, device=self.device, dtype=torch.long)
 
-            strict_features = next(iter(roll_out.cmp_state.observed_strict_constraint_features()))
+            strict_features = next(iter(roll_out.cmp_state.named_observed_strict_constraint_features()))[1]
             if strict_features is None:
                 strict_features = features
 
