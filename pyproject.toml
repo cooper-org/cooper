@@ -1,21 +1,26 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-    "hatch-vcs>=0.4.0",
-    "hatchling>=1.1.0",
+    "hatch-vcs>=0.4",
+    "hatchling>=1.27",
 ]
 
 [project]
 name = "cooper-optim"
 description = "cooper is a toolkit for Lagrangian-based constrained optimization in PyTorch"
-readme = { file = "README.md", content-type = "text/markdown" }
-license = { text = "MIT License" }
-maintainers = [
+readme = "README.md"
+keywords = [
+    "optimization",
+    "pytorch",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
     { name = "Jose Gallego-Posada", email = "jgalle29@gmail.com" },
     { name = "Juan Ramirez", email = "juan43.ramirez@gmail.com" },
     { name = "Meraj Hashemizadeh", email = "merajhashemi@yahoo.co.uk" },
 ]
-authors = [
+maintainers = [
     { name = "Jose Gallego-Posada", email = "jgalle29@gmail.com" },
     { name = "Juan Ramirez", email = "juan43.ramirez@gmail.com" },
     { name = "Meraj Hashemizadeh", email = "merajhashemi@yahoo.co.uk" },
@@ -24,65 +29,70 @@ requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
     "Operating System :: OS Independent",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 dynamic = ["version"]
 dependencies = [
     "torch>=1.13.1",
-    "typing-extensions>=4.8.0",
+    "typing-extensions>=4.12.2",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "build>=1.2.1",
-    "coverage>=7.6.1",
-    "cvxpy>=1.5.2",
-    "jupytext==1.16.7",
-    "mypy>=1.11.1",
-    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
-    "pre-commit>=3.7.1",
-    "pytest>=8.3.2",
-    "ruff==0.9.10",
-    "twine>=5.1.1",
+    { include-group = "tests" },
+    "jupytext>=1.16.7",
+    "mypy>=1.15.0",
+    "pre-commit>=4.1.0",
+    "ruff>=0.11.2",
 ]
 docs = [
+    { include-group = "notebooks" },
     "enum-tools[sphinx]>=0.12.0",
-    "matplotlib>=3.8.4,<4.0.0",
-    "seaborn>=0.11.2",
-    "myst-nb>=1.1.1",
-    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
+    "myst-nb>=1.2.0",
     "sphinx>=7.4.7",
-    "sphinx-autobuild>=2024.4.16",
-    "sphinx-autodoc-typehints>=2.2.3",
+    "sphinx-autobuild>=2024.10.3",
+    "sphinx-autodoc-typehints>=2.3.0",
     "sphinx-copybutton>=0.5.2",
-    "sphinx-rtd-theme>=2.0.0",
-    "sphinxcontrib-bibtex>=2.6.2",
-    "torchvision>=0.13.0,<1.0.0",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinxcontrib-bibtex>=2.6.3",
 ]
 notebooks = [
-    "matplotlib>=3.8.4,<4.0.0",
-    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
-    "torchvision>=0.13.0,<1.0.0",
+    "matplotlib>=3.9.4",
+    "numpy>=1.26.4,<2",  # PyTorch 2.2.2 and older don't support NumPy 2.0.
+    "seaborn>=0.13.2",
+    "torchvision>=0.14.1",
 ]
 tests = [
-    "coverage>=7.6.1",
-    "cvxpy>=1.5.2",
-    "numpy>=1.22.0,<2.0.0", # PyTorch 2.2.2 and older don't support NumPy 2.0.
-    "pytest>=8.3.2",
+    "coverage>=7.7.0",
+    "cvxpy>=1.6.4",
+    "numpy>=1.26.4,<2",  # PyTorch 2.2.2 and older don't support NumPy 2.0.
+    "pytest>=8.3.5",
 ]
 
 [project.urls]
 Homepage = "https://github.com/cooper-org/cooper"
+Download = "https://pypi.org/project/cooper-optim/#files"
 Documentation = "https://cooper.readthedocs.io"
-Repository = "https://github.com/cooper-org/cooper"
-Issues = "https://github.com/cooper-org/cooper/issues"
+Source = "https://github.com/cooper-org/cooper"
+Tracker = "https://github.com/cooper-org/cooper/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cooper"]
@@ -97,17 +107,24 @@ exclude = [
 [tool.hatch.version]
 source = "vcs"
 
-[tool.mypy]
-packages = ["cooper"]
-warn_unused_configs = true
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
 
 [tool.coverage.run]
 relative_files = true
-source = ["src/cooper"]
+source = ["src/cooper", "testing", "tests"]
 
 [tool.jupytext]
-notebook_metadata_filter="-kernelspec"
-cell_metadata_filter="-all"
+notebook_metadata_filter = "-kernelspec"
+cell_metadata_filter = "-all"
+
+[tool.mypy]
+packages = ["cooper"]
+warn_unused_configs = true
 
 [tool.ruff]
 line-length = 120
@@ -125,11 +142,17 @@ ignore = [
     "ANN401",   # Any type annotation
     "B028",     # Stacklevel in warnings
     "COM812",   # Fixed by ruff-format
+    "CPY",      # Copyright notice
     "D1",       # TODO: Remove this line when we have docstrings for all functions
     "D205",     # 1 blank line required between summary line and description in docstrings
     "D415",     # First line of docstrings should end with a period
+    "DOC",      # Docstring missing exceptions/returns
     "E501",     # Line length (handled by ruff-format)
     "E731",     # Lambda function
+    "EM",       # Exception message not in seperate msg variable
+    "FA",       # Future type annotations
+    "FBT",      # Boolean trap
+    "FIX",      # Fixmes
     "FURB140",  # Use itertools.starmap instead of list comprehension
     "ISC001",   # Fixed by ruff-format
     "NPY002",   # numpy.random.Generator is preferred over numpy.random.seed
@@ -138,19 +161,13 @@ ignore = [
     "PLR6104",  # Forces in-place operations, for example, x += 1 instead of x = x + 1
     "PLR6301",  # Self not used in method
     "PLW2901",  # For loop variable is overwritten
+    "PTH",      # Use Pathlib instead of os.path
     "RET504",   # Unnecessary assignment before return
     "S101",     # Use of assert
-    "TRY003",   # Long Exception message
-    "W505",     # Doc Line length
-    "CPY",      # Copyright notice
-    "DOC",      # Docstring missing exceptions/returns
-    "EM",       # Exception message not in seperate msg variable
-    "FA",       # Future type annotations
-    "FBT",      # Boolean trap
-    "FIX",      # Fixmes
-    "PTH",      # Use Pathlib instead of os.path
     "SLF",      # Private (underscore) attribute access
     "TD",       # TODOs
+    "TRY003",   # Long Exception message
+    "W505",     # Doc Line length
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -161,3 +178,9 @@ ignore = [
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]
 "docs/source/notebooks/*" = ["N801", "N802", "N803", "N806"]
 "src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
+
+[tool.uv]
+default-groups = []
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]

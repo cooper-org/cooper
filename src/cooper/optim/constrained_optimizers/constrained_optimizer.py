@@ -1,6 +1,7 @@
 """Implementation of the :py:class:`ConstrainedOptimizer` class."""
 
 import abc
+from typing import Any
 
 import torch
 
@@ -91,5 +92,5 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
             multiplier.post_step_()
 
     @abc.abstractmethod
-    def roll(*args, **kwargs) -> RollOut:  # noqa: ANN002, ANN003
+    def roll(self, *args: Any, **kwargs: Any) -> RollOut:
         """Performs a full update step on the primal and dual variables."""
