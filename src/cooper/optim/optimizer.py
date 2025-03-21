@@ -8,14 +8,20 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 
 class CooperOptimizerState(TypedDict):
-    """Stores the state of a :py:class:`~cooper.optim.cooper_optimizer.CooperOptimizer`."""
+    r"""Stores the state of a :py:class:`~cooper.optim.CooperOptimizer`.
+
+    Args:
+        primal_optimizer_states: List of primal optimizer ``state_dict``\s.
+        dual_optimizer_states: List of dual optimizer ``state_dict``\s. If the optimizer
+            is an unconstrained optimizer, this field is set to ``None``.
+    """
 
     primal_optimizer_states: list[dict]
     dual_optimizer_states: Optional[list[dict]]
 
 
 class RollOut(NamedTuple):
-    """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`.
+    """Stores the output of a call to :py:meth:`~cooper.optim.CooperOptimizer.roll()`.
 
     Args:
         loss (:py:class:`torch.Tensor`): Value of the objective function.
@@ -110,15 +116,17 @@ class CooperOptimizer(abc.ABC):
 
         Raises:
             ValueError: If the number of primal optimizers does not match the number of primal optimizer states.
-            ValueError: If `dual_optimizer_states` is present in the state dict but `dual_optimizers` is None.
             ValueError: If the number of dual optimizers does not match the number of dual optimizer states.
+            ValueError: If ``dual_optimizer_states`` is present in the state dict but ``dual_optimizers`` is None.
         """
         if len(state["primal_optimizer_states"]) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 
         if self.dual_optimizers is None:
             if state["dual_optimizer_states"] is not None:
-                raise ValueError("Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None.")
+                raise ValueError(
+                    "Optimizer state dict contains ``dual_optimizer_states`` but ``dual_optimizers`` is None."
+                )
         elif len(state["dual_optimizer_states"]) != len(self.dual_optimizers):
             raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 

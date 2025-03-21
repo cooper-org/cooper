@@ -266,3 +266,27 @@ for inputs, targets in train_loader:
 .. autoclass:: CooperOptimizer
     :members:
 ```
+
+
+## Checkpointing
+
+
+For convenience, if you checkpoint the state of a {py:class}`~cooper.optim.CooperOptimizer` object, it automatically checkpoints the state of all associated primal and dual optimizers, packaged in a {py:class}`~cooper.optim.CooperOptimizerState` object. For example, you can do the following:
+
+
+```python
+# Save the state of the constrained optimizer
+state_dict = constrained_optimizer.state_dict()
+torch.save(state_dict, "checkpoint.pth")
+
+# Load the state of the constrained optimizer
+state_dict = torch.load("checkpoint.pth")
+constrained_optimizer.load_state_dict(state_dict) # Automatically loads the state of the primal and dual optimizers
+```
+
+For a full working example, see [this tutorial](https://cooper.readthedocs.io/en/latest/notebooks/plot_mnist_logistic_regression.html).
+
+
+```{eval-rst}
+.. autoclass:: cooper.optim.CooperOptimizerState
+```

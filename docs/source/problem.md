@@ -230,7 +230,20 @@ To ensure that your {py:class}`CMPState` is correctly constructed—with loss an
     :members:
 ```
 
+(cmp-checkpointing)=
 ## Checkpointing
 
-TODO(gallego-posada): Add section on checkpointing. Link to MNIST tutorial which has a
-full working example.
+You can checkpoint a CMP by saving and loading its state with the methods `CMP.state_dict` and `CMP.load_state_dict`. These methods capture the current values of the multipliers and penalty coefficients for all problem constraints, allowing you to resume the optimization process from that exact state.
+
+```python
+# Save the state of the CMP
+cmp_state = cmp.state_dict()
+torch.save(cmp_state, "cmp_state.pth")
+
+# Later, restore the state of the CMP
+cmp = MyCMP(...) # A new CMP with default multiplier and coefficient values
+loaded_state = torch.load("cmp_state.pth")
+cmp.load_state_dict(loaded_state) # Load checkpointed multipliers and coefficients
+```
+
+For a full working example, see [this tutorial](https://cooper.readthedocs.io/en/latest/notebooks/plot_mnist_logistic_regression.html).

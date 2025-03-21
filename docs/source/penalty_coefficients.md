@@ -102,6 +102,10 @@ indices in `idx`.
     :members: __call__
 ```
 
+## Checkpointing
+
+To save the current penalty coefficients of a CMP, use the {py:meth}`~cooper.ConstrainedMinimizationProblem.state_dict()` method to create a state checkpoint. Later, you can restore this state using {py:meth}`~cooper.ConstrainedMinimizationProblem.load_state_dict()`. This process captures the multiplier and penalty coefficient values (see [CMP Checkpointing](#cmp-checkpointing) for details).
+
 
 ## Penalty Coefficient Updaters
 
