@@ -131,40 +131,40 @@ def test_compute_primal_lagrangian_with_constraints(cmp_state, eq_constraint):
     assert lagrangian_store.lagrangian.item() == true_lagrangian
 
 
-def test_observed_violations(cmp_state, eq_constraint):
+def test_named_observed_violations(cmp_state, eq_constraint):
     constraint_state = cooper.ConstraintState(violation=torch.tensor(3.0))
     cmp_state.observed_constraints[eq_constraint] = constraint_state
-    violations = list(cmp_state.observed_violations())
-    assert len(violations) == 1
-    assert torch.equal(violations[0], torch.tensor(3.0))
+    observed_violations = [_[1] for _ in cmp_state.named_observed_violations()]
+    assert len(observed_violations) == 1
+    assert torch.equal(observed_violations[0], torch.tensor(3.0))
 
 
-def test_observed_strict_violations(cmp_state, eq_constraint):
+def test_named_observed_strict_violations(cmp_state, eq_constraint):
     constraint_state = cooper.ConstraintState(violation=torch.tensor(0.0), strict_violation=torch.tensor(2.0))
     cmp_state.observed_constraints[eq_constraint] = constraint_state
-    strict_violations = list(cmp_state.observed_strict_violations())
+    strict_violations = [_[1] for _ in cmp_state.named_observed_strict_violations()]
     assert len(strict_violations) == 1
     assert strict_violations[0] == torch.tensor(2.0)
 
 
-def test_observed_constraint_features(cmp_state, eq_constraint):
+def test_named_observed_constraint_features(cmp_state, eq_constraint):
     constraint_state = cooper.ConstraintState(
         violation=torch.tensor(0.0), constraint_features=torch.tensor(0, dtype=torch.long)
     )
     cmp_state.observed_constraints[eq_constraint] = constraint_state
-    constraint_features = list(cmp_state.observed_constraint_features())
+    constraint_features = [_[1] for _ in cmp_state.named_observed_constraint_features()]
     assert len(constraint_features) == 1
     assert constraint_features[0].item() == 0
 
 
-def test_observed_strict_constraint_features(cmp_state, eq_constraint):
+def test_named_observed_strict_constraint_features(cmp_state, eq_constraint):
     constraint_state = cooper.ConstraintState(
         violation=torch.tensor(0.0),
         strict_violation=torch.tensor(2.0),
         strict_constraint_features=torch.tensor(0, dtype=torch.long),
     )
     cmp_state.observed_constraints[eq_constraint] = constraint_state
-    strict_constraint_features = list(cmp_state.observed_strict_constraint_features())
+    strict_constraint_features = [_[1] for _ in cmp_state.named_observed_strict_constraint_features()]
     assert len(strict_constraint_features) == 1
     assert strict_constraint_features[0].item() == 0
 
