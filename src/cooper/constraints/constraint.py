@@ -31,6 +31,8 @@ class Constraint:
         multiplier: Optional[Multiplier] = None,
         penalty_coefficient: Optional[PenaltyCoefficient] = None,
     ) -> None:
+        self._name = None
+
         self.constraint_type = constraint_type
         self.formulation_type = formulation_type
         self.formulation = formulation_type(constraint_type=self.constraint_type)
@@ -42,6 +44,22 @@ class Constraint:
 
         self.penalty_coefficient = penalty_coefficient
         self.formulation.sanity_check_penalty_coefficient(penalty_coefficient)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> None:
+        if self._name is not None:
+            raise ValueError("Cannot set the name of a constraint more than once.")
+        self._name = name
+
+    @name.getter
+    def name(self) -> str:
+        if self._name is None:
+            raise ValueError("Constraint name has not been set.")
+        return self._name
 
     def compute_contribution_to_lagrangian(
         self, constraint_state: ConstraintState, primal_or_dual: Literal["primal", "dual"]
