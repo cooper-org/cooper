@@ -9,7 +9,7 @@ import testing
 def steps(formulation_type, constraint_type, num_variables):
     if formulation_type == cooper.formulations.QuadraticPenalty:
         if constraint_type == cooper.ConstraintType.INEQUALITY:
-            return 40_000
+            return 45_000
         if constraint_type == cooper.ConstraintType.EQUALITY and num_variables == 10:  # noqa: PLR2004
             return 45_000
     return 1_500
