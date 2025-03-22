@@ -70,7 +70,7 @@ class TestConvergence:
         penalty_updater = None
         if self.use_penalty_updater:
             penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
-                growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE
+                growth_factor=PENALTY_GROWTH_FACTOR, violation_tolerance=PENALTY_VIOLATION_TOLERANCE, has_restart=False
             )
 
         manual_x = torch.ones(self.num_variables, device=self.device)
