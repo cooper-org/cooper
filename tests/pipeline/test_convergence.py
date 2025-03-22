@@ -6,10 +6,13 @@ import testing
 
 
 @pytest.fixture
-def steps(formulation_type):
+def steps(formulation_type, constraint_type, num_variables):
     if formulation_type == cooper.formulations.QuadraticPenalty:
-        return 50_000  # TODO(merajhashemi): Might be too high for some tests. Reduce if possible.
-    return 2_000
+        if constraint_type == cooper.ConstraintType.INEQUALITY:
+            return 40_000
+        if constraint_type == cooper.ConstraintType.EQUALITY and num_variables == 10:  # noqa: PLR2004
+            return 45_000
+    return 1_500
 
 
 def test_convergence_no_constraint(unconstrained_cmp, params, cooper_optimizer_no_constraint, steps):
@@ -34,8 +37,6 @@ def test_convergence_with_constraint(
     use_surrogate,
     steps,
 ):
-    lhs, rhs = constraint_params
-
     for _ in range(steps):
         roll_kwargs = {"compute_cmp_state_kwargs": {"x": torch.cat(params)}}
         if alternation_type == testing.AlternationType.PRIMAL_DUAL:
@@ -47,6 +48,7 @@ def test_convergence_with_constraint(
 
     # Compute the exact solution
     x_star, lambda_star = cmp.compute_exact_solution()
+    lhs, rhs = constraint_params
 
     if not use_surrogate:
         # Check if the primal variable is close to the exact solution
