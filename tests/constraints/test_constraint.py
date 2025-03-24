@@ -124,6 +124,7 @@ def test_constraint_repr(valid_constraint, formulation_type):
     repr_str = repr(valid_constraint)
     assert "constraint_type=" in repr_str
     assert "formulation=" in repr_str
-    assert "multiplier=" in repr_str
+    if formulation_type.expects_multiplier:
+        assert "multiplier=" in repr_str
     if formulation_type.expects_penalty_coefficient:
         assert "penalty_coefficient=" in repr_str

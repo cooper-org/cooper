@@ -69,7 +69,9 @@ class Constraint:
         return compute_contribution_fn(**kwargs)
 
     def __repr__(self) -> str:
-        repr_ = f"constraint_type={self.constraint_type}, formulation={self.formulation}, multiplier={self.multiplier}"
+        repr_ = f"constraint_type={self.constraint_type}, formulation={self.formulation}"
+        if self.multiplier is not None:
+            repr_ += f", multiplier={self.multiplier}"
         if self.penalty_coefficient is not None:
             repr_ += f", penalty_coefficient={self.penalty_coefficient}"
         return f"Constraint({repr_})"
