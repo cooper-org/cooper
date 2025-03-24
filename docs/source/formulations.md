@@ -65,10 +65,10 @@ my_constraint = cooper.Constraint(
 )
 ```
 
-If you consider a formulation that requires penalty coefficients, you can first instantiate a {py:class}`~cooper.multipliers.PenaltyCoefficient`:
+If you consider a formulation that requires penalty coefficients, you can first instantiate a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient`:
 
 ```python
-from cooper.multipliers import DensePenaltyCoefficient
+from cooper.penalty_coefficients import DensePenaltyCoefficient
 
 penalty_coefficient = DensePenaltyCoefficient(init=torch.tensor(...))
 ```
