@@ -45,6 +45,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "enum_tools.autoenum",
     "myst_nb",
+    "sphinx_design",
     "sphinx_rtd_theme",
     "sphinx_copybutton",
     "sphinxcontrib.bibtex",

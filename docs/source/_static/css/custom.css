@@ -6,16 +6,15 @@
     background: #ded9f1ea
 }
 
-details {
-    margin: 10px 0;
+.last-list-item-no-margin ul:last-child,
+.last-list-item-no-margin ol:last-child {
+    margin-bottom: 0 !important;
 }
 
-summary {
-    font-size: 1.1rem;
-    cursor: pointer;
+.reset-highlight-margin div[class^=highlight]{
+    margin-bottom: 0;
 }
 
-details div {
-    margin-top: 10px;
-    margin-left: 1rem;
+:root {
+    --sd-fontweight-dropdown-title: 400;
 }
