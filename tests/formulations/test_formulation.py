@@ -34,16 +34,16 @@ def constraint_state(num_constraints):
 
 @pytest.fixture
 def multiplier(num_constraints, formulation_type):
-    if not formulation_type.expects_multiplier:
-        return None
-    return cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
+    if formulation_type.expects_multiplier:
+        return cooper.multipliers.DenseMultiplier(num_constraints=num_constraints)
+    return None
 
 
 @pytest.fixture
 def penalty_coefficient(num_constraints, formulation_type):
-    if not formulation_type.expects_penalty_coefficient:
-        return None
-    return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    if formulation_type.expects_penalty_coefficient:
+        return cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.ones(num_constraints))
+    return None
 
 
 def test_formulation_init(constraint_type, formulation_type):
