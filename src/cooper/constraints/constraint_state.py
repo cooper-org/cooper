@@ -7,6 +7,8 @@ import torch
 @dataclass
 class ConstraintState:
     r"""State of a constraint, including the current constraint violation.
+        # TODO(merajhashemi): Document that if `contributes_to_dual_update` is `True`, and only `violation` is provided,
+        #  then we assume that violation is a dual-valid measurement of the violation, i.e., not a surrogate.
 
     Args:
         violation: The measurement of the constraint violation at some value of the primal
