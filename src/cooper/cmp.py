@@ -312,7 +312,8 @@ class ConstrainedMinimizationProblem(abc.ABC):
             ValueError: If the loss tensor does not have a valid gradient.
             ValueError: If the violation tensor of any constraint does not have a valid gradient.
             ValueError: If the strict violation tensor of any constraint has a gradient.
-
+            ValueError: If a constraint contributes to the dual update but the
+                associated formulation does not expect a multiplier.
         """
         if cmp_state.loss is not None and cmp_state.loss.grad is None:
             raise ValueError("The loss tensor must have a valid gradient.")
@@ -320,8 +321,13 @@ class ConstrainedMinimizationProblem(abc.ABC):
         for constraint, constraint_state in cmp_state.observed_constraints.items():
             if constraint_state.violation.grad is None:
                 raise ValueError(f"The violation tensor of constraint {constraint} must have a valid gradient.")
-            if constraint_state.strict_violation.grad is not None:
+            if constraint_state.strict_violation is not None and constraint_state.strict_violation.grad is not None:
                 raise ValueError(f"The strict violation tensor of constraint {constraint} must not have a gradient.")
+            if not constraint.formulation.expects_multiplier and constraint_state.contributes_to_dual_update:
+                raise ValueError(
+                    f"ConstraintState contributes to dual update but formulation {constraint.formulation}"
+                    f"associated with constraint {constraint} does not expect a multiplier."
+                )
 
     def compute_violations(self, *args: Any, **kwargs: Any) -> CMPState:
         """Computes the violation of the CMP constraints based on the current value of the

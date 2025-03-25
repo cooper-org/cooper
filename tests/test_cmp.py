@@ -346,3 +346,18 @@ def test_sanity_check_cmp_state_strict_violation(cmp_instance, eq_constraint):
                 }
             )
         )
+
+
+def test_sanity_check_cmp_state_contributing_to_dual_update(cmp_instance):
+    test_constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=cooper.formulations.QuadraticPenalty,
+        penalty_coefficient=cooper.penalty_coefficients.DensePenaltyCoefficient(torch.ones(1)),
+    )
+    cmp_instance._register_constraint("test_constraint", test_constraint)
+    violation = torch.tensor(1.0, requires_grad=True)
+    violation.backward()
+    with pytest.raises(ValueError, match=r"ConstraintState contributes to dual update.*"):
+        cmp_instance.sanity_check_cmp_state(
+            cooper.CMPState(observed_constraints={test_constraint: cooper.ConstraintState(violation=violation)})
+        )
