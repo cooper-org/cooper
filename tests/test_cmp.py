@@ -6,7 +6,13 @@ import torch
 import cooper
 
 
-@pytest.fixture(params=[cooper.formulations.Lagrangian, cooper.formulations.AugmentedLagrangian])
+@pytest.fixture(
+    params=[
+        cooper.formulations.Lagrangian,
+        cooper.formulations.AugmentedLagrangian,
+        cooper.formulations.QuadraticPenalty,
+    ]
+)
 def formulation_type(request):
     return request.param
 
@@ -19,22 +25,29 @@ def penalty_coefficient(formulation_type):
 
 
 @pytest.fixture
-def eq_constraint(formulation_type, penalty_coefficient):
+def multiplier(formulation_type):
+    if formulation_type.expects_multiplier:
+        return cooper.multipliers.DenseMultiplier(num_constraints=1)
+    return None
+
+
+@pytest.fixture
+def eq_constraint(formulation_type, multiplier, penalty_coefficient):
     constraint = cooper.Constraint(
         constraint_type=cooper.ConstraintType.EQUALITY,
         formulation_type=formulation_type,
-        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
+        multiplier=multiplier,
         penalty_coefficient=penalty_coefficient,
     )
     return constraint
 
 
 @pytest.fixture
-def ineq_constraint(formulation_type, penalty_coefficient):
+def ineq_constraint(formulation_type, multiplier, penalty_coefficient):
     constraint = cooper.Constraint(
         constraint_type=cooper.ConstraintType.INEQUALITY,
         formulation_type=formulation_type,
-        multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
+        multiplier=multiplier,
         penalty_coefficient=penalty_coefficient,
     )
     return constraint
@@ -121,11 +134,15 @@ def test_compute_primal_lagrangian_with_loss(cmp_state):
 
 
 def test_compute_primal_lagrangian_with_constraints(cmp_state, eq_constraint):
+    if eq_constraint.multiplier is not None:
+        eq_constraint.multiplier.weight.data.fill_(2.0)
     constraint_state = cooper.ConstraintState(violation=torch.tensor(3.0))
-    eq_constraint.multiplier.weight.data.fill_(2.0)
     cmp_state.observed_constraints[eq_constraint] = constraint_state
     lagrangian_store = cmp_state.compute_primal_lagrangian()
-    true_lagrangian = 3.0 * 2.0
+
+    true_lagrangian = 0.0
+    if eq_constraint.multiplier is not None:
+        true_lagrangian += 3.0 * 2.0
     if eq_constraint.penalty_coefficient is not None:
         true_lagrangian += 0.5 * (3.0**2)
     assert lagrangian_store.lagrangian.item() == true_lagrangian
@@ -203,44 +220,59 @@ def test_cmp_named_constraints(cmp_instance, eq_constraint):
 def test_cmp_multipliers(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     multipliers = list(cmp_instance.multipliers())
-    assert len(multipliers) == 1
-    assert multipliers[0] == eq_constraint.multiplier
+    if eq_constraint.multiplier is None:
+        assert len(multipliers) == 0
+    else:
+        assert len(multipliers) == 1
+        assert multipliers[0] == eq_constraint.multiplier
 
 
 def test_cmp_named_multipliers(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     named_multipliers = list(cmp_instance.named_multipliers())
-    assert len(named_multipliers) == 1
-    assert named_multipliers[0] == ("test_constraint", eq_constraint.multiplier)
+    if eq_constraint.multiplier is None:
+        assert len(named_multipliers) == 0
+    else:
+        assert len(named_multipliers) == 1
+        assert named_multipliers[0] == ("test_constraint", eq_constraint.multiplier)
 
 
 def test_cmp_penalty_coefficients(cmp_instance, eq_constraint):
-    eq_constraint.penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(torch.tensor(1.0))
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     penalty_coefficients = list(cmp_instance.penalty_coefficients())
-    assert len(penalty_coefficients) == 1
-    assert penalty_coefficients[0] == eq_constraint.penalty_coefficient
+    if eq_constraint.penalty_coefficient is None:
+        assert len(penalty_coefficients) == 0
+    else:
+        assert len(penalty_coefficients) == 1
+        assert penalty_coefficients[0] == eq_constraint.penalty_coefficient
 
 
 def test_cmp_named_penalty_coefficients(cmp_instance, eq_constraint):
-    eq_constraint.penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(torch.tensor(1.0))
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     named_penalty_coefficients = list(cmp_instance.named_penalty_coefficients())
-    assert len(named_penalty_coefficients) == 1
-    assert named_penalty_coefficients[0] == ("test_constraint", eq_constraint.penalty_coefficient)
+    if eq_constraint.penalty_coefficient is None:
+        assert len(named_penalty_coefficients) == 0
+    else:
+        assert len(named_penalty_coefficients) == 1
+        assert named_penalty_coefficients[0] == ("test_constraint", eq_constraint.penalty_coefficient)
 
 
 def test_cmp_dual_parameters(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     dual_parameters = list(cmp_instance.dual_parameters())
-    assert len(dual_parameters) == len(list(eq_constraint.multiplier.parameters()))
+    if eq_constraint.multiplier is None:
+        assert len(dual_parameters) == 0
+    else:
+        expected_parameters = list(eq_constraint.multiplier.parameters())
+        assert len(dual_parameters) == len(expected_parameters)
 
 
 def test_cmp_to(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     cmp_instance.to(torch.float64)
 
-    assert cmp_instance._constraints["test_constraint"].multiplier.weight.dtype == torch.float64
+    if eq_constraint.multiplier is not None:
+        assert cmp_instance._constraints["test_constraint"].multiplier.weight.dtype == torch.float64
     if eq_constraint.penalty_coefficient is not None:
         assert cmp_instance._constraints["test_constraint"].penalty_coefficient.value.dtype == torch.float64
 
@@ -248,7 +280,8 @@ def test_cmp_to(cmp_instance, eq_constraint):
 def test_cmp_state_dict(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     state_dict = cmp_instance.state_dict()
-    assert state_dict["multipliers"]["test_constraint"] == eq_constraint.multiplier.state_dict()
+    if eq_constraint.multiplier is not None:
+        assert state_dict["multipliers"]["test_constraint"] == eq_constraint.multiplier.state_dict()
     if eq_constraint.penalty_coefficient is not None:
         assert state_dict["penalty_coefficients"]["test_constraint"] == eq_constraint.penalty_coefficient.state_dict()
 
@@ -257,10 +290,12 @@ def test_load_state_dict(cmp_instance, eq_constraint):
     cmp_instance._register_constraint("test_constraint", eq_constraint)
     state_dict = cmp_instance.state_dict()
     cmp_instance.load_state_dict(state_dict)
-    assert (
-        cmp_instance._constraints["test_constraint"].multiplier.state_dict()
-        == state_dict["multipliers"]["test_constraint"]
-    )
+
+    if eq_constraint.multiplier is not None:
+        assert (
+            cmp_instance._constraints["test_constraint"].multiplier.state_dict()
+            == state_dict["multipliers"]["test_constraint"]
+        )
 
     if eq_constraint.penalty_coefficient is not None:
         assert (
