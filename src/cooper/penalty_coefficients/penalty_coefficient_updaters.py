@@ -76,7 +76,59 @@ class PenaltyCoefficientUpdater(abc.ABC):
         """
 
 
-class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
+class FeasibilityDrivenPenaltyCoefficientUpdater(PenaltyCoefficientUpdater, abc.ABC):
+    def __init__(self, violation_tolerance: float, has_restart: bool) -> None:
+        if violation_tolerance < 0.0:
+            raise ValueError("Violation tolerance must be non-negative.")
+        self.violation_tolerance = violation_tolerance
+        self.has_restart = has_restart
+
+    def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
+        # Extract violations and features
+        _, strict_violation = constraint_state.extract_violations()
+        _, strict_constraint_features = constraint_state.extract_constraint_features()
+        penalty_coefficient = constraint.penalty_coefficient
+
+        # Get current penalty values
+        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient()
+        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
+            observed_penalty_values = penalty_coefficient(strict_constraint_features)
+        else:
+            raise TypeError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
+
+        if constraint.constraint_type == ConstraintType.INEQUALITY:
+            # For inequality constraints, we only consider the non-negative part of the violation.
+            strict_violation = strict_violation.relu()
+
+        is_scalar = observed_penalty_values.dim() == 0
+        violation_measure = strict_violation.norm() if is_scalar else strict_violation.abs()
+
+        # Check where the violation exceeds the allowed tolerance
+        violation_exceeds_tolerance = violation_measure > self.violation_tolerance
+
+        # Compute base new value
+        new_value = self._compute_updated_penalties(observed_penalty_values, violation_exceeds_tolerance)
+
+        # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
+        if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
+            # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
+            is_feasible = torch.eq(violation_measure, 0)
+            new_value = torch.where(is_feasible, penalty_coefficient.init, new_value)
+
+        if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
+            penalty_coefficient.value[strict_constraint_features] = new_value.detach()
+        else:
+            penalty_coefficient.value = new_value.detach()
+
+    @abc.abstractmethod
+    def _compute_updated_penalties(
+        self, current_penalty_value: torch.Tensor, should_increase_penalty: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute updated penalty values based on violation status."""
+
+
+class MultiplicativePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficientUpdater):
     """Multiplicative penalty coefficient updater for Augmented Lagrangian formulation.
     The penalty coefficient is updated by multiplying it by a growth factor when the constraint
     violation is larger than a given tolerance.
@@ -101,56 +153,16 @@ class MultiplicativePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
     def __init__(
         self, growth_factor: float = 1.01, violation_tolerance: float = 1e-4, has_restart: bool = True
     ) -> None:
-        if violation_tolerance < 0.0:
-            raise ValueError("Violation tolerance must be non-negative.")
-
+        super().__init__(violation_tolerance, has_restart)
         self.growth_factor = growth_factor
-        self.violation_tolerance = violation_tolerance
-        self.has_restart = has_restart
 
-    def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
-        """TODO: Add raises docs for TypeErrors"""
-        _, strict_violation = constraint_state.extract_violations()
-        _, strict_constraint_features = constraint_state.extract_constraint_features()
-        penalty_coefficient = constraint.penalty_coefficient
-
-        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
-            observed_penalty_values = penalty_coefficient()
-        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
-            observed_penalty_values = penalty_coefficient(strict_constraint_features)
-        else:
-            raise TypeError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
-
-        if constraint.constraint_type == ConstraintType.INEQUALITY:
-            # For inequality constraints, we only consider the non-negative part of the violation.
-            strict_violation = strict_violation.relu()
-
-        is_scalar = observed_penalty_values.dim() == 0
-        violation_measure = strict_violation.norm() if is_scalar else strict_violation.abs()
-
-        # Check where the violation exceeds the allowed tolerance
-        violation_exceeds_tolerance = violation_measure > self.violation_tolerance
-
-        # Update the penalty coefficient by multiplying it by the growth factor when
-        # the constraint violation is larger than the tolerance. When the violation is
-        # less than the tolerance, the penalty value is left unchanged.
-        new_value = torch.where(
-            violation_exceeds_tolerance, observed_penalty_values * self.growth_factor, observed_penalty_values
-        )
-
-        # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
-        if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
-            # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
-            is_feasible = torch.eq(violation_measure, 0)
-            new_value = torch.where(is_feasible, penalty_coefficient.init, new_value)
-
-        if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
-            penalty_coefficient.value[strict_constraint_features] = new_value.detach()
-        else:
-            penalty_coefficient.value = new_value.detach()
+    def _compute_updated_penalties(
+        self, current_penalty_value: torch.Tensor, should_increase_penalty: torch.Tensor
+    ) -> torch.Tensor:
+        return torch.where(should_increase_penalty, current_penalty_value * self.growth_factor, current_penalty_value)
 
 
-class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
+class AdditivePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficientUpdater):
     """Additive penalty coefficient updater for Augmented Lagrangian formulation.
     The penalty coefficient is updated by adding a constant value when the constraint
     violation is larger than a given tolerance.
@@ -172,48 +184,10 @@ class AdditivePenaltyCoefficientUpdater(PenaltyCoefficientUpdater):
     """
 
     def __init__(self, increment: float = 1.0, violation_tolerance: float = 1e-4, has_restart: bool = True) -> None:
-        if violation_tolerance < 0.0:
-            raise ValueError("Violation tolerance must be non-negative.")
-
+        super().__init__(violation_tolerance, has_restart)
         self.increment = increment
-        self.violation_tolerance = violation_tolerance
-        self.has_restart = has_restart
 
-    def update_penalty_coefficient_(self, constraint: Constraint, constraint_state: ConstraintState) -> None:
-        """TODO: Add raises docs for TypeErrors"""
-        _, strict_violation = constraint_state.extract_violations()
-        _, strict_constraint_features = constraint_state.extract_constraint_features()
-        penalty_coefficient = constraint.penalty_coefficient
-
-        if isinstance(penalty_coefficient, DensePenaltyCoefficient):
-            observed_penalty_values = penalty_coefficient()
-        elif isinstance(penalty_coefficient, IndexedPenaltyCoefficient):
-            observed_penalty_values = penalty_coefficient(strict_constraint_features)
-        else:
-            raise TypeError(f"Unsupported penalty coefficient type: {type(penalty_coefficient)}")
-
-        if constraint.constraint_type == ConstraintType.INEQUALITY:
-            # For inequality constraints, we only consider the non-negative part of the violation.
-            strict_violation = strict_violation.relu()
-
-        is_scalar = observed_penalty_values.dim() == 0
-        violation_measure = strict_violation.norm() if is_scalar else strict_violation.abs()
-
-        # Check where the violation exceeds the allowed tolerance
-        violation_exceeds_tolerance = violation_measure > self.violation_tolerance
-
-        # Increment penalty coefficients where violations exceed tolerance, leave unchanged otherwise
-        new_value = torch.where(
-            violation_exceeds_tolerance, observed_penalty_values + self.increment, observed_penalty_values
-        )
-
-        # Restart the penalty coefficient to its initial value if inequality constraint is satisfied.
-        if self.has_restart and constraint.constraint_type == ConstraintType.INEQUALITY:
-            # The strict violation has relu applied to it, so we can check feasibility by comparing to 0.
-            is_feasible = torch.eq(violation_measure, 0)
-            new_value = torch.where(is_feasible, penalty_coefficient.init, new_value)
-
-        if isinstance(penalty_coefficient, IndexedPenaltyCoefficient) and new_value.dim() > 0:
-            penalty_coefficient.value[strict_constraint_features] = new_value.detach()
-        else:
-            penalty_coefficient.value = new_value.detach()
+    def _compute_updated_penalties(
+        self, current_penalty_value: torch.Tensor, should_increase_penalty: torch.Tensor
+    ) -> torch.Tensor:
+        return torch.where(should_increase_penalty, current_penalty_value + self.increment, current_penalty_value)
