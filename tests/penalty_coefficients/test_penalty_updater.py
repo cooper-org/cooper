@@ -50,6 +50,90 @@ def create_constraint_state(violations, num_constraints):
     )
 
 
+@pytest.fixture
+def penalty_updater():
+    class DummyPenaltyCoefficientUpdater(cooper.penalty_coefficients.PenaltyCoefficientUpdater):
+        def update_penalty_coefficient_(self, constraint, constraint_state):  # noqa: ARG002, PLR6301
+            constraint.penalty_coefficient.value = PENALTY_GROWTH_FACTOR * constraint.penalty_coefficient.value
+
+    return DummyPenaltyCoefficientUpdater()
+
+
+@pytest.mark.parametrize("contributes_to_primal_update", [True, False])
+def test_updater_step_expects_multiplier_contributes_to_dual(penalty_updater, contributes_to_primal_update):
+    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
+    penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.tensor(1.0))
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=cooper.formulations.AugmentedLagrangian,
+        multiplier=multiplier,
+        penalty_coefficient=penalty_coefficient,
+    )
+    constraint_state = cooper.ConstraintState(
+        violation=torch.tensor(1e-4), contributes_to_primal_update=contributes_to_primal_update
+    )
+
+    penalty_updater.step({constraint: constraint_state})
+    assert torch.all(torch.eq(penalty_coefficient.value, PENALTY_GROWTH_FACTOR * penalty_coefficient.init))
+
+
+@pytest.mark.parametrize("contributes_to_primal_update", [True, False])
+def test_updater_step_expects_multiplier_not_contributes_to_dual_without_strict_violation(
+    penalty_updater, contributes_to_primal_update
+):
+    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
+    penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.tensor(1.0))
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=cooper.formulations.AugmentedLagrangian,
+        multiplier=multiplier,
+        penalty_coefficient=penalty_coefficient,
+    )
+    constraint_state = cooper.ConstraintState(
+        violation=torch.tensor(1e-4),
+        contributes_to_dual_update=False,
+        contributes_to_primal_update=contributes_to_primal_update,
+    )
+
+    penalty_updater.step({constraint: constraint_state})
+    assert torch.all(torch.eq(penalty_coefficient.value, penalty_coefficient.init))
+
+
+def test_updater_step_expects_multiplier_not_contributes_to_dual_with_strict_violation(penalty_updater):
+    multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
+    penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.tensor(1.0))
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=cooper.formulations.AugmentedLagrangian,
+        multiplier=multiplier,
+        penalty_coefficient=penalty_coefficient,
+    )
+    constraint_state = cooper.ConstraintState(
+        violation=torch.tensor(1e-4),
+        strict_violation=torch.tensor(1e-4),
+        contributes_to_dual_update=False,
+        contributes_to_primal_update=True,
+    )
+
+    penalty_updater.step({constraint: constraint_state})
+    assert torch.all(torch.eq(penalty_coefficient.value, PENALTY_GROWTH_FACTOR * penalty_coefficient.init))
+
+
+def test_updater_step_not_expects_multiplier_contributes_to_primal(penalty_updater):
+    penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.tensor(1.0))
+    constraint = cooper.Constraint(
+        constraint_type=cooper.ConstraintType.EQUALITY,
+        formulation_type=cooper.formulations.QuadraticPenalty,
+        penalty_coefficient=penalty_coefficient,
+    )
+    constraint_state = cooper.ConstraintState(
+        violation=torch.tensor(1e-4), contributes_to_dual_update=False, contributes_to_primal_update=True
+    )
+
+    penalty_updater.step({constraint: constraint_state})
+    assert torch.all(torch.eq(penalty_coefficient.value, PENALTY_GROWTH_FACTOR * penalty_coefficient.init))
+
+
 @pytest.mark.parametrize(
     "penalty_updater_type", [AdditivePenaltyCoefficientUpdater, MultiplicativePenaltyCoefficientUpdater]
 )

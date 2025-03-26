@@ -16,10 +16,54 @@ class PenaltyCoefficientUpdater(abc.ABC):
     """Abstract class for updating the penalty coefficient of a constraint."""
 
     def step(self, observed_constraints: dict[Constraint, ConstraintState]) -> None:
+        r"""Trigger updates on the penalty coefficients for each of the ``observed_constraints``.
+
+        For each constraint in ``observed_constraints``, this method determines whether
+        its penalty coefficient should be updated. The decision depends on properties
+        like whether the constraint contributes to primal/dual updates and the
+        availability of strict violation measurements.
+
+        Note:
+        **Primal vs Dual Contributions**:
+        - For formulations expecting multipliers (e.g., AugmentedLagrangian), updates occur if:
+            - The constraint contributes to the dual update, **OR**
+            - It contributes to the primal update **and** has a strict violation measurement.
+        - For primal-only formulations (e.g., QuadraticPenalty), updates occur only if
+          the constraint contributes to the primal update.
+
+        TODO(merajhashemi): Add to documentation "We do not update penalty coefficients for constraints that are not observed."
+        Args:
+            observed_constraints: Dictionary with :py:class:`~Constraint` instances as
+                keys and :py:class:`~ConstraintState` instances as values (containing
+                tensors :math:`\vg(\vx_t)` and :math:`\vh(\vx_t)`).
+        """
         for constraint, constraint_state in observed_constraints.items():
-            # If a constraint does not contribute to the dual update, we do not update
-            # its penalty coefficient.
-            if (constraint.penalty_coefficient is not None) and constraint_state.contributes_to_dual_update:
+            if constraint.penalty_coefficient is None:
+                # Skip constraints without penalty coefficients
+                continue
+
+            if constraint.formulation.expects_multiplier:
+                # If the user provides a "surrogate" as the `violation` in the constraint state, and does not
+                # provide a `strict_violation`, and the constraint is marked as contributing to the dual update, our
+                # convention is that said violation is a dual-valid measurement, and thus can be relied on for
+                # updating the penalty coefficient.
+                contributes_to_dual = constraint_state.contributes_to_dual_update
+
+                # If we only have the `violation` but not the `strict_violation` we cannot be certain that the given
+                # `violation` is not a surrogate. Therefore, we cannot rely on it to update the penalty coefficients.
+                # On the other hand, if `strict_violation` is given, it can be used to update the penalty coefficients.
+                contributes_to_primal = constraint_state.contributes_to_primal_update
+                has_strict_violation = constraint_state.strict_violation is not None
+
+                should_update = contributes_to_dual or (contributes_to_primal and has_strict_violation)
+            else:
+                # If we have a primal only formulation (like QuadraticPenalty),
+                # `constraint_state.contributes_to_dual_update` must be `False`.
+                # Therefore, we only update the penalty coefficient if
+                # `constraint_state.contributes_to_primal_update=True`.
+                should_update = constraint_state.contributes_to_primal_update
+
+            if should_update:
                 self.update_penalty_coefficient_(constraint, constraint_state)
 
     @abc.abstractmethod
