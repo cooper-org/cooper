@@ -21,7 +21,7 @@ We aim to expand **Cooper** with several new features, and would love your help!
 
 Please follow these steps to contribute:
 
-1. If you plan to contribute new features, please first open an issue and discuss the feature with us.
+1. If you plan to contribute new features, please first open an [issue](https://github.com/cooper-org/cooper/issues) and discuss the feature with us.
 
 2. Fork the **Cooper** repository by clicking the **Fork** button on the
    [repository page](http://www.github.com/cooper-org/cooper).

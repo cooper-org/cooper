@@ -1,69 +1,97 @@
 # FAQ
 
 ::::{container} last-list-item-no-margin
-:::{dropdown} What are common pitfalls when implementing a CMP?
-- **Constraints convention:** Ensure your constraints comply with **Cooper**'s convention: $g(\mathbf{x}) \leq 0$ for inequality constraints and $h(\mathbf{x}) = 0$ for equality constraints. If you have a $g(\mathbf{x}) \geq 0$ constraint, provide **Cooper** with $-g(\mathbf{x}) \leq 0$.
+:::{dropdown} What are common pitfalls I should avoid when implementing a CMP?
+- **Constraints convention:** Ensure your constraints comply with **Cooper**'s convention: $\vg(\vx) \leq \vzero$ for inequality constraints and $\vh(\vx) = \vzero$ for equality constraints. If you have a $\vg(\vx) \geq \vzero$ constraint, provide **Cooper** with $-\vg(\vx) \leq \vzero$.
 >
-- **Gradient propagation:** Ensure that the tensors corresponding to the loss and constraints have gradients. Avoid "creating new tensors" for packing multiple constraints in a single tensor, as this can disrupt the computational graph and gradient backpropagation. Instead of using `torch.tensor([g1, g2, ...])`, use `torch.cat([g1, g2, ...])`. You can use the {py:meth}`~cooper.ConstrainedMinimizationProblem.sanity_check_cmp_state` method to check that constraints have gradients.
+- **Gradient propagation:** Ensure that the tensors corresponding to the loss and constraints have gradients. Avoid "creating new tensors" for packing multiple constraints into a single tensor, as this can disrupt the computational graph and gradient backpropagation. For example, instead of using `torch.tensor([g1, g2, ...])`, use `torch.cat([g1, g2, ...])`. You can use the {py:meth}`~cooper.ConstrainedMinimizationProblem.sanity_check_cmp_state` method to check that constraints have gradients.
 >
 - **Efficiency tip:** To improve efficiency, reuse as much of the computational graph as possible between the loss and constraints. For example, if both depend on the outputs of a neural network, perform a single forward pass and reuse the computed outputs for both the loss and constraints.
 :::
 ::::
 
 :::{dropdown} What types of problems can I solve with **Cooper**?
-**Cooper** can solve any constrained optimization problem with a (autograd) differentiable objective and constraints, including:
+**Cooper** is applicable to any constrained optimization problem with a (autograd) differentiable objective and constraints, including:
 
-- **Convex and non-convex problems**
-- **Stochastic problems** where constraints depend on training data
+- convex and non-convex problems,
+- problems involving stochastic functions, where the loss and/or constraints depend on data (such as typical deep learning tasks).
 
-While **Cooper** requires constraint differentiability, the [proxy constraints](https://cooper.readthedocs.io/en/latest/multipliers.html#surrogate-constraints) feature allows handling non-differentiable constraints by using a differentiable surrogate.
+While **Cooper** requires constraint differentiability, the [proxy constraints](constrained_optimization.md#non-differentiable-constraints) feature allows handling non-differentiable constraints by using differentiable surrogates.
+
+
+
 **Cooper** is designed for **general non-convex problems**, making minimal assumptions about the objective and constraints. For **convex problems with additional structure**, we recommend using specialized solvers.
 :::
 
 :::{dropdown} Where can I get help with **Cooper**?
-You can ask questions and get help on our [Discord server](https://discord.gg/Aq5PjH8m6E).
+
+If you spot any bugs, please raise an [issue](https://github.com/cooper-org/cooper/issues).
+
+You can ask questions and get help on the [Discussions page](https://github.com/cooper-org/cooper/discussions).
+
 :::
 
 :::{dropdown} Where can I learn more about constrained optimization?
 You can find more on convex constrained optimization in [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/) by Boyd and Vandenberghe.
 For non-convex constrained optimization, you can check out [Nonlinear Programming](http://athenasc.com/nonlinbook.html) by Bertsekas.
+
+For an introduction to constrained optimization in machine learning problems, we recommend [Constrained Optimization for Machine Learning: Algorithms and Applications](https://umontreal.scholaris.ca/items/6bbfce14-9225-4e23-a94e-504bcfb1298f) by Jose Gallego-Posada.
+
 :::
 
 ### Formulations
 
 ::::{container} last-list-item-no-margin
 :::{dropdown} What problem formulations does **Cooper** support?
-**Cooper** supports the following formulations:
-- [Lagrangian Formulation.](https://cooper.readthedocs.io/en/latest/formulations.html#lagrangian-formulations)
-- [Quadratic Penalty Formulation.](https://cooper.readthedocs.io/en/latest/formulations.html#quadratic-penalty-formulations)
-- [Augmented Lagrangian Formulation.](https://cooper.readthedocs.io/en/latest/formulations.html#augmented-lagrangian-formulations)
+
+**Cooper** transforms a constrained optimization problem into a min-max problem thanks to a choice of problem [formulation](formulations.md).
+
+The following formulations are supported in **Cooper**:
+- [Lagrangian Formulation.](formulations.md#lagrangian-formulations)
+- [Quadratic Penalty Formulation.](formulations.md#quadratic-penalty-formulations)
+- [Augmented Lagrangian Formulation.](formulations.md#augmented-lagrangian-formulations)
 :::
 ::::
 
 ### Optimizers
 
 :::{dropdown} What is a good configuration for the primal optimizer?
-**Cooper** works with any PyTorch optimizer. We recommend using the same optimizer as in the unconstrained version of your problem to avoid redesigning the primal optimization scheme. This allows you to focus on tuning the dual optimizer.
+**Cooper** is compatible with any PyTorch optimizer for updating the primal variables.
+
+A good rule of thumb for selecting the primal optimizer is to use the **same optimizer (and hyperparameters) as you would for the unconstrained version of your problem**. This way, you can focus on tuning the dual optimizer without needing to redesign the primal optimization scheme.
 :::
 
 ::::{container} last-list-item-no-margin
 :::{dropdown} What is a good configuration for the dual optimizer?
-- **Gradient ascent (SGD)** is the simplest and most intuitive choice, where multipliers accumulate constraint violations.
-- However, it can cause **oscillations** in the multipliers. To mitigate this, consider using [**nuPI**](https://cooper.readthedocs.io/en/latest/torch_optimizers.html#nupi), which is specifically designed to **stabilize multiplier dynamics**.
-- **Important Note:** Momentum can **exacerbate oscillations** in multipliers and is generally detrimental when optimizing dual variables in constrained optimization ([Sohrabi et al., 2024](https://arxiv.org/abs/2406.04558)).
+
+Typically, **gradient ascent** ({py:class}`torch.optim.SGD``(maximize=True)`) is a good starting point for the dual optimizer. This is a simple and intuitive choice, where multipliers accumulate constraint violations.
+
+The min-max nature of the problems can cause oscillations in the multipliers. To mitigate this, consider using the [$\nu$PI optimizer](torch_optimizers.md#nupi), which is specifically designed to stabilize multiplier dynamics.
+
+We highlight that **momentum has been reported to exacerbate oscillations** in multipliers and is generally detrimental when optimizing dual variables in constrained optimization {cite:p}`sohrabi2024nupi`.
+
 :::
 ::::
 
 :::{dropdown} How should I tune the dual learning rate?
-As a general rule of thumb, set the dual learning rate about one order of magnitude higher than the primal learning rate. This will typically allow the multipliers to push the primal parameters toward feasibility with a reasonable level of aggressiveness.
+A larger dual learning rate will push the problem toward feasibility faster, but it may also introduce **divergence** or **oscillations** in the multipliers or cause **numerical instability**.
 
-Note that a larger dual learning rate will push the problem toward feasibility faster, but it may also introduce **divergence** or **oscillations** in the multipliers or cause **numerical instability**.
+When setting the dual learning rate, you should consider the frequency of the dual updates. For example, updating the multipliers at every step might require a smaller step-size.
 
-When setting the dual learning rate, also consider the frequency of dual updates. For example, updating every step might require smaller steps, while updating every epoch might allow for larger steps.
+Moreover, many formulations, such as the {py:class}`cooper.formulations.Lagrangian` formulation, involve adding a weighted combination of the constraints to the loss. **When there are many constraints present, the dual step-size should be adjusted (reduced)** to prevent the constraints from dominating the contribution of the loss.
+
+As a general rule of thumb, we recommend **setting the dual learning rate an order of magnitude higher than the _primal_ learning rate, divided by the number of constraints**. This will typically allow the multipliers to push the primal parameters toward feasibility with a reasonable level of aggressiveness, while still allowing for progress in reducing the loss.
 :::
 
-:::{dropdown} Which **Cooper** constrained optimizer should I use?
-**Cooper** provides a range of constrained optimizers to choose from. The **AlternatingDualPrimalOptimizer** is a good starting point. For details, see [see](https://cooper.readthedocs.io/en/latest/optim.html).
+:::{dropdown} What is a "constrained optimizer" in **Cooper**, and how is it different from a PyTorch optimizer?
+
+TODO
+
+:::
+
+
+:::{dropdown} What constrained optimizer should I use?
+**Cooper** provides a range of [constrained optimizers](optim.md#constrained-optimizers) to choose from. The {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` is a good starting point. For details, see [Optim](optim.md).
 :::
 
 ### Debugging and troubleshooting
@@ -132,7 +160,7 @@ Oscillations in Lagrange multipliers are common due to the game structure of the
 However, if the oscillations become too severe, try the following:
 
 1.  Decrease one or both of the primal and dual learning rates.
-2.  Consider a different dual optimizer, such as [nuPI](https://cooper.readthedocs.io/en/latest/torch_optimizers.html#nupi), which is designed to mitigate oscillations.
+2.  Consider a different dual optimizer, such as [nuPI](torch_optimizers.md#nupi), which is designed to mitigate oscillations.
 :::
 ::::
 
@@ -174,7 +202,7 @@ We have not tested **Cooper** with AMP, so we cannot guarantee that it operates 
 :::
 
 :::{dropdown} What if my problem has a lot of constraints?
-If your problem involves a large number of constraints, you can use [IndexedMultipliers](https://cooper.readthedocs.io/en/latest/multipliers.html#indexed-multipliers) or [ImplicitMultipliers](https://cooper.readthedocs.io/en/latest/multipliers.html#implicit-multipliers). The former allows for efficient indexing of the multiplier object, while the latter avoids explicitly storing them by considering a parametric representation instead.
+If your problem involves a large number of constraints, you can use [IndexedMultipliers](multipliers.md#indexed-multipliers) or [ImplicitMultipliers](multipliers.md#implicit-multipliers). The former allows for efficient indexing of the multiplier object, while the latter avoids explicitly storing them by considering a parametric representation instead.
 :::
 
 ### Miscellaneous

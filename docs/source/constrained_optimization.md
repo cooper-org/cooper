@@ -152,7 +152,7 @@ $$
 \vmu_{t+1} &= \vmu_t + \eta_{\vmu} \nabla_{\vmu} \Lag(\vx_t, \vlambda_t, \vmu_t)
 $$
 
-where $\eta_{\vx}, \eta_{\vlambda}, \eta_{\vmu}$ are the step sizes for the primal and dual variables. The projection operator $[\cdot]_+$ ensures that the dual variables associated with the inequality constraints remain non-negative.
+where $\eta_{\vx}, \eta_{\vlambda}, \eta_{\vmu}$ are the step-sizes for the primal and dual variables. The projection operator $[\cdot]_+$ ensures that the dual variables associated with the inequality constraints remain non-negative.
 
 Plugging in the gradients of the Lagrangian, we get the following updates:
 
