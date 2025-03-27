@@ -1,7 +1,7 @@
 # FAQ
 
 ::::{container} last-list-item-no-margin
-:::{dropdown} What are common pitfalls I should avoid when implementing a CMP?
+:::{dropdown} What are common pitfalls I should avoid when implementing a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`?
 - **Constraints convention:** Ensure your constraints comply with **Cooper**'s convention: $\vg(\vx) \leq \vzero$ for inequality constraints and $\vh(\vx) = \vzero$ for equality constraints. If you have a $\vg(\vx) \geq \vzero$ constraint, provide **Cooper** with $-\vg(\vx) \leq \vzero$.
 >
 - **Gradient propagation:** Ensure that the tensors corresponding to the loss and constraints have gradients. Avoid "creating new tensors" for packing multiple constraints into a single tensor, as this can disrupt the computational graph and gradient backpropagation. For example, instead of using `torch.tensor([g1, g2, ...])`, use `torch.cat([g1, g2, ...])`. You can use the {py:meth}`~cooper.ConstrainedMinimizationProblem.sanity_check_cmp_state` method to check that constraints have gradients.

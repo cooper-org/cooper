@@ -6,13 +6,13 @@ from typing_extensions import Self
 
 
 class PenaltyCoefficient(abc.ABC):
-    """Abstract class for constant (non-trainable) coefficients used in Augmented Lagrangian formulation.
+    """Abstract class for constant (non-trainable) penalty coefficients.
 
     Args:
         init: Value of the penalty coefficient.
 
     Raises:
-        ValueError: If ``init`` has more than one dimension.
+        ValueError: If ``init`` has two or more dimensions.
     """
 
     expects_constraint_features: bool
@@ -48,7 +48,9 @@ class PenaltyCoefficient(abc.ABC):
         self.sanity_check()
 
     def to(self, *args: Any, **kwargs: Any) -> Self:
-        """Move the penalty coefficient to a new device and/or change its ``dtype``."""
+        """Move the penalty coefficient to a new ``device`` and/or change its
+        ``dtype``.
+        """
         self._value = self._value.to(*args, **kwargs)
         return self
 
@@ -95,9 +97,9 @@ class DensePenaltyCoefficient(PenaltyCoefficient):
 
 
 class IndexedPenaltyCoefficient(PenaltyCoefficient):
-    """Constant (non-trainable) coefficient class used in Augmented Lagrangian formulation.
-    When called, indexed penalty coefficients accept a tensor of indices and return the
-    value of the penalty for a subset of constraints.
+    """Constant (non-trainable) penalty coefficients. When called, indexed penalty
+    coefficients accept a tensor of indices and return the value of the penalty for
+    a subset of constraints.
     """
 
     expects_constraint_features = True

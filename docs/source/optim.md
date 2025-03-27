@@ -8,13 +8,13 @@
 
 # Optim
 
-The `cooper.optim` module contains classes and functions for solving constrained minimization problems (CMPs).
+The `cooper.optim` module contains classes and functions for solving constrained minimization problems ({py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s).
 
 This module is divided into two main parts:
 - [Constrained Optimizers](#constrained-optimizers): for solving *constrained* minimization problems.
 - [Unconstrained Optimizers](#unconstrained-optimizers): for solving *unconstrained* minimization problems.
 
-The [Torch Optimizers](torch_optimizers.md) section describes **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes tailored for solving CMPs that are not available in PyTorch.
+The [Torch Optimizers](torch_optimizers.md) section describes **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes tailored for solving {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s that are not available in PyTorch.
 
 ## Quick Start
 
@@ -69,7 +69,7 @@ The {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()`
   1. Calling {py:meth}`torch.optim.Optimizer.step()` on the primal and dual optimizers.
   2. Projecting the dual-variables associated with inequality constraints to the non-negative orthant by calling {py:meth}`cooper.multipliers.Multiplier.post_step_()`.
 
-As the procedures for performing updates on the parameters of a CMP can be complex, the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method, instead of the individual {py:meth}`~torch.optim.Optimizer.step()` methods of the primal and dual optimizers.
+As the procedures for performing updates on the parameters of a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>` can be complex, the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method provides a convenient and consistent interface for performing parameter updates across {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s. Therefore, when using a {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`, users are expected to call the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer.roll()` method, instead of the individual {py:meth}`~torch.optim.Optimizer.step()` methods of the primal and dual optimizers.
 
 ```{eval-rst}
 .. automethod:: cooper.optim.CooperOptimizer.roll
@@ -172,7 +172,7 @@ To ensure the non-negativity of Lagrange multipliers associated with inequality 
 
 ### Simultaneous Optimizer
 
-A simple approach to solving CMPs is to update the primal and dual parameters simultaneously. This is the approach taken by the {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer` class {cite:p}`arrow1958studies`.
+A simple approach to solving {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s is to update the primal and dual parameters simultaneously. This is the approach taken by the {py:class}`~cooper.optim.constrained_optimizers.SimultaneousOptimizer` class {cite:p}`arrow1958studies`.
 
 ```{eval-rst}
 .. autoclass:: SimultaneousOptimizer

@@ -60,11 +60,11 @@ pip install git+https://github.com/cooper-org/cooper@dev
 To use **Cooper**, you need to:
 
 - Implement a {py:class}`~cooper.ConstrainedMinimizationProblem` (CMP) class and its associated {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` method. This method computes the value of the objective function and constraint violations, and packages them in a {py:class}`~cooper.CMPState` object.
-- The initialization of the CMP must create a {py:class}`~cooper.constraints.Constraint` object for each constraint. It is necessary to specify a formulation type (e.g. {py:class}`~cooper.formulations.Lagrangian`). Finally, if the chosen formulation requires it, each constraint needs an associated {py:class}`~cooper.Multiplier` object corresponding to the Lagrange multiplier for that constraint.
+- The initialization of the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>` must create a {py:class}`~cooper.constraints.Constraint` object for each constraint. It is necessary to specify a formulation type (e.g. {py:class}`~cooper.formulations.Lagrangian`). Finally, if the chosen formulation requires it, each constraint needs an associated {py:class}`~cooper.Multiplier` object corresponding to the Lagrange multiplier for that constraint.
 - Create a {py:class}`torch.optim.Optimizer` for the primal variables and a {py:class}`torch.optim.Optimizer(maximize=True)` for the dual variables (i.e. the multipliers). Then, wrap these two optimizers in a {py:class}`cooper.optim.CooperOptimizer` (such as {py:class}`~cooper.optim.constrained_optimizer.SimultaneousOptimizer` for executing simultaneous primal-dual updates).
 - You are now ready to perform updates on the primal and dual parameters using the {py:meth}`cooper.optim.CooperOptimizer.roll` method. This method triggers the following calls:
   - {py:meth}`zero_grad` on both optimizers,
-  - {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` on the CMP,
+  - {py:meth}`~cooper.ConstrainedMinimizationProblem.compute_cmp_state` on the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`,
   - compute the Lagrangian based on the latest {py:class}`~cooper.cmp.CMPState`,
   - {py:meth}`backward` on the Lagrangian,
   - {py:meth}`~torch.optim.Optimizer.step` on both optimizers.
