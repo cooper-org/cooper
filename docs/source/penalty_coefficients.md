@@ -6,10 +6,10 @@
 .. currentmodule:: cooper.penalty_coefficients
 ```
 
-Penalty coefficient objects represent the penalty coefficients $\vc_{\vg}$ and $\vc_{\vh}$, required by formulations such as the {py:class}`~cooper.formulations.QuadraticPenalty`
+{py:class}`~cooper.penalty_coefficients.PenaltyCoefficient` objects are used to represent the penalty coefficients $\vc_{\vg}$ and $\vc_{\vh}$, required by formulations such as the {py:class}`~cooper.formulations.QuadraticPenalty`
 and {py:class}`~cooper.formulations.AugmentedLagrangian` formulations.
 
-In **Cooper**, penalty coefficients are wrappers around the {py:class}`torch.Tensor`. Notably, they do not require gradients, as they are not subject to optimization.
+In **Cooper**, penalty coefficients are wrappers around a {py:class}`torch.Tensor`. Notably, they do not require gradients, as they are not optimized.
 
 The `cooper.penalty_coefficients` module provides the following types of penalty coefficients:
 
@@ -44,7 +44,7 @@ $$
 
 where $\vc_{\vg}$ and $\vc_{\vh}$ are the penalty coefficients associated with the inequality and equality constraints, respectively.
 
-In **Cooper**, penalty coefficients represent the vectors $\vc_{\vg}$ and $\vc_{\vh}$, with one coefficient for each constraint. Alternatively, **Cooper** also supports scalar-valued penalty coefficients, which apply a shared coefficient across all constraints (i.e., $\vc_{\vg} = c_g \mathbf{1}$ and $\vc_{\vh} = c_h \mathbf{1}$).
+In **Cooper**, {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient` objects represent the vectors $\vc_{\vg}$ and $\vc_{\vh}$, with one coefficient for each constraint. Alternatively, **Cooper** also supports scalar-valued penalty coefficients, which apply a shared coefficient across all constraints (i.e., $\vc_{\vg} = c_g \mathbf{1}$ and $\vc_{\vh} = c_h \mathbf{1}$).
 
 Since it is often desirable to increase the penalty coefficient over the optimization process, **Cooper** provides a scheduler mechanism to do so. For more information, see [Penalty Coefficient Updaters](#penalty-coefficient-updaters).
 
@@ -64,14 +64,14 @@ penalty_coefficient = cooper.penalty_coefficients.IndexedPenaltyCoefficient(
 
 ### Evaluating a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient`
 
-Similar to [multipliers](#multipliers), penalty coefficients can be evaluated using the `__call__` method. For example:
+Similar to [multipliers](#multipliers), penalty coefficients can be evaluated using {py:meth}`~cooper.penalty_coefficients.PenaltyCoefficient.__call__`. For example:
 
 ```python
 # `DensePenaltyCoefficient`s do not require arguments during evaluation
 penalty_coefficient_value = penalty_coefficient()
 
 # `IndexedPenaltyCoefficient`s require indices for evaluation
-indices = torch.tensor([0, 2, 4, 6])
+indices = torch.tensor([1, 2, 4, 6])
 penalty_coefficient_value = penalty_coefficient(indices)
 ```
 
@@ -82,7 +82,7 @@ penalty_coefficient_value = penalty_coefficient(indices)
 
 ## Dense Penalty Coefficients
 
-The {py:class}`~cooper.penalty_coefficients.DensePenaltyCoefficient` class wraps a tensor of penalty coefficients, ensuring all coefficients are accessed during each evaluation.
+The {py:class}`~cooper.penalty_coefficients.DensePenaltyCoefficient` class wraps  a tensor of penalty coefficients, ensuring that all coefficients are accessed during each evaluation.
 
 ```{eval-rst}
 .. autoclass:: DensePenaltyCoefficient
@@ -101,7 +101,7 @@ indices in `idx`.
 
 ## Checkpointing
 
-To save the current penalty coefficients of a CMP, use the {py:meth}`~cooper.ConstrainedMinimizationProblem.state_dict()` method to create a state checkpoint. Later, you can restore this state using {py:meth}`~cooper.ConstrainedMinimizationProblem.load_state_dict()`. This process captures the multiplier and penalty coefficient values (see [CMP Checkpointing](#cmp-checkpointing) for details).
+To save the current penalty coefficients of a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`, use the {py:meth}`~cooper.ConstrainedMinimizationProblem.state_dict()` method to create a state checkpoint. Later, you can restore this state using {py:meth}`~cooper.ConstrainedMinimizationProblem.load_state_dict()`. This process captures the multiplier and penalty coefficient values (see [CMP Checkpointing](#cmp-checkpointing) for details).
 
 ## Penalty Coefficient Updaters
 

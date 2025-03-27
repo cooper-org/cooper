@@ -48,13 +48,13 @@ $$
 $$
 
 where $\Lag(\vx, \vlambda, \vmu) = f(\vx) + \vlambda^\top \vg(\vx) + \vmu^\top \vh(\vx)$ is the **Lagrangian function** associated with the constrained minimization problem. $\vlambda \geq \vzero$ and $\vmu$ are the **Lagrange multipliers** associated with the inequality and equality constraints, respectively.
-We refer to $\vx$ as the **primal variables** of the CMP, and $\vlambda$ and $\vmu$ as the **dual variables**.
+We refer to $\vx$ as the **primal variables** of the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`, and $\vlambda$ and $\vmu$ as the **dual variables**.
 
 :::{note}
 $\Lag(\vx,\vlambda, \vmu)$ is concave in $\vlambda$ and $\vmu$ regardless of the convexity properties of $f$, $\vg$, and $\vh$.
 :::
 
-An argmin-argmax point of the Lagrangian corresponds to a solution of the original CMP {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem.
+An argmin-argmax point of the Lagrangian corresponds to a solution of the original {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>` {cite:p}`boyd2004convex`. We refer to finding such a point as the **Lagrangian approach** to solving a constrained minimization problem.
 
 **Cooper** is primarily designed to solve constrained optimization problems using the Lagrangian approach, and it also implements alternative formulations such as the {py:class}`~cooper.formulation.QuadraticPenalty` and {py:class}`~cooper.formulation.AugmentedLagrangian` formulations (see {doc}`formulations`).
 

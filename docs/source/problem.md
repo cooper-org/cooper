@@ -22,7 +22,7 @@ Moreover, in order to package the values of the loss and constraints, we will de
 The example below illustrates the required steps for defining a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>` class for your problem. For simplicity, we illustrate the case of a single (possibly multi-dimensional) inequality constraint.
 1. **\[Line 4\]** Define a custom class which inherits from {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`.
 2. **\[Line 7\]** Instantiate a multiplier object for the constraint.
-3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type. Note that {py:class}`~cooper.constraints.Constraint`s must be "registered" as attributes of the CMP.
+3. **\[Lines 9-11\]** Define the constraint object, specifying the constraint type and (optionally) the formulation type. Note that {py:class}`~cooper.constraints.Constraint`s must be "registered" as attributes of the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`.
 4. **\[Line 13\]** Implement the {py:meth}`CMP.compute_cmp_state<cooper.ConstrainedMinimizationProblem.compute_cmp_state>` method that evaluates the loss and constraints.
 5. **\[Line 18\]** Return the information about the loss and constraints packaged into a {py:class}`~cooper.CMPState`.
 6. **\[Line 20\]** (Optional) Modularize the code to allow for evaluating the constraints **only**. This is useful for optimization algorithms that sometimes need to evaluate the constraints without computing the loss.
@@ -103,13 +103,13 @@ constraint = cooper.Constraint(
 :::
 
 (registering-constraints)=
-:::{admonition} Registering constraints in a CMP
+:::{admonition} Registering constraints in a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`
 :class: warning
 
-When initializing the CMP, {py:class}`~cooper.constraints.Constraint`s should be defined as attributes.
-We refer to this process as "registering" the constraints with the CMP. Utilities such as {py:meth}`CMP.constraints<cooper.ConstrainedMinimizationProblem.constraints>` and {py:meth}`CMP.named_constraints<cooper.ConstrainedMinimizationProblem.named_constraints>` enable iteration over the registered constraints.
+When initializing the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`, {py:class}`~cooper.constraints.Constraint`s should be defined as attributes.
+We refer to this process as "registering" the constraints with the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. Utilities such as {py:meth}`CMP.constraints<cooper.ConstrainedMinimizationProblem.constraints>` and {py:meth}`CMP.named_constraints<cooper.ConstrainedMinimizationProblem.named_constraints>` enable iteration over the registered constraints.
 
-Moreover, the utility method {py:meth}`CMP.dual_parameters<cooper.ConstrainedMinimizationProblem.dual_parameters>` returns the {py:class}`torch.nn.parameter.Parameter`s of the multipliers for the constraints registered with the CMP. This facilitates the instantiation of the `dual_optimizer` required by the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`. See the [Optim](optim.md#example) module for further details.
+Moreover, the utility method {py:meth}`CMP.dual_parameters<cooper.ConstrainedMinimizationProblem.dual_parameters>` returns the {py:class}`torch.nn.parameter.Parameter`s of the multipliers for the constraints registered with the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. This facilitates the instantiation of the `dual_optimizer` required by the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`. See the [Optim](optim.md#example) module for further details.
 
 ```python
 class MyCMP(cooper.ConstrainedMinimizationProblem):
@@ -205,10 +205,10 @@ Proxy constraints can be combined with sampled constraints and implicit multipli
 
 {py:class}`ConstrainedMinimizationProblem` sub-classes must be implemented and instantiated by the user, as shown in the [example](#example) above.
 
-CMPs represent constrained optimization problems and provide methods to compute the problem’s state, {py:class}`CMPState`, which includes the loss and constraints at a given point. The methods to be implemented are {py:meth}`CMP.compute_cmp_state<ConstrainedMinimizationProblem.compute_cmp_state>` and, optionally,
+{py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s represent constrained optimization problems and provide methods to compute the problem’s state, {py:class}`CMPState`, which includes the loss and constraints at a given point. The methods to be implemented are {py:meth}`CMP.compute_cmp_state<ConstrainedMinimizationProblem.compute_cmp_state>` and, optionally,
 {py:meth}`CMP.compute_violations<ConstrainedMinimizationProblem.compute_violations>`.
 
-Additionally, CMPs serve as an interface between the user and **Cooper**, enabling access to {py:meth}`CMP.constraints<ConstrainedMinimizationProblem.constraints>`, {py:meth}`CMP.multipliers<ConstrainedMinimizationProblem.multipliers>`, and {py:meth}`CMP.penalty_coefficients<ConstrainedMinimizationProblem.penalty_coefficients>`.
+Additionally, {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s serve as an interface between the user and **Cooper**, enabling access to {py:meth}`CMP.constraints<ConstrainedMinimizationProblem.constraints>`, {py:meth}`CMP.multipliers<ConstrainedMinimizationProblem.multipliers>`, and {py:meth}`CMP.penalty_coefficients<ConstrainedMinimizationProblem.penalty_coefficients>`.
 
 
 ```{eval-rst}
@@ -233,7 +233,7 @@ To ensure that your {py:class}`CMPState` is correctly constructed—with loss an
 (cmp-checkpointing)=
 ## Checkpointing
 
-You can checkpoint a CMP by saving and loading its state with the methods `CMP.state_dict` and `CMP.load_state_dict`. These methods capture the current values of the multipliers and penalty coefficients for all problem constraints, allowing you to resume the optimization process from that exact state.
+You can checkpoint a CMP by saving and loading its state with the methods {py:meth}`CMP.state_dict<cooper.ConstrainedMinimizationProblem.state_dict>` and {py:meth}`CMP.load_state_dict<cooper.ConstrainedMinimizationProblem.load_state_dict>`. These methods capture the current values of the multipliers and penalty coefficients for all problem constraints, allowing you to resume the optimization process from that exact state.
 
 ```python
 # Save the state of the CMP

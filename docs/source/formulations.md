@@ -14,10 +14,10 @@ $$
 
 various algorithmic approaches can be used to find a solution. The process involves two stages: first, selecting a **formulation** for the optimization problem, and second, choosing the **optimization algorithm** to solve that formulated problem.
 
-This section focuses on the **formulations** of the CMP. A formulation is a mathematical representation of the constrained optimization problem, involving a *scalarization* of the objective function and constraints (see Sec. 4.7.4 in {cite:t}`boyd2004convex`). Examples of formulations include the {py:class}`Lagrangian` and {py:class}`AugmentedLagrangian` formulations.
+This section focuses on the **formulations** of the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. A formulation is a mathematical representation of the constrained optimization problem, involving a *scalarization* of the objective function and constraints (see Sec. 4.7.4 in {cite:t}`boyd2004convex`). Examples of formulations include the {py:class}`Lagrangian` and {py:class}`AugmentedLagrangian` formulations.
 
 
-**Cooper** supports min-max formulations of CMPs of the form:
+**Cooper** supports min-max formulations of {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`s of the form:
 
 $$
 \min_{\vx \in \reals^d} \,\, \max_{\vlambda \ge \vzero, \vmu} \,\, \Lag(\vx,\vlambda, \vmu) \triangleq f(\vx) + P(\vg(\vx), \vlambda, \vc_{\vg}) + Q(\vh(\vx), \vmu, \vc_{\vh}),
