@@ -202,7 +202,7 @@ We have not tested **Cooper** with AMP, so we cannot guarantee that it operates 
 :::
 
 :::{dropdown} What if my problem has a lot of constraints?
-If your problem involves a large number of constraints, you can use [IndexedMultipliers](multipliers.md#indexed-multipliers) or [ImplicitMultipliers](multipliers.md#implicit-multipliers). The former allows for efficient indexing of the multiplier object, while the latter avoids explicitly storing them by considering a parametric representation instead.
+If your problem involves a large number of constraints, you can use [IndexedMultipliers](multipliers.md#indexed-multipliers) or [ImplicitMultipliers](multipliers.md#implicit-parametric-multipliers). The former allows for efficient indexing of the multiplier object, while the latter avoids explicitly storing them by considering a parametric representation instead.
 :::
 
 ### Miscellaneous

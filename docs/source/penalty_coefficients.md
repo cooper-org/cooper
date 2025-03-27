@@ -64,7 +64,7 @@ penalty_coefficient = cooper.penalty_coefficients.IndexedPenaltyCoefficient(
 
 ### Evaluating a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient`
 
-Similar to [multipliers](#multipliers), penalty coefficients can be evaluated using the `__call__` method. For example:
+Similar to [multipliers](multipliers.md), penalty coefficients can be evaluated using the `__call__` method. For example:
 
 ```python
 # `DensePenaltyCoefficient`s do not require arguments during evaluation

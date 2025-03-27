@@ -1,6 +1,6 @@
 (torch_optimizers)=
 
-## Torch Optimizers
+# Torch Optimizers
 
 
 ```{eval-rst}
@@ -15,7 +15,7 @@ The following optimizers are implemented in **Cooper**:
 - Specific instances of the {py:class}`~cooper.optim.torch_optimizers.ExtragradientOptimizer` class, such as the {py:class}`~cooper.optim.torch_optimizers.ExtraSGD` and {py:class}`~cooper.optim.torch_optimizers.ExtraAdam` optimizers.
 
 
-### $\nu$PI
+## $\nu$PI
 
 The $\nu$PI optimizer is a first-order optimization algorithm introduced by {cite:t}`sohrabi2024nupi`. It generalizes several popular first-order optimization techniques, including gradient descent, gradient descent with Polyak momentum {cite:p}`polyak1964some`, Nesterov accelerated gradient {cite:p}`nesterov1983method`, the optimistic gradient method {cite:p}`popov1980modification`, and Proportional-Integral (PI) controllers {cite:p}`astrom1995pid`.
 
@@ -34,7 +34,7 @@ The $\nu$PI optimizer has been shown to reduce oscillations and overshoot in the
 
 (extragradient-optimizers)=
 
-### Extragradient Optimizers
+## Extragradient Optimizers
 
 Extragradient optimizers are PyTorch optimizers equipped with an `extrapolation` method, allowing them to be used alongside the {py:class}`~cooper.optim.constrained_optimizers.ExtrapolationConstrainedOptimizer`.
 

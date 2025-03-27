@@ -223,6 +223,9 @@ A {py:class}`CMPState` is a dataclass containing the information about the loss 
 
 :::{note}
 To ensure that your {py:class}`CMPState` is correctly constructed—with loss and constraint tensors that have gradients—you can use the {py:meth}`CMP.sanity_check_cmp_state<ConstrainedMinimizationProblem.sanity_check_cmp_state>` method.
+
+However, avoid calling this method in every iteration of your optimization loop, as it can introduce unnecessary overhead.
+
 :::
 
 ```{eval-rst}

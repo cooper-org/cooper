@@ -128,7 +128,7 @@ $$
 
 :::{warning}
 There is no guarantee that a general nonconvex constrained optimization problem admits optimal Lagrange multipliers $\lambdastar$ and $\mustar$ at a solution $\xstar$.
-Nevertheless, in practice, many non-convex problems are successfully solved using the Lagrangian approach {cite:p}`elenter2022lagrangian, gallego2022controlled, hounie2023automatic, sohrabi2024pi, dai2024safe`
+Nevertheless, in practice, many non-convex problems are successfully solved using the Lagrangian approach {cite:p}`elenter2022lagrangian, gallego2022controlled, hounie2023automatic, sohrabi2024nupi, dai2024safe`
 For conditions under which Lagrange multipliers are guaranteed to exist, see {cite:t}`boyd2004convex`.
 :::
 
@@ -157,6 +157,14 @@ $$
 \lim_{\vc_{\vg}, \vc_{\vh} \rightarrow \infty}  \,\, \Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) =  \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
 $$
 
+:::{admonition} The Quadratic Penalty Formulation and Proxy Constraints
+:class: note
+
+TODO
+
+:::
+
+
 ```{eval-rst}
 .. autoclass:: QuadraticPenalty
     :members:
@@ -172,11 +180,21 @@ $$
 \Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu) = \Lag(\vx, \vlambda, \vmu) + \frac{1}{2} \vc_{\vg}^\top \, \texttt{relu}(\vg(\vx))^2 + \frac{1}{2} \vc_{\vh}^\top \, \vh(\vx)^2.
 $$
 
-The main advantage of the Augmented Lagrangian Method (ALM) over the quadratic penalty method (see Theorem 17.5 in {cite:t}`nocedal2006NumericalOptimization`) is that, under certain assumptions, there exists a finite $\bar{c}$ such that for all $c \geq \bar{c}$, the minimizer of $\Lag_{c}(\vx, \vlambda, \vmu)$ with respect to $\vx$ corresponds to the solution of the original constrained optimization problem $\xstar$. This allows the algorithm to succeed without requiring $c \rightarrow \infty$, as is often the case with the quadratic penalty method.
+The main advantage of the Augmented Lagrangian Method (ALM) over the quadratic penalty method (see Theorem 17.5 in {cite:t}`nocedal2006NumericalOptimization`) is that, under certain assumptions, there exists a finite $\bar{c}$ such that for all $c \geq \bar{c}$, the minimizer  $\xstar$ of $\Lag_{c \, \odot \, \mathbf{1}, c\, \odot \, \mathbf{1}}(\vx, \vlambda, \vmu)$ with respect to $\vx$ corresponds to the solution of the original constrained optimization problem. This allows the algorithm to succeed without requiring $c \rightarrow \infty$, as is often the case with the quadratic penalty method.
 
+Exactly solving the intermediate optimization problems considered by the {py:class}`~AugmentedLagrangian` formulation can be challenging. This is particularly true when $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$ is non-convex in $\vx$.
+
+Rather than aiming to solve the intermediate optimization problem to high precision, **Cooper** implements a version of the Augmented Lagrangian method where the primal variables are updated through one or more gradient-based steps.
+
+:::{admonition} The Augmented Lagrangian Formulation and Proxy Constraints
+:class: note
+
+TODO
+
+:::
 
 :::{warning}
-We make a distinction between the Augmented Lagrangian *formulation* ({py:class}`~AugmentedLagrangianFunction`) and the Augmented Lagrangian *method* ({py:class}`~AugmentedLagrangian`, $\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$, with the following updates:
+We make a distinction between the Augmented Lagrangian *formulation* ({py:class}`~AugmentedLagrangian`) and the Augmented Lagrangian *method* ($\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$, with the following updates:
 
 $$
 \vx_{t+1} &\in \argmin{\vx \in \reals^d} \,\, \Lag_{c_t}(\vx, \vlambda_t, \vmu_t) \\
@@ -187,25 +205,26 @@ $$
 
 The Augmented Lagrangian method has the following distinguishing features:
 1. The minimization with respect to the primal variables $\vx$ is (usually) solved completely or approximately (in contrast to taking one gradient step).
-2. It uses alternating updates (the *updated* primal iterate $\vx_{t+1}$ is used to update the Lagrange multipliers $\vlambda_{t+1}$).
+2. It uses alternating updates (the *updated* primal iterate $\vx_{t+1}$ is used to obtain the updated Lagrange multipliers $\vlambda_{t+1}$).
 3. The dual learning rates match the current value of the penalty coefficient $\eta_{\vlambda} = \eta_{\vmu} = c_t$.
 
-If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the {py:class}`~AugmentedLagrangianFunction` formulation. If you intend to use the Augmented Lagrangian *Method*, follow these steps:
+If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the {py:class}`~AugmentedLagrangian` formulation. If you intend to use the Augmented Lagrangian *Method*, follow these steps:
 1. Use an {py:class}`~AugmentedLagrangian` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
-2. Use {py:class}`torch.optim.SGD` with `lr=1.0` as the optimizer for the dual variables. This ensures that the dual learning rate is simply the penalty coefficient, as opposed `lr * c_t`.
-3. Use {py:class}`~cooper.optim.PrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
+2. Use {py:class}`torch.optim.SGD` as the dual optimizer, and ensure that its learning rate corresponds to the penalty coefficient on each step `c_t`.
+3. Use {py:class}`~cooper.optim.AlternatingPrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
 4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. See {doc}`optim` for details on how to implement this.
 :::
+
 
 ```{eval-rst}
 .. autoclass:: AugmentedLagrangian
     :members:
-    :exclude-members: compute_contribution_to_primal_lagrangian, compute_contribution_to_dual_lagrangian
 ```
+
 
 ## Custom Formulations
 
-If you are interested in implementing your own formulation, you can inherit from the {py:class}`~cooper.formulation.Formulation` abstract base class.
+If you are interested in implementing your own formulation, you can inherit from the {py:class}`~Formulation` abstract base class.
 
 ### Base Formulation Class
 

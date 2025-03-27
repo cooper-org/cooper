@@ -14,7 +14,7 @@ This module is divided into two main parts:
 - [Constrained Optimizers](#constrained-optimizers): for solving *constrained* minimization problems.
 - [Unconstrained Optimizers](#unconstrained-optimizers): for solving *unconstrained* minimization problems.
 
-The [Torch Optimizers]{ref}`torch-optimizers` section describes **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes tailored for solving CMPs that are not available in PyTorch.
+The [Torch Optimizers](torch_optimizers.md) section describes **Cooper** implementations of {py:class}`torch.optim.Optimizer` classes tailored for solving CMPs that are not available in PyTorch.
 
 ## Quick Start
 
@@ -40,6 +40,13 @@ All {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s expec
 - `primal_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the primal parameters.
 - `dual_optimizers`: a {py:class}`torch.optim.Optimizer` (or a list of optimizers) for the dual parameters.
 
+
+:::{admonition} Multiple Primal or Dual Optimizers
+:class: note
+
+When a list of optimizers is provided for the `primal_optimizers` or `dual_optimizers` argument, the different optimizers are treated as a single optimizer. As a result, all optimizers in the list are updated simultaneously, without intermediate calls to re-compute the Lagrangian or the CMP state.
+
+:::
 
 :::{admonition} Unconstrained problems in **Cooper**
 :class: note
@@ -177,6 +184,7 @@ A simple approach to solving CMPs is to update the primal and dual parameters si
 
 Alternating updates enjoy enhanced convergence guarantees for min-max optimization problems under certain assumptions {cite:p}`gidel2018variational,zhang2022near`. In the context of constrained optimization, these benefits can be achieved *without additional computational costs* relative to simultaneous updates (see {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer`). This motivates the implementation of the {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` and {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` classes.
 
+
 ```{eval-rst}
 .. autoclass:: AlternatingDualPrimalOptimizer
     :members:
@@ -258,6 +266,7 @@ for inputs, targets in train_loader:
     :members:
 ```
 
+
 ## **Cooper** Optimizer Base Class
 
 {py:class}`CooperOptimizer` is the base class for all **Cooper** optimizers, offering a unified interface for parameter updates. Both {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer` and {py:class}`~cooper.optim.UnconstrainedOptimizer` inherit from this class.
@@ -265,6 +274,7 @@ for inputs, targets in train_loader:
 ```{eval-rst}
 .. autoclass:: CooperOptimizer
     :members:
+    :exclude-members: roll
 ```
 
 
