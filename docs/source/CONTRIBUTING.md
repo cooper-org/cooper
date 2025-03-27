@@ -13,7 +13,7 @@ We aim to expand **Cooper** with several new features, and would love your help!
 - **New problem formulations**, such as the **Interior-point methods** {cite:p}`bertsekas1999NonlinearProgramming`.
 - Native **Distributed Data Parallel** (DDP) and **Automatic Mixed Precision** (AMP) support.
 - **A JAX version of Cooper**.
-- **Lightning integration**.
+- Integration with **PyTorch Lightning**.
 
 :::
 
