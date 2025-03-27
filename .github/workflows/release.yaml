@@ -22,7 +22,7 @@ jobs:
         id: build
         run: uv build
 
-      - name: Upload package to PyPI
+      - name: Publish package to PyPI
         id: pypi
         if: steps.build.outcome == 'success'
         uses: pypa/gh-action-pypi-publish@release/v1
