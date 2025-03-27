@@ -158,8 +158,7 @@ class ExtrapolationConstrainedOptimizer(ConstrainedOptimizer):
                 The dual Lagrangian store at :math:`\vx_{t}`, :math:`\vlambda_t` and
                 :math:`\vmu_t`.
 
-        .. admonition::
-            :class: note
+        .. note::
 
             The `RollOut` for this scheme returns the loss and `CMPState` values at the
             original point :math:`(\vx_t, \vlambda_t)`, *before* any of the updates are
