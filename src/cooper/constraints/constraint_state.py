@@ -17,11 +17,11 @@ class ConstraintState:
             used to evaluate the associated Lagrange multiplier. For example:
 
             - An :py:class:`~cooper.multipliers.IndexedMultiplier` expects the indices of the constraints
-            whose Lagrange multipliers are to be retrieved.
+              whose Lagrange multipliers are to be retrieved.
 
             - An :py:class:`~cooper.multipliers.ImplicitMultiplier` expects tensor-valued features for
-            the constraints, and can be used to measure the violation of a subset of the constraints within a
-            :py:class:`~cooper.constraints.Constraint`.
+              the constraints, and can be used to measure the violation of a subset of the constraints within a
+              :py:class:`~cooper.constraints.Constraint`.
 
             This field can also be used with an :py:class:`~cooper.multipliers.IndexedMultiplier`
             to measure the violation of only a subset of the constraints within a :py:class:`~cooper.constraints.Constraint`.

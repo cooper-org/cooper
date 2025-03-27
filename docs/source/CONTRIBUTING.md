@@ -115,9 +115,7 @@ clear and has sufficient instructions to be able to reproduce the issue.
 
 ## Code Style
 
-We use [ruff](https://docs.astral.sh/ruff/) for linting, formatting and import sorting. We ask for type hints for all code committed to **Cooper** and check for compliance with [mypy](https://mypy.readthedocs.io/).
-The continuous integration system should check this when you submit your pull requests.
-The easiest way to run these checks locally is via the
+We use [ruff](https://docs.astral.sh/ruff/) for linting, formatting and import sorting. We ask for type hints for all code committed to **Cooper** and check for compliance with [mypy](https://mypy.readthedocs.io/). The continuous integration system should check this when you submit your pull requests. The easiest way to run these checks locally is via the
 [pre-commit](https://pre-commit.com/) framework:
 
 ```bash
@@ -127,9 +125,7 @@ uv run pre-commit run --all-files
 
 ## Tutorial notebooks
 
-We use [jupytext](https://jupytext.readthedocs.io/) to maintain two synced copies of the notebooks
-in `docs/source/notebooks`: one in `ipynb` format, and one in `md` format. The advantage of the former
-is that it can be opened and executed directly in Google Colab; while the latter is useful to track diffs within version control.
+We use [jupytext](https://jupytext.readthedocs.io/) to maintain two synced copies of the notebooks in `docs/source/notebooks`: one in `ipynb` format, and one in `md` format. The advantage of the former is that it can be opened and executed directly in Google Colab; while the latter is useful to track diffs within version control.
 
 To create a new notebook which is automatically synced between the two formats, first create a jupyter notebook `path/to/notebook.ipynb`. Ensure that it has at least one cell, and then run the following command:
 
@@ -149,9 +145,7 @@ uv run jupytext --sync path/to/notebook.ipynb
 The jupytext version should match that specified in
 [.pre-commit-config.yaml](https://github.com/cooper-org/cooper/blob/master/.pre-commit-config.yaml).
 
-To check that the markdown and ipynb files are properly synced, you may use the
-[pre-commit](https://pre-commit.com/) framework to perform the same check used
-by the GitHub CI:
+To check that the markdown and ipynb files are properly synced, you may use the [pre-commit](https://pre-commit.com/) framework to perform the same check used by the GitHub CI:
 
 ```bash
 uv sync --group dev
@@ -172,8 +166,7 @@ And then run:
 uv run sphinx-build -b html docs/source docs/source/build/html -j auto
 ```
 
-This can take some time because it executes many of the notebooks in the documentation source.
-If you'd prefer to build the docs without executing the notebooks, you can run:
+This can take some time because it executes many of the notebooks in the documentation source. If you'd prefer to build the docs without executing the notebooks, you can run:
 
 ```
 uv run sphinx-build -b html -D nb_execution_mode=off docs/source docs/source/build/html -j auto
@@ -181,13 +174,11 @@ uv run sphinx-build -b html -D nb_execution_mode=off docs/source docs/source/bui
 
 You can then see the generated documentation in `docs/source/build/html/index.html`.
 
-The `-j auto` option controls the parallelism of the build. You can use a number
-in place of `auto` to control how many CPU cores to use.
+The `-j auto` option controls the parallelism of the build. You can use a number in place of `auto` to control how many CPU cores to use.
 
 :::{note}
 :class: note
-To re-build the documentation automatically upon changes, you can use the previous commands
-while changing `sphinx-build` for `sphinx-autobuild`:
+To re-build the documentation automatically upon changes, you can use the previous commands while changing `sphinx-build` for `sphinx-autobuild`:
 :::
 
 ```
@@ -198,8 +189,7 @@ uv run sphinx-autobuild -D nb_execution_mode=off docs/source docs/source/build/h
 
 ## License
 
-By contributing to **Cooper**, you agree that your contributions will be
-licensed under the LICENSE file in the root directory of this source tree.
+By contributing to **Cooper**, you agree that your contributions will be licensed under the LICENSE file in the root directory of this source tree.
 
 ## Acknowledgements
 

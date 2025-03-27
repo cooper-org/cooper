@@ -54,11 +54,11 @@ class AlternatingPrimalDualOptimizer(ConstrainedOptimizer):
         :math:`\vg(\vx_{\color{red} t+1})` and :math:`\vh(\vx_{\color{red} t+1})` are
         required, not the objective function value :math:`f(\vx_{\color{red} t+1})`. To
         reduce computational overhead, the user can implement the
-        :py:meth:`cooper.ConstrainedMinimizationProblem.compute_violations()`
-        method and pass the ``compute_violations_kwargs`` argument to
+        :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_violations()`
+        method of the CMP and pass the ``compute_violations_kwargs`` argument to
         :py:meth:`roll()`. This approach ensures that only the constraint violations
-        are computed at :math:`\vx_{\color{red} t+1}`, without constructing a computational
-        graph over the primal variables.
+        are recomputed at :math:`\vx_{\color{red} t+1}`, without calculating the loss or
+        constructing a computational graph over the primal variables.
     """
 
     def roll(
@@ -183,8 +183,8 @@ class AlternatingDualPrimalOptimizer(ConstrainedOptimizer):
         Both the primal and dual updates depend on the :py:class:`~cooper.CMPState` at
         the current primal iterate :math:`\vx_{t}`. Consequently, although the primal
         update uses the updated dual variables :math:`\vlambda_{\color{red} t+1}` and
-        :math:`\vmu_{\color{red} t+1}`, the :py:class:`~cooper.CMPState` does not need
-        to be recomputed after the dual update. As a result, the computational cost of
+        :math:`\vmu_{\color{red} t+1}`, the :py:class:`~cooper.CMPState` **does not need
+        to be recomputed after the dual update**. As a result, the computational cost of
         this optimizer matches that of the
         :py:class:`~cooper.optim.constrained_optimizers.SimultaneousOptimizer`.
     """
