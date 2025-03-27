@@ -597,17 +597,17 @@ tests = [
 [package.metadata]
 requires-dist = [
     { name = "torch", specifier = ">=1.13.1" },
-    { name = "typing-extensions", specifier = ">=4.12.2" },
+    { name = "typing-extensions", specifier = ">=4.13.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "coverage", specifier = ">=7.7.0" },
+    { name = "coverage", specifier = ">=7.7.1" },
     { name = "cvxpy", specifier = ">=1.6.4" },
     { name = "jupytext", specifier = ">=1.16.7" },
     { name = "mypy", specifier = ">=1.15.0" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
-    { name = "pre-commit", specifier = ">=4.1.0" },
+    { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "ruff", specifier = ">=0.11.2" },
 ]
@@ -633,7 +633,7 @@ notebooks = [
     { name = "torchvision", specifier = ">=0.14.1" },
 ]
 tests = [
-    { name = "coverage", specifier = ">=7.7.0" },
+    { name = "coverage", specifier = ">=7.7.1" },
     { name = "cvxpy", specifier = ">=1.6.4" },
     { name = "numpy", specifier = ">=1.26.4,<2" },
     { name = "pytest", specifier = ">=8.3.5" },
