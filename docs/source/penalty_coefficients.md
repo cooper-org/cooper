@@ -12,6 +12,7 @@ and {py:class}`~cooper.formulations.AugmentedLagrangian` formulations.
 In **Cooper**, penalty coefficients are wrappers around the {py:class}`torch.Tensor`. Notably, they do not require gradients, as they are not subject to optimization.
 
 The `cooper.penalty_coefficients` module provides the following types of penalty coefficients:
+
 - **{py:class}`~cooper.penalty_coefficients.DensePenaltyCoefficient`**: Models each penalty coefficient individually.
 - **{py:class}`~cooper.penalty_coefficients.IndexedPenaltyCoefficient`**: Similar to {py:class}`~cooper.penalty_coefficients.DensePenaltyCoefficient`, but allows fetching and updating penalty coefficients by index. This is useful when constraints are sampled, so that the required penalty coefficients change at each iteration.
 
@@ -31,7 +32,6 @@ constraint = cooper.Constraint(
 :::
 
 :::{note}
-
 The helper methods {py:meth}`CMP.penalty_coefficients<.ConstrainedMinimizationProblem.penalty_coefficients>` and {py:meth}`CMP.named_penalty_coefficients<.ConstrainedMinimizationProblem.named_penalty_coefficients>` allow iteration over the penalty coefficients associated with constraints registered in a {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`.
 For more details, see [Registering constraints in a CMP](#registering-constraints).
 :::
@@ -52,7 +52,6 @@ Since it is often desirable to increase the penalty coefficient over the optimiz
 
 To initialize a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient`, you can pass either a {py:class}`torch.Tensor` of shape `(num_constraints, )` or a scalar tensor to the `init` argument.
 
-
 ```python
 penalty_coefficient = cooper.penalty_coefficients.DensePenaltyCoefficient(
     init=torch.ones(10, device="cuda", dtype=torch.float32)
@@ -62,7 +61,6 @@ penalty_coefficient = cooper.penalty_coefficients.IndexedPenaltyCoefficient(
     init=torch.tensor(1.0, device="cuda", dtype=torch.float32)
 )
 ```
-
 
 ### Evaluating a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient`
 
@@ -81,7 +79,6 @@ penalty_coefficient_value = penalty_coefficient(indices)
 .. autoclass:: PenaltyCoefficient
     :members: __call__, sanity_check, value, to, state_dict, load_state_dict
 ```
-
 
 ## Dense Penalty Coefficients
 
@@ -106,24 +103,50 @@ indices in `idx`.
 
 To save the current penalty coefficients of a CMP, use the {py:meth}`~cooper.ConstrainedMinimizationProblem.state_dict()` method to create a state checkpoint. Later, you can restore this state using {py:meth}`~cooper.ConstrainedMinimizationProblem.load_state_dict()`. This process captures the multiplier and penalty coefficient values (see [CMP Checkpointing](#cmp-checkpointing) for details).
 
-
 ## Penalty Coefficient Updaters
 
-TODO
-
-Penalty coefficient updaters are objects that update the penalty coefficients of a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficient` object.
+Penalty coefficient updaters are used to adjust penalty coefficients during optimization based on constraint violations.
+Cooper provides two feasibility-driven updaters: {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater`
+and {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater`, both of which are driven by feasibility conditions.
 
 ```{eval-rst}
 .. autoclass:: PenaltyCoefficientUpdater
-    :members: __call__
+    :members: step
 ```
 
-```{eval-rst}
-.. autoclass:: AdditivePenaltyCoefficientUpdater
-    :members: __call__
-```
+### Multiplicative Penalty Coefficient Updater
+
+The {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater` multiplies the penalty coefficient
+by a growth factor when `violation`s are above the tolerance.
 
 ```{eval-rst}
 .. autoclass:: MultiplicativePenaltyCoefficientUpdater
-    :members: __call__
+```
+
+### Additive Penalty Coefficient Updater
+
+The {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater` increases the penalty coefficient by a
+fixed increment when `violation`s exceed the tolerance.
+
+```{eval-rst}
+.. autoclass:: AdditivePenaltyCoefficientUpdater
+```
+
+### Using Penalty Updaters in Training
+
+To use a penalty coefficient updater in training:
+
+1. **Instantiate** the updater with desired parameters.
+2. **Call** {py:meth}`~cooper.penalty_coefficients.PenaltyCoefficientUpdater.step` with observed constraints after each optimization step.
+
+**Example**:
+
+```python
+penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater(
+    growth_factor=2.0,
+    violation_tolerance=1e-3,
+    has_restart=True
+)
+roll_out = cooper_optimizer.roll(...)
+penalty_updater.step(roll_out.cmp_state.observed_constraints)
 ```

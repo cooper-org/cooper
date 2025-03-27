@@ -22,16 +22,19 @@ class PenaltyCoefficientUpdater(abc.ABC):
         its penalty coefficient should be updated. The decision depends on properties
         like whether the constraint contributes to primal/dual updates and the
         availability of strict violation measurements.
-
-        Note:
-        **Primal vs Dual Contributions**:
-        - For formulations expecting multipliers (e.g., AugmentedLagrangian), updates occur if:
-            - The constraint contributes to the dual update, **OR**
-            - It contributes to the primal update **and** has a strict violation measurement.
-        - For primal-only formulations (e.g., QuadraticPenalty), updates occur only if
-          the constraint contributes to the primal update.
-
         TODO(merajhashemi): Add to documentation "We do not update penalty coefficients for constraints that are not observed."
+
+        .. admonition:: Primal vs Dual Contributions
+            :class: note
+
+            - For formulations expecting multipliers (e.g., AugmentedLagrangian), updates occur if:
+
+                - The constraint contributes to the dual update, **OR**
+                - It contributes to the primal update **and** has a strict violation measurement.
+
+            - For primal-only formulations (e.g., QuadraticPenalty), updates occur only if
+              the constraint contributes to the primal update.
+
         Args:
             observed_constraints: Dictionary with :py:class:`~Constraint` instances as
                 keys and :py:class:`~ConstraintState` instances as values (containing
