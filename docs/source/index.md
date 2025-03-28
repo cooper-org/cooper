@@ -7,7 +7,10 @@
 :maxdepth: 2
 
 readme
+constrained_optimization
+faq
 notebooks/index
+CONTRIBUTING
 ```
 
 ```{toctree}
@@ -16,10 +19,11 @@ notebooks/index
 :maxdepth: 2
 
 problem
-lagrangian_formulation
-constrained_optimizer
+formulations
 optim
+torch_optimizers
 multipliers
+penalty_coefficients
 ```
 
 ```{toctree}

@@ -1,22 +1,13 @@
-r"""The nuPI optimizer is a first-order optimization algorithm proposed in the paper
-"On PI controllers for updating Lagrange multipliers in constrained optimization." by
-Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
+"""The nuPI optimizer is a first-order optimization algorithm proposed in the ICML 2024
+paper *On PI controllers for updating Lagrange multipliers in constrained optimization*
+by Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
 Jose Gallego-Posada.
-
-nuPI generalizes various popular first-order optimization algorithms, including gradient
-descent, gradient descent with Polyak and Nesterov momentum, the optimistic gradient
-method, and PI controllers. It's benefits when updating Lagrange multipliers in
-Lagrangian constrained optimization are discussed in the paper.
-
-For a detailed explanation of the $\nu$PI algorithm, see the paper:
-*On PI Controllers for Updating Lagrange Multipliers in Constrained Optimization* at
-`ICML 2024 <https://openreview.net/forum?id=1khG2xf1yt>`_.
 """
 
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 
@@ -24,8 +15,9 @@ import torch
 class InitType(Enum):
     r"""nuPI initialization types. This is used to determine how to initialize the
     error and derivative terms of the nuPI controller. The initialization scheme
-    `SGD` ensures that the first step of `nuPI(KP, KI)` is equivalent to SGD with
-    learning rate :math:`\text{lr} K_I`.
+    ``SGD`` ensures that the first step of ``nuPI(KP, KI)`` is equivalent to SGD with
+    learning rate :math:`\eta \times K_I`. The ``ZEROS`` scheme yields a first step which
+    corresponds to SGD with a learning rate of :math:`\eta \times (K_P + K_I)`.
     """
 
     ZEROS = 0
@@ -44,47 +36,96 @@ class nuPI(torch.optim.Optimizer):
         init_type: InitType = InitType.SGD,
         maximize: bool = False,
     ) -> None:
-        r"""Implements a nuPI controller as a PyTorch optimizer.
+        r"""Implements the ``nuPI`` controller as a PyTorch optimizer.
 
-        The error signal used for the nuPI controller is the gradient of a cost function
-        :math:`L` being optimized, with parameter :math:`\theta`. We treat :math:`\theta`
-        as the control variable, and the gradient of :math:`L` as the error signal. The
-        error signal at time :math:`t` is :math:`e_t = \nabla L_t(\theta_t)`. Note that
-        the function :math:`L_t` may change over time.
+        Controllers are designed to guide a system toward a desired state by adjusting a
+        control variable. This is achieved by measuring the error, which is the
+        difference between the desired and current states, and using this error to
+        modify the control variable, thereby influencing the system.
+
+        For this controller, the error signal is derived from the gradient of a loss
+        function :math:`L` being optimized with respect to a parameter
+        :math:`\vtheta`. Here, :math:`\vtheta` acts as the control variable, while the
+        **gradient** of :math:`L` serves as the error signal, defined as
+        :math:`\ve_t = \nabla L_t(\vtheta_t)`. The control objective of setting
+        :math:`\nabla L_t(\vtheta_t) = 0` corresponds to finding a stationary point
+        of the loss function, thereby minimizing (or maximizing) it.
+
+        .. note::
+            When applied to the Lagrange multipliers of a constrained minimization
+            problem, the control state :math:`\nabla L_t(\vtheta_t)` corresponds to the
+            gradient of the Lagrangian function with respect to the multipliers (e.g.,
+            :math:`\nabla_{\vlambda} \Lag(\vx, \vlambda) = \vg(\vx)` for
+            inequality-constrained problems). Setting this gradient to (less than or
+            equal to) zero corresponds to finding a point that satisfies the
+            constraints.
+
+        The ``nuPI`` controller updates parameters as follows:
+
+        .. math::
+            \vxi_t &= \nu \vxi_{t-1} + (1 - \nu) \ve_t, \\
+            \vtheta_1 &= \vtheta_0 - \eta (K_P \vxi_0 + K_I \ve_0), \\
+            \vtheta_{t+1} &= \vtheta_t - \eta (K_I \ve_t + K_P (\vxi_t - \vxi_{t-1}))
+
+        Here, :math:`\vxi_t` is a smoothed version of the error signal (:math:`\ve_t`),
+        using an exponential moving average (EMA) with coefficient :math:`\nu`.
+        :math:`K_P` and :math:`K_I` are the proportional and integral gains,
+        respectively, while the learning rate :math:`\eta` is kept separate
+        to allow comparison with other optimizers.
+
+        Weight decay is applied based only on the error signal :math:`\ve_t`, following
+        a similar approach to PyTorch's AdamW optimizer.
 
         When ``maximize=False``, the parameter update is multiplied by :math:`-1` before
         being applied.
 
-        The execution of the nuPI controller is given by:
+        **Initialization Schemes**:
+        The initialization of the ``nuPI`` controller requires specifying the initial
+        smoothed error signal, :math:`\vxi_{-1}`, which impacts the first parameter
+        update. Two initialization schemes are available:
 
-        .. math::
-            \xi_t &= \nu \xi_{t-1} + (1 - \nu) e_t \\
-            \theta_1 &= \theta_0 - \text{lr} (K_P \xi_0 + K_I e_0) \\
-            \theta_{t+1} &= \theta_t - \text{lr} (K_I e_t + K_P (\xi_t - \xi_{t-1})),
+        - ``InitType.ZEROS``: Initializes :math:`\vxi_{-1} = \vzero`. The first update rule becomes:
 
-        where :math:`K_P`, :math:`K_I` are the proportional and integral gains,
-        respectively. We keep the learning rate :math:`\text{lr}` as a separate
-        parameter to facilitate comparison with other optimizers.
+            .. math::
+                \vtheta_1 = \vtheta_0 - \eta (K_P \ve_0 + K_I \ve_0) = \vtheta_0 - \eta (K_P + K_I) \ve_0.
+
+        - ``InitType.SGD``: Initializes :math:`\vxi_{-1} = \ve_0`, producing a first step identical to SGD:
+
+            .. math::
+                \vxi_0 &= \ve_0, \\
+                \vtheta_1 &= \vtheta_0 - \eta (K_P \ve_0 + K_I \ve_0) = \vtheta_0 - \eta K_I \ve_0.
 
         .. note::
-            The optimizer state is initialized with :math:`\xi_{-1} = 0`.
+            nuPI(:math:`\eta`, :math:`K_P=0`, :math:`K_I=1`, :math:`\nu=0`) corresponds
+            to SGD with learning rate :math:`\eta`.
 
-        .. note::
-            Setting :math:`K_P=0`, :math:`K_I=1` and :math:`\nu=0` corresponds to SGD
-            with learning rate :math:`\text{lr}`.
-
-            Setting :math:`K_P=1`, :math:`K_I=1` and :math:`\nu=0` corresponds to the
-            optimistic gradient method.
+            nuPI(:math:`\eta`, :math:`K_P=1`, :math:`K_I=1`, :math:`\nu=0`) corresponds
+            to the optimistic gradient method :cite:p:`popov1980modification`.
 
         Args:
-            params: iterable of parameters to optimize or dicts defining parameter groups
-            lr: learning rate
-            weight_decay: weight decay (L2 penalty)
-            Kp: proportional gain
-            Ki: integral gain
-            ema_nu: EMA coefficient
-            init_type: initialization scheme
-            maximize: whether to maximize or minimize the loss
+            params: iterable of parameters to optimize, or dicts defining parameter groups.
+            lr: learning rate.
+            weight_decay: weight decay (L2 penalty). Defaults to 0.
+            Kp: proportional gain. Defaults to 0.
+            Ki: integral gain. Defaults to 1.
+            ema_nu: EMA coefficient for the smoothed error signal. Defaults to 0,
+                meaning no smoothing is applied.
+            init_type: initialization scheme for :math:`\vxi_{-1}`. Defaults to
+                ``InitType.SGD``, which matches the first step of SGD.
+            maximize: whether to maximize the objective with respect to the parameters
+                instead of minimizing. Defaults to ``False``.
+
+        Raises:
+            ValueError: If the learning rate, or weight decay is negative.
+            ValueError: If the EMA coefficient is not in the range :math:`(-1, 1)`.
+            ValueError: If the initialization type is invalid.
+            NotImplementedError: If multiple parameter groups are used with non-scalar
+                proportional and integral gains.
+
+        Warnings:
+            If a negative proportional or integral gain is used.
+            If both proportional and integral gains are zero.
+            If the EMA coefficient is negative.
         """
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -191,7 +232,6 @@ def _nupi_zero_init(
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
-    assert not error.is_sparse, "For sparse updates, use _sparse_nupi instead"
 
     xit_m1_coef = Kp * (1 - ema_nu)
     if "xi" not in state and xit_m1_coef.ne(0).any():
@@ -232,8 +272,6 @@ def _sparse_nupi_zero_init(
     updates based on a zero initialization scheme.
     """
     error = param.grad
-    assert error.is_sparse, "For dense updates, use _nupi instead"
-
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error.indices()
     detached_error_values = error._values().clone().detach()
@@ -291,7 +329,6 @@ def _nupi_sgd_init(
     """Applies a nuPI step update to `param`."""
     error = param.grad
     detached_error = error.clone().detach()
-    assert not error.is_sparse, "For sparse updates, use _sparse_nupi_* instead"
 
     uses_ki_term = Ki.ne(0).any()
     uses_kp_term = (Kp * (1 - ema_nu)).ne(0).any()
@@ -340,8 +377,6 @@ def _sparse_nupi_sgd_init(
     (on each coordinate) match that of SGD.
     """
     error = param.grad
-    assert error.is_sparse, "For dense updates, use _nupi instead"
-
     error = error.coalesce()  # the update is non-linear so indices must be unique
     error_indices = error.indices()
     detached_error_values = error._values().clone().detach()

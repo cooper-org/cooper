@@ -26,7 +26,7 @@ def test_multiplier_initialization_with_num_constraints(multiplier_class, num_co
 
 
 def test_multiplier_initialization_without_init_or_num_constraints(multiplier_class):
-    with pytest.raises(ValueError, match="At least one of `num_constraints` and `init` must be provided."):
+    with pytest.raises(ValueError, match=r"At least one of `num_constraints` and `init` must be provided."):
         multiplier_class()
 
 
@@ -51,7 +51,7 @@ def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multipl
         pytest.skip("")
 
     multiplier = multiplier_class(init=init_multiplier_tensor.abs().neg())
-    with pytest.raises(ValueError, match="For inequality constraint, all entries in multiplier must be non-negative."):
+    with pytest.raises(ValueError, match=r"For inequality constraint, all entries in multiplier must be non-negative."):
         multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
 
@@ -67,7 +67,7 @@ def test_indexed_multiplier_forward_invalid_indices(init_multiplier_tensor):
     multiplier = cooper.multipliers.IndexedMultiplier(init=init_multiplier_tensor)
     indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
 
-    with pytest.raises(ValueError, match="Indices must be of type torch.long."):
+    with pytest.raises(ValueError, match=r"Indices must be of type torch.long."):
         multiplier.forward(indices)
 
 

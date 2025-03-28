@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 import torch
 
-import cooper
 import testing
 
 DUAL_LR = 1e-2
@@ -15,20 +14,18 @@ DUAL_LR = 1e-2
 class Model(torch.nn.Module):
     """A simple model that concatenates a list of parameters."""
 
-    def __init__(self, params: Sequence):
+    def __init__(self, params: Sequence[torch.Tensor]):
         super().__init__()
         self.num_params = len(params)
 
         for i, param in enumerate(params):
-            if not isinstance(param, torch.nn.Parameter):
-                param = torch.nn.Parameter(param)
-            self.register_parameter(name=f"params_{i}", param=param)
+            self.register_parameter(name=f"params_{i}", param=torch.nn.Parameter(param))
 
     def forward(self):
         return torch.cat([getattr(self, f"params_{i}") for i in range(self.num_params)])
 
 
-def construct_cmp(multiplier_type, num_constraints, num_variables, device):
+def construct_cmp(multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device):
     generator = torch.Generator(device).manual_seed(0)
     A = torch.randn(num_constraints, num_variables, device=device, generator=generator)
     b = torch.randn(num_constraints, device=device, generator=generator)
@@ -37,21 +34,32 @@ def construct_cmp(multiplier_type, num_constraints, num_variables, device):
         num_variables=num_variables,
         has_ineq_constraint=True,
         ineq_multiplier_type=multiplier_type,
-        ineq_formulation_type=cooper.LagrangianFormulation,
+        ineq_penalty_coefficient_type=penalty_coefficient_type,
+        ineq_formulation_type=formulation_type,
         A=A,
         b=b,
         device=device,
     )
 
 
-def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constraints, num_variables, device):
+def test_checkpoint(
+    multiplier_type,
+    penalty_coefficient_type,
+    formulation_type,
+    use_multiple_primal_optimizers,
+    num_constraints,
+    num_variables,
+    device,
+):
     x = [torch.ones(num_variables, device=device)]
     if use_multiple_primal_optimizers:
         x = x[0].split(1)
     model = Model(x)
     model.to(device=device)
 
-    cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
+    cmp = construct_cmp(
+        multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device
+    )
 
     primal_optimizers = testing.build_primal_optimizers(list(model.parameters()))
     cooper_optimizer = testing.build_cooper_optimizer(
@@ -90,7 +98,9 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
     cmp_state_dict_200 = cmp.state_dict()
 
     # ------------ Reload from 100-step checkpoint ------------
-    new_cmp = construct_cmp(multiplier_type, num_constraints, num_variables, device)
+    new_cmp = construct_cmp(
+        multiplier_type, penalty_coefficient_type, formulation_type, num_constraints, num_variables, device
+    )
     new_cmp.load_state_dict(cmp_state_dict_100)
 
     x = [torch.randn(num_variables, device=device)]
@@ -102,15 +112,13 @@ def test_checkpoint(multiplier_type, use_multiple_primal_optimizers, num_constra
 
     loaded_primal_optimizers = testing.build_primal_optimizers(list(loaded_model.parameters()))
     loaded_dual_optimizers = None
-    if any(new_cmp.constraints()):
-        loaded_dual_optimizers = testing.build_dual_optimizers(
+    if any(True for _ in new_cmp.dual_parameters()):
+        loaded_dual_optimizers = testing.build_dual_optimizer(
             dual_parameters=new_cmp.dual_parameters(), dual_optimizer_kwargs={"lr": DUAL_LR}
         )
 
     loaded_cooper_optimizer = cooper_optimizer_class(
-        cmp=new_cmp,
-        primal_optimizers=loaded_primal_optimizers,
-        dual_optimizers=loaded_dual_optimizers,
+        cmp=new_cmp, primal_optimizers=loaded_primal_optimizers, dual_optimizers=loaded_dual_optimizers
     )
     loaded_cooper_optimizer.load_state_dict(cooper_optimizer_state_dict_100)
 

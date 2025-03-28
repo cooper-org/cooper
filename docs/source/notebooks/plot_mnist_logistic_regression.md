@@ -5,10 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
 # Training a logistic regression classifier on MNIST under a norm constraint.
@@ -67,7 +64,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
         self.norm_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=multiplier,
         )
 

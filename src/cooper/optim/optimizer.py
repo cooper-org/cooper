@@ -8,12 +8,28 @@ from cooper.utils import OneOrSequence, ensure_sequence
 
 
 class CooperOptimizerState(TypedDict):
+    r"""Stores the state of a :py:class:`~cooper.optim.CooperOptimizer`.
+
+    Args:
+        primal_optimizer_states: List of primal optimizer ``state_dict``\s.
+        dual_optimizer_states: List of dual optimizer ``state_dict``\s. If the optimizer
+            is an unconstrained optimizer, this field is set to ``None``.
+    """
+
     primal_optimizer_states: list[dict]
     dual_optimizer_states: Optional[list[dict]]
 
 
 class RollOut(NamedTuple):
-    """Stores the output of a call to :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`."""
+    """Stores the output of a call to :py:meth:`~cooper.optim.CooperOptimizer.roll()`.
+
+    Args:
+        loss (:py:class:`torch.Tensor`): Value of the objective function.
+        cmp_state (:py:class:`~cooper.cmp.CMPState`): State of the CMP.
+        primal_lagrangian_store (:py:class:`~cooper.LagrangianStore`): LagrangianStore for the primal Lagrangian.
+        dual_lagrangian_store (:py:class:`~cooper.LagrangianStore`): LagrangianStore for the dual Lagrangian.
+
+    """
 
     loss: torch.Tensor
     cmp_state: CMPState
@@ -22,6 +38,30 @@ class RollOut(NamedTuple):
 
 
 class CooperOptimizer(abc.ABC):
+    r"""Base class for :py:class:`~cooper.optim.constrained_optimizer.ConstrainedOptimizer`
+    and :py:class:`~cooper.optim.UnconstrainedOptimizer`\s.
+
+    Args:
+        cmp: The constrained minimization problem to be optimized. Providing the CMP
+            as an argument for the constructor allows the optimizer to call the
+            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
+            method. Additionally, in the case of a constrained optimizer, the CMP
+            enables access to the multipliers'
+            :py:meth:`~cooper.multipliers.Multiplier.post_step_` method which must be
+            called after the multiplier update.
+
+        primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
+            a model). The primal parameters can be partitioned into multiple optimizers,
+            in this case ``primal_optimizers`` accepts a list of
+            :py:class:`torch.optim.Optimizer`\s.
+
+        dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
+            multipliers associated with the constraints). A sequence of
+            :py:class:`torch.optim.Optimizer`\s can be passed to handle the case of
+            several :py:class:`~cooper.constraints.Constraint`\s.
+    """
+
     def __init__(
         self,
         cmp: ConstrainedMinimizationProblem,
@@ -48,10 +88,16 @@ class CooperOptimizer(abc.ABC):
 
     @torch.no_grad()
     def primal_step(self) -> None:
+        """Performs a gradient step on the parameters associated with the primal variables."""
         for primal_optimizer in self.primal_optimizers:
             primal_optimizer.step()
 
     def state_dict(self) -> CooperOptimizerState:
+        r"""Returns the state of the optimizer as a
+        :py:class:`~cooper.optim.cooper_optimizer.CooperOptimizerState`. This method
+        relies on the internal :py:meth:`~torch.optim.Optimizer.state_dict` method of
+        the corresponding primal or dual optimizers.
+        """
         primal_optimizer_states = [optimizer.state_dict() for optimizer in self.primal_optimizers]
 
         dual_optimizer_states = None
@@ -63,12 +109,24 @@ class CooperOptimizer(abc.ABC):
         )
 
     def load_state_dict(self, state: CooperOptimizerState) -> None:
+        """Loads the optimizer state from the given state dictionary.
+
+        Args:
+            state: A dictionary containing the optimizer state.
+
+        Raises:
+            ValueError: If the number of primal optimizers does not match the number of primal optimizer states.
+            ValueError: If the number of dual optimizers does not match the number of dual optimizer states.
+            ValueError: If ``dual_optimizer_states`` is present in the state dict but ``dual_optimizers`` is None.
+        """
         if len(state["primal_optimizer_states"]) != len(self.primal_optimizers):
             raise ValueError("The number of primal optimizers does not match the number of primal optimizer states.")
 
         if self.dual_optimizers is None:
             if state["dual_optimizer_states"] is not None:
-                raise ValueError("Optimizer state dict contains `dual_optimizer_states` but `dual_optimizers` is None.")
+                raise ValueError(
+                    "Optimizer state dict contains ``dual_optimizer_states`` but ``dual_optimizers`` is None."
+                )
         elif len(state["dual_optimizer_states"]) != len(self.dual_optimizers):
             raise ValueError("The number of dual optimizers does not match the number of dual optimizer states.")
 

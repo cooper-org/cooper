@@ -5,10 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
 # Finding the min-norm solution to a linear system of equations.
@@ -36,7 +33,7 @@ is partially observed at each iteration. That is, we assume that the matrix $A$
 and the vector $b$ may be sub-sampled at each iteration.
 
 $$
-\mathcal{L}(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
+\Lag(x, \lambda) = \Vert x \Vert_2^2 + \lambda^T D (Ax - b)
 $$
 
 where $\lambda$ is the vector of Lagrange multipliers, and $D$ is a
@@ -138,7 +135,7 @@ class MinNormWithLinearConstraints(cooper.ConstrainedMinimizationProblem):
         constraint_type = cooper.ConstraintType.EQUALITY
         multiplier = cooper.multipliers.IndexedMultiplier(num_constraints=num_equations, device=DEVICE)
         self.eq_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
     def compute_cmp_state(
