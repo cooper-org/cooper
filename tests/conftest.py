@@ -1,4 +1,9 @@
-import os
-import sys
+import pytest
+import torch
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "helpers"))
+
+@pytest.fixture(scope="session", params=["cpu", "cuda"])
+def device(request):
+    if request.param == "cuda" and not torch.cuda.is_available():
+        pytest.skip("Aim device 'cuda' is not available.")
+    return torch.device(request.param)

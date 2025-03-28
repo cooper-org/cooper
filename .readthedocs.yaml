@@ -5,15 +5,19 @@
 # Required
 version: 2
 
-# Set the version of Python and other tools you might need
+# Set the version of Python and install dependencies
 build:
-  os: ubuntu-20.04
+  os: ubuntu-24.04
   tools:
-    python: "3.8"
-    # You can also specify other tool versions:
-    # nodejs: "16"
-    # rust: "1.55"
-    # golang: "1.17"
+    python: "3.10"
+  jobs:
+    create_environment:
+      - asdf plugin add uv
+      - asdf install uv latest
+      - asdf global uv latest
+      - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --group docs
+    install:
+      - echo "Dependencies installed!"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -22,11 +26,3 @@ sphinx:
 # If using Sphinx, optionally build your docs in additional formats such as PDF
 # formats:
 #    - pdf
-
-# Optionally declare the Python requirements required to build your docs
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs

@@ -3,15 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Ignore generated version file by setuptools
-cooper/version.py
-
 # Tutorial auxiliary folder
-tutorials/data/
-
-# Ignore generated files for tutorial gallery
-docs/source/auto_tutorials
-docs/source/modules/
+docs/source/notebooks/data/
+docs/source/notebooks/checkpoint/
 
 # C extensions
 *.so
@@ -81,9 +75,6 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# pyenv
-.python-version
-
 # celery beat schedule file
 celerybeat-schedule
 
@@ -94,7 +85,7 @@ celerybeat-schedule
 .env
 
 # virtualenv
-.venv
+.venv/
 venv/
 ENV/
 
@@ -114,3 +105,6 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+
+# ruff
+.ruff_cache/
