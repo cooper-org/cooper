@@ -7,11 +7,13 @@ requires = [
 
 [project]
 name = "cooper-optim"
-description = "cooper is a toolkit for Lagrangian-based constrained optimization in PyTorch"
+description = "A library for Lagrangian-based constrained optimization in PyTorch"
 readme = "README.md"
 keywords = [
-    "optimization",
+    "non-convex constrained optimization",
+    "lagrangian optimization",
     "pytorch",
+    "machine learning",
 ]
 license = "MIT"
 license-files = ["LICENSE"]
