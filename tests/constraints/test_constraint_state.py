@@ -4,7 +4,7 @@ import pytest
 import torch
 
 import cooper
-from tests.helpers import testing_utils
+import testing
 
 
 @pytest.fixture(params=[1, 10])
@@ -14,7 +14,7 @@ def num_constraints(request):
 
 @pytest.fixture
 def violation(num_constraints):
-    violation = torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(0))
+    violation = torch.randn(num_constraints, generator=testing.frozen_rand_generator(0))
     if num_constraints == 1:
         violation.squeeze_()
     return violation
@@ -22,7 +22,7 @@ def violation(num_constraints):
 
 @pytest.fixture
 def strict_violation(num_constraints):
-    strict_violation = torch.randn(num_constraints, generator=testing_utils.frozen_rand_generator(1))
+    strict_violation = torch.randn(num_constraints, generator=testing.frozen_rand_generator(1))
     if num_constraints == 1:
         strict_violation.squeeze_()
     return strict_violation
@@ -30,12 +30,12 @@ def strict_violation(num_constraints):
 
 @pytest.fixture
 def constraint_features(num_constraints):
-    return torch.randperm(num_constraints, generator=testing_utils.frozen_rand_generator(2))
+    return torch.randperm(num_constraints, generator=testing.frozen_rand_generator(2))
 
 
 @pytest.fixture
 def strict_constraint_features(num_constraints):
-    return torch.randperm(num_constraints, generator=testing_utils.frozen_rand_generator(3))
+    return torch.randperm(num_constraints, generator=testing.frozen_rand_generator(3))
 
 
 @pytest.fixture(params=[True, False])
@@ -87,7 +87,7 @@ def test_constraint_state_initialization(
 
 def test_constraint_state_initialization_failure(violation, strict_constraint_features):
     with pytest.raises(
-        ValueError, match="strict_violation must be provided if strict_constraint_features is provided."
+        ValueError, match=r"`strict_violation` must be provided if `strict_constraint_features` is provided."
     ):
         cooper.ConstraintState(violation=violation, strict_constraint_features=strict_constraint_features)
 

@@ -5,11 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  language: python
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
 # Linear classification with rate constraints.
@@ -18,11 +14,11 @@ kernelspec:
 
 
 :::{note}
-This example highlights the use of proxy constraints {cite:t}`cotter2019JMLR`. Proxy
+This example highlights the use of proxy constraints {cite:t}`cotter2019proxy`. Proxy
 constraints allow using different constraint violations for updating the primal and
 dual variables. They are useful when the true constraint is non-differentiable, but
 there exists a differentiable surrogate that is aligned with the original constraint.
-This example is based on Fig. 2 of {cite:t}`cotter2019JMLR`.
+This example is based on Fig. 2 of {cite:t}`cotter2019proxy`.
 
 By default, Cooper uses the provided violation to update both the primal and dual.
 To use proxy constraints, the user must provide a `strict_violation` in the
@@ -52,7 +48,7 @@ formulation, but replace the constraints with differentiable approximations or
 surrogates. However, changing the constraint functions can result in an over- or
 under-constrained version of the problem (as illustrated in this tutorial).
 
-{cite:t}`cotter2019JMLR` propose a *proxy-Lagrangian formulation*, in which the
+{cite:t}`cotter2019proxy` propose a *proxy-Lagrangian formulation*, in which the
 non-differentiable constraints are relaxed *only when necessary*. In other
 words, the non-differentiable constraint functions are used to compute the
 Lagrangian and constraint violations (and thus the to update the Lagrange multipliers),
@@ -172,7 +168,7 @@ class MixtureSeparation(cooper.ConstrainedMinimizationProblem):
         constraint_type = cooper.ConstraintType.INEQUALITY
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1)
         self.rate_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
         self.constraint_level = constraint_level

@@ -30,7 +30,7 @@ def test_evaluate_constraint_factor_indexed_multiplier(num_constraints):
 
 
 def test_evaluate_constraint_factor_dense_penalty(num_constraints):
-    penalty = cooper.multipliers.DensePenaltyCoefficient(init=torch.tensor(1.0))
+    penalty = cooper.penalty_coefficients.DensePenaltyCoefficient(init=torch.tensor(1.0))
 
     result = cooper.formulations.utils.evaluate_constraint_factor(penalty, None, (num_constraints,))
     assert torch.equal(result, penalty().expand(num_constraints))
@@ -38,7 +38,7 @@ def test_evaluate_constraint_factor_dense_penalty(num_constraints):
 
 
 def test_evaluate_constraint_factor_indexed_penalty(num_constraints):
-    penalty = cooper.multipliers.IndexedPenaltyCoefficient(init=torch.tensor(1.0))
+    penalty = cooper.penalty_coefficients.IndexedPenaltyCoefficient(init=torch.tensor(1.0))
     constraint_features = torch.randperm(num_constraints, generator=torch.Generator().manual_seed(0))
 
     result = cooper.formulations.utils.evaluate_constraint_factor(penalty, constraint_features, (num_constraints,))
@@ -59,12 +59,9 @@ def test_compute_dual_weighted_violation(num_constraints):
     generator = torch.Generator().manual_seed(0)
     multiplier_value = torch.rand(num_constraints, generator=generator)
     violation = torch.randn(num_constraints, generator=generator)
-    penalty_coefficient_value = torch.rand(num_constraints, generator=generator)
 
-    result = cooper.formulations.utils.compute_dual_weighted_violation(
-        multiplier_value, violation, penalty_coefficient_value
-    )
-    assert torch.allclose(result, torch.sum(penalty_coefficient_value * multiplier_value * violation))
+    result = cooper.formulations.utils.compute_dual_weighted_violation(multiplier_value, violation)
+    assert torch.allclose(result, torch.sum(multiplier_value * violation))
 
 
 @pytest.mark.parametrize("constraint_type", [cooper.ConstraintType.EQUALITY, cooper.ConstraintType.INEQUALITY])

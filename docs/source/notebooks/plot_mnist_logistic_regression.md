@@ -5,10 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
 # Training a logistic regression classifier on MNIST under a norm constraint.
@@ -67,7 +64,7 @@ class NormConstrainedLogisticRegression(cooper.ConstrainedMinimizationProblem):
 
         self.norm_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.INEQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=multiplier,
         )
 
@@ -121,7 +118,7 @@ if not os.path.isfile(checkpoint_path + "/checkpoint.pth"):
     start_epoch = 0
     all_metrics = defaultdict(list)
 else:
-    checkpoint = torch.load(checkpoint_path + "/checkpoint.pth")
+    checkpoint = torch.load(checkpoint_path + "/checkpoint.pth", weights_only=True)
     batch_ix = checkpoint["batch_ix"]
     start_epoch = checkpoint["epoch"] + 1
     all_metrics = checkpoint["all_metrics"]
@@ -167,7 +164,7 @@ for epoch_num in range(start_epoch, 7):
 del batch_ix, all_metrics, model, cmp, cooper_optimizer
 
 # Post-training analysis and plotting
-all_metrics = torch.load(checkpoint_path + "/checkpoint.pth")["all_metrics"]
+all_metrics = torch.load(checkpoint_path + "/checkpoint.pth", weights_only=True)["all_metrics"]
 
 fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=4, sharex=True, figsize=(18, 4))
 

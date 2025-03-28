@@ -5,14 +5,10 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  language: python
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
-# Finding a discrete maximum entropy distribution.
+# Finding a maximum entropy (discrete) distribution using the Lagrangian Approach.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_max_entropy.ipynb)
 
@@ -71,12 +67,12 @@ class MaximumEntropy(cooper.ConstrainedMinimizationProblem):
 
         self.mean_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=mean_multiplier,
         )
         self.sum_constraint = cooper.Constraint(
             constraint_type=cooper.ConstraintType.EQUALITY,
-            formulation_type=cooper.LagrangianFormulation,
+            formulation_type=cooper.formulations.Lagrangian,
             multiplier=sum_multiplier,
         )
 
@@ -119,12 +115,12 @@ state_history = {}
 for i in range(3000):
     _, cmp_state, primal_lagrangian_store, _ = cooper_optimizer.roll(compute_cmp_state_kwargs={"log_probs": log_probs})
 
-    observed_violations = list(cmp_state.observed_violations())
-    observed_multipliers = list(primal_lagrangian_store.observed_multiplier_values())
+    observed_violation = cmp_state.observed_constraints[cmp.mean_constraint].violation
+    observed_multiplier = list(primal_lagrangian_store.observed_multiplier_values())
     state_history[i] = {
         "loss": -cmp_state.loss.item(),
-        "multipliers": torch.stack(observed_multipliers).detach(),
-        "violation": torch.stack(observed_violations).detach(),
+        "multipliers": torch.stack(observed_multiplier).detach(),
+        "violation": observed_violation.detach(),
     }
 
 

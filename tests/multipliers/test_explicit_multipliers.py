@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import cooper
-from tests.helpers import testing_utils
+import testing
 
 
 def evaluate_multiplier(multiplier, all_indices):
@@ -26,7 +26,7 @@ def test_multiplier_initialization_with_num_constraints(multiplier_class, num_co
 
 
 def test_multiplier_initialization_without_init_or_num_constraints(multiplier_class):
-    with pytest.raises(ValueError, match="At least one of `num_constraints` and `init` must be provided."):
+    with pytest.raises(ValueError, match=r"At least one of `num_constraints` and `init` must be provided."):
         multiplier_class()
 
 
@@ -51,7 +51,7 @@ def test_multiplier_sanity_check(constraint_type, multiplier_class, init_multipl
         pytest.skip("")
 
     multiplier = multiplier_class(init=init_multiplier_tensor.abs().neg())
-    with pytest.raises(ValueError, match="For inequality constraint, all entries in multiplier must be non-negative."):
+    with pytest.raises(ValueError, match=r"For inequality constraint, all entries in multiplier must be non-negative."):
         multiplier.set_constraint_type(cooper.ConstraintType.INEQUALITY)
 
 
@@ -67,7 +67,7 @@ def test_indexed_multiplier_forward_invalid_indices(init_multiplier_tensor):
     multiplier = cooper.multipliers.IndexedMultiplier(init=init_multiplier_tensor)
     indices = torch.tensor([0, 1, 2, 3, 4], dtype=torch.float32)
 
-    with pytest.raises(ValueError, match="Indices must be of type torch.long."):
+    with pytest.raises(ValueError, match=r"Indices must be of type torch.long."):
         multiplier.forward(indices)
 
 
@@ -126,7 +126,7 @@ def test_ineq_post_step_(constraint_type, multiplier_class, init_multiplier_tens
 
 
 def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constraints, random_seed):
-    generator = testing_utils.frozen_rand_generator(random_seed)
+    generator = testing.frozen_rand_generator(random_seed)
 
     multiplier_init = torch.randn(num_constraints, generator=generator)
     new_multiplier = explicit_multiplier_class(init=multiplier_init)
@@ -134,7 +134,7 @@ def check_save_load_state_dict(multiplier, explicit_multiplier_class, num_constr
     # Save to file to force reading from file so we can ensure correct loading
     with tempfile.TemporaryDirectory() as tmpdirname:
         torch.save(multiplier.state_dict(), os.path.join(tmpdirname, "multiplier.pt"))
-        state_dict = torch.load(os.path.join(tmpdirname, "multiplier.pt"))
+        state_dict = torch.load(os.path.join(tmpdirname, "multiplier.pt"), weights_only=True)
 
     new_multiplier.load_state_dict(state_dict)
 

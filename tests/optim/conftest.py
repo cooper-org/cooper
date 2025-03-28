@@ -18,7 +18,7 @@ def cmp_instance(cmp_state):
                 multiplier=cooper.multipliers.DenseMultiplier(num_constraints=1),
             )
 
-        def compute_cmp_state(self):
+        def compute_cmp_state(self):  # noqa: PLR6301
             return cmp_state
 
     return DummyCMP()

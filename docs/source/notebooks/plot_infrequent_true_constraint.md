@@ -5,14 +5,10 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.3
-kernelspec:
-  display_name: Python 3
-  language: python
-  name: python3
+    jupytext_version: 1.16.7
 ---
 
-# Linear transformation between two vectors with constrained spectrum.
+# Finding a spectrum-constrained linear transformation between two vectors.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_infrequent_true_constraint.ipynb)
 
@@ -21,16 +17,24 @@ kernelspec:
 This example highlights the use of the flags `contributes_to_primal_update` and
 `contributes_to_dual_update` in the `ConstraintState` class. These flags are used to
 specify whether a constraint violation contributes to the primal or dual update. By
-default, both flags are set to True. However, in this example, we update the primal
-parameters based on a surrogate constraint since the true constraint is expensive to
-compute, and difficult to differentiate. The true constraint is only computed every
-few iterations, and the multipliers are updated based on the true constraint.
+default, both flags are set to `True`.
+
+However, in this example, we update the primal parameters based on a _surrogate_
+constraint since the true constraint is expensive to compute, and difficult to
+differentiate. The true constraint is only computed every few iterations, and the
+multipliers are (infrequently) updated based on the true constraint.
+
+Note that this update scheme is similar to the proxy-constraint approach. However, using
+proxy-constraints via the `strict_violation` argument in the `ConstraintState` class
+would still require the computation of the true constraint at every iteration. In this
+example, we avoid this by using the `contributes_to_primal_update` and
+`contributes_to_dual_update` flags, enabling the update of the primal and dual variables
+at different frequencies.
 :::
 
 Consider the problem of finding the matrix $X$ that transforms a vector $y$
-so as to minimize the mean squared error between $Xy$ and another vector $z$.
-The problem has a constraint on the geometric mean of the singular values of $X$.
-Formally,
+so as to minimize the mean squared error between $Xy$ and another vector $z$,
+under a constraint on the geometric mean of the singular values of $X$. Formally,
 
 $$
 \min_{X}  \,\, \Vert Xy - z \Vert_2^2  \,\, \text{ such that } \,\, \prod_{i=1}^r \sigma_i(X) = c^r
@@ -114,7 +118,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         constraint_type = cooper.ConstraintType.EQUALITY
         multiplier = cooper.multipliers.DenseMultiplier(num_constraints=1, device=DEVICE)
         self.sv_constraint = cooper.Constraint(
-            constraint_type=constraint_type, formulation_type=cooper.LagrangianFormulation, multiplier=multiplier
+            constraint_type=constraint_type, formulation_type=cooper.formulations.Lagrangian, multiplier=multiplier
         )
 
     def loss_fn(self, X: torch.Tensor) -> torch.Tensor:
@@ -122,7 +126,7 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         return torch.linalg.norm(X @ self.y - self.z).pow(2) / 2
 
     def compute_arithmetic_mean(self, X: torch.Tensor) -> torch.Tensor:
-        """Compute the arithmetic mean of the singular values of X."""
+        """Compute the arithmetic mean of the squared singular values of X."""
         # We use the *arithmetic* mean of the squared singular values of X as a
         # surrogate for the true constraint given by the geometric mean of the singular
         # values of X.
@@ -131,50 +135,44 @@ class MinNormWithSingularValueConstraints(cooper.ConstrainedMinimizationProblem)
         # This is equivalent to computing the trace of X * X^T (and dividing by r)
         return torch.einsum("ij,ij->", X, X) / self.r
 
-    def compute_surrogate_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
-        """Compute the CMPState for a given X."""
-        # Compute the objective
-        objective = self.loss_fn(X)
-
-        # We include the constraint level offset, but note that it is irrelevant since
-        # the surrogate constraint is used only to compute gradients.
-        surrogate_violation = self.compute_arithmetic_mean(X) - self.constraint_level
-
-        # `strict_violation` is not measured, so only X is updated (and not the
-        # multipliers). We must specify `contributes_to_dual_update=False` to avoid
-        # updating the multipliers based on the surrogate constraint.
-        constraint_state = cooper.ConstraintState(
-            violation=surrogate_violation, contributes_to_primal_update=True, contributes_to_dual_update=False
-        )
-
-        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
-
     @staticmethod
     @torch.no_grad()
     def compute_geometric_mean(X: torch.Tensor) -> torch.Tensor:
         return torch.linalg.svdvals(X).prod()
 
-    def compute_true_cmp_state(self, X: torch.Tensor) -> cooper.CMPState:
-        # Compute the objective
-        objective = self.loss_fn(X)
-
-        # Compute the non-differentiable constraint to update the multipliers.
-        # This is only done sporadically since the SVD decomposition is expensive.
-        # Geometric mean of singular values of X *equal* to `constraint_level`.
-        true_violation = self.compute_geometric_mean(X) - self.constraint_level
-
+    def compute_surrogate_constraint(self, X: torch.Tensor) -> cooper.CMPState:
+        """Compute the (differentiable) surrogate violation for the primal update."""
+        # The `contributes_to_primal_update=True` and `contributes_to_dual_update=False`
+        # flags indicate that the constraint is used to update the primal variables only.
         constraint_state = cooper.ConstraintState(
-            violation=true_violation, contributes_to_primal_update=False, contributes_to_dual_update=True
+            violation=self.compute_arithmetic_mean(X),
+            contributes_to_primal_update=True,
+            contributes_to_dual_update=False,
         )
 
-        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
+        return constraint_state
 
-    def compute_cmp_state(self, X: torch.Tensor, true_or_surrogate: str = "true") -> cooper.CMPState:
-        if true_or_surrogate == "true":
-            return self.compute_true_cmp_state(X)
-        if true_or_surrogate == "surrogate":
-            return self.compute_surrogate_cmp_state(X)
-        raise ValueError("Invalid value for `true_or_surrogate`.")
+    def compute_true_constraint(self, X: torch.Tensor) -> cooper.CMPState:
+        """Compute the non-differentiable constraint to update the multipliers."""
+        # The `contributes_to_primal_update=False` and `contributes_to_dual_update=True`
+        # flags indicate that the constraint is used to update the dual variables only.
+        constraint_state = cooper.ConstraintState(
+            violation=self.compute_geometric_mean(X) - self.constraint_level,
+            contributes_to_primal_update=False,
+            contributes_to_dual_update=True,
+        )
+
+        return constraint_state
+
+    def compute_cmp_state(self, X: torch.Tensor, is_true_constraint: bool) -> cooper.CMPState:
+        objective = self.loss_fn(X)
+
+        if is_true_constraint:
+            constraint_state = self.compute_true_constraint(X)
+        else:
+            constraint_state = self.compute_surrogate_constraint(X)
+
+        return cooper.CMPState(loss=objective, observed_constraints={self.sv_constraint: constraint_state})
 
 
 def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for_dual_update, primal_lr, dual_lr):
@@ -204,9 +202,7 @@ def run_experiment(dim_y, dim_z, constraint_level, max_iter, tolerance, freq_for
     for it in range(max_iter):
         prev_X = X.clone().detach()
 
-        true_or_surrogate = "true" if it % freq_for_dual_update == 0 else "surrogate"
-
-        cooper_optimizer.roll({"X": X, "true_or_surrogate": true_or_surrogate})
+        cooper_optimizer.roll({"X": X, "is_true_constraint": (it % freq_for_dual_update) == 0})
 
         if prev_X.allclose(X, atol=tolerance):
             break

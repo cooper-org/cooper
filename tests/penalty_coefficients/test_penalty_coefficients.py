@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from cooper import multipliers
-from tests.helpers import testing_utils
+import testing
+from cooper import penalty_coefficients
 
 
 @pytest.fixture(params=[1, 100])
@@ -12,11 +12,11 @@ def num_constraints(request):
 
 @pytest.fixture
 def init_tensor(num_constraints):
-    generator = testing_utils.frozen_rand_generator()
+    generator = testing.frozen_rand_generator()
     return torch.rand(num_constraints, generator=generator)
 
 
-@pytest.fixture(params=[multipliers.DensePenaltyCoefficient, multipliers.IndexedPenaltyCoefficient])
+@pytest.fixture(params=[penalty_coefficients.DensePenaltyCoefficient, penalty_coefficients.IndexedPenaltyCoefficient])
 def penalty_coefficient_class(request):
     return request.param
 
@@ -42,7 +42,7 @@ def test_penalty_coefficient_initialization_failure_with_wrong_shape(penalty_coe
 
 
 def test_penalty_coefficient_failure_with_grad(penalty_coefficient_class, init_tensor):
-    with pytest.raises(ValueError, match="PenaltyCoefficient should not require gradients."):
+    with pytest.raises(ValueError, match=r"PenaltyCoefficient should not require gradients."):
         penalty_coefficient_class(init_tensor.requires_grad_())
 
 
@@ -52,7 +52,7 @@ def test_penalty_coefficient_failure_with_wrong_shape(penalty_coefficient, init_
 
 
 def test_penalty_coefficient_sanity_check(penalty_coefficient_class, init_tensor):
-    with pytest.raises(ValueError, match="All entries of the penalty coefficient must be non-negative."):
+    with pytest.raises(ValueError, match=r"All entries of the penalty coefficient must be non-negative."):
         penalty_coefficient_class(-1 * init_tensor)
 
 
@@ -66,10 +66,10 @@ def test_penalty_coefficient_repr(penalty_coefficient):
 
 
 def test_indexed_penalty_coefficient_forward_invalid_indices(num_constraints, init_tensor):
-    penalty_coefficient = multipliers.IndexedPenaltyCoefficient(init_tensor)
+    penalty_coefficient = penalty_coefficients.IndexedPenaltyCoefficient(init_tensor)
     indices = torch.arange(num_constraints, dtype=torch.float32)
 
-    with pytest.raises(ValueError, match="Indices must be of type torch.long."):
+    with pytest.raises(ValueError, match=r"Indices must be of type torch.long."):
         penalty_coefficient(indices)
 
 

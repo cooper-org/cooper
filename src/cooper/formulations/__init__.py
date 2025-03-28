@@ -1,1 +1,7 @@
-from .formulations import AugmentedLagrangianFormulation, ContributionStore, Formulation, LagrangianFormulation
+from .formulations import (
+    AugmentedLagrangian,
+    ContributionStore,
+    Formulation,
+    Lagrangian,
+    QuadraticPenalty,
+)

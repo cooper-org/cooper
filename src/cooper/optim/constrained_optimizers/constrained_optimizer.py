@@ -1,38 +1,44 @@
 """Implementation of the :py:class:`ConstrainedOptimizer` class."""
 
+import abc
+from typing import Any
+
 import torch
 
 from cooper.cmp import ConstrainedMinimizationProblem
-from cooper.optim.optimizer import CooperOptimizer
+from cooper.optim.optimizer import CooperOptimizer, RollOut
 from cooper.utils import OneOrSequence
 
 
-class ConstrainedOptimizer(CooperOptimizer):
-    r"""Optimizes a :py:class:`~cooper.problem.ConstrainedMinimizationProblem`
-    given a provided :py:class:`~cooper.formulation.Formulation`.
+class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
+    r"""Optimizes a :py:class:`~cooper.ConstrainedMinimizationProblem`.
 
-    A ``ConstrainedOptimizer`` includes one or more
+    A :py:class:`ConstrainedOptimizer` includes one or more
     :class:`torch.optim.Optimizer`\s for the primal variables. It also includes
     one or more :class:`torch.optim.Optimizer`\s for the dual variables.
 
-    For handling unconstrained problems in a consistent way, we provide an
-    :py:class:`~cooper.optim.UnconstrainedOptimizer`. Please refer to the documentation
-    of the :py:class:`~cooper.problem.ConstrainedMinimizationProblem` and
-    :py:class:`~cooper.formulation.Formulation` classes for further details on
-    handling unconstrained problems.
+    For handling unconstrained problems in a consistent way, we provide the
+    :py:class:`~cooper.optim.UnconstrainedOptimizer` class.
 
     Args:
+        cmp: The constrained minimization problem to be optimized. Providing the CMP
+            as an argument for the constructor allows the optimizer to call the
+            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
+            method. Additionally, in the case of a constrained optimizer, the CMP
+            enables access to the multipliers'
+            :py:meth:`~cooper.multipliers.Multiplier.post_step_` method which must be
+            called after the multiplier update.
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
             in this case ``primal_optimizers`` accepts a list of
-            ``torch.optim.Optimizer``\s.
-
+            :py:class:`torch.optim.Optimizer`\s.
         dual_optimizers: Optimizer(s) for the dual variables (e.g. the Lagrange
-            multipliers associated with the constraints). An iterable of
-            ``torch.optim.Optimizer``\s can be passed to handle the case of several
-            ``~cooper.constraints.Constraint``\s. If dealing with an unconstrained
-            problem, please use a
-            :py:class:`~cooper.optim.cooper_optimizer.UnconstrainedOptimizer` instead.
+            multipliers associated with the constraints). A sequence of
+            :py:class:`torch.optim.Optimizer`\s can be passed to handle the case of
+            several :py:class:`~cooper.constraints.Constraint`\s. If dealing with an
+            unconstrained problem, please use an
+            :py:class:`~cooper.optim.UnconstrainedOptimizer` instead.
 
     """
 
@@ -48,7 +54,12 @@ class ConstrainedOptimizer(CooperOptimizer):
         self.custom_sanity_checks()
 
     def base_sanity_checks(self) -> None:
-        """Perform sanity checks on the initialization of ``ConstrainedOptimizer``."""
+        """Performs sanity checks on the initialization of ``ConstrainedOptimizer``.
+
+        Raises:
+            TypeError: If no primal or dual optimizers are provided.
+            ValueError: If any dual optimizer is not configured with `maximize=True`.
+        """
         if self.primal_optimizers is None:
             raise TypeError("No primal optimizer(s) was provided for building a ConstrainedOptimizer.")
         if self.dual_optimizers is None:
@@ -59,13 +70,13 @@ class ConstrainedOptimizer(CooperOptimizer):
                     raise ValueError("Dual optimizers must be set to carry out maximization steps.")
 
     def custom_sanity_checks(self) -> None:
-        """Perform custom sanity checks on the initialization of ``ConstrainedOptimizer``."""
+        """Performs custom sanity checks on the initialization of ``ConstrainedOptimizer``."""
 
     @torch.no_grad()
     def dual_step(self) -> None:
-        """Perform a gradient step on the parameters associated with the dual variables.
+        """Performs a gradient step on the parameters associated with the dual variables.
         Since the dual problem involves *maximizing* over the dual variables, we require
-        dual optimizers which satisfy `maximize=True`.
+        dual optimizers which satisfy ``maximize=True``.
 
         After being updated by the dual optimizer steps, the multipliers are
         post-processed (e.g. to ensure non-negativity for inequality constraints).
@@ -79,3 +90,7 @@ class ConstrainedOptimizer(CooperOptimizer):
         # multipliers for inequality constraints are non-negative.
         for multiplier in self.cmp.multipliers():
             multiplier.post_step_()
+
+    @abc.abstractmethod
+    def roll(self, *args: Any, **kwargs: Any) -> RollOut:
+        """Performs a full update step on the primal and dual variables."""

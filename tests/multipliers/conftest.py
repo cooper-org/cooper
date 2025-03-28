@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import cooper
-from tests.helpers import testing_utils
+import testing
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def multiplier_class(request):
 
 @pytest.fixture
 def init_multiplier_tensor(constraint_type, num_constraints, random_seed):
-    generator = testing_utils.frozen_rand_generator(random_seed)
+    generator = testing.frozen_rand_generator(random_seed)
     raw_init = torch.randn(num_constraints, generator=generator)
     if constraint_type == cooper.ConstraintType.INEQUALITY:
         return raw_init.relu()

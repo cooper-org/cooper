@@ -5,46 +5,67 @@ on:
   push:
     branches: [ master ]
 
+concurrency:
+  # github.workflow: name of the workflow
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  cancel-in-progress: true
+
 jobs:
-  ci:
+  precommit:
+    name: Pre-commit checks
     runs-on: ubuntu-latest
-    name: Check coverage
-    permissions:
-      # Gives the action the necessary permissions for publishing new
-      # comments in pull requests.
-      pull-requests: write
-      # Gives the action the necessary permissions for pushing data to the
-      # python-coverage-comment-action branch, and for editing existing
-      # comments (to avoid publishing multiple comments in the same PR)
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Pre-commit checks
-        uses: pre-commit/action@v3.0.1
+        # uses: pre-commit/action@v3.0.1
+        run: uvx --isolated --with pre-commit-uv pre-commit run --all-files --show-diff-on-failure
 
-      - name: Install package & dependencies
-        run: pip install --editable '.[dev, docs, tests, examples]'
+  test:
+    needs: precommit
+    name: Tests
+    runs-on: ubuntu-latest
+    env:
+      UV_COMPILE_BYTECODE: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9", "3.10", "3.11" ]
+        TORCH_VERSION: [ "1.13.1", "2.0.1", "2.1.2", "2.2.2", "2.3.1", "2.4.1", "2.5.1", "2.6.0" ]
+        include:
+          - python-version: "3.12"
+            TORCH_VERSION: "2.4.1"
+          - python-version: "3.12"
+            TORCH_VERSION: "2.5.1"
+          - python-version: "3.12"
+            TORCH_VERSION: "2.6.0"
+          - python-version: "3.13"
+            TORCH_VERSION: "2.6.0"
+        exclude:
+          - python-version: "3.11"
+            TORCH_VERSION: "1.13.1"
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Launch tests & generate coverage report
-        run: coverage run -m pytest tests
-
-      - name: Coverage comment
-        id: coverage_comment
-        uses: py-cov-action/python-coverage-comment-action@v3
+      - name: Intall uv & Set up Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v5
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Store Pull Request comment to be posted
-        uses: actions/upload-artifact@v4
-        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
-        with:
-          # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
-          name: python-coverage-comment-action
-          # If you use a different name, update COMMENT_FILENAME accordingly
-          path: python-coverage-comment-action.txt
+      - name: Install dependencies & PyTorch ${{ matrix.TORCH_VERSION }}
+        run: |
+          uv sync --group tests --no-install-package torch
+          uv pip install torch==${{ matrix.TORCH_VERSION }}
+
+      - name: Launch tests
+        # Only run the unit tests, not the pipeline tests.
+        # Pipeline tests are too expensive to run for every python/PyTorch version.
+        # However, they are run as part the coverage job in the CI workflow
+        run: uv run --no-sync pytest --ignore=tests/pipeline tests

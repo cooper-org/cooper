@@ -5,3 +5,16 @@
 .rst-content .theorem {
     background: #ded9f1ea
 }
+
+.last-list-item-no-margin ul:last-child,
+.last-list-item-no-margin ol:last-child {
+    margin-bottom: 0 !important;
+}
+
+.reset-highlight-margin div[class^=highlight]{
+    margin-bottom: 0;
+}
+
+:root {
+    --sd-fontweight-dropdown-title: 400;
+}

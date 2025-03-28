@@ -1,12 +1,35 @@
 cff-version: 1.2.0
-message: "If you use this software, please consider citing it as indicated below."
+title: 'Cooper: A Library for Constrained Optimization in Deep Learning'
+message: If you use this software, please consider citing it as indicated below.
+type: software
 authors:
-    - family-names: "Gallego-Posada"
-      given-names: "Jose"
-    - family-names: "Ramirez"
-      given-names: "Juan"
-    - family-names: "Hashemizadeh"
-      given-names: "Meraj"
-title: "Cooper: a toolkit for Lagrangian-based constrained optimization"
-date-released: 2022-03-15
-url: "https://github.com/cooper-org/cooper"
+  - family-names: Gallego-Posada
+    given-names: Jose
+  - family-names: Ramirez
+    given-names: Juan
+  - family-names: Hashemizadeh
+    given-names: Meraj
+  - family-names: Lacoste-Julien
+    given-names: Simon
+identifiers:
+  - type: other
+    value: 'arXiv:TODO:2503.xxxxx'
+    description: The ArXiv preprint of the paper
+repository-code: 'https://github.com/cooper-org/cooper'
+url: 'https://github.com/cooper-org/cooper'
+abstract: "Cooper is an open-source package for solving constrained optimization problems
+  involving deep learning models. Cooper implements several Lagrangian-based first-order
+  update schemes, making it easy to combine constrained optimization algorithms with high-
+  level features of PyTorch such as automatic differentiation, and specialized deep learning
+  architectures and optimizers. Although Cooper is specifically designed for deep learning
+  applications where gradients are estimated based on mini-batches, it is suitable for general
+  non-convex continuous constrained optimization. Cooper's source code is available at
+  https://github.com/cooper-org/cooper."
+keywords:
+  - non-convex constrained optimization
+  - lagrangian optimization
+  - pytorch
+  - machine learning
+license: MIT
+version: 0.1.0
+date-released: '2025-01-01'

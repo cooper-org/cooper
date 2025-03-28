@@ -7,16 +7,20 @@ from cooper.optim.optimizer import CooperOptimizer, RollOut
 
 
 class UnconstrainedOptimizer(CooperOptimizer):
-    r"""Wraps a (sequence of) ``torch.optim.Optimizer``\s to enable handling
-    unconstrained problems in a way that is consistent with the
-    :py:class:`~cooper.optim.ConstrainedOptimizer`\s.
+    r"""Wraps a (sequence of) :py:class:`torch.optim.Optimizer`\s to enable handling
+    unconstrained minimization problems in a way that is consistent with
+    :py:class:`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`\s.
 
     Args:
-        cmp: The constrained minimization problem to optimize.
+        cmp: The constrained minimization problem to be optimized. Providing the CMP
+            as an argument for the constructor allows the optimizer to call the
+            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
+            method.
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of
             a model). The primal parameters can be partitioned into multiple optimizers,
-            in this case ``primal_optimizers`` accepts a sequence of
-            ``torch.optim.Optimizer``\s.
+            in this case ``primal_optimizers`` accepts a list of
+            :py:class:`torch.optim.Optimizer`\s.
     """
 
     def roll(self, compute_cmp_state_kwargs: Optional[dict] = None) -> RollOut:
@@ -24,8 +28,10 @@ class UnconstrainedOptimizer(CooperOptimizer):
         parameters.
 
         Args:
-            compute_cmp_state_kwargs: Keyword arguments to pass to the ``compute_cmp_state`` method.
-            Since this is an unconstrained optimizer, the CMPState will just contain the loss.
+            compute_cmp_state_kwargs: Keyword arguments to pass to the
+                :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state()`
+                method. Since this is an unconstrained optimizer, the CMPState will just
+                contain the loss.
         """
         if compute_cmp_state_kwargs is None:
             compute_cmp_state_kwargs = {}
