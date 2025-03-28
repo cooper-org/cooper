@@ -7,8 +7,6 @@ import torch
 @dataclass
 class ConstraintState:
     r"""State of a constraint, including the current constraint violation.
-        # TODO(merajhashemi): Document that if `contributes_to_dual_update` is `True`, and only `violation` is provided,
-        #  then we assume that violation is a dual-valid measurement of the violation, i.e., not a surrogate.
 
     Args:
         violation: The measurement of the constraint violation at some value of the primal
@@ -36,7 +34,8 @@ class ConstraintState:
         contributes_to_dual_update: If ``False``, the current observed constraint violation does not contribute
             to the **dual** Lagrangian but still contributes to the **primal** Lagrangian. This allows for less frequent
             updates to the dual variables (e.g., after several primal steps), affecting the update for the primal variables
-            but not the dual variables.
+            but not the dual variables. When ``True``, **Cooper** will update the dual variables using
+            ``strict_violation`` if provided, or ``violation`` otherwise.
     """
 
     violation: torch.Tensor

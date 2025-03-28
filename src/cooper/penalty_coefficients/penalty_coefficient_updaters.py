@@ -22,7 +22,6 @@ class PenaltyCoefficientUpdater(abc.ABC):
         its penalty coefficient should be updated. The decision depends on properties
         like whether the constraint contributes to primal/dual updates and the
         availability of strict violation measurements.
-        TODO(merajhashemi): Add to documentation "We do not update penalty coefficients for constraints that are not observed."
 
         .. admonition:: Primal vs Dual Contributions
             :class: note
@@ -132,10 +131,13 @@ class FeasibilityDrivenPenaltyCoefficientUpdater(PenaltyCoefficientUpdater, abc.
 
 
 class MultiplicativePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficientUpdater):
-    """Multiplicative penalty coefficient updater for Augmented Lagrangian formulation.
-    The penalty coefficient is updated by multiplying it by a growth factor when the constraint
-    violation is larger than a given tolerance.
-    Based on Algorithm 17.4 in Numerical Optimization by Nocedal and Wright.
+    r"""Multiplicative updater for
+    :py:class:`~cooper.penalty_coefficients.PenaltyCoefficient`\s.
+
+    The penalty coefficient is updated by multiplying it by ``growth_factor`` when the
+    constraint violation is larger than ``violation_tolerance``.
+
+    Based on Algorithm 17.4 in :cite:t:`nocedal2006NumericalOptimization`.
 
     Args:
         growth_factor: The factor by which the penalty coefficient is multiplied when the
@@ -150,7 +152,8 @@ class MultiplicativePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficien
             the inequality constraint is satisfied. This is only applicable to inequality
             constraints.
 
-    TODO: Add raises docs for ValueErrors
+    Raises:
+        ValueError: If the violation tolerance is negative.
     """
 
     def __init__(
@@ -166,9 +169,11 @@ class MultiplicativePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficien
 
 
 class AdditivePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficientUpdater):
-    """Additive penalty coefficient updater for Augmented Lagrangian formulation.
-    The penalty coefficient is updated by adding a constant value when the constraint
-    violation is larger than a given tolerance.
+    r"""Additive updater for
+    :py:class:`~cooper.penalty_coefficients.PenaltyCoefficient`\s.
+
+    The penalty coefficient is updated by adding ``increment`` when the constraint
+    violation is larger than ``violation_tolerance``.
 
     Args:
         increment: The constant value by which the penalty coefficient is added when the
@@ -183,7 +188,8 @@ class AdditivePenaltyCoefficientUpdater(FeasibilityDrivenPenaltyCoefficientUpdat
             the inequality constraint is satisfied. This is only applicable to inequality
             constraints.
 
-    TODO: Add raises docs for ValueErrors
+    Raises:
+        ValueError: If the violation tolerance is negative.
     """
 
     def __init__(self, increment: float = 1.0, violation_tolerance: float = 1e-4, has_restart: bool = True) -> None:

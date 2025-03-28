@@ -157,10 +157,12 @@ $$
 \lim_{\vc_{\vg}, \vc_{\vh} \rightarrow \infty}  \,\, \Lag^{\text{QP}}_{\vc_g, \vc_h}(\vx) =  \,\, \begin{cases} f(\vx), & \text{if } \vg(\vx) \le \vzero, \vh(\vx) = \vzero, \\ \infty, & \text{otherwise}. \end{cases}
 $$
 
-:::{admonition} The Quadratic Penalty Formulation and Proxy Constraints
+:::{admonition} The Quadratic Penalty formulation and Proxy Constraints
 :class: note
 
-TODO
+**Cooper** enables the use of [Proxy Constraints](constrained_optimization.md#non-differentiable-constraints) together with the {py:class}`~QuadraticPenalty` formulation. This approach is similar to the {py:class}`~Lagrangian` formulation with proxy constraints, where a differentiable surrogate is used for primal optimization, while the true non-differentiable constraint guides the update of dual variables. In this case, the surrogate Quadratic Penalty function incorporates the surrogate, while the true constraint determines whether to update the penalty coefficient (see [Penalty Coefficient Updaters](penalty_coefficients.md#penalty-coefficient-updaters)).
+
+This approach carries some risk: if the surrogate and true constraint are misaligned, feasibility with respect to the true non-differentiable constraint may not be achievable, as optimization is performed on the surrogate. In this case, since the penalty coefficient is updated based on the unsatisfied true constraint, it may grow indefinitely rather than converging to a finite value, leading to numerical issues. To mitigate this risk, consider adding extra tolerance to the penalty coefficient updates.
 
 :::
 
@@ -186,15 +188,15 @@ Exactly solving the intermediate optimization problems considered by the {py:cla
 
 Rather than aiming to solve the intermediate optimization problem to high precision, **Cooper** implements a version of the Augmented Lagrangian method where the primal variables are updated through one or more gradient-based steps.
 
-:::{admonition} The Augmented Lagrangian Formulation and Proxy Constraints
+:::{admonition} The Augmented Lagrangian formulation and Proxy Constraints
 :class: note
 
-TODO
+**Cooper** supports the use of [Proxy Constraints](constrained_optimization.md#non-differentiable-constraints) with the {py:class}`~AugmentedLagrangian` formulation. Like the {py:class}`~Lagrangian` formulation, a differentiable surrogate is used for primal optimization, while the true non-differentiable constraint is used for updating the dual variables. Moreover, similar to the {py:class}`~QuadraticPenalty` formulation, penalty coefficient updates are based on the value of the non-differentiable constraint when using a penalty coefficient updater.
 
 :::
 
 :::{warning}
-We make a distinction between the Augmented Lagrangian *formulation* ({py:class}`~AugmentedLagrangian`) and the Augmented Lagrangian *method* ($\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a specific optimization algorithm over the Augmented Lagrangian function $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$, with the following updates:
+We make a distinction between the Augmented Lagrangian *formulation* implemented in **Cooper** ({py:class}`~AugmentedLagrangian`) and the Augmented Lagrangian *method* ($\S$4.2.1 in {cite:t}`bertsekas1999NonlinearProgramming`). The Augmented Lagrangian method is a **specific optimization algorithm over the Augmented Lagrangian function** $\Lag_{\vc_g, \vc_h}(\vx, \vlambda, \vmu)$, with the following updates:
 
 $$
 \vx_{t+1} &\in \argmin{\vx \in \reals^d} \,\, \Lag_{c_t}(\vx, \vlambda_t, \vmu_t) \\
@@ -211,7 +213,7 @@ The Augmented Lagrangian method has the following distinguishing features:
 If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the {py:class}`~AugmentedLagrangian` formulation. If you intend to use the Augmented Lagrangian *Method*, follow these steps:
 1. Use an {py:class}`~AugmentedLagrangian` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
 2. Use {py:class}`torch.optim.SGD` as the dual optimizer, and ensure that its learning rate corresponds to the penalty coefficient on each step `c_t`.
-3. Use {py:class}`~cooper.optim.AlternatingPrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
+3. Use {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
 4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. See {doc}`optim` for details on how to implement this.
 :::
 

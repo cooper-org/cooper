@@ -105,9 +105,7 @@ To save the current penalty coefficients of a {py:class}`CMP<cooper.cmp.Constrai
 
 ## Penalty Coefficient Updaters
 
-Penalty coefficient updaters are used to adjust penalty coefficients during optimization based on constraint violations.
-Cooper provides two feasibility-driven updaters: {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater`
-and {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater`, both of which are driven by feasibility conditions.
+Penalty coefficient updaters are used to adjust penalty coefficients during optimization based on measurements of constraint violations. Cooper provides two feasibility-driven updaters: {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater` and {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater`, both of which increase the penalty coefficients when constraint violations exceed a specified tolerance.
 
 ```{eval-rst}
 .. autoclass:: PenaltyCoefficientUpdater
@@ -116,8 +114,7 @@ and {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater`, 
 
 ### Multiplicative Penalty Coefficient Updater
 
-The {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater` multiplies the penalty coefficient
-by a growth factor when `violation`s are above the tolerance.
+The {py:class}`~cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUpdater` multiplies the penalty coefficient by a growth factor when the corresponding entries in `violation` exceed a prescribed tolerance.
 
 ```{eval-rst}
 .. autoclass:: MultiplicativePenaltyCoefficientUpdater
@@ -125,19 +122,18 @@ by a growth factor when `violation`s are above the tolerance.
 
 ### Additive Penalty Coefficient Updater
 
-The {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater` increases the penalty coefficient by a
-fixed increment when `violation`s exceed the tolerance.
+The {py:class}`~cooper.penalty_coefficients.AdditivePenaltyCoefficientUpdater` increases the penalty coefficient by a fixed amount when the corresponding entries in `violation` exceed a prescribed tolerance.
 
 ```{eval-rst}
 .. autoclass:: AdditivePenaltyCoefficientUpdater
 ```
 
-### Using Penalty Updaters in Training
+### Using Penalty Coefficient Updaters
 
-To use a penalty coefficient updater in training:
+To use a {py:class}`~cooper.penalty_coefficients.PenaltyCoefficientUpdater`, follow these steps:
 
-1. **Instantiate** the updater with desired parameters.
-2. **Call** {py:meth}`~cooper.penalty_coefficients.PenaltyCoefficientUpdater.step` with observed constraints after each optimization step.
+1. **Instantiate** the updater with the desired parameters.
+2. **Call** {py:meth}`penalty_updater.step()<cooper.penalty_coefficients.PenaltyCoefficientUpdater.step>`, providing the observed constraints.
 
 **Example**:
 
@@ -147,6 +143,7 @@ penalty_updater = cooper.penalty_coefficients.MultiplicativePenaltyCoefficientUp
     violation_tolerance=1e-3,
     has_restart=True
 )
+
 roll_out = cooper_optimizer.roll(...)
 penalty_updater.step(roll_out.cmp_state.observed_constraints)
 ```

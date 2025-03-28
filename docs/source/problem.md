@@ -143,7 +143,7 @@ print([constraint_name for constraint_name, constraint in cmp.named_constraints(
 
 ## ConstraintStates
 
-In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects contain the value of the constraint violation. However, they can be extended to enable extra functionality, such as constraint sampling, the use of implicit parameterizations for the Lagrange multipliers {cite:p}`narasimhan2020multiplier`, and proxy constraints {cite:p}`cotter2019proxy`.
+In their simplest form, {py:class}`~cooper.constraints.ConstraintState` objects contain the value of the constraint violation. However, they can be extended to enable extra functionality, such as constraint sampling, the use of [implicit parameterizations](multipliers.md#implicit-parametric-multipliers) for the Lagrange multipliers {cite:p}`narasimhan2020multiplier`, and [proxy constraints](constrained_optimization.md#non-differentiable-constraints) {cite:p}`cotter2019proxy`.
 
 :::
 ### Constraint Sampling
@@ -190,7 +190,6 @@ To use proxy constraints in **Cooper**:
 2. Provide (the potentially non-differentiable) `strict_violation` for updating the **dual variables**.
 
 Proxy constraints can be combined with sampled constraints and implicit multipliers. To do so, include both `constraint_features` and `strict_constraint_features` as needed.
-
 
 ```{eval-rst}
 .. autoclass:: ConstraintState

@@ -85,8 +85,9 @@ As a general rule of thumb, we recommend **setting the dual learning rate an ord
 
 :::{dropdown} What is a "constrained optimizer" in **Cooper**, and how is it different from a PyTorch optimizer?
 
-TODO
+A **constrained optimizer** in **Cooper** is a specialized class ({py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`) designed to solve *constrained optimization problems* by jointly optimizing the **primal variables** (e.g., model parameters) and **dual variables** (e.g., Lagrange multipliers) associated with the problem.
 
+You should use {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s when your problem formulation requires dual variables (e.g., {py:class}`~cooper.formulations.Lagrangian` or {py:class}`~cooper.formulations.AugmentedLagrangian` formulations). For unconstrained problems, or formulations that do not require multipliers (e.g., {py:class}`~cooper.formulations.QuadraticPenalty`), use **Cooper**'s {py:class}`~cooper.optim.UnconstrainedOptimizer` (a lightweight wrapper around PyTorch optimizers).
 :::
 
 
