@@ -4,36 +4,36 @@
 
 | Name                                                                 |    Stmts |     Miss |   Cover |   Missing |
 |--------------------------------------------------------------------- | -------: | -------: | ------: | --------: |
-| src/cooper/\_\_init\_\_.py                                           |       12 |        4 |     67% |     13-18 |
+| src/cooper/\_\_init\_\_.py                                           |       12 |        4 |     67% |     16-21 |
 | src/cooper/cmp.py                                                    |      145 |        0 |    100% |           |
 | src/cooper/constraints/\_\_init\_\_.py                               |        2 |        0 |    100% |           |
-| src/cooper/constraints/constraint.py                                 |       41 |        1 |     98% |        55 |
+| src/cooper/constraints/constraint.py                                 |       41 |        1 |     98% |        58 |
 | src/cooper/constraints/constraint\_state.py                          |       29 |        0 |    100% |           |
 | src/cooper/formulations/\_\_init\_\_.py                              |        1 |        0 |    100% |           |
-| src/cooper/formulations/formulations.py                              |       90 |        2 |     98% |    52, 54 |
-| src/cooper/formulations/utils.py                                     |       31 |        1 |     97% |       161 |
+| src/cooper/formulations/formulations.py                              |       90 |        2 |     98% |    55, 57 |
+| src/cooper/formulations/utils.py                                     |       31 |        1 |     97% |       164 |
 | src/cooper/multipliers/\_\_init\_\_.py                               |        1 |        0 |    100% |           |
-| src/cooper/multipliers/multipliers.py                                |       63 |        1 |     98% |       186 |
+| src/cooper/multipliers/multipliers.py                                |       63 |        1 |     98% |       189 |
 | src/cooper/optim/\_\_init\_\_.py                                     |        4 |        0 |    100% |           |
 | src/cooper/optim/constrained\_optimizers/\_\_init\_\_.py             |        5 |        0 |    100% |           |
-| src/cooper/optim/constrained\_optimizers/alternating\_optimizer.py   |       40 |        1 |     98% |       217 |
+| src/cooper/optim/constrained\_optimizers/alternating\_optimizer.py   |       40 |        1 |     98% |       220 |
 | src/cooper/optim/constrained\_optimizers/constrained\_optimizer.py   |       29 |        0 |    100% |           |
-| src/cooper/optim/constrained\_optimizers/extrapolation\_optimizer.py |       38 |        1 |     97% |       168 |
-| src/cooper/optim/constrained\_optimizers/simultaneous\_optimizer.py  |       16 |        1 |     94% |        52 |
+| src/cooper/optim/constrained\_optimizers/extrapolation\_optimizer.py |       38 |        1 |     97% |       171 |
+| src/cooper/optim/constrained\_optimizers/simultaneous\_optimizer.py  |       16 |        1 |     94% |        55 |
 | src/cooper/optim/optimizer.py                                        |       49 |        0 |    100% |           |
 | src/cooper/optim/torch\_optimizers/\_\_init\_\_.py                   |        2 |        0 |    100% |           |
-| src/cooper/optim/torch\_optimizers/extragradient.py                  |      123 |       36 |     71% |82, 93, 97-98, 106, 167, 169, 171, 182, 186-188, 198, 203, 205-212, 247, 249, 251, 253, 265-267, 271, 274, 276, 290, 294, 300, 307-309 |
-| src/cooper/optim/torch\_optimizers/nupi\_optimizer.py                |      160 |       28 |     82% |131, 133, 135, 138, 146, 148, 150, 152, 189-190, 195, 212-219, 252, 281, 309-310, 343-344, 352, 362, 386, 417-418 |
-| src/cooper/optim/unconstrained\_optimizer.py                         |       14 |        1 |     93% |        37 |
+| src/cooper/optim/torch\_optimizers/extragradient.py                  |      123 |       36 |     71% |85, 96, 100-101, 109, 170, 172, 174, 185, 189-191, 201, 206, 208-215, 250, 252, 254, 256, 268-270, 274, 277, 279, 293, 297, 303, 310-312 |
+| src/cooper/optim/torch\_optimizers/nupi\_optimizer.py                |      160 |       28 |     82% |134, 136, 138, 141, 149, 151, 153, 155, 192-193, 198, 215-222, 255, 284, 312-313, 346-347, 355, 365, 389, 420-421 |
+| src/cooper/optim/unconstrained\_optimizer.py                         |       14 |        1 |     93% |        40 |
 | src/cooper/penalty\_coefficients/\_\_init\_\_.py                     |        2 |        0 |    100% |           |
-| src/cooper/penalty\_coefficients/penalty\_coefficient\_updaters.py   |       62 |        1 |     98% |        45 |
+| src/cooper/penalty\_coefficients/penalty\_coefficient\_updaters.py   |       62 |        1 |     98% |        48 |
 | src/cooper/penalty\_coefficients/penalty\_coefficients.py            |       54 |        0 |    100% |           |
 | src/cooper/utils/\_\_init\_\_.py                                     |        2 |        0 |    100% |           |
 | src/cooper/utils/annotations.py                                      |        8 |        0 |    100% |           |
 | src/cooper/utils/utils.py                                            |        7 |        0 |    100% |           |
 | testing/\_\_init\_\_.py                                              |        2 |        0 |    100% |           |
-| testing/cooper\_helpers.py                                           |      137 |        2 |     99% |  264, 295 |
-| testing/utils.py                                                     |       45 |       12 |     73% |33, 38, 49, 52, 55, 58-60, 64, 67, 71, 74 |
+| testing/cooper\_helpers.py                                           |      137 |        2 |     99% |  267, 298 |
+| testing/utils.py                                                     |       45 |       12 |     73% |36, 41, 52, 55, 58, 61-63, 67, 70, 74, 77 |
 | tests/\_\_init\_\_.py                                                |        0 |        0 |    100% |           |
 | tests/conftest.py                                                    |        7 |        0 |    100% |           |
 | tests/constraints/\_\_init\_\_.py                                    |        0 |        0 |    100% |           |
@@ -51,16 +51,16 @@
 | tests/optim/test\_constrained\_optimizers.py                         |       28 |        0 |    100% |           |
 | tests/optim/test\_optimizer.py                                       |       37 |        0 |    100% |           |
 | tests/optim/torch\_optimizers/\_\_init\_\_.py                        |        0 |        0 |    100% |           |
-| tests/optim/torch\_optimizers/test\_nupi.py                          |      193 |        1 |     99% |        37 |
+| tests/optim/torch\_optimizers/test\_nupi.py                          |      193 |        1 |     99% |        40 |
 | tests/penalty\_coefficients/\_\_init\_\_.py                          |        0 |        0 |    100% |           |
 | tests/penalty\_coefficients/test\_penalty\_coefficients.py           |       52 |        0 |    100% |           |
 | tests/penalty\_coefficients/test\_penalty\_updater.py                |       94 |        0 |    100% |           |
 | tests/pipeline/\_\_init\_\_.py                                       |        0 |        0 |    100% |           |
-| tests/pipeline/conftest.py                                           |      132 |        1 |     99% |        40 |
+| tests/pipeline/conftest.py                                           |      132 |        1 |     99% |        43 |
 | tests/pipeline/test\_checkpoint.py                                   |       68 |        0 |    100% |           |
 | tests/pipeline/test\_convergence.py                                  |       34 |        0 |    100% |           |
-| tests/pipeline/test\_manual.py                                       |      170 |        1 |     99% |       296 |
-| tests/test\_cmp.py                                                   |      225 |        1 |     99% |        65 |
+| tests/pipeline/test\_manual.py                                       |      170 |        1 |     99% |       299 |
+| tests/test\_cmp.py                                                   |      225 |        1 |     99% |        68 |
 |                                                            **TOTAL** | **2658** |   **96** | **96%** |           |
 
 
