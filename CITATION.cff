@@ -31,7 +31,7 @@ keywords:
   - pytorch
   - machine learning
 license: MIT
-version: 0.1.0
+version: 1.0.0
 date-released: '2025-04-01'
 preferred-citation:
   type: article

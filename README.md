@@ -128,6 +128,10 @@ We appreciate all contributions. Please let us know if you encounter a bug by [f
 
 If you plan to contribute new features, utility functions, or extensions, please first open an issue and discuss the feature with us. To learn more about making a contribution to **Cooper**, please see our [Contribution page](https://cooper.readthedocs.io/en/latest/CONTRIBUTING.html).
 
+## Papers Using **Cooper**
+
+**Cooper** has enabled several papers published at top machine learning conferences: [Gallego-Posada et al. (2022)](https://arxiv.org/abs/2208.04425); [Lachapelle and Lacoste-Julien (2022)](https://arxiv.org/abs/2207.07732); [Ramirez and Gallego-Posada (2022)](https://arxiv.org/abs/2207.04144); [Zhu et al. (2023)](https://arxiv.org/abs/2310.08106); [Hashemizadeh et al. (2024)](https://arxiv.org/abs/2310.20673); [Sohrabi et al. (2024)](https://arxiv.org/abs/2406.04558); [Lachapelle et al. (2024)](https://arxiv.org/abs/2401.04890); [Jang et al. (2024)](https://arxiv.org/abs/2312.10289); [Navarin et al. (2024)](https://ieeexplore.ieee.org/document/10650578); [Chung et al. (2024)](https://arxiv.org/abs/2404.01216).
+
 
 ## Acknowledgements
 
