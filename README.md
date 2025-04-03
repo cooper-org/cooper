@@ -10,7 +10,7 @@
 | src/cooper/constraints/constraint.py                                 |       41 |        1 |     98% |        55 |
 | src/cooper/constraints/constraint\_state.py                          |       29 |        0 |    100% |           |
 | src/cooper/formulations/\_\_init\_\_.py                              |        1 |        0 |    100% |           |
-| src/cooper/formulations/formulations.py                              |       92 |        4 |     96% |52, 54, 134, 144 |
+| src/cooper/formulations/formulations.py                              |       90 |        2 |     98% |    52, 54 |
 | src/cooper/formulations/utils.py                                     |       31 |        1 |     97% |       161 |
 | src/cooper/multipliers/\_\_init\_\_.py                               |        1 |        0 |    100% |           |
 | src/cooper/multipliers/multipliers.py                                |       63 |        1 |     98% |       186 |
@@ -51,7 +51,7 @@
 | tests/optim/test\_constrained\_optimizers.py                         |       28 |        0 |    100% |           |
 | tests/optim/test\_optimizer.py                                       |       37 |        0 |    100% |           |
 | tests/optim/torch\_optimizers/\_\_init\_\_.py                        |        0 |        0 |    100% |           |
-| tests/optim/torch\_optimizers/test\_nupi.py                          |      196 |        1 |     99% |        42 |
+| tests/optim/torch\_optimizers/test\_nupi.py                          |      193 |        1 |     99% |        37 |
 | tests/penalty\_coefficients/\_\_init\_\_.py                          |        0 |        0 |    100% |           |
 | tests/penalty\_coefficients/test\_penalty\_coefficients.py           |       52 |        0 |    100% |           |
 | tests/penalty\_coefficients/test\_penalty\_updater.py                |       94 |        0 |    100% |           |
@@ -61,7 +61,7 @@
 | tests/pipeline/test\_convergence.py                                  |       34 |        0 |    100% |           |
 | tests/pipeline/test\_manual.py                                       |      170 |        1 |     99% |       296 |
 | tests/test\_cmp.py                                                   |      225 |        1 |     99% |        65 |
-|                                                            **TOTAL** | **2663** |   **98** | **96%** |           |
+|                                                            **TOTAL** | **2658** |   **96** | **96%** |           |
 
 
 ## Setup coverage badge
