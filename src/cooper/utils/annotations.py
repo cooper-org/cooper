@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 from collections.abc import Sequence
 from enum import Enum, auto
 from typing import TypeVar, Union

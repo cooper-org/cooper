@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Implementation of the :py:class:`SimultaneousOptimizer` class."""
 
 from typing import Optional

@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Implementation of constrained optimizers based on alternation such as
 :py:class:`AlternatingPrimalDualOptimizer` and :py:class:`AlternatingDualPrimalOptimizer`.
 """

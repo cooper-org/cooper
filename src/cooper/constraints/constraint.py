@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 from typing import Literal, Optional
 
 from cooper.constraints.constraint_state import ConstraintState

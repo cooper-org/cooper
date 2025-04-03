@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Classes for modeling dual variables (e.g. Lagrange multipliers)."""
 
 import abc

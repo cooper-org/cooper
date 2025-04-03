@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Utilities for writing tests."""
 
 from collections.abc import Collection

@@ -1,8 +1,7 @@
 # **Cooper**
 
-[![LICENSE](https://img.shields.io/pypi/l/cooper-optim)](https://github.com/cooper-org/cooper/tree/main/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/cooper-org/cooper)](https://github.com/cooper-org/cooper/tree/main/LICENSE)
 [![Version](https://img.shields.io/pypi/v/cooper-optim?label=version)](https://pypi.python.org/pypi/cooper-optim)
-[![Downloads](https://img.shields.io/pepy/dt/cooper-optim?color=blue)](https://pypi.python.org/pypi/cooper-optim)
 [![Python](https://img.shields.io/pypi/pyversions/cooper-optim?label=Python&logo=python&logoColor=white)](https://pypi.python.org/pypi/cooper-optim)
 [![PyTorch](https://img.shields.io/badge/PyTorch-1.13.1+-EE4C2C?logo=pytorch)](https://pytorch.org/docs/stable/index.html)
 [![DOCS](https://img.shields.io/readthedocs/cooper)](https://cooper.readthedocs.io/en/latest/?version=latest)

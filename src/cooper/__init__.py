@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Top-level package for Cooper."""
 
 from importlib.metadata import PackageNotFoundError, version

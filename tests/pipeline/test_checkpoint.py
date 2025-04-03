@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """Tests for checkpointing of constrained and unconstrained experiments."""
 
 import os

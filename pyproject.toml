@@ -149,7 +149,6 @@ ignore = [
     "ANN401",   # Any type annotation
     "B028",     # Stacklevel in warnings
     "COM812",   # Fixed by ruff-format
-    "CPY",      # Copyright notice
     "D1",       # TODO: Remove this line when we have docstrings for all functions
     "D205",     # 1 blank line required between summary line and description in docstrings
     "D415",     # First line of docstrings should end with a period
@@ -179,7 +178,7 @@ ignore = [
 "testing/*" = ["ANN", "N801", "N802", "N803", "N806", "S101"]
 "tests/*" = ["ANN", "C901", "N801", "N802", "N803", "N806", "S101"]
 "docs/source/conf.py" = ["A001", "ERA001", "INP001"]
-"docs/source/notebooks/*" = ["N801", "ANN", "N802", "N803", "N806", "S101"]
+"docs/source/notebooks/*" = ["N801", "ANN", "CPY", "N802", "N803", "N806", "S101"]
 "docs/source/notebooks/plot_gaussian_mixture.ipynb" = ["PLR2004", "PLR6301"]
 "src/cooper/optim/torch_optimizers/nupi_optimizer.py" = ["C901", "N801", "N802", "N803", "N806"]
 

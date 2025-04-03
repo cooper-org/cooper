@@ -1,3 +1,6 @@
+# Copyright (C) 2025 The Cooper Developers.
+# Licensed under the MIT License.
+
 """The nuPI optimizer is a first-order optimization algorithm proposed in the ICML 2024
 paper *On PI controllers for updating Lagrange multipliers in constrained optimization*
 by Motahareh Sohrabi, Juan Ramirez, Tianyue H. Zhang, Simon Lacoste-Julien, and
