@@ -96,18 +96,18 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         self.eq_observed_constraint_ratio = eq_observed_constraint_ratio
         self.device = device
 
-        self.generator = torch.Generator(device=device).manual_seed(0)
+        self.generator = torch.Generator().manual_seed(0)
 
         self.A_sur = None
         if has_ineq_constraint and ineq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, device=device, generator=self.generator)
+            noise = ineq_surrogate_noise_magnitude * torch.randn(A.shape, generator=self.generator).to(device)
             self.A_sur = A + noise
 
         self.C_sur = None
         if has_eq_constraint and eq_use_surrogate:
             # Use a generator with a fixed seed for reproducibility across different runs of the same test
-            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, device=device, generator=self.generator)
+            noise = eq_surrogate_noise_magnitude * torch.randn(C.shape, generator=self.generator).to(device)
             self.C_sur = C + noise
 
         if has_ineq_constraint:
@@ -161,7 +161,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
 
         strict_constraint_features = None
         if is_sampled:
-            strict_constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            strict_constraint_features = torch.randperm(num_constraints, generator=self.generator).to(self.device)
             strict_constraint_features = strict_constraint_features[: int(observed_constraint_ratio * num_constraints)]
             strict_violation = strict_violation[strict_constraint_features]
 
@@ -174,7 +174,7 @@ class SquaredNormLinearCMP(cooper.ConstrainedMinimizationProblem):
         if is_sampled:
             # Sampling constraint features separately from the previous block to allow
             # for the sampled surrogate_constraints to be different from the sampled strict_constraints
-            constraint_features = torch.randperm(num_constraints, generator=self.generator, device=self.device)
+            constraint_features = torch.randperm(num_constraints, generator=self.generator).to(self.device)
             constraint_features = constraint_features[: int(observed_constraint_ratio * num_constraints)]
             violation = violation[constraint_features]
 

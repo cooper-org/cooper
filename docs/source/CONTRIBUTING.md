@@ -143,7 +143,7 @@ uv run jupytext --sync path/to/notebook.ipynb
 ```
 
 The jupytext version should match that specified in
-[.pre-commit-config.yaml](https://github.com/cooper-org/cooper/blob/master/.pre-commit-config.yaml).
+[.pre-commit-config.yaml](https://github.com/cooper-org/cooper/blob/main/.pre-commit-config.yaml).
 
 To check that the markdown and ipynb files are properly synced, you may use the [pre-commit](https://pre-commit.com/) framework to perform the same check used by the GitHub CI:
 

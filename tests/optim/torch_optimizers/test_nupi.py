@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import cooper
-from cooper.optim.torch_optimizers.nupi_optimizer import InitType, nuPI
+from cooper.optim import nuPI, nuPIInitType
 
 # TODO(juan43ramirez): test with multiple parameter groups
 
@@ -15,11 +15,6 @@ ALL_HYPER_PARAMS = [
 ]
 
 LR = 0.01
-
-
-@pytest.fixture
-def device():
-    return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 @pytest.fixture(params=[1e-2])
@@ -56,7 +51,14 @@ def test_i_optimizer(params, lr, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params], lr=lr, Ki=Ki, Kp=0.0, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.ZEROS
+        params=[params],
+        lr=lr,
+        Ki=Ki,
+        Kp=0.0,
+        ema_nu=0.0,
+        weight_decay=0.0,
+        maximize=False,
+        init_type=nuPIInitType.ZEROS,
     )
 
     for _ in range(100):
@@ -79,7 +81,7 @@ def test_pi_optimizer(params, lr, Kp, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.ZEROS
+        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=nuPIInitType.ZEROS
     )
 
     previous_grad = torch.zeros_like(params)
@@ -112,7 +114,7 @@ def test_manual_nupi_dense_update():
 
     parameter = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
 
-    optimizer = nuPI([parameter], lr=LR, Kp=KP, Ki=KI, ema_nu=EMA_NU, maximize=False, init_type=InitType.ZEROS)
+    optimizer = nuPI([parameter], lr=LR, Kp=KP, Ki=KI, ema_nu=EMA_NU, maximize=False, init_type=nuPIInitType.ZEROS)
 
     optimizer.zero_grad()
     loss(parameter).backward()
@@ -159,7 +161,13 @@ def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
         return (Ki + (1 - ema_nu) * Kp) * error - (1 - ema_nu) * Kp * previous_xi
 
     optimizer = nuPI(
-        multiplier_module.parameters(), lr=LR, Kp=Kp, Ki=Ki, ema_nu=ema_nu, maximize=maximize, init_type=InitType.ZEROS
+        multiplier_module.parameters(),
+        lr=LR,
+        Kp=Kp,
+        Ki=Ki,
+        ema_nu=ema_nu,
+        maximize=maximize,
+        init_type=nuPIInitType.ZEROS,
     )
 
     def do_optimizer_step(indices):
@@ -231,7 +239,7 @@ def test_nupi_sgd_init_matches_sgd(params, lr, Kp, Ki):
     params = params.clone().detach().requires_grad_(True)
     params_for_manual_update = params.clone().detach()
     optimizer = nuPI(
-        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=InitType.SGD
+        params=[params], lr=lr, Ki=Ki, Kp=Kp, ema_nu=0.0, weight_decay=0.0, maximize=False, init_type=nuPIInitType.SGD
     )
 
     optimizer.zero_grad()
@@ -267,7 +275,13 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
         return multiplier_module(indices).reshape(-1, 1).clone().detach()
 
     optimizer = nuPI(
-        multiplier_module.parameters(), lr=LR, Kp=Kp, Ki=Ki, ema_nu=ema_nu, maximize=maximize, init_type=InitType.SGD
+        multiplier_module.parameters(),
+        lr=LR,
+        Kp=Kp,
+        Ki=Ki,
+        ema_nu=ema_nu,
+        maximize=maximize,
+        init_type=nuPIInitType.SGD,
     )
 
     def do_optimizer_step(indices):

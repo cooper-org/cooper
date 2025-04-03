@@ -22,10 +22,10 @@ The `cooper.multipliers` module provides three types of multipliers:
 - **{py:class}`~cooper.multipliers.IndexedMultiplier`**: Similar to {py:class}`~cooper.multipliers.DenseMultiplier`, but supports efficient indexing. This is useful for scenarios where constraints are sampled, allowing for sparse multiplier accessing and updates (see [Constraint Sampling](problem.md#constraint-sampling)).
 - **{py:class}`~cooper.multipliers.ImplicitMultiplier`**: Instead of storing multipliers explicitly, {py:class}`~cooper.multipliers.ImplicitMultiplier`s compute their values through a `forward` call on an *arbitrary* {py:class}`torch.nn.Module`. This is particularly useful when the number of constraints is too large to maintain individual multipliers.
 
-The diagram below illustrates how different multiplier types operate. Intuitively, all multipliers can be viewed as modules that produce vectors of multiplier values. These values must align with the constraint violations stored in the `violation` tensor of a {py:class}`~cooper.constraints.ConstraintState`. The color coding in the diagram indicates this alignment between individual constraint violations and their corresponding multiplier values.
+% The diagram below illustrates how different multiplier types operate. Intuitively, all multipliers can be viewed as modules that produce vectors of multiplier values. These values must align with the constraint violations stored in the `violation` tensor of a {py:class}`~cooper.constraints.ConstraintState`. The color coding in the diagram indicates this alignment between individual constraint violations and their corresponding multiplier values.
 
-TODO: diagram
-![multipliers](_static/multipliers.svg)
+% TODO: diagram
+% ![multipliers](_static/multipliers.svg)
 
 % Duplicating "Linking constraints and multipliers" on problem.md
 

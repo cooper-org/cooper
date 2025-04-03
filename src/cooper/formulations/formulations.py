@@ -131,7 +131,7 @@ class Formulation(abc.ABC):
         Returns ``None`` if the constraint does not contribute to the primal update
         (i.e., when ``ConstraintState.contributes_to_primal_update=False``).
         """
-        return NotImplemented
+        raise NotImplementedError
 
     @abc.abstractmethod
     def compute_contribution_to_dual_lagrangian(self, *args: Any, **kwargs: Any) -> Optional[ContributionStore]:
@@ -141,7 +141,7 @@ class Formulation(abc.ABC):
         Returns ``None`` if the constraint does not contribute to the dual update
         (i.e., when ``ConstraintState.contributes_to_dual_update=False``).
         """
-        return NotImplemented
+        raise NotImplementedError
 
 
 class Lagrangian(Formulation):

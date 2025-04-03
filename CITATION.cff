@@ -13,7 +13,7 @@ authors:
     given-names: Simon
 identifiers:
   - type: other
-    value: 'arXiv:TODO:2503.xxxxx'
+    value: 'arXiv:2504.01212'
     description: The ArXiv preprint of the paper
 repository-code: 'https://github.com/cooper-org/cooper'
 url: 'https://github.com/cooper-org/cooper'
@@ -32,4 +32,18 @@ keywords:
   - machine learning
 license: MIT
 version: 0.1.0
-date-released: '2025-01-01'
+date-released: '2025-04-01'
+preferred-citation:
+  type: article
+  title: 'Cooper: A Library for Constrained Optimization in Deep Learning'
+  authors:
+  - family-names: Gallego-Posada
+    given-names: Jose
+  - family-names: Ramirez
+    given-names: Juan
+  - family-names: Hashemizadeh
+    given-names: Meraj
+  - family-names: Lacoste-Julien
+    given-names: Simon
+  journal: "arXiv preprint arXiv:2504.01212"
+  year: 2025

@@ -1,13 +1,13 @@
-name: Post coverage comment
+name: Post Coverage Comment
 
 on:
   workflow_run:
-    workflows: [ "Coverage" ]
+    workflows: [ "Continuous Integration" ]
     types: [ completed ]
 
 jobs:
   push-coverage-comment:
-    name: Run tests & display coverage
+    name: Publish Coverage Comment
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     permissions:
@@ -22,12 +22,8 @@ jobs:
       # artifact that contains the comment to be published
       actions: read
     steps:
-      - name: Post comment
+      - name: Post Comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_PR_RUN_ID: ${{ github.event.workflow_run.id }}
-          # If the coverage percentage is above or equal to this value, the badge will be green.
-          MINIMUM_GREEN: 90
-          # If the coverage percentage is below this value, the badge will be red.
-          MINIMUM_ORANGE: 80

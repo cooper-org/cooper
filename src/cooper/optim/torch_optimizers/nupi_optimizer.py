@@ -12,7 +12,7 @@ from typing import Optional
 import torch
 
 
-class InitType(Enum):
+class nuPIInitType(Enum):
     r"""nuPI initialization types. This is used to determine how to initialize the
     error and derivative terms of the nuPI controller. The initialization scheme
     ``SGD`` ensures that the first step of ``nuPI(KP, KI)`` is equivalent to SGD with
@@ -33,7 +33,7 @@ class nuPI(torch.optim.Optimizer):
         Kp: Optional[torch.Tensor] = 0.0,
         Ki: Optional[torch.Tensor] = 1.0,
         ema_nu: float = 0.0,
-        init_type: InitType = InitType.SGD,
+        init_type: nuPIInitType = nuPIInitType.SGD,
         maximize: bool = False,
     ) -> None:
         r"""Implements the ``nuPI`` controller as a PyTorch optimizer.
@@ -84,12 +84,12 @@ class nuPI(torch.optim.Optimizer):
         smoothed error signal, :math:`\vxi_{-1}`, which impacts the first parameter
         update. Two initialization schemes are available:
 
-        - ``InitType.ZEROS``: Initializes :math:`\vxi_{-1} = \vzero`. The first update rule becomes:
+        - ``nuPIInitType.ZEROS``: Initializes :math:`\vxi_{-1} = \vzero`. The first update rule becomes:
 
             .. math::
                 \vtheta_1 = \vtheta_0 - \eta (K_P \ve_0 + K_I \ve_0) = \vtheta_0 - \eta (K_P + K_I) \ve_0.
 
-        - ``InitType.SGD``: Initializes :math:`\vxi_{-1} = \ve_0`, producing a first step identical to SGD:
+        - ``nuPIInitType.SGD``: Initializes :math:`\vxi_{-1} = \ve_0`, producing a first step identical to SGD:
 
             .. math::
                 \vxi_0 &= \ve_0, \\
@@ -111,7 +111,7 @@ class nuPI(torch.optim.Optimizer):
             ema_nu: EMA coefficient for the smoothed error signal. Defaults to 0,
                 meaning no smoothing is applied.
             init_type: initialization scheme for :math:`\vxi_{-1}`. Defaults to
-                ``InitType.SGD``, which matches the first step of SGD.
+                ``nuPIInitType.SGD``, which matches the first step of SGD.
             maximize: whether to maximize the objective with respect to the parameters
                 instead of minimizing. Defaults to ``False``.
 
@@ -134,7 +134,7 @@ class nuPI(torch.optim.Optimizer):
         if not -1 < ema_nu < 1.0:
             raise ValueError(f"Invalid nu value: {ema_nu}")
 
-        if init_type not in {InitType.ZEROS, InitType.SGD}:
+        if init_type not in {nuPIInitType.ZEROS, nuPIInitType.SGD}:
             raise ValueError(f"Invalid init_type: {init_type}")
 
         if not isinstance(Kp, torch.Tensor):
@@ -167,12 +167,12 @@ class nuPI(torch.optim.Optimizer):
             raise NotImplementedError("When using multiple parameter groups, Kp and Ki must be scalars")
 
     @staticmethod
-    def disambiguate_update_function(is_grad_sparse: bool, init_type: InitType) -> Callable:
+    def disambiguate_update_function(is_grad_sparse: bool, init_type: nuPIInitType) -> Callable:
         if is_grad_sparse:
-            if init_type == InitType.ZEROS:
+            if init_type == nuPIInitType.ZEROS:
                 return _sparse_nupi_zero_init
             return _sparse_nupi_sgd_init
-        if init_type == InitType.ZEROS:
+        if init_type == nuPIInitType.ZEROS:
             return _nupi_zero_init
         return _nupi_sgd_init
 

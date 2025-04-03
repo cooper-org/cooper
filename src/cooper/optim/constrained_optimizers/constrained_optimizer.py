@@ -23,7 +23,7 @@ class ConstrainedOptimizer(CooperOptimizer, abc.ABC):
     Args:
         cmp: The constrained minimization problem to be optimized. Providing the CMP
             as an argument for the constructor allows the optimizer to call the
-            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state`
             method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
             method. Additionally, in the case of a constrained optimizer, the CMP
             enables access to the multipliers'

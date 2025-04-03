@@ -3,7 +3,7 @@ name: Continuous Integration
 on:
   pull_request:
   push:
-    branches: [ master ]
+    branches: [ main ]
 
 concurrency:
   # github.workflow: name of the workflow
@@ -14,22 +14,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  precommit:
-    name: Pre-commit checks
+  pre-commit-checks:
+    name: Pre-commit Hooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name:  Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Pre-commit checks
+      - name: Run Pre-commit Checks
         # uses: pre-commit/action@v3.0.1
         run: uvx --isolated --with pre-commit-uv pre-commit run --all-files --show-diff-on-failure
 
-  test:
-    needs: precommit
-    name: Tests
+  unit-tests:
+    needs: pre-commit-checks
+    name: Run Tests
     runs-on: ubuntu-latest
     env:
       UV_COMPILE_BYTECODE: 1
@@ -51,7 +52,8 @@ jobs:
           - python-version: "3.11"
             TORCH_VERSION: "1.13.1"
     steps:
-      - uses: actions/checkout@v4
+      - name:  Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Intall uv & Set up Python ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v5
@@ -64,8 +66,53 @@ jobs:
           uv sync --group tests --no-install-package torch
           uv pip install torch==${{ matrix.TORCH_VERSION }}
 
-      - name: Launch tests
+      - name: Run Unit Tests
         # Only run the unit tests, not the pipeline tests.
         # Pipeline tests are too expensive to run for every python/PyTorch version.
-        # However, they are run as part the coverage job in the CI workflow
+        # However, they are run as part the check-coverage job.
         run: uv run --no-sync pytest --ignore=tests/pipeline tests
+
+  check-coverage:
+    needs: unit-tests
+    name: Check Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      # Gives the action the necessary permissions for publishing new
+      # comments in pull requests.
+      pull-requests: write
+      # Gives the action the necessary permissions for pushing data to the
+      # python-coverage-comment-action branch, and for editing existing
+      # comments (to avoid publishing multiple comments in the same PR)
+      contents: write
+    env:
+      UV_COMPILE_BYTECODE: 1
+    steps:
+      - name:  Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run Tests & Generate Coverage Report
+        run: uv run --locked --group tests coverage run -m pytest tests
+
+      - name: Coverage comment
+        id: coverage_comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # If the coverage percentage is above or equal to this value, the badge will be green.
+          MINIMUM_GREEN: 90
+          # If the coverage percentage is below this value, the badge will be red.
+          MINIMUM_ORANGE: 80
+
+      - name: Store Coverage Comment Artifact
+        uses: actions/upload-artifact@v4
+        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
+          name: python-coverage-comment-action
+          # If you use a different name, update COMMENT_FILENAME accordingly
+          path: python-coverage-comment-action.txt

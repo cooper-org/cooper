@@ -213,7 +213,7 @@ The Augmented Lagrangian method has the following distinguishing features:
 If you want to use the Augmented Lagrangian *formulation* in **Cooper**, use the {py:class}`~AugmentedLagrangian` formulation. If you intend to use the Augmented Lagrangian *Method*, follow these steps:
 1. Use an {py:class}`~AugmentedLagrangian` formulation. This formulation automatically ensures that the dual learning rate is multiplied by the current value of the penalty coefficient.
 2. Use {py:class}`torch.optim.SGD` as the dual optimizer, and ensure that its learning rate corresponds to the penalty coefficient on each step `c_t`.
-3. Use {py:class}`~cooper.optim.constrained_optimizers.AlternatingPrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
+3. Use {py:class}`~cooper.optim.AlternatingPrimalDualOptimizer` as the constrained optimizer to obtain alternating updates which first update the primal variables and then the dual variables.
 4. [Optional] Instead of carrying out a single step of primal optimization for every step of dual optimization, you can carry out multiple primal steps for every dual step, more closely approximating the full minimization of the Augmented Lagrangian function. See {doc}`optim` for details on how to implement this.
 :::
 

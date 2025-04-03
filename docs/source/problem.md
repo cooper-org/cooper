@@ -71,7 +71,7 @@ The {py:class}`~cooper.CMPState` dataclass includes the loss, which must be a sc
 It is possible to have multiple constraints represented by the same {py:class}`~cooper.constraints.Constraint` object. However, all constraints under a {py:class}`~cooper.constraints.Constraint` must share the same `constraint_type` (all equality or all inequality constraints) and must be handled using the same `formulation_type` (a subclass of a {py:class}`~cooper.formulations.Formulation`). For problems with different types of constraints or formulations, you should instantiate separate {py:class}`~cooper.constraints.Constraint` objects.
 
 ```{eval-rst}
-.. autoclass:: cooper.ConstraintType
+.. autoenum:: cooper.ConstraintType
     :members:
 ```
 
@@ -109,7 +109,7 @@ constraint = cooper.Constraint(
 When initializing the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`, {py:class}`~cooper.constraints.Constraint`s should be defined as attributes.
 We refer to this process as "registering" the constraints with the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. Utilities such as {py:meth}`CMP.constraints<cooper.ConstrainedMinimizationProblem.constraints>` and {py:meth}`CMP.named_constraints<cooper.ConstrainedMinimizationProblem.named_constraints>` enable iteration over the registered constraints.
 
-Moreover, the utility method {py:meth}`CMP.dual_parameters<cooper.ConstrainedMinimizationProblem.dual_parameters>` returns the {py:class}`torch.nn.parameter.Parameter`s of the multipliers for the constraints registered with the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. This facilitates the instantiation of the `dual_optimizer` required by the {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`. See the [Optim](optim.md#example) module for further details.
+Moreover, the utility method {py:meth}`CMP.dual_parameters<cooper.ConstrainedMinimizationProblem.dual_parameters>` returns the {py:class}`torch.nn.parameter.Parameter`s of the multipliers for the constraints registered with the {py:class}`CMP<cooper.cmp.ConstrainedMinimizationProblem>`. This facilitates the instantiation of the `dual_optimizer` required by the {py:class}`~cooper.optim.ConstrainedOptimizer`. See the [Optim](optim.md#example) module for further details.
 
 ```python
 class MyCMP(cooper.ConstrainedMinimizationProblem):

@@ -122,16 +122,16 @@ def params(device, num_variables, use_multiple_primal_optimizers):
 
 @pytest.fixture
 def constraint_params(num_variables, num_constraints, seed, device):
-    generator = torch.Generator(device).manual_seed(seed)
+    generator = torch.Generator().manual_seed(seed)
 
     # Uniform distribution between 1.5 and 2.5
-    S = torch.diag(torch.rand(num_constraints, device=device, generator=generator) + 1.5)
-    U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, device=device, generator=generator))
-    V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, device=device, generator=generator))
+    S = torch.diag(torch.rand(num_constraints, generator=generator).to(device) + 1.5)
+    U, _ = torch.linalg.qr(torch.randn(num_constraints, num_constraints, generator=generator).to(device))
+    V, _ = torch.linalg.qr(torch.randn(num_variables, num_variables, generator=generator).to(device))
 
     # Form the matrix U * S * V
     lhs = torch.mm(U, torch.mm(S, V[:num_constraints, :]))
-    rhs = torch.randn(num_constraints, device=device, generator=generator)
+    rhs = torch.randn(num_constraints, generator=generator).to(device)
     rhs = rhs / rhs.norm()
 
     return lhs, rhs

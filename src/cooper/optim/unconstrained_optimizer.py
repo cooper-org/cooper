@@ -14,7 +14,7 @@ class UnconstrainedOptimizer(CooperOptimizer):
     Args:
         cmp: The constrained minimization problem to be optimized. Providing the CMP
             as an argument for the constructor allows the optimizer to call the
-            :py:meth:`~cooper.cmp.ConstrainedMinimizationProblem.compute_cmp_state`
+            :py:meth:`~cooper.ConstrainedMinimizationProblem.compute_cmp_state`
             method within the :py:meth:`~cooper.optim.cooper_optimizer.CooperOptimizer.roll`
             method.
         primal_optimizers: Optimizer(s) for the primal variables (e.g. the weights of

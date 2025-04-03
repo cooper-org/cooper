@@ -10,7 +10,7 @@ jupytext:
 
 # Training a logistic regression classifier on MNIST under a norm constraint.
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/master/docs/source/notebooks/plot_mnist_logistic_regression.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cooper-org/cooper/blob/main/docs/source/notebooks/plot_mnist_logistic_regression.ipynb)
 
 
 :::{note}
@@ -32,8 +32,7 @@ pipeline, where:
 
 ```{code-cell} ipython3
 %%capture
-# %pip install cooper-optim
-%pip install --index-url https://test.pypi.org/simple/ --no-deps cooper-optim  # TODO: Remove this line when cooper deployed to pypi
+%pip install cooper-optim
 ```
 
 ```{code-cell} ipython3

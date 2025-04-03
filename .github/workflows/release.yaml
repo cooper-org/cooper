@@ -1,4 +1,4 @@
-name: Publish package
+name: Publish Package
 
 on:
   workflow_dispatch:
@@ -7,31 +7,34 @@ on:
       - 'v[0-9]+\.[0-9]+\.[0-9]+'
 
 jobs:
-  publish:
+  build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Needed for making GitHub releases
-      id-token: write  # Needed for trusted publishing to PyPI
+      contents: write  # Required to create GitHub releases
+      id-token: write  # Required for trusted PyPI publishing via OIDC
     steps:
-      - uses: actions/checkout@v4
+      - name:  Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Build package
+      - name: Build Package
         id: build
         run: uv build
 
-      - name: Publish package to PyPI
+      - name: Publish to PyPI
         id: pypi
         if: steps.build.outcome == 'success'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           attestations: true
 
-      - name: Publish release to GitHub
+      - name: Create GitHub Release
         if: steps.pypi.outcome == 'success'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}

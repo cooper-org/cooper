@@ -85,14 +85,14 @@ As a general rule of thumb, we recommend **setting the dual learning rate an ord
 
 :::{dropdown} What is a "constrained optimizer" in **Cooper**, and how is it different from a PyTorch optimizer?
 
-A **constrained optimizer** in **Cooper** is a specialized class ({py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`) designed to solve *constrained optimization problems* by jointly optimizing the **primal variables** (e.g., model parameters) and **dual variables** (e.g., Lagrange multipliers) associated with the problem.
+A **constrained optimizer** in **Cooper** is a specialized class ({py:class}`~cooper.optim.ConstrainedOptimizer`) designed to solve *constrained optimization problems* by jointly optimizing the **primal variables** (e.g., model parameters) and **dual variables** (e.g., Lagrange multipliers) associated with the problem.
 
-You should use {py:class}`~cooper.optim.constrained_optimizers.ConstrainedOptimizer`s when your problem formulation requires dual variables (e.g., {py:class}`~cooper.formulations.Lagrangian` or {py:class}`~cooper.formulations.AugmentedLagrangian` formulations). For unconstrained problems, or formulations that do not require multipliers (e.g., {py:class}`~cooper.formulations.QuadraticPenalty`), use **Cooper**'s {py:class}`~cooper.optim.UnconstrainedOptimizer` (a lightweight wrapper around PyTorch optimizers).
+You should use {py:class}`~cooper.optim.ConstrainedOptimizer`s when your problem formulation requires dual variables (e.g., {py:class}`~cooper.formulations.Lagrangian` or {py:class}`~cooper.formulations.AugmentedLagrangian` formulations). For unconstrained problems, or formulations that do not require multipliers (e.g., {py:class}`~cooper.formulations.QuadraticPenalty`), use **Cooper**'s {py:class}`~cooper.optim.UnconstrainedOptimizer` (a lightweight wrapper around PyTorch optimizers).
 :::
 
 
 :::{dropdown} What constrained optimizer should I use?
-**Cooper** provides a range of [constrained optimizers](optim.md#constrained-optimizers) to choose from. The {py:class}`~cooper.optim.constrained_optimizers.AlternatingDualPrimalOptimizer` is a good starting point. For details, see [Optim](optim.md).
+**Cooper** provides a range of [constrained optimizers](optim.md#constrained-optimizers) to choose from. The {py:class}`~cooper.optim.AlternatingDualPrimalOptimizer` is a good starting point. For details, see [Optim](optim.md).
 :::
 
 ### Debugging and troubleshooting
@@ -210,15 +210,16 @@ If your problem involves a large number of constraints, you can use [IndexedMult
 
 :::{container} reset-highlight-margin
 :::{dropdown} How do I cite **Cooper**?
-To cite **Cooper**, please cite [this paper](link-to-paper):
-#TODO: Add link to paper
+To cite **Cooper**, please cite [this paper](https://arxiv.org/abs/2504.01212):
 
-    @misc{gallegoPosada2025cooper,
-        author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
-        title={{Cooper: A Library for Constrained Optimization in Deep Learning}},
-        howpublished={\url{https://github.com/cooper-org/cooper}},
-        year={2025}
-    }
+```bibtex
+@article{gallegoPosada2025cooper,
+    author={Gallego-Posada, Jose and Ramirez, Juan and Hashemizadeh, Meraj and Lacoste-Julien, Simon},
+    title={{Cooper: A Library for Constrained Optimization in Deep Learning}},
+    journal={arXiv preprint arXiv:2504.01212},
+    year={2025}
+}
+```
 :::
 ::::
 
