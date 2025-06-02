@@ -7,3 +7,12 @@ from .penalty_coefficient_updaters import (
     PenaltyCoefficientUpdater,
 )
 from .penalty_coefficients import DensePenaltyCoefficient, IndexedPenaltyCoefficient, PenaltyCoefficient
+
+__all__ = [
+    "AdditivePenaltyCoefficientUpdater",
+    "DensePenaltyCoefficient",
+    "IndexedPenaltyCoefficient",
+    "MultiplicativePenaltyCoefficientUpdater",
+    "PenaltyCoefficient",
+    "PenaltyCoefficientUpdater",
+]
