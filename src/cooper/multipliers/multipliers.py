@@ -145,7 +145,7 @@ class IndexedMultiplier(ExplicitMultiplier):
         device: Device for the multiplier. If ``None``, the device is inferred from the
             ``init`` tensor or the default device.
         dtype: Data type for the multiplier. Default is ``torch.float32``.
-        sparse: Whether to use sparse gradients during indexing. Default is True.
+        sparse_grad: Whether to use sparse gradients. Default is True.
     """
 
     expects_constraint_features = True
@@ -157,15 +157,10 @@ class IndexedMultiplier(ExplicitMultiplier):
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float32,
         *,
-        sparse: bool = True,
+        sparse_grad: bool = True,
     ) -> None:
         super().__init__(num_constraints, init, device, dtype)
-        self.sparse = sparse
-
-        if self.weight.dim() == 1:
-            # To use the forward call in F.embedding, we must reshape the weight to be a
-            # 2-dim tensor
-            self.weight.data = self.weight.data.unsqueeze(-1)
+        self.sparse_grad = sparse_grad
 
     def forward(self, indices: torch.Tensor) -> torch.Tensor:
         """Return the current value of the multiplier at the provided indices.
@@ -173,21 +168,8 @@ class IndexedMultiplier(ExplicitMultiplier):
         Args:
             indices: Indices of the multipliers to return. The shape of ``indices`` must
                 be ``(num_indices,)``.
-
-        Raises:
-            ValueError: If ``indices`` dtype is not ``torch.long``.
         """
-        if indices.dtype != torch.long:
-            # Not allowing for boolean "indices", which are treated as indices by
-            # torch.nn.functional.embedding and *not* as masks.
-            raise ValueError("Indices must be of type torch.long.")
-
-        # TODO(gallego-posada): Document sparse gradients are expected for stateful
-        # optimizers (having buffers)
-        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=self.sparse)
-
-        # Flatten multiplier values to 1D since Embedding works with 2D tensors.
-        return torch.flatten(multiplier_values)
+        return self.weight.gather(0, indices, sparse_grad=self.sparse_grad)
 
 
 class ImplicitMultiplier(Multiplier):
