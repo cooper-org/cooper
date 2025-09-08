@@ -301,7 +301,7 @@ def _sparse_nupi_zero_init(
         nupi_update_values.add_(detached_error_values.mul(et_coef_values))
 
     if xit_m1_coef_values.ne(0).any():
-        xi_values = state["xi"].sparse_mask(error)._values()
+        xi_values = state["xi"][tuple(error_indices)]
         nupi_update_values.sub_(xi_values.mul(xit_m1_coef))
 
     nupi_update = torch.sparse_coo_tensor(error_indices, nupi_update_values, size=param.shape)
@@ -404,9 +404,9 @@ def _sparse_nupi_sgd_init(
         nupi_update_values.add_(detached_error_values.mul(filtered_Ki_values))
 
     if uses_kp_term:
-        previous_xi_values = state["xi"].sparse_mask(error)._values()
+        previous_xi_values = state["xi"][tuple(error_indices)]
         proportional_term_contribution = torch.where(
-            state["needs_error_initialization_mask"].sparse_mask(error)._values(),
+            state["needs_error_initialization_mask"][tuple(error_indices)],
             torch.zeros_like(detached_error_values),  # If state has not been initialized, xi_0 = 0
             (1 - ema_nu) * (detached_error_values - previous_xi_values),  # Else, we use recursive update
         )
