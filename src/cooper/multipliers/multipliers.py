@@ -145,7 +145,15 @@ class IndexedMultiplier(ExplicitMultiplier):
         device: Device for the multiplier. If ``None``, the device is inferred from the
             ``init`` tensor or the default device.
         dtype: Data type for the multiplier. Default is ``torch.float32``.
-        sparse_grad: Whether to use sparse gradients. Default is True.
+        sparse_grad: Whether to use sparse gradients. Default is ``True``. When set to
+            ``False`` with stateful optimizers (e.g., Adam), optimizer states will be
+            updated for all parameters, assuming zero gradients for non-sampled indices.
+            This may lead to incorrect optimization behavior as these values should not
+            be updated at all.
+
+    Note:
+        The default value of ``sparse_grad=True`` is recommended for stateful optimizers.
+        Set ``sparse_grad=False`` only when necessary (e.g., when using DDP) and with caution.
     """
 
     expects_constraint_features = True
