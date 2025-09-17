@@ -197,6 +197,10 @@ class nuPI(torch.optim.Optimizer):
                 if p.grad is None:
                     continue
 
+                if p.grad.ndim != 1:
+                    # TODO(juan43ramirez): Implement support for multidimensional parameters
+                    raise NotImplementedError("nuPI optimizer only supports 1D parameters.")
+
                 update_function = self.disambiguate_update_function(p.grad.is_sparse, group["init_type"])
                 update_function(
                     param=p,
