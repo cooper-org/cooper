@@ -37,6 +37,19 @@ def init_multiplier_tensor(constraint_type, num_constraints, random_seed):
     return raw_init
 
 
+@pytest.fixture(params=[True, False])
+def sparse_grad(request):
+    return request.param
+
+
+@pytest.fixture
+def multiplier(multiplier_class, num_constraints, init_multiplier_tensor, device, sparse_grad):
+    kwargs = {"num_constraints": num_constraints, "init": init_multiplier_tensor, "device": device}
+    if multiplier_class == cooper.multipliers.IndexedMultiplier:
+        kwargs["sparse_grad"] = sparse_grad
+    return multiplier_class(**kwargs)
+
+
 @pytest.fixture
 def all_indices(num_constraints):
     return torch.arange(num_constraints, dtype=torch.long)

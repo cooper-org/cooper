@@ -158,7 +158,7 @@ def test_sparse_nupi_update_zeros_init(Kp, Ki, ema_nu, maximize, device):
 
     def compute_analytic_gradient(indices):
         # For the quadratic loss, the gradient is simply the current value of p.
-        return multiplier_module(indices).reshape(-1, 1).clone().detach()
+        return multiplier_module(indices).clone().detach()
 
     def recursive_nuPI_direction(error, previous_xi):
         return (Ki + (1 - ema_nu) * Kp) * error - (1 - ema_nu) * Kp * previous_xi
@@ -275,7 +275,7 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
 
     def compute_analytic_gradient(indices):
         # For the quadratic loss, the gradient is simply the current value of p.
-        return multiplier_module(indices).reshape(-1, 1).clone().detach()
+        return multiplier_module(indices).clone().detach()
 
     optimizer = nuPI(
         multiplier_module.parameters(),
@@ -352,3 +352,11 @@ def test_sparse_nupi_update_sgd_init(Kp, Ki, ema_nu, maximize, device):
         # Check state entries that have not been updated yet
         unseen_indices = torch.tensor([4, 8, 9], device=device)
         assert torch.allclose(buffer[unseen_indices], torch.zeros_like(buffer[unseen_indices]))
+
+
+def test_nupi_multi_dimensional_raises():
+    param = torch.ones(2, 3, requires_grad=True)
+    param.sum().backward()
+    optimizer = nuPI([param], lr=0.01)
+    with pytest.raises(NotImplementedError, match="nuPI optimizer only supports 1D parameters"):
+        optimizer.step()

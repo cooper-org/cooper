@@ -137,6 +137,23 @@ class DenseMultiplier(ExplicitMultiplier):
 class IndexedMultiplier(ExplicitMultiplier):
     r""":py:class:`~cooper.multipliers.ExplicitMultiplier` for indexed constraints which
     are evaluated only for a subset of constraints on every optimization step.
+
+    Args:
+        num_constraints: Number of constraints associated with the multiplier.
+        init: Tensor used to initialize the multiplier values. If both ``init`` and
+            ``num_constraints`` are provided, ``init`` must have shape ``(num_constraints,)``.
+        device: Device for the multiplier. If ``None``, the device is inferred from the
+            ``init`` tensor or the default device.
+        dtype: Data type for the multiplier. Default is ``torch.float32``.
+        sparse_grad: Whether to use sparse gradients. Default is ``True``. When set to
+            ``False`` with stateful optimizers (e.g., Adam), optimizer states will be
+            updated for all parameters, assuming zero gradients for non-sampled indices.
+            This may lead to incorrect optimization behavior as these values should not
+            be updated at all.
+
+    Note:
+        The default value of ``sparse_grad=True`` is recommended for stateful optimizers.
+        Set ``sparse_grad=False`` only when necessary (e.g., when using DDP) and with caution.
     """
 
     expects_constraint_features = True
@@ -147,12 +164,11 @@ class IndexedMultiplier(ExplicitMultiplier):
         init: Optional[torch.Tensor] = None,
         device: Optional[torch.device] = None,
         dtype: torch.dtype = torch.float32,
+        *,
+        sparse_grad: bool = True,
     ) -> None:
         super().__init__(num_constraints, init, device, dtype)
-        if self.weight.dim() == 1:
-            # To use the forward call in F.embedding, we must reshape the weight to be a
-            # 2-dim tensor
-            self.weight.data = self.weight.data.unsqueeze(-1)
+        self.sparse_grad = sparse_grad
 
     def forward(self, indices: torch.Tensor) -> torch.Tensor:
         """Return the current value of the multiplier at the provided indices.
@@ -160,21 +176,8 @@ class IndexedMultiplier(ExplicitMultiplier):
         Args:
             indices: Indices of the multipliers to return. The shape of ``indices`` must
                 be ``(num_indices,)``.
-
-        Raises:
-            ValueError: If ``indices`` dtype is not ``torch.long``.
         """
-        if indices.dtype != torch.long:
-            # Not allowing for boolean "indices", which are treated as indices by
-            # torch.nn.functional.embedding and *not* as masks.
-            raise ValueError("Indices must be of type torch.long.")
-
-        # TODO(gallego-posada): Document sparse gradients are expected for stateful
-        # optimizers (having buffers)
-        multiplier_values = torch.nn.functional.embedding(indices, self.weight, sparse=True)
-
-        # Flatten multiplier values to 1D since Embedding works with 2D tensors.
-        return torch.flatten(multiplier_values)
+        return self.weight.gather(0, indices, sparse_grad=self.sparse_grad)
 
 
 class ImplicitMultiplier(Multiplier):
