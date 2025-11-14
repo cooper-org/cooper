@@ -359,9 +359,10 @@ def _nupi_sgd_init(
 
     if uses_kp_term:
         if "xi" not in state:
-            # Initialize xi_0 = 0
-            state["xi"] = torch.zeros_like(param)
+            # This is step t=0. Initialize xi_0 = e_0 based on SGD init.
+            state["xi"] = detached_error.clone()
         else:
+            # This is step t > 0. Update xi_t = nu*xi_{t-1} + (1-nu)*e_t
             state["xi"].mul_(ema_nu).add_(detached_error, alpha=1 - ema_nu)
 
 
