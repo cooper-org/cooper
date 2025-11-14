@@ -156,7 +156,24 @@ def compute_primal_quadratic_augmented_contribution(
         aux1 = torch.einsum("i...,i...->i...", penalty_coefficient_value, violation)
         detached_multiplier = multiplier_value.detach()
         aux2 = torch.relu(detached_multiplier + aux1) ** 2 - detached_multiplier**2
-        return 0.5 * torch.einsum("i...,i...->", 1 / penalty_coefficient_value, aux2)
+
+        # Handle the case where the penalty coefficient is zero to avoid division by zero
+        rho_is_zero = penalty_coefficient_value == 0.0
+        safe_rho = torch.where(
+            rho_is_zero,
+            torch.ones_like(penalty_coefficient_value),
+            penalty_coefficient_value,
+        )
+
+        # When rho is zero, the contribution reduces to multiplier * violation
+        contribution_zero = multiplier_value.detach() * violation
+
+        contribution_nonzero = aux2 / safe_rho
+
+        contribution = torch.where(rho_is_zero, contribution_zero, contribution_nonzero)
+
+        return 0.5 * torch.sum(contribution)
+
     if constraint_type == ConstraintType.EQUALITY:
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
