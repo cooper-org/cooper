@@ -166,7 +166,7 @@ def compute_primal_quadratic_augmented_contribution(
         )
 
         # When rho is zero, the contribution reduces to multiplier * violation
-        contribution_zero = multiplier_value.detach() * violation
+        contribution_zero = compute_primal_weighted_violation(multiplier_value, violation)
 
         contribution_nonzero = aux2 / safe_rho
 
