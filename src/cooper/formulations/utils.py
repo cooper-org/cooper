@@ -168,11 +168,11 @@ def compute_primal_quadratic_augmented_contribution(
         # When rho is zero, the contribution reduces to multiplier * violation
         contribution_zero = compute_primal_weighted_violation(multiplier_value, violation)
 
-        contribution_nonzero = aux2 / safe_rho
+        contribution_nonzero = 0.5 * aux2 / safe_rho
 
         contribution = torch.where(rho_is_zero, contribution_zero, contribution_nonzero)
 
-        return 0.5 * torch.sum(contribution)
+        return torch.sum(contribution)
 
     if constraint_type == ConstraintType.EQUALITY:
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
