@@ -160,7 +160,9 @@ def compute_primal_quadratic_augmented_contribution(
 
         # Case 1: prox_arg > 0 -> lambda * violation + 0.5 * rho * violation^2
         linear_term = compute_primal_weighted_violation(multiplier_value, violation)
-        quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
+
+        # We use an "equality" constraint to avoid clamping the violation
+        quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, ConstraintType.EQUALITY)
         case1_contribution = linear_term + quadratic_penalty
 
         # Case 2: prox_arg <= 0 -> -0.5 * (lambda^2) / rho
