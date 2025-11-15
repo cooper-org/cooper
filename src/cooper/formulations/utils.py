@@ -178,3 +178,41 @@ def compute_primal_quadratic_augmented_contribution(
         quadratic_penalty = compute_quadratic_penalty(penalty_coefficient_value, violation, constraint_type)
         return linear_term + quadratic_penalty
     return None
+
+
+def compute_dual_alm_contribution(
+    multiplier_value: torch.Tensor,
+    penalty_coefficient_value: torch.Tensor,
+    violation: torch.Tensor,
+    constraint_type: ConstraintType,
+) -> Optional[torch.Tensor]:
+    r"""TODO"""
+    if constraint_type == ConstraintType.INEQUALITY:
+        detached_violation = violation.detach()
+
+        aux1 = torch.einsum("i...,i...->i...", penalty_coefficient_value, detached_violation)
+
+        prox_arg = multiplier_value + aux1
+
+        # Case 1: prox_arg > 0 -> lambda * violation + constant
+        case1_contribution = compute_dual_weighted_violation(multiplier_value, detached_violation)
+
+        # Create a safe reciprocal for the einsum.
+        # If penalty_coefficient is 0, the contribution is 0 (as 0 * lambda^2 = 0).
+        safe_reciprocal_rho = torch.where(
+            penalty_coefficient_value == 0.0,
+            torch.zeros_like(penalty_coefficient_value),
+            1.0 / penalty_coefficient_value,
+        )
+
+        # Case 2: prox_arg <= 0 -> -0.5 * (lambda^2) / rho
+        case2_contribution = -0.5 * torch.einsum("i...,i...->", (multiplier_value**2), safe_reciprocal_rho)
+
+        contribution = torch.where(prox_arg > 0, case1_contribution, case2_contribution)
+
+        return torch.sum(contribution)
+
+    if constraint_type == ConstraintType.EQUALITY:
+        return compute_dual_weighted_violation(multiplier_value, violation)
+
+    return None
